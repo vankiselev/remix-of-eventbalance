@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { DollarSign, Calendar, TrendingUp, Users } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
+import CashOnHand from "@/components/CashOnHand";
 
 interface DashboardStats {
   totalEvents: number;
@@ -56,9 +58,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return `${new Intl.NumberFormat("ru-RU").format(amount)} ₽`;
-  };
 
   const statsCards = [
     {
@@ -140,6 +139,11 @@ const Dashboard = () => {
             </Card>
           );
         })}
+      </div>
+
+      {/* Cash on Hand Section */}
+      <div className="mb-6">
+        <CashOnHand />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, DollarSign, Eye } from "lucide-react";
-import EventDetails from "@/components/EventDetails";
-import { formatCurrency } from "@/utils/currency";
+import { Plus, CalendarIcon, DollarSign, Eye } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
 
 interface Event {
   id: string;
@@ -19,9 +19,14 @@ interface Event {
   description: string;
   start_date: string;
   end_date: string;
+  event_time: string;
+  location: string;
   budget: number;
   actual_cost: number;
   status: string;
+  notes: string;
+  show_program: string;
+  project_owner: string;
   created_at: string;
 }
 
@@ -29,7 +34,8 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showEventDialog, setShowEventDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -89,8 +95,8 @@ const Events = () => {
       setFormData({
         name: "",
         description: "",
-        start_date: "",
-        end_date: "",
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date().toISOString().split('T')[0],
         budget: "",
       });
       setShowCreateDialog(false);
@@ -138,17 +144,14 @@ const Events = () => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
-  const handleViewEvent = (eventId: string) => {
-    setSelectedEventId(eventId);
+  const handleViewEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEventDialog(true);
   };
 
-  const handleBackToList = () => {
-    setSelectedEventId(null);
+  const handleEventUpdated = () => {
+    fetchEvents();
   };
-
-  if (selectedEventId) {
-    return <EventDetails eventId={selectedEventId} onBack={handleBackToList} />;
-  }
 
   if (loading) {
     return (
@@ -259,7 +262,7 @@ const Events = () => {
       {events.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+            <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Нет мероприятий</h3>
             <p className="text-muted-foreground text-center mb-4">
               Создайте ваше первое мероприятие, чтобы начать работу
@@ -283,7 +286,7 @@ const Events = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center text-sm text-muted-foreground">
-                  <Calendar className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4" />
                   {formatDate(event.start_date)} - {formatDate(event.end_date)}
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -294,7 +297,7 @@ const Events = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => handleViewEvent(event.id)}
+                    onClick={() => handleViewEvent(event)}
                   >
                     <Eye className="mr-1 h-4 w-4" />
                     Просмотр
@@ -305,6 +308,14 @@ const Events = () => {
           ))}
         </div>
       )}
+
+      {/* Event Details Dialog */}
+      <EventDetailsDialog
+        event={selectedEvent}
+        open={showEventDialog}
+        onOpenChange={setShowEventDialog}
+        onEventUpdated={handleEventUpdated}
+      />
     </div>
   );
 };

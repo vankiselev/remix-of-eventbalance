@@ -20,14 +20,20 @@ interface Event {
   description: string;
   start_date: string;
   end_date: string;
-  event_time: string;
-  location: string;
+  event_time?: string;
+  location?: string;
   budget: number;
   actual_cost: number;
   status: string;
-  notes: string;
-  show_program: string;
-  project_owner: string;
+  notes?: string;
+  show_program?: string;
+  project_owner?: string;
+  managers?: string[];
+  animators?: string[];
+  contractors?: string[];
+  photos?: string[];
+  videos?: string[];
+  created_at: string;
 }
 
 interface EventDetailsDialogProps {

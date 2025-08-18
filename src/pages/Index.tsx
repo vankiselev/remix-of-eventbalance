@@ -6,8 +6,6 @@ import EventCalendar from "@/components/EventCalendar";
 import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
 import TransactionForm from "@/components/TransactionForm";
-import FinancialTransaction from "@/components/FinancialTransaction";
-import CashDashboard from "@/components/CashDashboard";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -15,19 +13,19 @@ const Index = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <CashDashboard />;
+        return <Dashboard />;
       case "events":
         return <Events />;
       case "calendar":
         return <EventCalendar />;
       case "transaction":
-        return <FinancialTransaction />;
+        return <TransactionForm />;
       case "finances":
         return <Finances />;
       case "staff":
         return <Staff />;
       default:
-        return <CashDashboard />;
+        return <Dashboard />;
     }
   };
 

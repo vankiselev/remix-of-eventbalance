@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, MapPin, Clock, Camera, Video, Users } from "lucide-react";
 import { format, parseISO, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatCurrency } from "@/utils/formatCurrency";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
 
 interface Event {
   id: string;
@@ -46,8 +48,8 @@ const EventCalendar = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    start_date: "",
-    end_date: "",
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
     budget: "",
     project_owner: "",
     managers: "",
@@ -118,8 +120,8 @@ const EventCalendar = () => {
       setFormData({
         name: "",
         description: "",
-        start_date: "",
-        end_date: "",
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date().toISOString().split('T')[0],
         budget: "",
         project_owner: "",
         managers: "",
@@ -179,12 +181,13 @@ const EventCalendar = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-    }).format(amount);
-  };
+  // Remove this function since we're using the imported utility
+  // const formatCurrency = (amount: number) => {
+  //   return new Intl.NumberFormat("ru-RU", {
+  //     style: "currency",
+  //     currency: "RUB",
+  //   }).format(amount);
+  // };
 
   const eventsForSelectedDate = getEventsForDate(selectedDate);
 
@@ -441,126 +444,12 @@ const EventCalendar = () => {
       </div>
 
       {/* Event Details Dialog */}
-      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedEvent && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedEvent.name}</DialogTitle>
-                <DialogDescription>
-                  {format(parseISO(selectedEvent.start_date), "d MMMM yyyy", { locale: ru })} - {format(parseISO(selectedEvent.end_date), "d MMMM yyyy", { locale: ru })}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Основная информация</h4>
-                    <div className="space-y-2 text-sm">
-                      {selectedEvent.project_owner && (
-                        <div><strong>Чей проект:</strong> {selectedEvent.project_owner}</div>
-                      )}
-                      {selectedEvent.location && (
-                        <div><strong>Место:</strong> {selectedEvent.location}</div>
-                      )}
-                      {selectedEvent.event_time && (
-                        <div><strong>Время:</strong> {selectedEvent.event_time}</div>
-                      )}
-                      <div><strong>Бюджет:</strong> {formatCurrency(selectedEvent.budget)}</div>
-                      {selectedEvent.actual_cost > 0 && (
-                        <div><strong>Потрачено:</strong> {formatCurrency(selectedEvent.actual_cost)}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedEvent.show_program && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Шоу/Программа</h4>
-                      <p className="text-sm">{selectedEvent.show_program}</p>
-                    </div>
-                  )}
-
-                  {selectedEvent.description && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Описание</h4>
-                      <p className="text-sm">{selectedEvent.description}</p>
-                    </div>
-                  )}
-
-                  {selectedEvent.notes && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Примечания</h4>
-                      <p className="text-sm">{selectedEvent.notes}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {selectedEvent.managers && selectedEvent.managers.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center">
-                        <Users className="mr-2 h-4 w-4" />
-                        Менеджеры
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedEvent.managers.map((manager, index) => (
-                          <Badge key={index} variant="secondary">{manager}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedEvent.animators && selectedEvent.animators.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Аниматоры</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedEvent.animators.map((animator, index) => (
-                          <Badge key={index} variant="outline">{animator}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedEvent.contractors && selectedEvent.contractors.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Подрядчики</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedEvent.contractors.map((contractor, index) => (
-                          <Badge key={index} variant="outline">{contractor}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedEvent.photos && selectedEvent.photos.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center">
-                        <Camera className="mr-2 h-4 w-4" />
-                        Фото
-                      </h4>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedEvent.photos.length} фото
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedEvent.videos && selectedEvent.videos.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center">
-                        <Video className="mr-2 h-4 w-4" />
-                        Видео
-                      </h4>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedEvent.videos.length} видео
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EventDetailsDialog
+        event={selectedEvent as any}
+        open={showEventDialog}
+        onOpenChange={setShowEventDialog}
+        onEventUpdated={fetchEvents}
+      />
     </div>
   );
 };
