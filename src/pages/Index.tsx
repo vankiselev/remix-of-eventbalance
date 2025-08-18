@@ -6,6 +6,7 @@ import EventCalendar from "@/components/EventCalendar";
 import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
 import TransactionForm from "@/components/TransactionForm";
+import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -24,6 +25,8 @@ const Index = () => {
         return <Finances />;
       case "staff":
         return <Staff />;
+      case "invitations":
+        return <InvitationsManagement />;
       default:
         return <Dashboard />;
     }
