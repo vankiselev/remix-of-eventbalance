@@ -49,7 +49,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
         .from("profiles")
         .select("email")
         .eq("email", data.email)
-        .single();
+        .maybeSingle();
       
       if (existingProfile) {
         toast({
@@ -66,7 +66,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
         .select("*")
         .eq("email", data.email)
         .in("status", ["sent"])
-        .single();
+        .maybeSingle();
 
       if (existingInvitation) {
         toast({
