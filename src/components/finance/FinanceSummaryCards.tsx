@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { Wallet, Users, User } from "lucide-react";
+import { Wallet, User } from "lucide-react";
 
 interface CashSummary {
   total_cash: number;
@@ -17,12 +17,14 @@ interface FinanceSummaryCardsProps {
 export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="animate-pulse">
-              <div className="bg-muted h-5 w-24 rounded"></div>
-              <div className="bg-muted h-8 w-32 rounded"></div>
+          <Card key={i} className="card-modern">
+            <CardHeader className="pb-3">
+              <div className="animate-pulse">
+                <div className="bg-slate-200 h-4 w-24 rounded mb-2"></div>
+                <div className="bg-slate-200 h-8 w-32 rounded"></div>
+              </div>
             </CardHeader>
           </Card>
         ))}
@@ -30,55 +32,70 @@ export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsP
     );
   }
 
+  const cards = [
+    {
+      title: "Итого на руках",
+      value: summary.total_cash,
+      icon: Wallet,
+      color: "slate",
+      bgColor: "bg-slate-50",
+      iconColor: "text-slate-600",
+      textColor: "text-slate-900"
+    },
+    {
+      title: "Наличка Настя",
+      value: summary.cash_nastya,
+      icon: User,
+      color: "blue",
+      bgColor: "bg-blue-50",
+      iconColor: "text-blue-600",
+      textColor: "text-blue-700"
+    },
+    {
+      title: "Наличка Лера",
+      value: summary.cash_lera,
+      icon: User,
+      color: "green",
+      bgColor: "bg-green-50",
+      iconColor: "text-green-600",
+      textColor: "text-green-700"
+    },
+    {
+      title: "Наличка Ваня",
+      value: summary.cash_vanya,
+      icon: User,
+      color: "purple",
+      bgColor: "bg-purple-50",
+      iconColor: "text-purple-600",
+      textColor: "text-purple-700"
+    }
+  ];
+
   return (
-    <div className="grid gap-4 md:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Общая сумма на руках</CardTitle>
-          <Wallet className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {formatCurrency(summary.total_cash)}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Наличка Настя</CardTitle>
-          <User className="h-4 w-4 text-blue-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-600">
-            {formatCurrency(summary.cash_nastya)}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Наличка Лера</CardTitle>
-          <User className="h-4 w-4 text-green-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-green-600">
-            {formatCurrency(summary.cash_lera)}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Наличка Ваня</CardTitle>
-          <User className="h-4 w-4 text-purple-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-purple-600">
-            {formatCurrency(summary.cash_vanya)}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid gap-6 md:grid-cols-4">
+      {cards.map((card, index) => {
+        const Icon = card.icon;
+        
+        return (
+          <Card key={index} className="card-modern hover:shadow-lg transition-all duration-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  {card.title}
+                </CardTitle>
+                <div className={`w-8 h-8 ${card.bgColor} rounded-lg flex items-center justify-center`}>
+                  <Icon className={`h-4 w-4 ${card.iconColor}`} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className={`text-2xl font-bold ${card.textColor}`}>
+                {formatCurrency(card.value)}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

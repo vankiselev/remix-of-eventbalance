@@ -1,96 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Modern EventBalance Color Palette */
+    --background: 248 250 252; /* slate-50 */
+    --foreground: 15 23 42; /* slate-900 */
+    --card: 255 255 255; /* white */
+    --card-foreground: 15 23 42; /* slate-900 */
+    --popover: 255 255 255; /* white */
+    --popover-foreground: 15 23 42; /* slate-900 */
+    --primary: 99 102 241; /* indigo-500 */
+    --primary-foreground: 248 250 252; /* slate-50 */
+    --secondary: 241 245 249; /* slate-100 */
+    --secondary-foreground: 30 41 59; /* slate-700 */
+    --muted: 248 250 252; /* slate-50 */
+    --muted-foreground: 100 116 139; /* slate-500 */
+    --accent: 241 245 249; /* slate-100 */
+    --accent-foreground: 30 41 59; /* slate-700 */
+    --destructive: 239 68 68; /* red-500 */
+    --destructive-foreground: 248 250 252; /* slate-50 */
+    --border: 226 232 240; /* slate-200 */
+    --input: 226 232 240; /* slate-200 */
+    --ring: 99 102 241; /* indigo-500 */
+    --radius: 0.75rem; /* 12px */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* EventBalance Specific Colors */
+    --success: 34 197 94; /* green-500 */
+    --success-foreground: 255 255 255;
+    --success-light: 240 253 244; /* green-50 */
+    --danger: 239 68 68; /* red-500 */
+    --danger-foreground: 255 255 255;
+    --danger-light: 254 242 242; /* red-50 */
+    --warning: 245 158 11; /* amber-500 */
+    --warning-foreground: 255 255 255;
+    --warning-light: 255 251 235; /* amber-50 */
+    --info: 59 130 246; /* blue-500 */
+    --info-foreground: 255 255 255;
+    --info-light: 239 246 255; /* blue-50 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Cash Type Colors */
+    --cash-nastya: 59 130 246; /* blue-500 */
+    --cash-lera: 34 197 94; /* green-500 */
+    --cash-vanya: 147 51 234; /* purple-500 */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar */
+    --sidebar-background: 255 255 255; /* white */
+    --sidebar-foreground: 15 23 42; /* slate-900 */
+    --sidebar-primary: 99 102 241; /* indigo-500 */
+    --sidebar-primary-foreground: 248 250 252; /* slate-50 */
+    --sidebar-accent: 241 245 249; /* slate-100 */
+    --sidebar-accent-foreground: 30 41 59; /* slate-700 */
+    --sidebar-border: 226 232 240; /* slate-200 */
+    --sidebar-ring: 99 102 241; /* indigo-500 */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 15 23 42; /* slate-900 */
+    --foreground: 248 250 252; /* slate-50 */
+    --card: 30 41 59; /* slate-700 */
+    --card-foreground: 248 250 252; /* slate-50 */
+    --popover: 30 41 59; /* slate-700 */
+    --popover-foreground: 248 250 252; /* slate-50 */
+    --primary: 129 140 248; /* indigo-400 */
+    --primary-foreground: 15 23 42; /* slate-900 */
+    --secondary: 51 65 85; /* slate-600 */
+    --secondary-foreground: 248 250 252; /* slate-50 */
+    --muted: 51 65 85; /* slate-600 */
+    --muted-foreground: 148 163 184; /* slate-400 */
+    --accent: 51 65 85; /* slate-600 */
+    --accent-foreground: 248 250 252; /* slate-50 */
+    --destructive: 220 38 38; /* red-600 */
+    --destructive-foreground: 248 250 252; /* slate-50 */
+    --border: 51 65 85; /* slate-600 */
+    --input: 51 65 85; /* slate-600 */
+    --ring: 129 140 248; /* indigo-400 */
+    --sidebar-background: 30 41 59; /* slate-700 */
+    --sidebar-foreground: 248 250 252; /* slate-50 */
+    --sidebar-primary: 129 140 248; /* indigo-400 */
+    --sidebar-primary-foreground: 15 23 42; /* slate-900 */
+    --sidebar-accent: 51 65 85; /* slate-600 */
+    --sidebar-accent-foreground: 248 250 252; /* slate-50 */
+    --sidebar-border: 51 65 85; /* slate-600 */
+    --sidebar-ring: 129 140 248; /* indigo-400 */
   }
 }
 
@@ -98,8 +92,80 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Modern Card Styles */
+  .card-modern {
+    @apply bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .card-stats {
+    @apply card-modern p-6 hover:shadow-lg;
+  }
+
+  /* Typography */
+  .text-heading {
+    @apply text-lg font-semibold text-foreground;
+  }
+
+  .text-body {
+    @apply text-sm text-foreground;
+  }
+
+  .text-caption {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /* Money Display */
+  .money-positive {
+    @apply text-green-600 font-semibold;
+  }
+
+  .money-negative {
+    @apply text-red-600 font-semibold;
+  }
+
+  .money-neutral {
+    @apply text-foreground font-semibold;
+  }
+
+  /* Cash Type Badges */
+  .badge-nastya {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+
+  .badge-lera {
+    @apply bg-green-50 text-green-700 border-green-200;
+  }
+
+  .badge-vanya {
+    @apply bg-purple-50 text-purple-700 border-purple-200;
+  }
+
+  /* Table Styles */
+  .table-zebra tbody tr:nth-child(odd) {
+    @apply bg-slate-50/50;
+  }
+
+  .table-header {
+    @apply bg-slate-100 border-b border-slate-200;
+  }
+
+  /* Navigation */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200;
+  }
+
+  .nav-item-active {
+    @apply bg-primary/10 text-primary font-medium;
+  }
+
+  .nav-item-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-accent;
   }
 }

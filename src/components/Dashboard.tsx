@@ -1,25 +1,34 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Calendar, TrendingUp, Users } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import CashOnHand from "@/components/CashOnHand";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
+import { useAuth } from "@/hooks/useAuth";
 
-interface DashboardStats {
+interface DashboardData {
   totalEvents: number;
-  totalRevenue: number;
+  totalIncome: number;
   totalExpenses: number;
   profit: number;
+  totalCash: number;
+  cashNastya: number;
+  cashLera: number;
+  cashVanya: number;
 }
 
 const Dashboard = () => {
-  const [stats, setStats] = useState<DashboardStats>({
+  const [data, setData] = useState<DashboardData>({
     totalEvents: 0,
-    totalRevenue: 0,
+    totalIncome: 0,
     totalExpenses: 0,
     profit: 0,
+    totalCash: 0,
+    cashNastya: 0,
+    cashLera: 0,
+    cashVanya: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -29,24 +38,40 @@ const Dashboard = () => {
           .from("events")
           .select("*", { count: "exact", head: true });
 
-        // Fetch total revenue
-        const { data: incomes } = await supabase
-          .from("incomes")
-          .select("amount");
+        // Fetch financial data
+        const { data: transactions } = await supabase
+          .from("financial_transactions")
+          .select("income_amount, expense_amount, cash_type");
 
-        // Fetch total expenses
-        const { data: expenses } = await supabase
-          .from("expenses")
-          .select("amount");
+        // Calculate totals
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let cashNastya = 0;
+        let cashLera = 0;
+        let cashVanya = 0;
 
-        const totalRevenue = incomes?.reduce((sum, income) => sum + Number(income.amount), 0) || 0;
-        const totalExpenses = expenses?.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
+        transactions?.forEach(t => {
+          if (t.income_amount) totalIncome += t.income_amount;
+          if (t.expense_amount) totalExpenses += t.expense_amount;
+          
+          const netAmount = (t.income_amount || 0) - (t.expense_amount || 0);
+          if (t.cash_type === 'nastya') cashNastya += netAmount;
+          else if (t.cash_type === 'lera') cashLera += netAmount;
+          else if (t.cash_type === 'vanya') cashVanya += netAmount;
+        });
 
-        setStats({
+        const totalCash = cashNastya + cashLera + cashVanya;
+        const profit = totalIncome - totalExpenses;
+
+        setData({
           totalEvents: eventsCount || 0,
-          totalRevenue,
+          totalIncome,
           totalExpenses,
-          profit: totalRevenue - totalExpenses,
+          profit,
+          totalCash,
+          cashNastya,
+          cashLera,
+          cashVanya,
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -58,140 +83,37 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-
-  const statsCards = [
-    {
-      title: "Всего мероприятий",
-      value: stats.totalEvents.toString(),
-      icon: Calendar,
-      description: "Активные и завершенные",
-    },
-    {
-      title: "Общий доход",
-      value: formatCurrency(stats.totalRevenue),
-      icon: DollarSign,
-      description: "За все время",
-    },
-    {
-      title: "Общие расходы",
-      value: formatCurrency(stats.totalExpenses),
-      icon: TrendingUp,
-      description: "За все время",
-    },
-    {
-      title: "Прибыль",
-      value: formatCurrency(stats.profit),
-      icon: Users,
-      description: "Доход - Расходы",
-      valueColor: stats.profit >= 0 ? "text-green-600" : "text-red-600",
-    },
-  ];
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Панель управления</h1>
-          <p className="text-muted-foreground">Обзор вашей финансовой деятельности</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium bg-muted h-4 w-24 rounded"></CardTitle>
-                <div className="bg-muted h-4 w-4 rounded"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted h-6 w-16 rounded mb-1"></div>
-                <div className="bg-muted h-3 w-20 rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Панель управления</h1>
-        <p className="text-muted-foreground">Обзор вашей финансовой деятельности</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">
+          Панель управления
+        </h1>
+        <p className="text-slate-600">
+          Добро пожаловать в EventBalance! Обзор вашей финансовой деятельности
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsCards.map((card, index) => {
-          const Icon = card.icon;
-          return (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${card.valueColor || ""}`}>
-                  {card.value}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {card.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Main Cash Summary */}
+      <CashSummaryCard
+        totalCash={data.totalCash}
+        cashNastya={data.cashNastya}
+        cashLera={data.cashLera}
+        cashVanya={data.cashVanya}
+        isLoading={loading}
+      />
 
-      {/* Cash on Hand Section */}
-      <div className="mb-6">
-        <CashOnHand />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Последние мероприятия</CardTitle>
-            <CardDescription>
-              Недавно созданные или обновленные мероприятия
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-center py-4">
-              Данные загружаются...
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Финансовая сводка</CardTitle>
-            <CardDescription>
-              Краткий обзор доходов и расходов
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Доходы:</span>
-                <span className="text-green-600 font-medium">
-                  {formatCurrency(stats.totalRevenue)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Расходы:</span>
-                <span className="text-red-600 font-medium">
-                  {formatCurrency(stats.totalExpenses)}
-                </span>
-              </div>
-              <div className="border-t pt-2 flex justify-between font-bold">
-                <span>Итого:</span>
-                <span className={stats.profit >= 0 ? "text-green-600" : "text-red-600"}>
-                  {formatCurrency(stats.profit)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats Grid */}
+      <DashboardStats
+        stats={{
+          totalEvents: data.totalEvents,
+          totalIncome: data.totalIncome,
+          totalExpenses: data.totalExpenses,
+          profit: data.profit,
+        }}
+        isLoading={loading}
+      />
     </div>
   );
 };

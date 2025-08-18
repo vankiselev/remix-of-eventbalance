@@ -23,8 +23,7 @@ import {
   Edit, 
   Trash2, 
   MoreHorizontal, 
-  Search, 
-  Filter,
+  Search,
   ArrowUpDown 
 } from "lucide-react";
 
@@ -165,21 +164,18 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
   const getCashTypeBadge = (cashType: string | null) => {
     if (!cashType) return null;
     
-    const colors = {
-      nastya: "bg-blue-100 text-blue-800",
-      lera: "bg-green-100 text-green-800",
-      vanya: "bg-purple-100 text-purple-800"
+    const cashTypes = {
+      nastya: { label: "Настя", className: "badge-nastya" },
+      lera: { label: "Лера", className: "badge-lera" },
+      vanya: { label: "Ваня", className: "badge-vanya" }
     };
 
-    const labels = {
-      nastya: "Настя",
-      lera: "Лера", 
-      vanya: "Ваня"
-    };
+    const type = cashTypes[cashType as keyof typeof cashTypes];
+    if (!type) return null;
 
     return (
-      <Badge className={colors[cashType as keyof typeof colors]}>
-        {labels[cashType as keyof typeof labels]}
+      <Badge variant="outline" className={`${type.className} text-xs`}>
+        {type.label}
       </Badge>
     );
   };
@@ -198,41 +194,43 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Search and Filters */}
       <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Поиск по описанию, проекту, категории..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 border-slate-200 focus:border-indigo-300 focus:ring-indigo-200"
           />
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      {/* Modern Table */}
+      <div className="card-modern overflow-hidden">
+        <Table className="table-zebra">
           <TableHeader>
-            <TableRow>
-              <TableHead>
+            <TableRow className="table-header border-0">
+              <TableHead className="font-semibold text-slate-700">
                 <Button
                   variant="ghost"
                   onClick={() => handleSort("operation_date")}
-                  className="h-auto p-0 font-semibold"
+                  className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
                 >
                   Дата операции
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead>Проект</TableHead>
-              <TableHead>Чей проект</TableHead>
-              <TableHead>Описание</TableHead>
-              <TableHead>Статья</TableHead>
-              <TableHead>Касса</TableHead>
-              <TableHead className="text-right">Трата</TableHead>
-              <TableHead className="text-right">Приход</TableHead>
-              {isAdmin && <TableHead className="text-right">Действия</TableHead>}
+              <TableHead className="font-semibold text-slate-700">Проект</TableHead>
+              <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
+              <TableHead className="font-semibold text-slate-700">Описание</TableHead>
+              <TableHead className="font-semibold text-slate-700">Статья</TableHead>
+              <TableHead className="font-semibold text-slate-700">Касса</TableHead>
+              <TableHead className="text-right font-semibold text-slate-700">Трата</TableHead>
+              <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
+              {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -240,44 +238,50 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
               <TableRow>
                 <TableCell 
                   colSpan={isAdmin ? 9 : 8} 
-                  className="text-center py-8 text-muted-foreground"
+                  className="text-center py-12 text-slate-500"
                 >
                   {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
                 </TableCell>
               </TableRow>
             ) : (
               filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{formatDate(transaction.operation_date)}</TableCell>
-                  <TableCell>
+                <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
+                  <TableCell className="text-sm font-medium">
+                    {formatDate(transaction.operation_date)}
+                  </TableCell>
+                  <TableCell className="text-sm">
                     {transaction.events?.name || "—"}
                   </TableCell>
-                  <TableCell>{transaction.project_owner}</TableCell>
+                  <TableCell className="text-sm">
+                    {transaction.project_owner}
+                  </TableCell>
                   <TableCell className="max-w-xs">
-                    <div className="truncate" title={transaction.description}>
+                    <div className="truncate text-sm" title={transaction.description}>
                       {transaction.description}
                     </div>
                     {transaction.notes && (
-                      <div className="text-xs text-muted-foreground mt-1 truncate">
+                      <div className="text-xs text-slate-500 mt-1 truncate">
                         {transaction.notes}
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{transaction.category}</Badge>
+                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
+                      {transaction.category}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {getCashTypeBadge(transaction.cash_type)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right font-medium">
                     {transaction.expense_amount 
-                      ? formatCurrency(transaction.expense_amount)
+                      ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
                       : "—"
                     }
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right font-medium">
                     {transaction.income_amount 
-                      ? formatCurrency(transaction.income_amount)
+                      ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
                       : "—"
                     }
                   </TableCell>
@@ -285,21 +289,21 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-40">
                           <DropdownMenuItem 
                             onClick={() => onEdit?.(transaction)}
-                            className="cursor-pointer"
+                            className="cursor-pointer text-sm"
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Редактировать
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(transaction.id)}
-                            className="cursor-pointer text-red-600"
+                            className="cursor-pointer text-red-600 text-sm"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Удалить
