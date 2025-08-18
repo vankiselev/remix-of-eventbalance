@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
-import { TransactionTable } from "@/components/finance/TransactionTable";
+import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTable";
 import { TransactionForm } from "@/components/finance/TransactionForm";
 
 interface CashSummary {
@@ -177,7 +177,7 @@ const Finances = () => {
           <CardTitle className="text-lg">Транзакции</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <TransactionTable
+          <EnhancedTransactionTable
             userId={currentUserId}
             isAdmin={isAdmin}
             onEdit={handleEditTransaction}
@@ -215,10 +215,10 @@ const Finances = () => {
         <FinanceSummaryCards summary={companySummary} isLoading={false} />
       </div>
 
-      <Tabs defaultValue="employees" className="w-full">
-        <TabsList>
-          <TabsTrigger value="employees">Сотрудники</TabsTrigger>
-          <TabsTrigger value="transactions">Все транзакции</TabsTrigger>
+      <Tabs defaultValue="transactions" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-muted/60 rounded-lg p-1">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Все транзакции</TabsTrigger>
+          <TabsTrigger value="employees" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Сотрудники</TabsTrigger>
         </TabsList>
         
         <TabsContent value="employees" className="space-y-4 mt-4">
@@ -231,7 +231,7 @@ const Finances = () => {
               <CardTitle className="text-lg">Все транзакции</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <TransactionTable
+              <EnhancedTransactionTable
                 isAdmin={true}
                 onEdit={handleEditTransaction}
               />
