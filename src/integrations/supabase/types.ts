@@ -407,6 +407,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_invitation: {
+        Args: { invitation_token: string }
+        Returns: boolean
+      }
       get_my_employee_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
