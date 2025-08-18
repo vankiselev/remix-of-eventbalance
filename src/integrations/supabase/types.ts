@@ -288,43 +288,20 @@ export type Database = {
       }
     }
     Views: {
-      employee_profile: {
-        Row: {
-          created_at: string | null
-          hire_date: string | null
-          id: string | null
-          position: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          hire_date?: string | null
-          id?: string | null
-          position?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          hire_date?: string | null
-          id?: string | null
-          position?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_employees_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_my_employee_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          hire_date: string
+          id: string
+          position: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
