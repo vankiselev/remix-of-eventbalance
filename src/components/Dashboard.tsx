@@ -84,25 +84,24 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
-          Панель управления
-        </h1>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Добро пожаловать в EventBalance! Обзор вашей финансовой деятельности
         </p>
       </div>
 
-      {/* Main Cash Summary */}
-      <CashSummaryCard
-        totalCash={data.totalCash}
-        cashNastya={data.cashNastya}
-        cashLera={data.cashLera}
-        cashVanya={data.cashVanya}
-        isLoading={loading}
-      />
+      {/* Main Cash Summary - Always visible */}
+      <div className="sticky top-0 z-10 bg-background pb-4">
+        <CashSummaryCard
+          totalCash={data.totalCash}
+          cashNastya={data.cashNastya}
+          cashLera={data.cashLera}
+          cashVanya={data.cashVanya}
+          isLoading={loading}
+        />
+      </div>
 
       {/* Stats Grid */}
       <DashboardStats
