@@ -11,6 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const Auth = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -31,63 +34,6 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">EventBalance</CardTitle>
-          <CardDescription>
-            Система управления мероприятиями
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-[400px]">
-            <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="login">Вход в систему</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <LoginForm />
-            </TabsContent>
-            
-            <div className="mt-6 text-center">
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>Нет доступа к системе?</p>
-                <p>Обратитесь к администратору для получения приглашения.</p>
-              </div>
-              
-              <div className="mt-4">
-                <Button 
-                  variant="link" 
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-sm"
-                >
-                  Забыли пароль?
-                </Button>
-              </div>
-            </div>
-          </Tabs>
-
-          {showForgotPassword && (
-            <ForgotPasswordDialog 
-              open={showForgotPassword}
-              onOpenChange={setShowForgotPassword}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// Компонент формы входа
-const LoginForm = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,45 +81,72 @@ const LoginForm = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Вход в систему</CardTitle>
-        <CardDescription>
-          Введите свои данные для входа в EventBalance
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-[90%] max-w-[450px] sm:w-[400px]">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">EventBalance</CardTitle>
+          <CardDescription>
+            Система управления мероприятиями
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Войти
+            </Button>
+          </form>
+          
+          <div className="mt-6 text-center">
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>Нет доступа к системе?</p>
+              <p>Обратитесь к администратору для получения приглашения.</p>
+            </div>
+            
+            <div className="mt-4">
+              <Button 
+                variant="link" 
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm"
+              >
+                Забыли пароль?
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Пароль</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+
+          {showForgotPassword && (
+            <ForgotPasswordDialog 
+              open={showForgotPassword}
+              onOpenChange={setShowForgotPassword}
             />
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Войти
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
+
 
 // Компонент диалога восстановления пароля
 const ForgotPasswordDialog = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
