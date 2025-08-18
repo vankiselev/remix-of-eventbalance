@@ -26,14 +26,14 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email, token, firstName, lastName, role }: InvitationEmailRequest = await req.json();
 
-    const baseUrl = Deno.env.get("SITE_URL") || "https://wpxhmajdeunabximyfln.supabase.co";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://eventbalance.ru";
     const inviteUrl = `${baseUrl}/invite?token=${token}`;
     
     const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
     const roleDisplay = role === 'admin' ? 'Администратор' : 'Сотрудник';
 
     const emailResponse = await resend.emails.send({
-      from: "EventBalance <noreply@eventbalance.com>",
+      from: "EventBalance <onboarding@resend.dev>",
       to: [email],
       subject: "Приглашение в EventBalance",
       html: `
