@@ -42,47 +42,85 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_employees_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
           actual_cost: number | null
+          animators: string[] | null
           budget: number
+          contractors: string[] | null
           created_at: string
           created_by: string
           description: string | null
           end_date: string
+          event_time: string | null
           id: string
+          location: string | null
+          managers: string[] | null
           name: string
+          notes: string | null
+          photos: string[] | null
+          project_owner: string | null
+          show_program: string | null
           start_date: string
           status: string
           updated_at: string
+          videos: string[] | null
         }
         Insert: {
           actual_cost?: number | null
+          animators?: string[] | null
           budget?: number
+          contractors?: string[] | null
           created_at?: string
           created_by: string
           description?: string | null
           end_date: string
+          event_time?: string | null
           id?: string
+          location?: string | null
+          managers?: string[] | null
           name: string
+          notes?: string | null
+          photos?: string[] | null
+          project_owner?: string | null
+          show_program?: string | null
           start_date: string
           status?: string
           updated_at?: string
+          videos?: string[] | null
         }
         Update: {
           actual_cost?: number | null
+          animators?: string[] | null
           budget?: number
+          contractors?: string[] | null
           created_at?: string
           created_by?: string
           description?: string | null
           end_date?: string
+          event_time?: string | null
           id?: string
+          location?: string | null
+          managers?: string[] | null
           name?: string
+          notes?: string | null
+          photos?: string[] | null
+          project_owner?: string | null
+          show_program?: string | null
           start_date?: string
           status?: string
           updated_at?: string
+          videos?: string[] | null
         }
         Relationships: []
       }

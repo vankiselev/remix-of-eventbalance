@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Menu, X, DollarSign, Calendar, Users, BarChart3 } from "lucide-react";
+import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
@@ -34,6 +34,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
   const menuItems = [
     { id: "dashboard", label: "Панель управления", icon: BarChart3 },
     { id: "events", label: "Мероприятия", icon: Calendar },
+    { id: "calendar", label: "Календарь", icon: CalendarDays },
     { id: "finances", label: "Финансы", icon: DollarSign },
     { id: "staff", label: "Сотрудники", icon: Users },
   ];

@@ -69,17 +69,17 @@ const Staff = () => {
 
       setProfiles(profilesData || []);
 
-      // Fetch employees with their profiles
-      const { data: employeesData, error } = await supabase
-        .from("employees")
-        .select(`
-          *,
-          profiles!employees_user_id_fkey(*)
-        `)
-        .order("hire_date", { ascending: false });
+       // Fetch employees with their profiles
+       const { data: employeesData, error } = await supabase
+         .from("employees")
+         .select(`
+           *,
+           profiles!inner(*)
+         `)
+         .order("hire_date", { ascending: false });
 
-      if (error) throw error;
-      setEmployees(employeesData || []);
+       if (error) throw error;
+       setEmployees(employeesData || []);
     } catch (error) {
       console.error("Error fetching staff data:", error);
       toast({
