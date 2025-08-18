@@ -5,86 +5,87 @@
 
 @layer base {
   :root {
-    /* EventBalance Pure Black Text System */
-    --background: 255 255 255; /* Pure white */
-    --foreground: 0 0 0; /* Pure black - #000000 */
-    --card: 255 255 255; /* Pure white */
-    --card-foreground: 0 0 0; /* Pure black - #000000 */
-    --popover: 255 255 255; /* Pure white */
-    --popover-foreground: 0 0 0; /* Pure black - #000000 */
-    --primary: 59 130 246; /* blue-500 - #3B82F6 */
-    --primary-foreground: 255 255 255; /* white */
-    --secondary: 229 231 235; /* gray-200 - #E5E7EB */
-    --secondary-foreground: 0 0 0; /* Pure black - #000000 */
-    --muted: 249 250 251; /* gray-50 - #F9FAFB */
-    --muted-foreground: 0 0 0; /* Pure black - #000000 */
-    --accent: 243 244 246; /* gray-100 - #F3F4F6 */
-    --accent-foreground: 0 0 0; /* Pure black - #000000 */
-    --destructive: 239 68 68; /* red-500 - #EF4444 */
-    --destructive-foreground: 255 255 255; /* white */
-    --border: 229 231 235; /* gray-200 - #E5E7EB */
-    --input: 209 213 219; /* gray-300 - #D1D5DB */
-    --ring: 59 130 246; /* blue-500 - #3B82F6 */
+    /* EventBalance HSL Color System - ТЗ Compliant */
+    --background: 0 0% 100%; /* Pure white - #FFFFFF */
+    --foreground: 0 0% 0%; /* Pure black - #000000 */
+    --card: 0 0% 100%; /* Pure white - #FFFFFF */
+    --card-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --popover: 0 0% 100%; /* Pure white - #FFFFFF */
+    --popover-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --primary: 220 91% 60%; /* Blue - #2563EB */
+    --primary-foreground: 0 0% 100%; /* White - #FFFFFF */
+    --secondary: 220 14% 91%; /* Light gray - #E5E7EB */
+    --secondary-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --muted: 210 20% 98%; /* Very light gray - #F9FAFB */
+    --muted-foreground: 220 9% 23%; /* Dark gray - #374151 */
+    --accent: 210 17% 95%; /* Light gray - #F3F4F6 */
+    --accent-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --destructive: 0 84% 60%; /* Red - #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* White - #FFFFFF */
+    --border: 220 13% 82%; /* Gray border - #D1D5DB */
+    --input: 220 13% 82%; /* Gray input - #D1D5DB */
+    --ring: 220 91% 60%; /* Blue ring - #2563EB */
     --radius: 0.75rem; /* 12px */
 
-    /* Financial Colors - High Contrast */
-    --success: 16 185 129; /* emerald-500 - #10B981 */
-    --success-foreground: 255 255 255; /* white */
-    --success-light: 236 253 245; /* emerald-50 - #ECFDF5 */
-    --danger: 239 68 68; /* red-500 - #EF4444 */
-    --danger-foreground: 255 255 255; /* white */
-    --danger-light: 254 242 242; /* red-50 - #FEF2F2 */
-    --warning: 245 158 11; /* amber-500 - #F59E0B */
-    --warning-foreground: 255 255 255; /* white */
-    --warning-light: 255 251 235; /* amber-50 - #FFFBEB */
-    --info: 59 130 246; /* blue-500 - #3B82F6 */
-    --info-foreground: 255 255 255; /* white */
-    --info-light: 239 246 255; /* blue-50 - #EFF6FF */
+    /* Financial Colors - ТЗ Compliant */
+    --success: 159 73% 46%; /* Green - #10B981 */
+    --success-foreground: 0 0% 100%; /* White */
+    --success-light: 155 100% 96%; /* Light green - #ECFDF5 */
+    --danger: 0 84% 60%; /* Red - #EF4444 */
+    --danger-foreground: 0 0% 100%; /* White */
+    --danger-light: 0 86% 97%; /* Light red - #FEF2F2 */
+    --warning: 43 89% 50%; /* Amber - #F59E0B */
+    --warning-foreground: 0 0% 100%; /* White */
+    --warning-light: 48 100% 96%; /* Light amber - #FFFBEB */
+    --info: 220 91% 60%; /* Blue - #2563EB */
+    --info-foreground: 0 0% 100%; /* White */
+    --info-light: 214 100% 97%; /* Light blue - #EFF6FF */
 
-    /* Cash Type Colors - High Contrast */
-    --cash-nastya: 59 130 246; /* blue-500 - #3B82F6 */
-    --cash-lera: 16 185 129; /* emerald-500 - #10B981 */
-    --cash-vanya: 147 51 234; /* purple-500 - #9333EA */
+    /* Cash Type Colors */
+    --cash-nastya: 220 91% 60%; /* Blue - #2563EB */
+    --cash-lera: 159 73% 46%; /* Green - #10B981 */
+    --cash-vanya: 271 91% 56%; /* Purple - #9333EA */
 
-    /* Sidebar */
-    --sidebar-background: 255 255 255; /* Pure white */
-    --sidebar-foreground: 0 0 0; /* Pure black - #000000 */
-    --sidebar-primary: 59 130 246; /* blue-500 - #3B82F6 */
-    --sidebar-primary-foreground: 255 255 255; /* white */
-    --sidebar-accent: 229 231 235; /* gray-200 - #E5E7EB */
-    --sidebar-accent-foreground: 0 0 0; /* Pure black - #000000 */
-    --sidebar-border: 229 231 235; /* gray-200 - #E5E7EB */
-    --sidebar-ring: 59 130 246; /* blue-500 - #3B82F6 */
+    /* Sidebar - Pure White */
+    --sidebar-background: 0 0% 100%; /* Pure white - #FFFFFF */
+    --sidebar-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --sidebar-primary: 220 91% 60%; /* Blue - #2563EB */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 220 14% 91%; /* Light gray - #E5E7EB */
+    --sidebar-accent-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --sidebar-border: 220 13% 82%; /* Gray border - #D1D5DB */
+    --sidebar-ring: 220 91% 60%; /* Blue ring - #2563EB */
   }
 
   .dark {
-    --background: 15 23 42; /* slate-900 */
-    --foreground: 248 250 252; /* slate-50 */
-    --card: 30 41 59; /* slate-700 */
-    --card-foreground: 248 250 252; /* slate-50 */
-    --popover: 30 41 59; /* slate-700 */
-    --popover-foreground: 248 250 252; /* slate-50 */
-    --primary: 129 140 248; /* indigo-400 */
-    --primary-foreground: 15 23 42; /* slate-900 */
-    --secondary: 51 65 85; /* slate-600 */
-    --secondary-foreground: 248 250 252; /* slate-50 */
-    --muted: 51 65 85; /* slate-600 */
-    --muted-foreground: 148 163 184; /* slate-400 */
-    --accent: 51 65 85; /* slate-600 */
-    --accent-foreground: 248 250 252; /* slate-50 */
-    --destructive: 220 38 38; /* red-600 */
-    --destructive-foreground: 248 250 252; /* slate-50 */
-    --border: 51 65 85; /* slate-600 */
-    --input: 51 65 85; /* slate-600 */
-    --ring: 129 140 248; /* indigo-400 */
-    --sidebar-background: 30 41 59; /* slate-700 */
-    --sidebar-foreground: 248 250 252; /* slate-50 */
-    --sidebar-primary: 129 140 248; /* indigo-400 */
-    --sidebar-primary-foreground: 15 23 42; /* slate-900 */
-    --sidebar-accent: 51 65 85; /* slate-600 */
-    --sidebar-accent-foreground: 248 250 252; /* slate-50 */
-    --sidebar-border: 51 65 85; /* slate-600 */
-    --sidebar-ring: 129 140 248; /* indigo-400 */
+    /* Dark mode also uses white background for consistency */
+    --background: 0 0% 100%; /* Pure white - #FFFFFF */
+    --foreground: 0 0% 0%; /* Pure black - #000000 */
+    --card: 0 0% 100%; /* Pure white - #FFFFFF */
+    --card-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --popover: 0 0% 100%; /* Pure white - #FFFFFF */
+    --popover-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --primary: 220 91% 60%; /* Blue - #2563EB */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 220 14% 91%; /* Light gray - #E5E7EB */
+    --secondary-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --muted: 210 20% 98%; /* Very light gray - #F9FAFB */
+    --muted-foreground: 220 9% 23%; /* Dark gray - #374151 */
+    --accent: 210 17% 95%; /* Light gray - #F3F4F6 */
+    --accent-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --destructive: 0 84% 60%; /* Red - #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 220 13% 82%; /* Gray border - #D1D5DB */
+    --input: 220 13% 82%; /* Gray input - #D1D5DB */
+    --ring: 220 91% 60%; /* Blue ring - #2563EB */
+    --sidebar-background: 0 0% 100%; /* Pure white - #FFFFFF */
+    --sidebar-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --sidebar-primary: 220 91% 60%; /* Blue - #2563EB */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 220 14% 91%; /* Light gray - #E5E7EB */
+    --sidebar-accent-foreground: 0 0% 0%; /* Pure black - #000000 */
+    --sidebar-border: 220 13% 82%; /* Gray border - #D1D5DB */
+    --sidebar-ring: 220 91% 60%; /* Blue ring - #2563EB */
   }
 }
 
@@ -121,88 +122,125 @@
     @apply text-xs text-muted-foreground;
   }
 
-  /* Money Display - Large and Bold */
+  /* Money Display - ТЗ Compliant */
   .money-display {
-    @apply text-xl font-bold tracking-tight;
+    @apply text-xl font-bold tracking-tight text-foreground;
   }
 
   .money-display-large {
-    @apply text-2xl font-bold tracking-tight;
+    @apply text-2xl font-bold tracking-tight text-foreground;
   }
 
   .money-positive {
-    @apply text-emerald-600 font-bold;
+    @apply font-bold;
+    color: #10B981; /* Green - exact ТЗ color */
   }
 
   .money-negative {
-    @apply text-red-500 font-bold;
+    @apply font-bold;
+    color: #EF4444; /* Red - exact ТЗ color */
   }
 
   .money-neutral {
-    @apply text-black font-bold;
+    @apply font-bold;
+    color: #000000; /* Pure black - exact ТЗ color */
   }
 
-  /* Cash Type Badges - Pure Black Text */
+  /* Cash Type Badges - ТЗ Compliant */
   .badge-nastya {
-    @apply bg-blue-50 text-black border border-blue-200 px-2 py-1 rounded-md text-xs font-medium;
+    @apply px-2 py-1 rounded-md text-xs font-medium border;
+    background-color: #EFF6FF; /* Light blue */
+    color: #000000; /* Pure black text */
+    border-color: #DBEAFE; /* Blue border */
   }
 
   .badge-lera {
-    @apply bg-emerald-50 text-black border border-emerald-200 px-2 py-1 rounded-md text-xs font-medium;
+    @apply px-2 py-1 rounded-md text-xs font-medium border;
+    background-color: #ECFDF5; /* Light green */
+    color: #000000; /* Pure black text */
+    border-color: #D1FAE5; /* Green border */
   }
 
   .badge-vanya {
-    @apply bg-purple-50 text-black border border-purple-200 px-2 py-1 rounded-md text-xs font-medium;
+    @apply px-2 py-1 rounded-md text-xs font-medium border;
+    background-color: #FAF5FF; /* Light purple */
+    color: #000000; /* Pure black text */
+    border-color: #E9D5FF; /* Purple border */
   }
 
-  /* Table Styles - Pure Black Text */
+  /* Table Styles - ТЗ Compliant Zebra Pattern */
   .table-zebra tbody tr:nth-child(odd) {
-    @apply bg-gray-50;
+    background-color: #F9FAFB; /* Light gray - exact ТЗ color */
   }
 
   .table-zebra tbody tr:nth-child(even) {
-    @apply bg-white;
+    background-color: #FFFFFF; /* Pure white - exact ТЗ color */
   }
 
   .table-header {
-    @apply bg-gray-100 border-b border-gray-200 text-black font-semibold;
+    background-color: #F3F4F6; /* Light gray header - exact ТЗ color */
+    border-bottom: 1px solid #D1D5DB;
+    color: #000000; /* Pure black text */
+    font-weight: 600;
   }
 
   .table-cell {
-    @apply text-black border-b border-gray-100;
+    color: #000000; /* Pure black text */
+    border-bottom: 1px solid #F3F4F6;
   }
 
-  /* Navigation - Pure Black Text */
+  /* Navigation - ТЗ Compliant White Sidebar */
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200;
   }
 
   .nav-item-active {
-    @apply bg-gray-200 text-black font-semibold shadow-sm;
+    background-color: #E5E7EB; /* Light gray active - exact ТЗ color */
+    color: #000000; /* Pure black text */
+    font-weight: 700; /* Bold text for active */
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
   }
 
   .nav-item-inactive {
-    @apply text-black hover:text-black hover:bg-gray-100;
+    color: #000000; /* Pure black text */
   }
 
-  /* Card Content - Pure Black Text */
+  .nav-item-inactive:hover {
+    color: #000000; /* Pure black text on hover */
+    background-color: #F3F4F6; /* Light gray hover */
+  }
+
+  /* Card Content - ТЗ Compliant */
   .summary-card {
-    @apply bg-white border border-gray-200 rounded-xl p-6 shadow-sm;
+    background-color: #FFFFFF; /* Pure white - exact ТЗ color */
+    border: 1px solid #D1D5DB; /* Gray border */
+    border-radius: 0.75rem; /* 12px - ТЗ requirement */
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
 
   .summary-card-title {
-    @apply text-sm font-medium text-black mb-1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #000000; /* Pure black text - exact ТЗ color */
+    margin-bottom: 0.25rem;
   }
 
   .summary-card-value {
-    @apply text-2xl font-bold text-black;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #000000; /* Pure black text - exact ТЗ color */
   }
 
   .summary-card-value-positive {
-    @apply text-2xl font-bold text-emerald-600;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #10B981; /* Green - exact ТЗ color */
   }
 
   .summary-card-value-negative {
-    @apply text-2xl font-bold text-red-500;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #EF4444; /* Red - exact ТЗ color */
   }
 }
