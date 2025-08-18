@@ -288,7 +288,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employee_profile: {
+        Row: {
+          created_at: string | null
+          hire_date: string | null
+          id: string | null
+          position: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_employees_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_role: {
