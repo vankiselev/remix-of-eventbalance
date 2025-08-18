@@ -168,8 +168,42 @@ export type Database = {
           },
         ]
       }
+      financial_audit_log: {
+        Row: {
+          action: string
+          change_description: string | null
+          changed_at: string
+          changed_by: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          change_description?: string | null
+          changed_at?: string
+          changed_by: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          change_description?: string | null
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       financial_transactions: {
         Row: {
+          cash_type: string | null
           category: string
           created_at: string
           created_by: string
@@ -177,12 +211,15 @@ export type Database = {
           expense_amount: number | null
           id: string
           income_amount: number | null
+          notes: string | null
           operation_date: string
           project_id: string | null
           project_owner: string
+          receipt_url: string | null
           updated_at: string
         }
         Insert: {
+          cash_type?: string | null
           category: string
           created_at?: string
           created_by: string
@@ -190,12 +227,15 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          notes?: string | null
           operation_date?: string
           project_id?: string | null
           project_owner: string
+          receipt_url?: string | null
           updated_at?: string
         }
         Update: {
+          cash_type?: string | null
           category?: string
           created_at?: string
           created_by?: string
@@ -203,9 +243,11 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          notes?: string | null
           operation_date?: string
           project_id?: string | null
           project_owner?: string
+          receipt_url?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -377,27 +419,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cash_lera: number | null
+          cash_nastya: number | null
+          cash_vanya: number | null
           created_at: string
           email: string
           full_name: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          total_cash_on_hand: number | null
           updated_at: string
         }
         Insert: {
+          cash_lera?: number | null
+          cash_nastya?: number | null
+          cash_vanya?: number | null
           created_at?: string
           email: string
           full_name: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
+          total_cash_on_hand?: number | null
           updated_at?: string
         }
         Update: {
+          cash_lera?: number | null
+          cash_nastya?: number | null
+          cash_vanya?: number | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          total_cash_on_hand?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -407,9 +461,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_user_cash_totals: {
+        Args: { user_uuid: string }
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+        }[]
+      }
       can_view_invitation: {
         Args: { invitation_token: string }
         Returns: boolean
+      }
+      get_company_cash_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+        }[]
       }
       get_my_employee_profile: {
         Args: Record<PropertyKey, never>

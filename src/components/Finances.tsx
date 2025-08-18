@@ -1,97 +1,122 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { CashSummary } from "./CashSummary";
+import { EmployeeList } from "./EmployeeList";
+import { TransactionsTable } from "./TransactionsTable";
+import { TransactionDialog } from "./TransactionDialog";
 
-interface Event {
-  id: string;
-  name: string;
+interface CashSummaryData {
+  total_cash: number;
+  cash_nastya: number;
+  cash_lera: number;
+  cash_vanya: number;
 }
 
-interface Income {
+interface Employee {
   id: string;
-  source: string;
+  full_name: string;
+  email: string;
+  role: string;
+  totalCash: number;
+}
+
+interface Transaction {
+  id: string;
+  operation_date: string;
+  project_owner: string;
   description: string;
-  amount: number;
-  income_date: string;
-  event_id: string;
-  events?: { name: string };
-}
-
-interface Expense {
-  id: string;
+  income_amount: number;
+  expense_amount: number;
   category: string;
-  description: string;
-  amount: number;
-  expense_date: string;
-  event_id: string;
+  cash_type?: string;
+  project_id?: string;
   events?: { name: string };
 }
 
 const Finances = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showIncomeDialog, setShowIncomeDialog] = useState(false);
-  const [showExpenseDialog, setShowExpenseDialog] = useState(false);
-  
-  const [incomeForm, setIncomeForm] = useState({
-    source: "",
-    description: "",
-    amount: "",
-    income_date: "",
-    event_id: "",
-  });
-
-  const [expenseForm, setExpenseForm] = useState({
-    category: "",
-    description: "",
-    amount: "",
-    expense_date: "",
-    event_id: "",
-  });
-
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [userRole, setUserRole] = useState<string>('employee');
+
+  const employeeId = searchParams.get('employeeId');
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user) {
+      fetchUserRole();
+      fetchData();
+    }
+  }, [user, employeeId]);
+
+  const fetchUserRole = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (data) {
+      setUserRole(data.role);
+    }
+  };
+
+  const [loading, setLoading] = useState(true);
+  const [companySummary, setCompanySummary] = useState<CashSummaryData>({
+    total_cash: 0,
+    cash_nastya: 0,
+    cash_lera: 0,
+    cash_vanya: 0
+  });
+  const [userSummary, setUserSummary] = useState<CashSummaryData>({
+    total_cash: 0,
+    cash_nastya: 0,
+    cash_lera: 0,
+    cash_vanya: 0
+  });
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showTransactionDialog, setShowTransactionDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+    if (user) {
+      fetchData();
+    }
+  }, [user, employeeId]);
 
   const fetchData = async () => {
     try {
-      // Fetch events
-      const { data: eventsData } = await supabase
-        .from("events")
-        .select("id, name")
-        .order("name");
+      setLoading(true);
 
-      // Fetch incomes
-      const { data: incomesData } = await supabase
-        .from("incomes")
-        .select("*, events(name)")
-        .order("income_date", { ascending: false });
-
-      // Fetch expenses
-      const { data: expensesData } = await supabase
-        .from("expenses")
-        .select("*, events(name)")
-        .order("expense_date", { ascending: false });
-
-      setEvents(eventsData || []);
-      setIncomes(incomesData || []);
-      setExpenses(expensesData || []);
+      if (isAdmin) {
+        // Admin: fetch company-wide data
+        await fetchCompanySummary();
+        
+        if (employeeId) {
+          // Viewing specific employee
+          await fetchEmployeeDetails(employeeId);
+          await fetchEmployeeTransactions(employeeId);
+        } else {
+          // Admin dashboard
+          await fetchEmployees();
+        }
+      } else {
+        // Employee: fetch only their data
+        await fetchUserSummary();
+        await fetchUserTransactions();
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -104,109 +129,202 @@ const Finances = () => {
     }
   };
 
-  const handleCreateIncome = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const { error } = await supabase.from("incomes").insert({
-        source: incomeForm.source,
-        description: incomeForm.description,
-        amount: parseFloat(incomeForm.amount),
-        income_date: incomeForm.income_date,
-        event_id: incomeForm.event_id,
-        created_by: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Успешно!",
-        description: "Доход добавлен",
-      });
-
-      setIncomeForm({
-        source: "",
-        description: "",
-        amount: "",
-        income_date: "",
-        event_id: "",
-      });
-      setShowIncomeDialog(false);
-      fetchData();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось добавить доход",
+  const fetchCompanySummary = async () => {
+    const { data, error } = await supabase
+      .rpc('get_company_cash_summary');
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      setCompanySummary({
+        total_cash: data[0].total_cash || 0,
+        cash_nastya: data[0].cash_nastya || 0,
+        cash_lera: data[0].cash_lera || 0,
+        cash_vanya: data[0].cash_vanya || 0
       });
     }
   };
 
-  const handleCreateExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchUserSummary = async () => {
     if (!user) return;
-
-    try {
-      const { error } = await supabase.from("expenses").insert({
-        category: expenseForm.category,
-        description: expenseForm.description,
-        amount: parseFloat(expenseForm.amount),
-        expense_date: expenseForm.expense_date,
-        event_id: expenseForm.event_id,
-        created_by: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Успешно!",
-        description: "Расход добавлен",
-      });
-
-      setExpenseForm({
-        category: "",
-        description: "",
-        amount: "",
-        expense_date: "",
-        event_id: "",
-      });
-      setShowExpenseDialog(false);
-      fetchData();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось добавить расход",
+    
+    const { data, error } = await supabase
+      .rpc('calculate_user_cash_totals', { user_uuid: user.id });
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      setUserSummary({
+        total_cash: data[0].total_cash || 0,
+        cash_nastya: data[0].cash_nastya || 0,
+        cash_lera: data[0].cash_lera || 0,
+        cash_vanya: data[0].cash_vanya || 0
       });
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `${new Intl.NumberFormat("ru-RU").format(amount)} ₽`;
+  const fetchEmployees = async () => {
+    const { data: profilesData, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role');
+
+    if (error) throw error;
+
+    // Calculate cash totals for each employee
+    const employeesWithCash = await Promise.all(
+      (profilesData || []).map(async (employee) => {
+        const { data: cashData } = await supabase
+          .rpc('calculate_user_cash_totals', { user_uuid: employee.id });
+        
+        return {
+          ...employee,
+          totalCash: cashData?.[0]?.total_cash || 0
+        };
+      })
+    );
+
+    setEmployees(employeesWithCash);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU");
+  const fetchEmployeeDetails = async (empId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role')
+      .eq('id', empId)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+      const { data: cashData } = await supabase
+        .rpc('calculate_user_cash_totals', { user_uuid: empId });
+
+      setSelectedEmployee({
+        ...data,
+        totalCash: cashData?.[0]?.total_cash || 0
+      });
+
+      // Fetch employee's individual summary
+      if (cashData && cashData.length > 0) {
+        setUserSummary({
+          total_cash: cashData[0].total_cash || 0,
+          cash_nastya: cashData[0].cash_nastya || 0,
+          cash_lera: cashData[0].cash_lera || 0,
+          cash_vanya: cashData[0].cash_vanya || 0
+        });
+      }
+    }
   };
 
-  const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const profit = totalIncome - totalExpenses;
+  const fetchEmployeeTransactions = async (empId: string) => {
+    const { data, error } = await supabase
+      .from('financial_transactions')
+      .select(`
+        *,
+        events(name)
+      `)
+      .eq('created_by', empId)
+      .order('operation_date', { ascending: false });
+
+    if (error) throw error;
+    setTransactions(data || []);
+  };
+
+  const fetchUserTransactions = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('financial_transactions')
+      .select(`
+        *,
+        events(name)
+      `)
+      .eq('created_by', user.id)
+      .order('operation_date', { ascending: false });
+
+    if (error) throw error;
+    setTransactions(data || []);
+  };
+
+  const handleEmployeeClick = (empId: string) => {
+    navigate(`/finances?employeeId=${empId}`);
+  };
+
+  const handleBackToEmployees = () => {
+    navigate('/finances');
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setShowTransactionDialog(true);
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!deletingTransactionId || !user) return;
+
+    try {
+      // Get transaction data for audit log
+      const { data: transactionData } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('id', deletingTransactionId)
+        .single();
+
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('id', deletingTransactionId);
+
+      if (error) throw error;
+
+      // Log audit trail for deletion
+      if (transactionData) {
+        await supabase.from("financial_audit_log").insert({
+          transaction_id: deletingTransactionId,
+          changed_by: user.id,
+          action: "deleted",
+          old_data: transactionData,
+          change_description: `Deleted transaction: ${transactionData.description}`,
+        });
+      }
+
+      toast({
+        title: "Успешно!",
+        description: "Транзакция удалена",
+      });
+
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить транзакцию",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeletingTransactionId(null);
+    }
+  };
+
+  const confirmDeleteTransaction = (transactionId: string) => {
+    setDeletingTransactionId(transactionId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleTransactionSuccess = () => {
+    setEditingTransaction(null);
+    fetchData();
+  };
 
   if (loading) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Финансы</h1>
         <div className="animate-pulse space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <div className="bg-muted h-5 w-24 rounded"></div>
-                  <div className="bg-muted h-8 w-32 rounded"></div>
-                </CardHeader>
-              </Card>
+          <div className="grid gap-4 md:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-muted h-24 rounded"></div>
             ))}
           </div>
         </div>
@@ -214,288 +332,117 @@ const Finances = () => {
     );
   }
 
+  // Admin viewing specific employee
+  if (isAdmin && employeeId && selectedEmployee) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleBackToEmployees}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Назад к списку
+            </Button>
+            <h1 className="text-3xl font-bold">Финансы - {selectedEmployee.full_name}</h1>
+          </div>
+        </div>
+
+        <CashSummary 
+          totalCash={userSummary.total_cash}
+          cashNastya={userSummary.cash_nastya}
+          cashLera={userSummary.cash_lera}
+          cashVanya={userSummary.cash_vanya}
+        />
+
+        <TransactionsTable
+          transactions={transactions}
+          canEdit={true}
+          onEdit={handleEditTransaction}
+          onDelete={confirmDeleteTransaction}
+          onAdd={() => setShowTransactionDialog(true)}
+          userName={selectedEmployee.full_name}
+        />
+
+        <TransactionDialog
+          open={showTransactionDialog}
+          onOpenChange={setShowTransactionDialog}
+          transaction={editingTransaction}
+          onSuccess={handleTransactionSuccess}
+          targetUserId={employeeId}
+        />
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Подтвердите удаление</DialogTitle>
+              <DialogDescription>
+                Вы уверены, что хотите удалить эту транзакцию? Это действие нельзя отменить.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteTransaction}>
+                Удалить
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Admin dashboard
+  if (isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Финансы</h1>
+            <p className="text-muted-foreground">Управление финансами компании</p>
+          </div>
+        </div>
+
+        <CashSummary 
+          totalCash={companySummary.total_cash}
+          cashNastya={companySummary.cash_nastya}
+          cashLera={companySummary.cash_lera}
+          cashVanya={companySummary.cash_vanya}
+          isCompanyWide={true}
+        />
+        <EmployeeList employees={employees} onEmployeeClick={handleEmployeeClick} />
+      </div>
+    );
+  }
+
+  // Employee view
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Финансы</h1>
-          <p className="text-muted-foreground">Управляйте доходами и расходами</p>
+          <p className="text-muted-foreground">Ваши личные финансы</p>
         </div>
       </div>
 
-      {/* Financial Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Общий доход</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalIncome)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Общие расходы</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalExpenses)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Прибыль</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(profit)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Вы можете только просматривать свои транзакции. Для редактирования обратитесь к администратору.
+        </AlertDescription>
+      </Alert>
 
-      {/* Tabs for Income and Expenses */}
-      <Tabs defaultValue="incomes" className="w-full">
-        <TabsList>
-          <TabsTrigger value="incomes">Доходы</TabsTrigger>
-          <TabsTrigger value="expenses">Расходы</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="incomes" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Доходы</h2>
-            <Dialog open={showIncomeDialog} onOpenChange={setShowIncomeDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить доход
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Добавить доход</DialogTitle>
-                  <DialogDescription>
-                    Введите информацию о доходе
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateIncome} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="income-source">Источник</Label>
-                    <Input
-                      id="income-source"
-                      value={incomeForm.source}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, source: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="income-description">Описание</Label>
-                    <Textarea
-                      id="income-description"
-                      value={incomeForm.description}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, description: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="income-amount">Сумма (₽)</Label>
-                    <Input
-                      id="income-amount"
-                      type="number"
-                      step="0.01"
-                      value={incomeForm.amount}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="income-date">Дата</Label>
-                    <Input
-                      id="income-date"
-                      type="date"
-                      value={incomeForm.income_date}
-                      onChange={(e) => setIncomeForm({ ...incomeForm, income_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="income-event">Мероприятие</Label>
-                    <Select 
-                      value={incomeForm.event_id} 
-                      onValueChange={(value) => setIncomeForm({ ...incomeForm, event_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите мероприятие" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {events.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Добавить доход
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          <div className="space-y-3">
-            {incomes.map((income) => (
-              <Card key={income.id}>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">{income.source}</h3>
-                      <p className="text-sm text-muted-foreground">{income.description}</p>
-                      <Badge variant="outline">{income.events?.name}</Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">
-                        {formatCurrency(income.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(income.income_date)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="expenses" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Расходы</h2>
-            <Dialog open={showExpenseDialog} onOpenChange={setShowExpenseDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить расход
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Добавить расход</DialogTitle>
-                  <DialogDescription>
-                    Введите информацию о расходе
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateExpense} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-category">Категория</Label>
-                    <Select 
-                      value={expenseForm.category} 
-                      onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите категорию" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="catering">Кейтеринг</SelectItem>
-                        <SelectItem value="venue">Аренда площадки</SelectItem>
-                        <SelectItem value="equipment">Оборудование</SelectItem>
-                        <SelectItem value="decoration">Декор</SelectItem>
-                        <SelectItem value="staff">Персонал</SelectItem>
-                        <SelectItem value="marketing">Маркетинг</SelectItem>
-                        <SelectItem value="other">Прочее</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-description">Описание</Label>
-                    <Textarea
-                      id="expense-description"
-                      value={expenseForm.description}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-amount">Сумма (₽)</Label>
-                    <Input
-                      id="expense-amount"
-                      type="number"
-                      step="0.01"
-                      value={expenseForm.amount}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-date">Дата</Label>
-                    <Input
-                      id="expense-date"
-                      type="date"
-                      value={expenseForm.expense_date}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-event">Мероприятие</Label>
-                    <Select 
-                      value={expenseForm.event_id} 
-                      onValueChange={(value) => setExpenseForm({ ...expenseForm, event_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите мероприятие" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {events.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Добавить расход
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          <div className="space-y-3">
-            {expenses.map((expense) => (
-              <Card key={expense.id}>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">{expense.category}</h3>
-                      <p className="text-sm text-muted-foreground">{expense.description}</p>
-                      <Badge variant="outline">{expense.events?.name}</Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">
-                        -{formatCurrency(expense.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(expense.expense_date)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+      <CashSummary 
+        totalCash={userSummary.total_cash}
+        cashNastya={userSummary.cash_nastya}
+        cashLera={userSummary.cash_lera}
+        cashVanya={userSummary.cash_vanya}
+      />
+
+      <TransactionsTable
+        transactions={transactions}
+        canEdit={false}
+      />
     </div>
   );
 };
