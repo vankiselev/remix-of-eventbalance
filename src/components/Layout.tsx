@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3 } from "lucide-react";
+import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {

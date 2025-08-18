@@ -5,6 +5,7 @@ import Events from "@/components/Events";
 import EventCalendar from "@/components/EventCalendar";
 import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
+import TransactionForm from "@/components/TransactionForm";
 import FinancialTransaction from "@/components/FinancialTransaction";
 import CashDashboard from "@/components/CashDashboard";
 
