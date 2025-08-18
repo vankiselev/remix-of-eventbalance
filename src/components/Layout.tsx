@@ -110,16 +110,17 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
       {/* Main content */}
       <div className="md:pl-64">
         {/* Top bar */}
-        <div className="flex h-16 items-center justify-between border-b bg-card px-6 md:hidden">
+        <div className="flex h-16 items-center justify-between border-b bg-card px-6">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:block"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Финансовый Помощник</h1>
-          <div className="w-10" />
+          <h1 className="text-lg font-semibold md:hidden">Финансовый Помощник</h1>
+          <div className="w-10 md:hidden" />
         </div>
 
         {/* Page content */}
