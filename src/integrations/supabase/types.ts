@@ -168,6 +168,56 @@ export type Database = {
           },
         ]
       }
+      financial_transactions: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          expense_amount: number | null
+          id: string
+          income_amount: number | null
+          operation_date: string
+          project_id: string | null
+          project_owner: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          description: string
+          expense_amount?: number | null
+          id?: string
+          income_amount?: number | null
+          operation_date?: string
+          project_id?: string | null
+          project_owner: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          expense_amount?: number | null
+          id?: string
+          income_amount?: number | null
+          operation_date?: string
+          project_id?: string | null
+          project_owner?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incomes: {
         Row: {
           amount: number

@@ -183,10 +183,7 @@ const Finances = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-    }).format(amount);
+    return `${new Intl.NumberFormat("ru-RU").format(amount)} ₽`;
   };
 
   const formatDate = (dateString: string) => {

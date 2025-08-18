@@ -35,6 +35,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     { id: "dashboard", label: "Панель управления", icon: BarChart3 },
     { id: "events", label: "Мероприятия", icon: Calendar },
     { id: "calendar", label: "Календарь", icon: CalendarDays },
+    { id: "transaction", label: "Внести Трату/Приход", icon: DollarSign },
     { id: "finances", label: "Финансы", icon: DollarSign },
     { id: "staff", label: "Сотрудники", icon: Users },
   ];

@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, DollarSign } from "lucide-react";
+import { Plus, Calendar, DollarSign, Eye } from "lucide-react";
+import EventDetails from "@/components/EventDetails";
+import { formatCurrency } from "@/utils/currency";
 
 interface Event {
   id: string;
@@ -27,11 +29,12 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    start_date: "",
-    end_date: "",
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
     budget: "",
   });
   const { user } = useAuth();
@@ -131,16 +134,21 @@ const Events = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
+
+  const handleViewEvent = (eventId: string) => {
+    setSelectedEventId(eventId);
+  };
+
+  const handleBackToList = () => {
+    setSelectedEventId(null);
+  };
+
+  if (selectedEventId) {
+    return <EventDetails eventId={selectedEventId} onBack={handleBackToList} />;
+  }
 
   if (loading) {
     return (
@@ -209,24 +217,24 @@ const Events = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата начала</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_date">Дата окончания</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    required
-                  />
+                        <Label htmlFor="start_date">Дата начала</Label>
+                        <Input
+                          id="start_date"
+                          type="date"
+                          value={formData.start_date}
+                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="end_date">Дата окончания</Label>
+                        <Input
+                          id="end_date"
+                          type="date"
+                          value={formData.end_date}
+                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                          required
+                        />
                 </div>
               </div>
               <div className="space-y-2">
@@ -278,17 +286,20 @@ const Events = () => {
                   <Calendar className="mr-2 h-4 w-4" />
                   {formatDate(event.start_date)} - {formatDate(event.end_date)}
                 </div>
-                <div className="flex items-center text-sm">
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  <span className="font-medium">Бюджет: {formatCurrency(event.budget)}</span>
-                </div>
-                {event.actual_cost > 0 && (
-                  <div className="flex items-center text-sm">
-                    <span className="font-medium">
-                      Потрачено: {formatCurrency(event.actual_cost)}
-                    </span>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center">
+                    <DollarSign className="mr-1 h-4 w-4" />
+                    {formatCurrency(event.budget)}
                   </div>
-                )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleViewEvent(event.id)}
+                  >
+                    <Eye className="mr-1 h-4 w-4" />
+                    Просмотр
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
