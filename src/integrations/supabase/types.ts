@@ -461,6 +461,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { invitation_token: string }
+        Returns: boolean
+      }
       calculate_user_cash_totals: {
         Args: { user_uuid: string }
         Returns: {
@@ -481,6 +485,18 @@ export type Database = {
           cash_nastya: number
           cash_vanya: number
           total_cash: number
+        }[]
+      }
+      get_invitation_by_token: {
+        Args: { invitation_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          first_name: string
+          id: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: string
         }[]
       }
       get_my_employee_profile: {

@@ -67,17 +67,11 @@ export function InvitePage() {
       }
 
       try {
-        // Hash the token to find the invitation
-        const tokenHash = await hashToken(token);
-        
+        // Use the secure database function to validate invitation
         const { data, error } = await supabase
-          .from("invitations")
-          .select("*")
-          .eq("token_hash", tokenHash)
-          .eq("status", "sent")
-          .single();
+          .rpc('get_invitation_by_token', { invitation_token: token });
 
-        if (error || !data) {
+        if (error || !data || data.length === 0) {
           toast({
             title: "Ошибка",
             description: "Приглашение не найдено или уже использовано",
@@ -87,18 +81,7 @@ export function InvitePage() {
           return;
         }
 
-        // Check if invitation is expired
-        if (new Date(data.expires_at) < new Date()) {
-          toast({
-            title: "Ошибка",
-            description: "Срок действия приглашения истек",
-            variant: "destructive",
-          });
-          navigate("/auth");
-          return;
-        }
-
-        setInvitation(data);
+        setInvitation(data[0]);
       } catch (error) {
         console.error("Error validating invitation:", error);
         toast({
@@ -165,14 +148,9 @@ export function InvitePage() {
         console.error("Error updating profile:", profileError);
       }
 
-      // Mark invitation as accepted
+      // Mark invitation as accepted using secure function
       const { error: invitationError } = await supabase
-        .from("invitations")
-        .update({ 
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-        })
-        .eq("id", invitation.id);
+        .rpc('accept_invitation', { invitation_token: token });
 
       if (invitationError) {
         console.error("Error updating invitation:", invitationError);
