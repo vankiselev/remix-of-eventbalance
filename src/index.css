@@ -5,56 +5,56 @@
 
 @layer base {
   :root {
-    /* Modern EventBalance Color Palette */
-    --background: 248 250 252; /* slate-50 */
-    --foreground: 15 23 42; /* slate-900 */
-    --card: 255 255 255; /* white */
-    --card-foreground: 15 23 42; /* slate-900 */
-    --popover: 255 255 255; /* white */
-    --popover-foreground: 15 23 42; /* slate-900 */
-    --primary: 99 102 241; /* indigo-500 */
-    --primary-foreground: 248 250 252; /* slate-50 */
-    --secondary: 241 245 249; /* slate-100 */
-    --secondary-foreground: 30 41 59; /* slate-700 */
-    --muted: 248 250 252; /* slate-50 */
-    --muted-foreground: 100 116 139; /* slate-500 */
-    --accent: 241 245 249; /* slate-100 */
-    --accent-foreground: 30 41 59; /* slate-700 */
-    --destructive: 239 68 68; /* red-500 */
-    --destructive-foreground: 248 250 252; /* slate-50 */
-    --border: 226 232 240; /* slate-200 */
-    --input: 226 232 240; /* slate-200 */
-    --ring: 99 102 241; /* indigo-500 */
+    /* EventBalance High-Contrast Color System */
+    --background: 255 255 255; /* Pure white */
+    --foreground: 17 24 39; /* gray-900 - #111827 */
+    --card: 255 255 255; /* Pure white */
+    --card-foreground: 17 24 39; /* gray-900 - #111827 */
+    --popover: 255 255 255; /* Pure white */
+    --popover-foreground: 17 24 39; /* gray-900 - #111827 */
+    --primary: 59 130 246; /* blue-500 - #3B82F6 */
+    --primary-foreground: 255 255 255; /* white */
+    --secondary: 229 231 235; /* gray-200 - #E5E7EB */
+    --secondary-foreground: 17 24 39; /* gray-900 - #111827 */
+    --muted: 249 250 251; /* gray-50 - #F9FAFB */
+    --muted-foreground: 107 114 128; /* gray-500 - #6B7280 */
+    --accent: 243 244 246; /* gray-100 - #F3F4F6 */
+    --accent-foreground: 17 24 39; /* gray-900 - #111827 */
+    --destructive: 239 68 68; /* red-500 - #EF4444 */
+    --destructive-foreground: 255 255 255; /* white */
+    --border: 229 231 235; /* gray-200 - #E5E7EB */
+    --input: 209 213 219; /* gray-300 - #D1D5DB */
+    --ring: 59 130 246; /* blue-500 - #3B82F6 */
     --radius: 0.75rem; /* 12px */
 
-    /* EventBalance Specific Colors */
-    --success: 34 197 94; /* green-500 */
-    --success-foreground: 255 255 255;
-    --success-light: 240 253 244; /* green-50 */
-    --danger: 239 68 68; /* red-500 */
-    --danger-foreground: 255 255 255;
-    --danger-light: 254 242 242; /* red-50 */
-    --warning: 245 158 11; /* amber-500 */
-    --warning-foreground: 255 255 255;
-    --warning-light: 255 251 235; /* amber-50 */
-    --info: 59 130 246; /* blue-500 */
-    --info-foreground: 255 255 255;
-    --info-light: 239 246 255; /* blue-50 */
+    /* Financial Colors - High Contrast */
+    --success: 16 185 129; /* emerald-500 - #10B981 */
+    --success-foreground: 255 255 255; /* white */
+    --success-light: 236 253 245; /* emerald-50 - #ECFDF5 */
+    --danger: 239 68 68; /* red-500 - #EF4444 */
+    --danger-foreground: 255 255 255; /* white */
+    --danger-light: 254 242 242; /* red-50 - #FEF2F2 */
+    --warning: 245 158 11; /* amber-500 - #F59E0B */
+    --warning-foreground: 255 255 255; /* white */
+    --warning-light: 255 251 235; /* amber-50 - #FFFBEB */
+    --info: 59 130 246; /* blue-500 - #3B82F6 */
+    --info-foreground: 255 255 255; /* white */
+    --info-light: 239 246 255; /* blue-50 - #EFF6FF */
 
-    /* Cash Type Colors */
-    --cash-nastya: 59 130 246; /* blue-500 */
-    --cash-lera: 34 197 94; /* green-500 */
-    --cash-vanya: 147 51 234; /* purple-500 */
+    /* Cash Type Colors - High Contrast */
+    --cash-nastya: 59 130 246; /* blue-500 - #3B82F6 */
+    --cash-lera: 16 185 129; /* emerald-500 - #10B981 */
+    --cash-vanya: 147 51 234; /* purple-500 - #9333EA */
 
     /* Sidebar */
-    --sidebar-background: 255 255 255; /* white */
-    --sidebar-foreground: 15 23 42; /* slate-900 */
-    --sidebar-primary: 99 102 241; /* indigo-500 */
-    --sidebar-primary-foreground: 248 250 252; /* slate-50 */
-    --sidebar-accent: 241 245 249; /* slate-100 */
-    --sidebar-accent-foreground: 30 41 59; /* slate-700 */
-    --sidebar-border: 226 232 240; /* slate-200 */
-    --sidebar-ring: 99 102 241; /* indigo-500 */
+    --sidebar-background: 255 255 255; /* Pure white */
+    --sidebar-foreground: 17 24 39; /* gray-900 - #111827 */
+    --sidebar-primary: 59 130 246; /* blue-500 - #3B82F6 */
+    --sidebar-primary-foreground: 255 255 255; /* white */
+    --sidebar-accent: 229 231 235; /* gray-200 - #E5E7EB */
+    --sidebar-accent-foreground: 17 24 39; /* gray-900 - #111827 */
+    --sidebar-border: 229 231 235; /* gray-200 - #E5E7EB */
+    --sidebar-ring: 59 130 246; /* blue-500 - #3B82F6 */
   }
 
   .dark {
@@ -108,7 +108,7 @@
     @apply card-modern p-6 hover:shadow-lg;
   }
 
-  /* Typography */
+  /* Typography - High Contrast */
   .text-heading {
     @apply text-lg font-semibold text-foreground;
   }
@@ -121,51 +121,88 @@
     @apply text-xs text-muted-foreground;
   }
 
-  /* Money Display */
+  /* Money Display - Large and Bold */
+  .money-display {
+    @apply text-xl font-bold tracking-tight;
+  }
+
+  .money-display-large {
+    @apply text-2xl font-bold tracking-tight;
+  }
+
   .money-positive {
-    @apply text-green-600 font-semibold;
+    @apply text-emerald-600 font-bold;
   }
 
   .money-negative {
-    @apply text-red-600 font-semibold;
+    @apply text-red-500 font-bold;
   }
 
   .money-neutral {
-    @apply text-foreground font-semibold;
+    @apply text-gray-900 font-bold;
   }
 
-  /* Cash Type Badges */
+  /* Cash Type Badges - High Contrast */
   .badge-nastya {
-    @apply bg-blue-50 text-blue-700 border-blue-200;
+    @apply bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md text-xs font-medium;
   }
 
   .badge-lera {
-    @apply bg-green-50 text-green-700 border-green-200;
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-md text-xs font-medium;
   }
 
   .badge-vanya {
-    @apply bg-purple-50 text-purple-700 border-purple-200;
+    @apply bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-md text-xs font-medium;
   }
 
-  /* Table Styles */
+  /* Table Styles - High Contrast */
   .table-zebra tbody tr:nth-child(odd) {
-    @apply bg-slate-50/50;
+    @apply bg-gray-50;
+  }
+
+  .table-zebra tbody tr:nth-child(even) {
+    @apply bg-white;
   }
 
   .table-header {
-    @apply bg-slate-100 border-b border-slate-200;
+    @apply bg-gray-100 border-b border-gray-200 text-gray-900 font-semibold;
   }
 
-  /* Navigation */
+  .table-cell {
+    @apply text-gray-900 border-b border-gray-100;
+  }
+
+  /* Navigation - High Contrast */
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200;
   }
 
   .nav-item-active {
-    @apply bg-primary/10 text-primary font-medium;
+    @apply bg-gray-200 text-gray-900 font-semibold shadow-sm;
   }
 
   .nav-item-inactive {
-    @apply text-muted-foreground hover:text-foreground hover:bg-accent;
+    @apply text-gray-500 hover:text-gray-900 hover:bg-gray-100;
+  }
+
+  /* Card Content */
+  .summary-card {
+    @apply bg-white border border-gray-200 rounded-xl p-6 shadow-sm;
+  }
+
+  .summary-card-title {
+    @apply text-sm font-medium text-gray-500 mb-1;
+  }
+
+  .summary-card-value {
+    @apply text-2xl font-bold text-gray-900;
+  }
+
+  .summary-card-value-positive {
+    @apply text-2xl font-bold text-emerald-600;
+  }
+
+  .summary-card-value-negative {
+    @apply text-2xl font-bold text-red-500;
   }
 }
