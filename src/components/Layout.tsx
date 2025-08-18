@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +15,21 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
   const { signOut, user } = useAuth();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setUserRole(data?.role || 'employee');
+      }
+    };
+    fetchUserRole();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -36,9 +52,9 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     { id: "events", label: "Мероприятия", icon: Calendar },
     { id: "calendar", label: "Календарь", icon: CalendarDays },
     { id: "transaction", label: "Внести Трату/Приход", icon: PlusCircle },
-        { id: "finances", label: "Финансы", icon: DollarSign },
-        { id: "staff", label: "Сотрудники", icon: Users },
-        { id: "invitations", label: "Приглашения", icon: Users },
+    { id: "finances", label: "Финансы", icon: DollarSign },
+    { id: "staff", label: "Сотрудники", icon: Users },
+    ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: Users }] : []),
   ];
 
   return (
@@ -60,7 +76,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex h-16 items-center justify-between px-6 border-b">
-            <h1 className="text-lg font-semibold">Финансовый Помощник</h1>
+            <h1 className="text-lg font-semibold">EventBalance</h1>
             <Button
               variant="ghost"
               size="icon"
@@ -100,6 +116,9 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
             <div className="flex items-center justify-between">
               <div className="text-sm">
                 <p className="font-medium">{user?.email}</p>
+                <p className="text-muted-foreground text-xs">
+                  {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
@@ -121,7 +140,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold md:hidden">Финансовый Помощник</h1>
+          <h1 className="text-lg font-semibold md:hidden">EventBalance</h1>
           <div className="w-10 md:hidden" />
         </div>
 
