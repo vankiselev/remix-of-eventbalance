@@ -19,6 +19,7 @@ interface Event {
   description: string | null;
   start_date: string;
   event_time: string | null;
+  end_time?: string | null;
   status: string;
   location: string | null;
   venue_id: string | null;
@@ -45,6 +46,7 @@ const Events = () => {
     description: "",
     start_date: new Date().toISOString().split('T')[0],
     event_time: "",
+    end_time: "",
     status: "planning" as const,
     venue_id: "",
     project_owner: "",
@@ -87,6 +89,7 @@ const Events = () => {
         description: formData.description,
         start_date: formData.start_date,
         event_time: formData.event_time || null,
+        end_time: formData.end_time || null,
         status: formData.status,
         venue_id: formData.venue_id || null,
         project_owner: formData.project_owner,
@@ -105,6 +108,7 @@ const Events = () => {
         description: "",
         start_date: new Date().toISOString().split('T')[0],
         event_time: "",
+        end_time: "",
         status: "planning" as const,
         venue_id: "",
         project_owner: "",
@@ -228,9 +232,9 @@ const Events = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата</Label>
+                  <Label htmlFor="start_date">Дата начала</Label>
                   <Input
                     id="start_date"
                     type="date"
@@ -239,14 +243,25 @@ const Events = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_time">Время</Label>
-                  <Input
-                    id="event_time"
-                    type="time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="event_time">Время начала</Label>
+                    <Input
+                      id="event_time"
+                      type="time"
+                      value={formData.event_time}
+                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">Время окончания</Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">

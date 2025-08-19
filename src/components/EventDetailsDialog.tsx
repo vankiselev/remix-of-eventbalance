@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { CalendarIcon, Edit, Save, X, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Edit, Save, X, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,7 @@ interface Event {
   description: string | null;
   start_date: string;
   event_time?: string | null;
+  end_time?: string | null;
   location?: string | null;
   status: string;
   notes?: string | null;
@@ -35,6 +38,21 @@ interface Event {
   updated_at: string;
 }
 
+interface Contractor {
+  id: string;
+  name: string;
+}
+
+interface Venue {
+  id: string;
+  name: string;
+}
+
+interface Employee {
+  id: string;
+  full_name: string;
+}
+
 interface EventDetailsDialogProps {
   event: Event | null;
   open: boolean;
@@ -46,13 +64,44 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editedEvent, setEditedEvent] = useState<Event | null>(null);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedContractors, setSelectedContractors] = useState<string[]>([]);
+  const [selectedResponsibleManagers, setSelectedResponsibleManagers] = useState<string[]>([]);
+  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (event) {
       setEditedEvent({ ...event });
+      setSelectedContractors(event.contractor_ids || []);
+      setSelectedResponsibleManagers(event.responsible_manager_ids || []);
+      setSelectedManagers(event.manager_ids || []);
     }
   }, [event]);
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
+
+  const fetchData = async () => {
+    try {
+      const [contractorsRes, venuesRes, employeesRes] = await Promise.all([
+        supabase.from("contractors").select("id, name"),
+        supabase.from("venues").select("id, name"),
+        supabase.rpc("get_admin_profiles").select("id, full_name")
+      ]);
+
+      if (contractorsRes.data) setContractors(contractorsRes.data);
+      if (venuesRes.data) setVenues(venuesRes.data);
+      if (employeesRes.data) setEmployees(employeesRes.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   const handleSave = async () => {
     if (!editedEvent) return;
@@ -66,10 +115,15 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
           description: editedEvent.description,
           start_date: editedEvent.start_date,
           event_time: editedEvent.event_time,
+          end_time: editedEvent.end_time,
           location: editedEvent.location,
           status: editedEvent.status,
           notes: editedEvent.notes,
           project_owner: editedEvent.project_owner,
+          venue_id: editedEvent.venue_id,
+          contractor_ids: selectedContractors,
+          responsible_manager_ids: selectedResponsibleManagers,
+          manager_ids: selectedManagers,
         })
         .eq("id", editedEvent.id);
 
@@ -86,7 +140,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
       toast({
         variant: "destructive",
         title: "Ошибка",
-        description: error.message || "Не удалось загрузить данные мероприятия",
+        description: error.message || "Не удалось обновить мероприятие",
       });
     } finally {
       setLoading(false);
@@ -95,7 +149,31 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
 
   const handleCancel = () => {
     setEditedEvent(event ? { ...event } : null);
+    setSelectedContractors(event?.contractor_ids || []);
+    setSelectedResponsibleManagers(event?.responsible_manager_ids || []);
+    setSelectedManagers(event?.manager_ids || []);
     setIsEditing(false);
+  };
+
+  const toggleSelection = (id: string, selectedList: string[], setSelectedList: (list: string[]) => void) => {
+    if (selectedList.includes(id)) {
+      setSelectedList(selectedList.filter(item => item !== id));
+    } else {
+      setSelectedList([...selectedList, id]);
+    }
+  };
+
+  const getNameById = (id: string, type: 'contractor' | 'venue' | 'employee') => {
+    switch (type) {
+      case 'contractor':
+        return contractors.find(c => c.id === id)?.name || id;
+      case 'venue':
+        return venues.find(v => v.id === id)?.name || id;
+      case 'employee':
+        return employees.find(e => e.id === id)?.full_name || id;
+      default:
+        return id;
+    }
   };
 
   const handleDelete = async () => {
@@ -196,7 +274,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Basic Information */}
           <div className="space-y-4">
             <div>
@@ -212,7 +290,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             </div>
 
             <div>
-              <Label>Описание</Label>
+              <Label>Описание (Шоу-программа)</Label>
               {isEditing ? (
                 <Textarea
                   value={editedEvent.description || ""}
@@ -224,38 +302,39 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             </div>
 
             <div>
-              <Label>Локация</Label>
-              {isEditing ? (
-                <Input
-                  value={editedEvent.location || ""}
-                  onChange={(e) => setEditedEvent({ ...editedEvent, location: e.target.value })}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{event.location || "Не указано"}</p>
-              )}
-            </div>
-
-            <div>
               <Label>Статус</Label>
               {isEditing ? (
-                <select
-                  className="w-full p-2 border rounded"
-                  value={editedEvent.status}
-                  onChange={(e) => setEditedEvent({ ...editedEvent, status: e.target.value })}
-                >
-                  <option value="planning">Планирование</option>
-                  <option value="confirmed">Подтверждено</option>
-                  <option value="in_progress">В процессе</option>
-                  <option value="completed">Завершено</option>
-                  <option value="cancelled">Отменено</option>
-                </select>
+                <Select value={editedEvent.status} onValueChange={(value) => setEditedEvent({ ...editedEvent, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите статус" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planning">Планирование</SelectItem>
+                    <SelectItem value="confirmed">Подтверждено</SelectItem>
+                    <SelectItem value="in_progress">В процессе</SelectItem>
+                    <SelectItem value="completed">Завершено</SelectItem>
+                    <SelectItem value="cancelled">Отменено</SelectItem>
+                  </SelectContent>
+                </Select>
               ) : (
                 <p className="text-sm text-muted-foreground">{event.status}</p>
               )}
             </div>
+
+            <div>
+              <Label>Владелец проекта</Label>
+              {isEditing ? (
+                <Input
+                  value={editedEvent.project_owner || ""}
+                  onChange={(e) => setEditedEvent({ ...editedEvent, project_owner: e.target.value })}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">{event.project_owner || "Не указано"}</p>
+              )}
+            </div>
           </div>
 
-          {/* Dates and Times */}
+          {/* Dates, Times and Location */}
           <div className="space-y-4">
             <div>
               <Label>Дата начала</Label>
@@ -300,19 +379,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             </div>
 
             <div>
-              <Label>Владелец проекта</Label>
-              {isEditing ? (
-                <Input
-                  value={editedEvent.project_owner || ""}
-                  onChange={(e) => setEditedEvent({ ...editedEvent, project_owner: e.target.value })}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{event.project_owner || "Не указано"}</p>
-              )}
-            </div>
-
-            <div>
-              <Label>Время мероприятия</Label>
+              <Label>Время начала</Label>
               {isEditing ? (
                 <Input
                   type="time"
@@ -321,6 +388,41 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">{event.event_time || "Не указано"}</p>
+              )}
+            </div>
+
+            <div>
+              <Label>Время окончания</Label>
+              {isEditing ? (
+                <Input
+                  type="time"
+                  value={editedEvent.end_time || ""}
+                  onChange={(e) => setEditedEvent({ ...editedEvent, end_time: e.target.value })}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">{event.end_time || "Не указано"}</p>
+              )}
+            </div>
+
+            <div>
+              <Label>Площадка (место проведения)</Label>
+              {isEditing ? (
+                <Select value={editedEvent.venue_id || ""} onValueChange={(value) => setEditedEvent({ ...editedEvent, venue_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите площадку" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {venues.map((venue) => (
+                      <SelectItem key={venue.id} value={venue.id}>
+                        {venue.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {event.venue_id ? getNameById(event.venue_id, 'venue') : "Не указано"}
+                </p>
               )}
             </div>
 
@@ -336,22 +438,128 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
               )}
             </div>
           </div>
+
+          {/* Team and Contractors */}
+          <div className="space-y-4">
+            <div>
+              <Label>Подрядчики (Шоу-программа)</Label>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    {contractors.map((contractor) => (
+                      <div key={contractor.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedContractors.includes(contractor.id)}
+                          onChange={() => toggleSelection(contractor.id, selectedContractors, setSelectedContractors)}
+                        />
+                        <span className="text-sm">{contractor.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedContractors.map(id => (
+                      <Badge key={id} variant="secondary" className="text-xs">
+                        {getNameById(id, 'contractor')}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {event.contractor_ids?.length ? (
+                    event.contractor_ids.map(id => (
+                      <Badge key={id} variant="secondary" className="text-xs">
+                        {getNameById(id, 'contractor')}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Не назначено</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label>Ответственный менеджер</Label>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    {employees.map((employee) => (
+                      <div key={employee.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedResponsibleManagers.includes(employee.id)}
+                          onChange={() => toggleSelection(employee.id, selectedResponsibleManagers, setSelectedResponsibleManagers)}
+                        />
+                        <span className="text-sm">{employee.full_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedResponsibleManagers.map(id => (
+                      <Badge key={id} variant="outline" className="text-xs">
+                        {getNameById(id, 'employee')}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {event.responsible_manager_ids?.length ? (
+                    event.responsible_manager_ids.map(id => (
+                      <Badge key={id} variant="outline" className="text-xs">
+                        {getNameById(id, 'employee')}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Не назначено</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label>Менеджеры</Label>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    {employees.map((employee) => (
+                      <div key={employee.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedManagers.includes(employee.id)}
+                          onChange={() => toggleSelection(employee.id, selectedManagers, setSelectedManagers)}
+                        />
+                        <span className="text-sm">{employee.full_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedManagers.map(id => (
+                      <Badge key={id} variant="default" className="text-xs">
+                        {getNameById(id, 'employee')}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {event.manager_ids?.length ? (
+                    event.manager_ids.map(id => (
+                      <Badge key={id} variant="default" className="text-xs">
+                        {getNameById(id, 'employee')}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Не назначено</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Event Information */}
-        <div className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            {event.contractor_ids && event.contractor_ids.length > 0 && (
-              <span>Подрядчики: {event.contractor_ids.length} выбрано</span>
-            )}
-            {event.responsible_manager_ids && event.responsible_manager_ids.length > 0 && (
-              <span className="ml-4">Ответственные: {event.responsible_manager_ids.length} назначено</span>
-            )}
-            {event.manager_ids && event.manager_ids.length > 0 && (
-              <span className="ml-4">Менеджеры: {event.manager_ids.length} назначено</span>
-            )}
-          </p>
-        </div>
       </DialogContent>
     </Dialog>
   );
