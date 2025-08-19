@@ -518,6 +518,18 @@ export type Database = {
         Args: { token_value: string }
         Returns: string
       }
+      request_password_reset: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      reset_password_with_token: {
+        Args: { new_password: string; reset_token: string }
+        Returns: boolean
+      }
+      validate_password_reset_token: {
+        Args: { reset_token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: "admin" | "employee"

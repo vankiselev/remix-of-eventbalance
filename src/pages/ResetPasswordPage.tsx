@@ -43,18 +43,34 @@ export function ResetPasswordPage() {
   });
 
   useEffect(() => {
-    const validateSession = async () => {
+    const validateToken = async () => {
+      const token = searchParams.get('token');
+      
+      if (!token) {
+        toast({
+          title: "Ошибка",
+          description: "Недействительная ссылка для сброса пароля",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Validate token using our secure function
+        const { data: isValid, error } = await supabase.rpc(
+          'validate_password_reset_token',
+          { reset_token: token }
+        );
         
         if (error) throw error;
         
-        if (session) {
+        if (isValid) {
           setIsValidToken(true);
         } else {
           toast({
             title: "Ошибка",
-            description: "Недействительная ссылка для сброса пароля",
+            description: "Ссылка недействительна или истекла",
             variant: "destructive",
           });
           navigate("/auth");
@@ -72,26 +88,48 @@ export function ResetPasswordPage() {
       }
     };
 
-    validateSession();
-  }, [navigate, toast]);
+    validateToken();
+  }, [searchParams, navigate, toast]);
 
   const onSubmit = async (data: PasswordFormData) => {
+    const token = searchParams.get('token');
+    
+    if (!token) {
+      toast({
+        title: "Ошибка",
+        description: "Недействительная ссылка для сброса пароля",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      const { error } = await supabase.auth.updateUser({
-        password: data.password,
-      });
+      // First validate and mark token as used
+      const { data: isValid, error: tokenError } = await supabase.rpc(
+        'reset_password_with_token',
+        { 
+          reset_token: token,
+          new_password: data.password 
+        }
+      );
 
-      if (error) throw error;
+      if (tokenError || !isValid) {
+        toast({
+          title: "Ошибка",
+          description: "Ссылка недействительна или истекла",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
 
       toast({
         title: "Пароль обновлен",
         description: "Ваш пароль успешно изменен. Теперь вы можете войти в систему.",
       });
 
-      // Sign out and redirect to login
-      await supabase.auth.signOut();
       navigate("/auth");
     } catch (error: any) {
       console.error("Error updating password:", error);
