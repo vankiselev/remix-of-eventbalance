@@ -1,43 +1,13 @@
-import { useState, useEffect } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem
-} from "@/components/ui/dropdown-menu";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Edit, 
-  Trash2, 
-  MoreHorizontal, 
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Filter,
-  User
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { Edit, Trash2, RefreshCw, FilterX } from "lucide-react";
+import { TransactionFilter } from "./TransactionFilter";
 
 interface Transaction {
   id: string;
@@ -51,8 +21,8 @@ interface Transaction {
   notes: string | null;
   created_by: string;
   project_id: string | null;
-  events?: { name: string } | null;
-  profiles?: { full_name: string } | null;
+  type: 'income' | 'expense';
+  amount: number;
 }
 
 interface TransactionTableProps {
@@ -61,97 +31,70 @@ interface TransactionTableProps {
   onEdit?: (transaction: Transaction) => void;
 }
 
-interface SortConfig {
-  field: keyof Transaction | 'project_name' | 'creator_name';
-  direction: 'asc' | 'desc';
-}
-
-interface FilterConfig {
-  [key: string]: string[];
-}
-
 export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: TransactionTableProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "operation_date", direction: "desc" });
-  const [filters, setFilters] = useState<FilterConfig>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  // Filter state
+  const [filters, setFilters] = useState<Record<string, string[]>>({
+    category: [],
+    project_owner: [],
+    cash_type: [],
+    type: [],
+  });
+  
   const { toast } = useToast();
-
-  // Get unique values for filters
-  const getUniqueValues = (field: string) => {
-    const values = transactions.map(t => {
-      switch (field) {
-        case 'project_name':
-          return t.events?.name || 'Без проекта';
-        case 'project_owner':
-          return t.project_owner;
-        case 'category':
-          return t.category;
-        case 'cash_type':
-          return t.cash_type ? getCashTypeDisplay(t.cash_type) : 'Не указано';
-        case 'creator_name':
-          return t.profiles?.full_name || 'Неизвестно';
-        default:
-          return '';
-      }
-    }).filter(Boolean);
-    return [...new Set(values)].sort();
-  };
 
   useEffect(() => {
     fetchTransactions();
-  }, [userId]);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [transactions, searchTerm, sortConfig, filters]);
+  }, [userId, isAdmin]);
 
   const fetchTransactions = async () => {
     try {
-      setError(null);
       setLoading(true);
       
       let query = supabase
         .from("financial_transactions")
         .select(`
-          *,
-          events:project_id(name)
+          id,
+          description,
+          category,
+          income_amount,
+          expense_amount,
+          operation_date,
+          project_owner,
+          cash_type,
+          notes,
+          created_at,
+          created_by,
+          project_id
         `)
         .order("operation_date", { ascending: false });
 
-      // If specific userId provided, filter by that user
-      if (userId) {
+      // Apply user-specific filtering if not admin
+      if (userId && !isAdmin) {
+        query = query.eq("created_by", userId);
+      } else if (userId && isAdmin) {
         query = query.eq("created_by", userId);
       }
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error details:", error);
+        throw error;
+      }
 
-      // Fetch user names separately for admin view
-      const transactionsWithProfiles = isAdmin && !userId ? await Promise.all(
-        (data || []).map(async (transaction) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", transaction.created_by)
-            .single();
-          
-          return {
-            ...transaction,
-            profiles: profile ? { full_name: profile.full_name } : null
-          };
-        })
-      ) : (data || []).map(item => ({ ...item, profiles: null }));
+      const processedTransactions = (data || []).map(transaction => ({
+        ...transaction,
+        type: (transaction.income_amount && transaction.income_amount > 0) ? 'income' as const : 'expense' as const,
+        amount: (transaction.income_amount && transaction.income_amount > 0) ? transaction.income_amount : (transaction.expense_amount || 0),
+      }));
 
-      setTransactions(transactionsWithProfiles);
+      setTransactions(processedTransactions);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
-      setError(null); // Don't show error state, just show empty state
-      setTransactions([]);
       toast({
         variant: "destructive",
         title: "Ошибка",
@@ -162,87 +105,10 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }
   };
 
-  const applyFiltersAndSort = () => {
-    let filtered = [...transactions];
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.project_owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (transaction.events?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (transaction.profiles?.full_name || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply column filters
-    Object.entries(filters).forEach(([field, selectedValues]) => {
-      if (selectedValues.length > 0) {
-        filtered = filtered.filter(transaction => {
-          let value = '';
-          switch (field) {
-            case 'project_name':
-              value = transaction.events?.name || 'Без проекта';
-              break;
-            case 'project_owner':
-              value = transaction.project_owner;
-              break;
-            case 'category':
-              value = transaction.category;
-              break;
-            case 'cash_type':
-              value = transaction.cash_type ? getCashTypeDisplay(transaction.cash_type) : 'Не указано';
-              break;
-            case 'creator_name':
-              value = transaction.profiles?.full_name || 'Неизвестно';
-              break;
-          }
-          return selectedValues.includes(value);
-        });
-      }
-    });
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortConfig.field) {
-        case 'project_name':
-          aValue = a.events?.name || '';
-          bValue = b.events?.name || '';
-          break;
-        case 'creator_name':
-          aValue = a.profiles?.full_name || '';
-          bValue = b.profiles?.full_name || '';
-          break;
-        case 'expense_amount':
-          aValue = a.expense_amount || 0;
-          bValue = b.expense_amount || 0;
-          break;
-        case 'income_amount':
-          aValue = a.income_amount || 0;
-          bValue = b.income_amount || 0;
-          break;
-        default:
-          aValue = a[sortConfig.field as keyof Transaction];
-          bValue = b[sortConfig.field as keyof Transaction];
-      }
-      
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-      
-      const result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      return sortConfig.direction === "asc" ? result : -result;
-    });
-
-    setFilteredTransactions(filtered);
-  };
-
   const handleDelete = async (transactionId: string) => {
     if (!isAdmin) return;
 
+    setDeletingId(transactionId);
     try {
       const { error } = await supabase
         .from("financial_transactions")
@@ -264,323 +130,299 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         title: "Ошибка",
         description: "Не удалось удалить транзакцию",
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleSort = (field: keyof Transaction | 'project_name' | 'creator_name') => {
-    setSortConfig(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc"
-    }));
-  };
+  // Filter and memo logic
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(transaction => {
+      for (const [column, selectedValues] of Object.entries(filters)) {
+        if (selectedValues.length === 0) continue;
+        
+        let value = '';
+        switch (column) {
+          case 'category':
+            value = transaction.category;
+            break;
+          case 'project_owner':
+            value = transaction.project_owner;
+            break;
+          case 'cash_type':
+            value = transaction.cash_type || '';
+            break;
+          case 'type':
+            value = transaction.type;
+            break;
+          default:
+            continue;
+        }
+        
+        if (!selectedValues.includes(value)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [transactions, filters]);
 
-  const handleFilterChange = (field: string, value: string, checked: boolean) => {
-    setFilters(prev => {
-      const fieldFilters = prev[field] || [];
-      if (checked) {
-        return { ...prev, [field]: [...fieldFilters, value] };
-      } else {
-        return { ...prev, [field]: fieldFilters.filter(v => v !== value) };
+  // Generate filter options
+  const filterOptions = useMemo(() => {
+    const options: Record<string, Array<{value: string, label: string, count: number}>> = {
+      category: [],
+      project_owner: [],
+      cash_type: [],
+      type: [],
+    };
+
+    // Count occurrences
+    const counts: Record<string, Record<string, number>> = {
+      category: {},
+      project_owner: {},
+      cash_type: {},
+      type: {},
+    };
+
+    transactions.forEach(transaction => {
+      counts.category[transaction.category] = (counts.category[transaction.category] || 0) + 1;
+      counts.project_owner[transaction.project_owner] = (counts.project_owner[transaction.project_owner] || 0) + 1;
+      if (transaction.cash_type) {
+        counts.cash_type[transaction.cash_type] = (counts.cash_type[transaction.cash_type] || 0) + 1;
+      }
+      counts.type[transaction.type] = (counts.type[transaction.type] || 0) + 1;
+    });
+
+    // Generate options
+    Object.entries(counts.category).forEach(([value, count]) => {
+      options.category.push({ value, label: value, count });
+    });
+    
+    Object.entries(counts.project_owner).forEach(([value, count]) => {
+      options.project_owner.push({ value, label: value, count });
+    });
+    
+    Object.entries(counts.cash_type).forEach(([value, count]) => {
+      if (value !== 'undefined' && value) {
+        options.cash_type.push({ value, label: value, count });
       }
     });
+    
+    Object.entries(counts.type).forEach(([value, count]) => {
+      const label = value === 'income' ? 'Доход' : 'Расход';
+      options.type.push({ value, label, count });
+    });
+
+    // Sort options by label
+    Object.keys(options).forEach(key => {
+      options[key].sort((a, b) => a.label.localeCompare(b.label));
+    });
+
+    return options;
+  }, [transactions]);
+
+  const handleFilterChange = (column: string, values: string[]) => {
+    setFilters(prev => ({ ...prev, [column]: values }));
   };
 
-  const clearFilter = (field: string) => {
-    setFilters(prev => {
-      const newFilters = { ...prev };
-      delete newFilters[field];
-      return newFilters;
+  const handleResetFilter = (column: string) => {
+    setFilters(prev => ({ ...prev, [column]: [] }));
+  };
+
+  const handleResetAllFilters = () => {
+    setFilters({
+      category: [],
+      project_owner: [],
+      cash_type: [],
+      type: [],
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU");
-  };
-
-  const getCashTypeDisplay = (cashType: string) => {
-    const types = {
-      nastya: "Настя",
-      lera: "Лера", 
-      vanya: "Ваня"
-    };
-    return types[cashType as keyof typeof types] || cashType;
-  };
-
-  const getCashTypeBadge = (cashType: string | null) => {
-    if (!cashType) return <span className="text-muted-foreground">—</span>;
-    
-    const cashTypes = {
-      nastya: { label: "Настя", className: "bg-blue-100 text-blue-800" },
-      lera: { label: "Лера", className: "bg-green-100 text-green-800" },
-      vanya: { label: "Ваня", className: "bg-purple-100 text-purple-800" }
-    };
-
-    const type = cashTypes[cashType as keyof typeof cashTypes];
-    if (!type) return <span className="text-muted-foreground">{cashType}</span>;
-
-    return (
-      <Badge variant="outline" className={`${type.className} text-xs`}>
-        {type.label}
-      </Badge>
-    );
-  };
-
-  const SortableHeader = ({ 
-    field, 
-    children, 
-    className = "" 
-  }: { 
-    field: keyof Transaction | 'project_name' | 'creator_name'; 
-    children: React.ReactNode;
-    className?: string;
-  }) => {
-    const isActive = sortConfig.field === field;
-    return (
-      <TableHead className={`${className}`}>
-        <Button
-          variant="ghost"
-          onClick={() => handleSort(field)}
-          className="h-auto p-0 font-semibold text-black hover:text-gray-700 justify-start"
-        >
-          {children}
-          {isActive ? (
-            sortConfig.direction === "asc" ? 
-            <ArrowUp className="ml-2 h-4 w-4" /> : 
-            <ArrowDown className="ml-2 h-4 w-4" />
-          ) : (
-            <ArrowUpDown className="ml-2 h-4 w-4 opacity-40" />
-          )}
-        </Button>
-      </TableHead>
-    );
-  };
-
-  const FilterDropdown = ({ field, label }: { field: string; label: string }) => {
-    const uniqueValues = getUniqueValues(field);
-    const activeFilters = filters[field] || [];
-    
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className={`h-6 w-6 p-0 ${activeFilters.length > 0 ? 'text-blue-600' : 'text-gray-400'}`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56 p-3" align="start">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{label}</p>
-              {activeFilters.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => clearFilter(field)}
-                  className="h-auto p-0 text-xs text-muted-foreground"
-                >
-                  Очистить
-                </Button>
-              )}
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-2">
-              {uniqueValues.map(value => (
-                <div key={value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`${field}-${value}`}
-                    checked={activeFilters.includes(value)}
-                    onCheckedChange={(checked) => 
-                      handleFilterChange(field, value, checked as boolean)
-                    }
-                  />
-                  <label 
-                    htmlFor={`${field}-${value}`}
-                    className="text-sm cursor-pointer truncate"
-                  >
-                    {value}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
+  const hasActiveFilters = Object.values(filters).some(filter => filter.length > 0);
 
   if (loading) {
     return (
       <div className="space-y-4">
         <div className="animate-pulse">
-          <div className="bg-muted h-10 w-full rounded mb-4"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-muted h-16 w-full rounded mb-2"></div>
-          ))}
+          <div className="h-8 bg-muted rounded mb-4"></div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded"></div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Поиск по описанию, проекту, категории, имени..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+    <div className="space-y-4">
+      {/* Filter Controls */}
+      <div className="flex flex-wrap items-center gap-2 p-4 bg-muted/30 rounded-lg">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium">Фильтры:</span>
+          
+          <TransactionFilter
+            column="category"
+            title="Категория"
+            options={filterOptions.category}
+            selectedValues={filters.category}
+            onFilterChange={(values) => handleFilterChange('category', values)}
+            onReset={() => handleResetFilter('category')}
           />
+          
+          <TransactionFilter
+            column="project_owner"
+            title="Проект"
+            options={filterOptions.project_owner}
+            selectedValues={filters.project_owner}
+            onFilterChange={(values) => handleFilterChange('project_owner', values)}
+            onReset={() => handleResetFilter('project_owner')}
+          />
+          
+          <TransactionFilter
+            column="cash_type"
+            title="Кошелек"
+            options={filterOptions.cash_type}
+            selectedValues={filters.cash_type}
+            onFilterChange={(values) => handleFilterChange('cash_type', values)}
+            onReset={() => handleResetFilter('cash_type')}
+          />
+          
+          <TransactionFilter
+            column="type"
+            title="Тип"
+            options={filterOptions.type}
+            selectedValues={filters.type}
+            onFilterChange={(values) => handleFilterChange('type', values)}
+            onReset={() => handleResetFilter('type')}
+          />
+        </div>
+        
+        <div className="flex items-center gap-2 ml-auto">
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetAllFilters}
+              className="text-xs"
+            >
+              <FilterX className="w-3 h-3 mr-1" />
+              Сбросить все фильтры
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={fetchTransactions}>
+            <RefreshCw className="w-3 h-3 mr-1" />
+            Обновить
+          </Button>
         </div>
       </div>
 
-      {/* Enhanced Table */}
-      <div className="border rounded-lg overflow-hidden bg-white">
+      {/* Results Summary */}
+      <div className="text-sm text-muted-foreground">
+        Показано {filteredTransactions.length} из {transactions.length} транзакций
+        {hasActiveFilters && " (отфильтровано)"}
+      </div>
+
+      {/* Table */}
+      <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              {isAdmin && (
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span className="font-semibold text-black">Имя</span>
-                    <FilterDropdown field="creator_name" label="Фильтр по имени" />
-                  </div>
-                </TableHead>
-              )}
-              <SortableHeader field="operation_date" className="text-center">
-                Дата операции
-              </SortableHeader>
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="font-semibold text-black">Проект</span>
-                  <FilterDropdown field="project_name" label="Фильтр по проекту" />
-                </div>
-              </TableHead>
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="font-semibold text-black">Чей проект</span>
-                  <FilterDropdown field="project_owner" label="Фильтр по владельцу" />
-                </div>
-              </TableHead>
-              <SortableHeader field="description" className="text-center">
-                Подробное описание
-              </SortableHeader>
-              <SortableHeader field="expense_amount" className="text-center">
-                Траты
-              </SortableHeader>
-              <SortableHeader field="income_amount" className="text-center">
-                Приход
-              </SortableHeader>
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="font-semibold text-black">Статья прихода/расхода</span>
-                  <FilterDropdown field="category" label="Фильтр по категории" />
-                </div>
-              </TableHead>
-              {isAdmin && <TableHead className="text-center font-semibold text-black">Действия</TableHead>}
+              <TableHead>Дата</TableHead>
+              <TableHead>Описание</TableHead>
+              <TableHead>Категория</TableHead>
+              <TableHead>Проект</TableHead>
+              <TableHead>Кошелек</TableHead>
+              <TableHead>Тип</TableHead>
+              <TableHead className="text-right">Сумма</TableHead>
+              {(isAdmin || onEdit) && <TableHead className="w-20">Действия</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {error ? (
+            {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell 
-                  colSpan={isAdmin ? 9 : 7} 
-                  className="text-center py-12 text-red-600"
-                >
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : filteredTransactions.length === 0 ? (
-              <TableRow>
-                <TableCell 
-                  colSpan={isAdmin ? 9 : 7} 
-                  className="text-center py-12 text-muted-foreground"
-                >
-                  {searchTerm || Object.keys(filters).length > 0 ? "Транзакции не найдены" : "Транзакций пока нет"}
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  {transactions.length === 0 ? "Транзакций пока нет" : "Нет транзакций, соответствующих фильтрам"}
                 </TableCell>
               </TableRow>
             ) : (
               filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id} className="hover:bg-muted/30">
-                  {isAdmin && (
-                    <TableCell className="text-center align-middle">
-                      <div className="text-sm font-medium">
-                        {transaction.profiles?.full_name || "Неизвестно"}
-                      </div>
-                    </TableCell>
-                  )}
-                  <TableCell className="text-center align-middle">
-                    <div className="text-sm font-medium">
-                      {formatDate(transaction.operation_date)}
-                    </div>
+                  <TableCell>
+                    {new Date(transaction.operation_date).toLocaleDateString("ru-RU")}
                   </TableCell>
-                  <TableCell className="text-center align-middle">
-                    <div className="text-sm">
-                      {transaction.events?.name || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center align-middle">
-                    <div className="text-sm">
-                      {transaction.project_owner}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center align-middle max-w-xs">
-                    <div className="text-sm" title={transaction.description}>
+                  <TableCell className="max-w-48">
+                    <div className="truncate" title={transaction.description}>
                       {transaction.description}
                     </div>
                     {transaction.notes && (
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-xs text-muted-foreground mt-1 truncate" title={transaction.notes}>
                         {transaction.notes}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-center align-middle">
-                    {transaction.expense_amount 
-                      ? <span className="text-red-600 font-medium">{formatCurrency(transaction.expense_amount)}</span>
-                      : "—"
-                    }
+                  <TableCell>
+                    <Badge variant="outline">{transaction.category}</Badge>
                   </TableCell>
-                  <TableCell className="text-center align-middle">
-                    {transaction.income_amount 
-                      ? <span className="text-green-600 font-medium">{formatCurrency(transaction.income_amount)}</span>
-                      : "—"
-                    }
+                  <TableCell>{transaction.project_owner}</TableCell>
+                  <TableCell>
+                    {transaction.cash_type && (
+                      <Badge variant="secondary">{transaction.cash_type}</Badge>
+                    )}
                   </TableCell>
-                  <TableCell className="text-center align-middle">
-                    <Badge variant="outline" className="text-xs">
-                      {transaction.category}
+                  <TableCell>
+                    <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
+                      {transaction.type === 'income' ? 'Доход' : 'Расход'}
                     </Badge>
                   </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-center align-middle">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
+                  <TableCell className="text-right">
+                    <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </span>
+                  </TableCell>
+                  {(isAdmin || onEdit) && (
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEdit(transaction)}
+                          >
+                            <Edit className="w-3 h-3" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 bg-white">
-                          <DropdownMenuItem 
-                            onClick={() => onEdit?.(transaction)}
-                            className="cursor-pointer text-sm"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Редактировать
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(transaction.id)}
-                            className="cursor-pointer text-red-600 text-sm"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Удалить
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={deletingId === transaction.id}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Удалить транзакцию?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Это действие нельзя отменить. Транзакция будет удалена безвозвратно.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(transaction.id)}
+                                >
+                                  Удалить
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
