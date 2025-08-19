@@ -16,27 +16,36 @@ export type Database = {
     Tables: {
       employees: {
         Row: {
+          avatar_url: string | null
+          birth_date: string | null
           created_at: string
           hire_date: string
           id: string
+          phone: string | null
           position: string
           salary: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string
           hire_date?: string
           id?: string
+          phone?: string | null
           position: string
           salary?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string
           hire_date?: string
           id?: string
+          phone?: string | null
           position?: string
           salary?: number | null
           updated_at?: string
@@ -417,8 +426,55 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_edit_history: {
+        Row: {
+          created_at: string | null
+          edited_by: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          edited_by: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          edited_by?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_edit_history_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_edit_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          avatar_url: string | null
+          birth_date: string | null
           cash_lera: number | null
           cash_nastya: number | null
           cash_vanya: number | null
@@ -426,11 +482,14 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand: number | null
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
           cash_lera?: number | null
           cash_nastya?: number | null
           cash_vanya?: number | null
@@ -438,11 +497,14 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
           cash_lera?: number | null
           cash_nastya?: number | null
           cash_vanya?: number | null
@@ -450,6 +512,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
           updated_at?: string
@@ -487,6 +550,15 @@ export type Database = {
           total_cash: number
         }[]
       }
+      get_employee_cash_summary: {
+        Args: { employee_user_id: string }
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+        }[]
+      }
       get_invitation_by_token: {
         Args: { invitation_token: string }
         Returns: {
@@ -517,6 +589,15 @@ export type Database = {
       hash_token: {
         Args: { token_value: string }
         Returns: string
+      }
+      log_profile_edit: {
+        Args: {
+          p_field_name: string
+          p_new_value: string
+          p_old_value: string
+          p_profile_id: string
+        }
+        Returns: undefined
       }
       request_password_reset: {
         Args: { user_email: string }

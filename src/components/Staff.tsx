@@ -6,16 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Shield, User } from "lucide-react";
+import { Plus, Users, Shield, User, Edit, UserPlus } from "lucide-react";
+import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 
 interface Profile {
   id: string;
   email: string;
   full_name: string;
   role: 'admin' | 'employee';
+  phone?: string;
+  birth_date?: string;
+  avatar_url?: string;
   created_at: string;
 }
 
@@ -34,6 +39,8 @@ const Staff = () => {
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [formData, setFormData] = useState({
     user_id: "",
     position: "",
@@ -61,7 +68,7 @@ const Staff = () => {
 
       setCurrentUserProfile(currentProfile);
 
-      // Fetch all profiles (for admin to select when creating employee records)
+      // Fetch all profiles (including invited users) based on employees or invitations
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("*")
@@ -81,7 +88,16 @@ const Staff = () => {
            created_at,
            updated_at,
            ${currentProfile?.role === 'admin' ? 'salary,' : ''}
-           profiles!inner(*)
+           profiles!inner(
+             id,
+             email,
+             full_name,
+             role,
+             phone,
+             birth_date,
+             avatar_url,
+             created_at
+           )
          `)
          .order("hire_date", { ascending: false });
 
@@ -174,6 +190,17 @@ const Staff = () => {
 
   const canManageStaff = () => {
     return currentUserProfile?.role === "admin";
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setShowProfileDialog(true);
+  };
+
+  const handleProfileSuccess = () => {
+    fetchData();
+    setShowProfileDialog(false);
+    setSelectedEmployee(null);
   };
 
   if (loading) {
@@ -301,23 +328,47 @@ const Staff = () => {
           {employees.map((employee) => {
             const RoleIcon = getRoleIcon(employee.profiles.role);
             return (
-              <Card key={employee.id}>
+              <Card key={employee.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="line-clamp-2">
-                      {employee.profiles.full_name}
-                    </CardTitle>
-                    <Badge className={getRoleColor(employee.profiles.role)}>
-                      <RoleIcon className="w-3 h-3 mr-1" />
-                      {getRoleLabel(employee.profiles.role)}
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={employee.profiles.avatar_url} />
+                        <AvatarFallback>
+                          {employee.profiles.full_name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle className="line-clamp-2 text-base">
+                          {employee.profiles.full_name}
+                        </CardTitle>
+                        <CardDescription className="text-sm">{employee.profiles.email}</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge className={getRoleColor(employee.profiles.role)}>
+                        <RoleIcon className="w-3 h-3 mr-1" />
+                        {getRoleLabel(employee.profiles.role)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditEmployee(employee)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <CardDescription>{employee.profiles.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="text-sm">
                     <span className="font-medium">Должность:</span> {employee.position}
                   </div>
+                  {employee.profiles.phone && (
+                    <div className="text-sm">
+                      <span className="font-medium">Телефон:</span> {employee.profiles.phone}
+                    </div>
+                  )}
                   {canViewSalary(employee) && employee.salary && (
                     <div className="text-sm">
                       <span className="font-medium">Зарплата:</span>{" "}
@@ -335,12 +386,23 @@ const Staff = () => {
                   <div className="text-sm text-muted-foreground">
                     <span className="font-medium">Дата найма:</span> {formatDate(employee.hire_date)}
                   </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">В системе с:</span> {formatDate(employee.profiles.created_at)}
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
       )}
+
+      <EmployeeProfileDialog
+        employee={selectedEmployee}
+        isOpen={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+        onSuccess={handleProfileSuccess}
+        isAdmin={canManageStaff()}
+      />
     </div>
   );
 };

@@ -87,32 +87,24 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
+        <h1 className="text-3xl font-bold">Главная</h1>
         <p className="text-muted-foreground">
-          Добро пожаловать в EventBalance! Обзор вашей финансовой деятельности
+          Добро пожаловать в EventBalance! Система управления ивентами
         </p>
       </div>
 
-      {/* Main Cash Summary - Always visible */}
-      <div className="sticky top-0 z-10 bg-background pb-4">
-        <CashSummaryCard
-          totalCash={data.totalCash}
-          cashNastya={data.cashNastya}
-          cashLera={data.cashLera}
-          cashVanya={data.cashVanya}
-          isLoading={loading}
-        />
+      {/* Simple dashboard without financial stats */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="bg-card text-card-foreground rounded-lg border p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Всего событий</h3>
+          </div>
+          <div className="text-2xl font-bold">{data.totalEvents}</div>
+          <p className="text-xs text-muted-foreground">
+            Активных мероприятий в системе
+          </p>
+        </div>
       </div>
-
-      {/* Stats Grid */}
-      <DashboardStats
-        stats={{
-          totalEvents: data.totalEvents,
-          totalIncome: data.totalIncome,
-          totalExpenses: data.totalExpenses,
-          profit: data.profit,
-        }}
-        isLoading={loading}
-      />
     </div>
   );
 };
