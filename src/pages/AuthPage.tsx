@@ -14,6 +14,9 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -133,6 +136,37 @@ const AuthPage = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('send-password-reset', {
+        body: { email: resetEmail }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Ссылка отправлена",
+        description: "Если email существует в системе, ссылка для сброса пароля была отправлена на почту.",
+      });
+      
+      setShowForgotPassword(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось отправить ссылку для сброса пароля",
+        variant: "destructive",
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -176,6 +210,16 @@ const AuthPage = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Вход..." : "Войти"}
                 </Button>
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-sm"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    Забыли пароль?
+                  </Button>
+                </div>
               </form>
             </TabsContent>
             
@@ -221,6 +265,37 @@ const AuthPage = () => {
               </form>
             </TabsContent>
           </Tabs>
+
+          {showForgotPassword && (
+            <div className="mt-6 p-4 border rounded-lg">
+              <h3 className="text-lg font-medium mb-4">Сброс пароля</h3>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={resetLoading}>
+                    {resetLoading ? "Отправка..." : "Отправить ссылку"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowForgotPassword(false)}
+                  >
+                    Отмена
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

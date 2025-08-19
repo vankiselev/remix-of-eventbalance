@@ -36,7 +36,7 @@ serve(async (req) => {
 
     console.log(`Processing password reset request for email: ${email}`)
 
-    // Call the secure database function to create reset token
+    // Call the secure database function to create reset token  
     const { data: resetResult, error: resetError } = await supabaseClient.rpc(
       'request_password_reset',
       { user_email: email }
@@ -44,10 +44,29 @@ serve(async (req) => {
 
     if (resetError) {
       console.error('Error creating reset token:', resetError)
+      // Still return success to not leak email existence
       return new Response(
-        JSON.stringify({ error: 'Failed to process reset request' }),
+        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
         { 
-          status: 500,
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Get user ID to retrieve the token
+    const { data: userData, error: userError } = await supabaseClient
+      .from('auth.users')
+      .select('id')
+      .eq('email', email)
+      .single()
+
+    if (userError || !userData) {
+      // User doesn't exist, but don't reveal this
+      return new Response(
+        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+        { 
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
@@ -57,7 +76,7 @@ serve(async (req) => {
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('password_reset_tokens')
       .select('token')
-      .eq('user_id', (await supabaseClient.from('auth.users').select('id').eq('email', email).single()).data?.id)
+      .eq('user_id', userData.id)
       .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
