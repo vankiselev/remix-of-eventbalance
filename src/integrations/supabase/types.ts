@@ -458,7 +458,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      employee_profiles: {
+        Row: {
+          created_at: string | null
+          hire_date: string | null
+          id: string | null
+          position: string | null
+          salary: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          salary?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string | null
+          position?: string | null
+          salary?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_employees_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation: {
@@ -473,6 +510,10 @@ export type Database = {
           cash_vanya: number
           total_cash: number
         }[]
+      }
+      can_view_employee_salary: {
+        Args: { target_user_id: string }
+        Returns: boolean
       }
       can_view_invitation: {
         Args: { invitation_token: string }
