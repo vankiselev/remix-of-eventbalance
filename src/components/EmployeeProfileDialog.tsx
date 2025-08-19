@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PhoneInputRU } from "@/components/ui/phone-input-ru";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +20,8 @@ import { Upload, ChevronDown, History, Wallet } from "lucide-react";
 const profileSchema = z.object({
   full_name: z.string().min(1, "Имя обязательно"),
   email: z.string().email("Некорректный email"),
-  phone: z.string().optional(),
+  phone_display: z.string().optional(),
+  phone_e164: z.string().optional(),
   birth_date: z.string().optional(),
   position: z.string().min(1, "Должность обязательна"),
   hire_date: z.string().min(1, "Дата трудоустройства обязательна"),
@@ -40,6 +42,7 @@ interface Employee {
     full_name: string;
     role: 'admin' | 'employee';
     phone?: string;
+    phone_e164?: string;
     birth_date?: string;
     avatar_url?: string;
     created_at: string;
@@ -97,7 +100,8 @@ export const EmployeeProfileDialog = ({
     defaultValues: {
       full_name: "",
       email: "",
-      phone: "",
+      phone_display: "",
+      phone_e164: "",
       birth_date: "",
       position: "",
       hire_date: "",
@@ -110,7 +114,8 @@ export const EmployeeProfileDialog = ({
       form.reset({
         full_name: employee.profiles.full_name,
         email: employee.profiles.email,
-        phone: employee.profiles.phone || "",
+        phone_display: employee.profiles.phone || "",
+        phone_e164: employee.profiles.phone_e164 || "",
         birth_date: employee.profiles.birth_date || "",
         position: employee.position,
         hire_date: employee.hire_date,
@@ -238,7 +243,8 @@ export const EmployeeProfileDialog = ({
       // Update profile data
       const profileUpdates: any = {
         full_name: data.full_name,
-        phone: data.phone || null,
+        phone: data.phone_display || null,
+        phone_e164: data.phone_e164 || null,
         birth_date: data.birth_date || null,
       };
 
@@ -251,8 +257,8 @@ export const EmployeeProfileDialog = ({
       if (data.full_name !== currentProfile.full_name) {
         await logFieldChange("full_name", currentProfile.full_name, data.full_name);
       }
-      if (data.phone !== (currentProfile.phone || "")) {
-        await logFieldChange("phone", currentProfile.phone, data.phone);
+      if (data.phone_display !== (currentProfile.phone || "")) {
+        await logFieldChange("phone", currentProfile.phone, data.phone_display);
       }
       if (data.birth_date !== (currentProfile.birth_date || "")) {
         await logFieldChange("birth_date", currentProfile.birth_date, data.birth_date);
@@ -446,12 +452,18 @@ export const EmployeeProfileDialog = ({
 
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="phone_display"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Телефон</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="+7 (999) 123-45-67" />
+                        <PhoneInputRU
+                          value={field.value}
+                          onChange={(result) => {
+                            field.onChange(result.display);
+                            form.setValue("phone_e164", result.e164);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
