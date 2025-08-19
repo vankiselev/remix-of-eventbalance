@@ -199,8 +199,8 @@ const Staff = () => {
     setShowProfileDialog(true);
   };
 
-  const handleProfileSuccess = () => {
-    fetchData();
+  const handleProfileSuccess = async () => {
+    await fetchData(); // Перезагружаем все данные
     setShowProfileDialog(false);
     setSelectedEmployee(null);
   };

@@ -301,8 +301,8 @@ export const EmployeeProfileDialog = ({
       await fetchEditHistory();
       await fetchCashSummary();
       
+      // Вызываем onSuccess для обновления списка сотрудников
       onSuccess();
-      onOpenChange(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
