@@ -411,7 +411,7 @@ const EventCalendar = () => {
         </div>
         
         {/* Scrollable Content */}
-        <div className="h-[calc(100vh-350px)] overflow-auto">
+        <div className="h-[calc(100vh-200px)] overflow-auto">
           <Table>
             <TableBody>
             {Array.from({ length: maxDays }, (_, index) => {
