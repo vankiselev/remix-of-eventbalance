@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardData {
   totalEvents: number;
