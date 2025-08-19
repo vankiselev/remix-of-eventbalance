@@ -184,8 +184,8 @@ const Staff = () => {
   };
 
   const canViewSalary = (employee: Employee) => {
-    // Admin can see all salaries, employees can only see their own
-    return currentUserProfile?.role === "admin" || employee.user_id === user?.id;
+    // Only admins can see salaries - employees cannot see salary information even their own
+    return currentUserProfile?.role === "admin";
   };
 
   const canManageStaff = () => {
