@@ -16,18 +16,22 @@ import EventDetailsDialog from "@/components/EventDetailsDialog";
 interface Event {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   start_date: string;
-  end_date: string;
-  event_time: string;
-  location: string;
-  budget: number;
-  actual_cost: number;
+  event_time: string | null;
   status: string;
-  notes: string;
-  show_program: string;
-  project_owner: string;
+  location: string | null;
+  venue_id: string | null;
+  contractor_ids: string[] | null;
+  responsible_manager_ids: string[] | null;
+  manager_ids: string[] | null;
+  photos: string[] | null;
+  videos: string[] | null;
+  notes: string | null;
+  project_owner: string | null;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 const Events = () => {
@@ -40,8 +44,10 @@ const Events = () => {
     name: "",
     description: "",
     start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-    budget: "",
+    event_time: "",
+    status: "planning" as const,
+    venue_id: "",
+    project_owner: "",
   });
   const { user } = useAuth();
   const { toast } = useToast();
@@ -80,8 +86,10 @@ const Events = () => {
         name: formData.name,
         description: formData.description,
         start_date: formData.start_date,
-        end_date: formData.end_date,
-        budget: parseFloat(formData.budget),
+        event_time: formData.event_time || null,
+        status: formData.status,
+        venue_id: formData.venue_id || null,
+        project_owner: formData.project_owner,
         created_by: user.id,
       });
 
@@ -96,8 +104,10 @@ const Events = () => {
         name: "",
         description: "",
         start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0],
-        budget: "",
+        event_time: "",
+        status: "planning" as const,
+        venue_id: "",
+        project_owner: "",
       });
       setShowCreateDialog(false);
       fetchEvents();
@@ -220,36 +230,47 @@ const Events = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                        <Label htmlFor="start_date">Дата начала</Label>
-                        <Input
-                          id="start_date"
-                          type="date"
-                          value={formData.start_date}
-                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="end_date">Дата окончания</Label>
-                        <Input
-                          id="end_date"
-                          type="date"
-                          value={formData.end_date}
-                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                          required
-                        />
+                  <Label htmlFor="start_date">Дата</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="event_time">Время</Label>
+                  <Input
+                    id="event_time"
+                    type="time"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="budget">Бюджет (₽)</Label>
+                <Label htmlFor="project_owner">Владелец проекта</Label>
                 <Input
-                  id="budget"
-                  type="number"
-                  step="0.01"
-                  value={formData.budget}
-                  onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                  required
+                  id="project_owner"
+                  value={formData.project_owner}
+                  onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Статус</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="planning">Планирование</option>
+                  <option value="confirmed">Подтверждено</option>
+                  <option value="in_progress">В процессе</option>
+                  <option value="completed">Завершено</option>
+                  <option value="cancelled">Отменено</option>
+                </select>
               </div>
               <Button type="submit" className="w-full">
                 Создать мероприятие
@@ -287,12 +308,12 @@ const Events = () => {
               <CardContent className="space-y-2">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatDate(event.start_date)} - {formatDate(event.end_date)}
+                  {formatDate(event.start_date)}
+                  {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center">
-                    <DollarSign className="mr-1 h-4 w-4" />
-                    {formatCurrency(event.budget)}
+                  <div className="text-muted-foreground">
+                    {event.project_owner && `Проект: ${event.project_owner}`}
                   </div>
                   <Button 
                     variant="outline" 
@@ -311,7 +332,7 @@ const Events = () => {
 
       {/* Event Details Dialog */}
       <EventDetailsDialog
-        event={selectedEvent}
+        event={selectedEvent as any}
         open={showEventDialog}
         onOpenChange={setShowEventDialog}
         onEventUpdated={handleEventUpdated}
