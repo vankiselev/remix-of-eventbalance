@@ -70,16 +70,30 @@ const Staff = () => {
       setProfiles(profilesData || []);
 
        // Fetch employees with their profiles
+       // For security: only fetch salary data if user is admin
        const { data: employeesData, error } = await supabase
          .from("employees")
          .select(`
-           *,
+           id,
+           user_id,
+           position,
+           hire_date,
+           created_at,
+           updated_at,
+           ${currentProfile?.role === 'admin' ? 'salary,' : ''}
            profiles!inner(*)
          `)
          .order("hire_date", { ascending: false });
 
        if (error) throw error;
-       setEmployees(employeesData || []);
+       
+       // Map the data to ensure salary is null for non-admin users
+       const processedData = (employeesData || []).map((emp: any) => ({
+         ...emp,
+         salary: currentProfile?.role === 'admin' ? emp.salary : null
+       }));
+       
+       setEmployees(processedData);
     } catch (error) {
       console.error("Error fetching staff data:", error);
       toast({
