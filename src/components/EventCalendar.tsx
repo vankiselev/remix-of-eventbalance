@@ -19,23 +19,22 @@ import EventDetailsDialog from "@/components/EventDetailsDialog";
 interface Event {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   start_date: string;
-  end_date: string;
-  budget: number;
-  actual_cost: number;
+  event_time: string | null;
   status: string;
-  project_owner?: string;
-  managers?: string[];
-  location?: string;
-  event_time?: string;
-  animators?: string[];
-  show_program?: string;
-  contractors?: string[];
-  photos?: string[];
-  videos?: string[];
-  notes?: string;
+  location: string | null;
+  venue_id: string | null;
+  contractor_ids: string[] | null;
+  responsible_manager_ids: string[] | null;
+  manager_ids: string[] | null;
+  photos: string[] | null;
+  videos: string[] | null;
+  notes: string | null;
+  project_owner: string | null;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 const EventCalendar = () => {
@@ -49,15 +48,9 @@ const EventCalendar = () => {
     name: "",
     description: "",
     start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-    budget: "",
-    project_owner: "",
-    managers: "",
-    location: "",
     event_time: "",
-    animators: "",
-    show_program: "",
-    contractors: "",
+    project_owner: "",
+    location: "",
     notes: "",
   });
   const { user } = useAuth();
@@ -97,15 +90,9 @@ const EventCalendar = () => {
         name: formData.name,
         description: formData.description,
         start_date: formData.start_date,
-        end_date: formData.end_date,
-        budget: parseFloat(formData.budget),
         project_owner: formData.project_owner,
-        managers: formData.managers ? formData.managers.split(",").map(m => m.trim()) : [],
         location: formData.location,
         event_time: formData.event_time || null,
-        animators: formData.animators ? formData.animators.split(",").map(a => a.trim()) : [],
-        show_program: formData.show_program,
-        contractors: formData.contractors ? formData.contractors.split(",").map(c => c.trim()) : [],
         notes: formData.notes,
         created_by: user.id,
       });
@@ -121,15 +108,9 @@ const EventCalendar = () => {
         name: "",
         description: "",
         start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0],
-        budget: "",
-        project_owner: "",
-        managers: "",
-        location: "",
         event_time: "",
-        animators: "",
-        show_program: "",
-        contractors: "",
+        project_owner: "",
+        location: "",
         notes: "",
       });
       setShowCreateDialog(false);
@@ -145,9 +126,8 @@ const EventCalendar = () => {
 
   const getEventsForDate = (date: Date) => {
     return events.filter(event => {
-      const startDate = parseISO(event.start_date);
-      const endDate = parseISO(event.end_date);
-      return date >= startDate && date <= endDate;
+      const startDate = new Date(event.start_date);
+      return date.toDateString() === startDate.toDateString();
     });
   };
 
@@ -248,34 +228,13 @@ const EventCalendar = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата начала</Label>
+                  <Label htmlFor="start_date">Дата</Label>
                   <Input
                     id="start_date"
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                     required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_date">Дата окончания</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Место</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -291,56 +250,23 @@ const EventCalendar = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="managers">Менеджеры (через запятую)</Label>
+                  <Label htmlFor="location">Место</Label>
                   <Input
-                    id="managers"
-                    value={formData.managers}
-                    onChange={(e) => setFormData({ ...formData, managers: e.target.value })}
-                    placeholder="Иван Иванов, Петр Петров"
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="animators">Аниматоры (через запятую)</Label>
+                  <Label htmlFor="project_owner">Чей проект?</Label>
                   <Input
-                    id="animators"
-                    value={formData.animators}
-                    onChange={(e) => setFormData({ ...formData, animators: e.target.value })}
-                    placeholder="Анна Смирнова, Олег Кузнецов"
+                    id="project_owner"
+                    value={formData.project_owner}
+                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="show_program">Шоу/Программа</Label>
-                  <Input
-                    id="show_program"
-                    value={formData.show_program}
-                    onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contractors">Подрядчики (через запятую)</Label>
-                  <Input
-                    id="contractors"
-                    value={formData.contractors}
-                    onChange={(e) => setFormData({ ...formData, contractors: e.target.value })}
-                    placeholder="ООО Свет, ИП Звук"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="budget">Бюджет (₽)</Label>
-                <Input
-                  id="budget"
-                  type="number"
-                  step="0.01"
-                  value={formData.budget}
-                  onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                  required
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Описание</Label>
