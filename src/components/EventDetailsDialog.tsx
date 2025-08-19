@@ -7,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Edit, Save, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { CalendarIcon, Edit, Save, X, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/utils/formatCurrency";
 
 interface Event {
   id: string;
@@ -98,6 +98,36 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
     setIsEditing(false);
   };
 
+  const handleDelete = async () => {
+    if (!event) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Мероприятие удалено",
+        description: "Мероприятие успешно удалено",
+      });
+
+      onOpenChange(false);
+      onEventUpdated();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить мероприятие",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!event || !editedEvent) return null;
 
   return (
@@ -108,14 +138,39 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             <span>{event.name}</span>
             <div className="flex gap-2">
               {!isEditing ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Редактировать
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Редактировать
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Удалить
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удалить мероприятие</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Вы уверены, что хотите удалить мероприятие "{event.name}"? Это действие нельзя отменить.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Удалить
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               ) : (
                 <>
                   <Button

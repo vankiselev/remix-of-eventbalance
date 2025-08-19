@@ -332,7 +332,7 @@ const Events = () => {
 
       {/* Event Details Dialog */}
       <EventDetailsDialog
-        event={selectedEvent as any}
+        event={selectedEvent}
         open={showEventDialog}
         onOpenChange={setShowEventDialog}
         onEventUpdated={handleEventUpdated}

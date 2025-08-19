@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Save, X, MapPin, Clock, User, Calendar } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ArrowLeft, Edit, Save, X, MapPin, Clock, User, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -113,6 +114,33 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!event) return;
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Успешно!',
+        description: 'Мероприятие удалено',
+      });
+
+      onBack();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Ошибка',
+        description: 'Не удалось удалить мероприятие',
+      });
     }
   };
 
@@ -232,23 +260,48 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
             {getStatusText(event.status)}
           </Badge>
           {user?.id === event.created_by && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setEditing(!editing)}
-            >
-              {editing ? (
-                <>
-                  <X className="mr-2 h-4 w-4" />
-                  Отмена
-                </>
-              ) : (
-                <>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Редактировать
-                </>
-              )}
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditing(!editing)}
+              >
+                {editing ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Отмена
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Редактировать
+                  </>
+                )}
+              </Button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Удалить мероприятие</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Вы уверены, что хотите удалить мероприятие "{event.name}"? Это действие нельзя отменить.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Удалить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
         </div>
       </div>
