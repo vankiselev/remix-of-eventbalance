@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ResponsiveGrid, ResponsiveCard, TextTruncate } from "@/components/ui/responsive-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -316,45 +317,47 @@ const Staff = () => {
       </div>
 
       {employees.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Нет записей о сотрудниках</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {canManageStaff() 
-                ? "Добавьте первую запись о сотруднике" 
-                : "Записи о сотрудниках пока не созданы"}
-            </p>
-          </CardContent>
-        </Card>
+        <ResponsiveCard className="text-center py-12">
+          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Нет записей о сотрудниках</h3>
+          <p className="text-muted-foreground mb-4">
+            {canManageStaff() 
+              ? "Добавьте первую запись о сотруднике" 
+              : "Записи о сотрудниках пока не созданы"}
+          </p>
+        </ResponsiveCard>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <ResponsiveGrid type="cards">
           {employees.map((employee) => {
             const RoleIcon = getRoleIcon(employee.profiles.role);
             return (
-              <Card key={employee.id} className="hover:shadow-md transition-shadow">
+              <ResponsiveCard key={employee.id} hover={true}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="w-12 h-12 flex-shrink-0">
+                      <Avatar className="avatar-responsive flex-shrink-0">
                         <AvatarImage src={employee.profiles.avatar_url} />
                         <AvatarFallback>
                           {employee.profiles.full_name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="line-clamp-2 text-base leading-tight">
-                          {employee.profiles.full_name}
+                        <CardTitle className="text-base leading-tight">
+                          <TextTruncate lines={2}>
+                            {employee.profiles.full_name}
+                          </TextTruncate>
                         </CardTitle>
-                        <CardDescription className="text-sm truncate">{employee.profiles.email}</CardDescription>
+                        <CardDescription className="text-sm">
+                          <TextTruncate>
+                            {employee.profiles.email}
+                          </TextTruncate>
+                        </CardDescription>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <Badge 
-                        className={`${getRoleColor(employee.profiles.role)} text-xs px-2 py-1 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]`}
-                      >
+                      <Badge className={`${getRoleColor(employee.profiles.role)} badge-responsive`}>
                         <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <span className="truncate">{getRoleLabel(employee.profiles.role)}</span>
+                        <span className="text-truncate">{getRoleLabel(employee.profiles.role)}</span>
                       </Badge>
                       <Button
                         variant="ghost"
@@ -367,9 +370,14 @@ const Staff = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">Должность:</span> {employee.position}
+                <CardContent className="space-y-3">
+                  <div className="text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Должность:</span> 
+                      <TextTruncate className="text-right max-w-[120px]">
+                        {employee.position}
+                      </TextTruncate>
+                    </div>
                   </div>
                   {employee.profiles.phone && (
                     <div className="text-sm">
@@ -384,23 +392,17 @@ const Staff = () => {
                       </span>
                     </div>
                   )}
-                  {!canViewSalary(employee) && employee.salary && (
-                    <div className="text-sm">
-                      <span className="font-medium">Зарплата:</span>{" "}
-                      <span className="text-muted-foreground">Скрыто</span>
-                    </div>
-                  )}
                   <div className="text-sm text-muted-foreground">
                     <span className="font-medium">Дата найма:</span> {formatDate(employee.hire_date)}
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs text-muted-foreground pt-2 border-t">
                     <span className="font-medium">В системе с:</span> {formatDate(employee.profiles.created_at)}
                   </div>
                 </CardContent>
-              </Card>
+              </ResponsiveCard>
             );
           })}
-        </div>
+        </ResponsiveGrid>
       )}
 
       <EmployeeProfileDialog

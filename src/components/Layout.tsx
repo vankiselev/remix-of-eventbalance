@@ -63,22 +63,22 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen-safe bg-background flex w-full">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 bg-card border-r transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 bg-card border-r transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           sidebarCollapsed ? "w-16" : "w-64"
         } ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        } lg:translate-x-0`}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
@@ -91,7 +91,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden md:flex h-8 w-8"
+                className="hidden lg:flex h-8 w-8"
               >
                 {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
@@ -99,7 +99,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(false)}
-                className="md:hidden h-8 w-8"
+                className="lg:hidden h-8 w-8"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -175,7 +175,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden h-8 w-8"
+              className="lg:hidden h-8 w-8"
             >
               <Menu className="h-4 w-4" />
             </Button>
@@ -186,7 +186,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 overflow-auto">{children}</main>
+        <main className="flex-1 main-container overflow-auto">{children}</main>
       </div>
     </div>
   );
