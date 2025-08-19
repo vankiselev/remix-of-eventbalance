@@ -112,17 +112,17 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const fetchTransactions = async () => {
     try {
       setError(null);
+      setLoading(true);
+      
       let query = supabase
         .from("financial_transactions")
         .select(`
           *,
-          events:project_id(name),
-          profiles:created_by(full_name)
+          events:project_id(name)
         `)
         .order("operation_date", { ascending: false });
 
       // If specific userId provided, filter by that user
-      // If not admin and no specific user, filter by current user
       if (userId) {
         query = query.eq("created_by", userId);
       }
@@ -131,13 +131,27 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
       if (error) throw error;
 
-      setTransactions((data as any[])?.map(item => ({
-        ...item,
-        profiles: item.profiles || null
-      })) || []);
+      // Fetch user names separately for admin view
+      const transactionsWithProfiles = isAdmin && !userId ? await Promise.all(
+        (data || []).map(async (transaction) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", transaction.created_by)
+            .single();
+          
+          return {
+            ...transaction,
+            profiles: profile ? { full_name: profile.full_name } : null
+          };
+        })
+      ) : (data || []).map(item => ({ ...item, profiles: null }));
+
+      setTransactions(transactionsWithProfiles);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
-      setError("Не удалось загрузить транзакции");
+      setError(null); // Don't show error state, just show empty state
+      setTransactions([]);
       toast({
         variant: "destructive",
         title: "Ошибка",

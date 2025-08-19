@@ -243,4 +243,39 @@
     font-weight: 700;
     color: #EF4444; /* Red - exact ТЗ color */
   }
+
+  /* Toast Positioning - Top Right Corner */
+  .toaster {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    max-width: 420px;
+    width: 100%;
+  }
+
+  /* Toast Styling - Semantic Colors */
+  .toast-error {
+    background-color: hsl(var(--destructive)) !important;
+    color: hsl(var(--destructive-foreground)) !important;
+    border-color: hsl(var(--destructive)) !important;
+  }
+
+  .toast-success {
+    background-color: hsl(var(--success)) !important;
+    color: hsl(var(--success-foreground)) !important;
+    border-color: hsl(var(--success)) !important;
+  }
+
+  .toast-warning {
+    background-color: hsl(var(--warning)) !important;
+    color: hsl(var(--warning-foreground)) !important;
+    border-color: hsl(var(--warning)) !important;
+  }
+
+  .toast-info {
+    background-color: hsl(var(--info)) !important;
+    color: hsl(var(--info-foreground)) !important;
+    border-color: hsl(var(--info)) !important;
+  }
 }
