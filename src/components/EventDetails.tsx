@@ -63,6 +63,7 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
   }, [eventId]);
 
   const fetchEvent = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('events')
@@ -70,7 +71,27 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
         .eq('id', eventId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          toast({
+            variant: 'destructive',
+            title: 'Ошибка',
+            description: 'Данные по мероприятию отсутствуют',
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      if (!data) {
+        toast({
+          variant: 'destructive',
+          title: 'Ошибка',
+          description: 'Данные по мероприятию отсутствуют',
+        });
+        return;
+      }
 
       setEvent(data);
       setFormData({
@@ -88,7 +109,7 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
       toast({
         variant: 'destructive',
         title: 'Ошибка',
-        description: 'Не удалось загрузить информацию о мероприятии',
+        description: 'Не удалось загрузить данные мероприятия',
       });
     } finally {
       setLoading(false);
@@ -189,10 +210,10 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
   if (!event) {
     return (
       <div className="text-center py-8">
-        <p>Мероприятие не найдено</p>
-        <Button variant="ghost" onClick={onBack} className="mt-4">
+        <p className="text-muted-foreground mb-4">Данные по мероприятию отсутствуют</p>
+        <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Назад
+          Назад к мероприятиям
         </Button>
       </div>
     );

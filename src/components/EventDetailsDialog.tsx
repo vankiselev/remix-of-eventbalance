@@ -17,23 +17,22 @@ import { formatCurrency } from "@/utils/formatCurrency";
 interface Event {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   start_date: string;
-  end_date: string;
-  event_time?: string;
-  location?: string;
-  budget: number;
-  actual_cost: number;
+  event_time?: string | null;
+  location?: string | null;
   status: string;
-  notes?: string;
-  show_program?: string;
-  project_owner?: string;
-  managers?: string[];
-  animators?: string[];
-  contractors?: string[];
-  photos?: string[];
-  videos?: string[];
+  notes?: string | null;
+  project_owner?: string | null;
+  venue_id?: string | null;
+  contractor_ids?: string[] | null;
+  responsible_manager_ids?: string[] | null;
+  manager_ids?: string[] | null;
+  photos?: string[] | null;
+  videos?: string[] | null;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface EventDetailsDialogProps {
@@ -66,14 +65,10 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
           name: editedEvent.name,
           description: editedEvent.description,
           start_date: editedEvent.start_date,
-          end_date: editedEvent.end_date,
           event_time: editedEvent.event_time,
           location: editedEvent.location,
-          budget: editedEvent.budget,
-          actual_cost: editedEvent.actual_cost,
           status: editedEvent.status,
           notes: editedEvent.notes,
-          show_program: editedEvent.show_program,
           project_owner: editedEvent.project_owner,
         })
         .eq("id", editedEvent.id);
@@ -91,7 +86,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
       toast({
         variant: "destructive",
         title: "Ошибка",
-        description: error.message || "Не удалось сохранить изменения",
+        description: error.message || "Не удалось загрузить данные мероприятия",
       });
     } finally {
       setLoading(false);
@@ -250,44 +245,14 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             </div>
 
             <div>
-              <Label>Дата окончания</Label>
+              <Label>Владелец проекта</Label>
               {isEditing ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !editedEvent.end_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {editedEvent.end_date ? (
-                        format(new Date(editedEvent.end_date), "PPP", { locale: ru })
-                      ) : (
-                        <span>Выберите дату</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={editedEvent.end_date ? new Date(editedEvent.end_date) : undefined}
-                      onSelect={(date) => 
-                        setEditedEvent({ 
-                          ...editedEvent, 
-                          end_date: date ? date.toISOString().split('T')[0] : "" 
-                        })
-                      }
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  value={editedEvent.project_owner || ""}
+                  onChange={(e) => setEditedEvent({ ...editedEvent, project_owner: e.target.value })}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(event.end_date), "PPP", { locale: ru })}
-                </p>
+                <p className="text-sm text-muted-foreground">{event.project_owner || "Не указано"}</p>
               )}
             </div>
 
@@ -305,70 +270,32 @@ const EventDetailsDialog = ({ event, open, onOpenChange, onEventUpdated }: Event
             </div>
 
             <div>
-              <Label>Бюджет</Label>
+              <Label>Заметки</Label>
               {isEditing ? (
-                <Input
-                  type="number"
-                  value={editedEvent.budget}
-                  onChange={(e) => setEditedEvent({ ...editedEvent, budget: Number(e.target.value) })}
+                <Textarea
+                  value={editedEvent.notes || ""}
+                  onChange={(e) => setEditedEvent({ ...editedEvent, notes: e.target.value })}
                 />
               ) : (
-                <p className="text-sm text-muted-foreground">{formatCurrency(event.budget)}</p>
-              )}
-            </div>
-
-            <div>
-              <Label>Фактические затраты</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  value={editedEvent.actual_cost || 0}
-                  onChange={(e) => setEditedEvent({ ...editedEvent, actual_cost: Number(e.target.value) })}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">{formatCurrency(event.actual_cost || 0)}</p>
+                <p className="text-sm text-muted-foreground">{event.notes || "Нет заметок"}</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Additional Information */}
-        <div className="space-y-4 mt-6">
-          <div>
-            <Label>Шоу программа</Label>
-            {isEditing ? (
-              <Textarea
-                value={editedEvent.show_program || ""}
-                onChange={(e) => setEditedEvent({ ...editedEvent, show_program: e.target.value })}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">{event.show_program || "Не указано"}</p>
+        {/* Event Information */}
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground">
+            {event.contractor_ids && event.contractor_ids.length > 0 && (
+              <span>Подрядчики: {event.contractor_ids.length} выбрано</span>
             )}
-          </div>
-
-          <div>
-            <Label>Заметки</Label>
-            {isEditing ? (
-              <Textarea
-                value={editedEvent.notes || ""}
-                onChange={(e) => setEditedEvent({ ...editedEvent, notes: e.target.value })}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">{event.notes || "Нет заметок"}</p>
+            {event.responsible_manager_ids && event.responsible_manager_ids.length > 0 && (
+              <span className="ml-4">Ответственные: {event.responsible_manager_ids.length} назначено</span>
             )}
-          </div>
-
-          <div>
-            <Label>Владелец проекта</Label>
-            {isEditing ? (
-              <Input
-                value={editedEvent.project_owner || ""}
-                onChange={(e) => setEditedEvent({ ...editedEvent, project_owner: e.target.value })}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">{event.project_owner || "Не указано"}</p>
+            {event.manager_ids && event.manager_ids.length > 0 && (
+              <span className="ml-4">Менеджеры: {event.manager_ids.length} назначено</span>
             )}
-          </div>
+          </p>
         </div>
       </DialogContent>
     </Dialog>
