@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -297,6 +297,10 @@ export const EmployeeProfileDialog = ({
         description: "Профиль сотрудника обновлен",
       });
 
+      // Refresh the edit history and data immediately
+      await fetchEditHistory();
+      await fetchCashSummary();
+      
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -334,6 +338,9 @@ export const EmployeeProfileDialog = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Профиль сотрудника</DialogTitle>
+          <DialogDescription>
+            Просмотр и редактирование информации о сотруднике
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

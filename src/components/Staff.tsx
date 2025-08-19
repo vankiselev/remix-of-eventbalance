@@ -331,31 +331,34 @@ const Staff = () => {
             const RoleIcon = getRoleIcon(employee.profiles.role);
             return (
               <Card key={employee.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar className="w-12 h-12 flex-shrink-0">
                         <AvatarImage src={employee.profiles.avatar_url} />
                         <AvatarFallback>
                           {employee.profiles.full_name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <CardTitle className="line-clamp-2 text-base">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="line-clamp-2 text-base leading-tight">
                           {employee.profiles.full_name}
                         </CardTitle>
-                        <CardDescription className="text-sm">{employee.profiles.email}</CardDescription>
+                        <CardDescription className="text-sm truncate">{employee.profiles.email}</CardDescription>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className={getRoleColor(employee.profiles.role)}>
-                        <RoleIcon className="w-3 h-3 mr-1" />
-                        {getRoleLabel(employee.profiles.role)}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <Badge 
+                        className={`${getRoleColor(employee.profiles.role)} text-xs px-2 py-1 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]`}
+                      >
+                        <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{getRoleLabel(employee.profiles.role)}</span>
                       </Badge>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditEmployee(employee)}
+                        className="p-1 h-8 w-8"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
