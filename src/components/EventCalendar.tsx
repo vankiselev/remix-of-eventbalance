@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, MapPin, Clock, Camera, Video, Users } from "lucide-react";
-import { format, parseISO, isSameDay } from "date-fns";
+import { Plus, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isPast } from "date-fns";
 import { ru } from "date-fns/locale";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { cn } from "@/lib/utils";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
 
 interface Event {
@@ -39,11 +37,13 @@ interface Event {
 
 const EventCalendar = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -131,6 +131,93 @@ const EventCalendar = () => {
     });
   };
 
+  const getDaysInMonth = () => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return eachDayOfInterval({ start, end });
+  };
+
+  const getEventForDay = (day: number) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    return events.find(event => {
+      const eventDate = new Date(event.start_date);
+      return eventDate.getDate() === day && 
+             eventDate.getMonth() === currentDate.getMonth() && 
+             eventDate.getFullYear() === currentDate.getFullYear();
+    });
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
+  const isDateHighlighted = (day: number) => {
+    const event = getEventForDay(day);
+    if (!event) return false;
+    
+    const eventDate = new Date(event.start_date);
+    return !isPast(eventDate) || isToday(eventDate);
+  };
+
+  const handleCellEdit = (day: number, field: string, currentValue: string = "") => {
+    setEditingCell({ day, field });
+    setEditValue(currentValue);
+  };
+
+  const handleCellSave = async () => {
+    if (!editingCell || !user) return;
+    
+    const event = getEventForDay(editingCell.day);
+    const eventDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), editingCell.day);
+    
+    try {
+      if (event) {
+        // Update existing event
+        const { error } = await supabase
+          .from("events")
+          .update({ [editingCell.field]: editValue })
+          .eq("id", event.id);
+          
+        if (error) throw error;
+      } else {
+        // Create new event
+        const { error } = await supabase
+          .from("events")
+          .insert({
+            name: editingCell.field === 'name' ? editValue : `Мероприятие ${editingCell.day}`,
+            start_date: eventDate.toISOString().split('T')[0],
+            [editingCell.field]: editValue,
+            created_by: user.id,
+          });
+          
+        if (error) throw error;
+      }
+      
+      fetchEvents();
+      toast({
+        title: "Успешно!",
+        description: "Данные обновлены",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive", 
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить изменения",
+      });
+    }
+    
+    setEditingCell(null);
+    setEditValue("");
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "planning":
@@ -161,15 +248,13 @@ const EventCalendar = () => {
     }
   };
 
-  // Remove this function since we're using the imported utility
-  // const formatCurrency = (amount: number) => {
-  //   return new Intl.NumberFormat("ru-RU", {
-  //     style: "currency",
-  //     currency: "RUB",
-  //   }).format(amount);
-  // };
+  const monthNames = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+  ];
 
-  const eventsForSelectedDate = getEventsForDate(selectedDate);
+  const daysInMonth = getDaysInMonth();
+  const maxDays = Math.max(...daysInMonth.map(d => d.getDate()));
 
   if (loading) {
     return (
@@ -186,10 +271,26 @@ const EventCalendar = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with month navigation */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Календарь мероприятий</h1>
-          <p className="text-muted-foreground">Планируйте и отслеживайте ваши мероприятия</p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigateMonth('prev')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold text-black">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h1>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigateMonth('next')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
@@ -248,25 +349,14 @@ const EventCalendar = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Место</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project_owner">Чей проект?</Label>
-                  <Input
-                    id="project_owner"
-                    value={formData.project_owner}
-                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Место</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
               </div>
-
 
               <div className="space-y-2">
                 <Label htmlFor="description">Описание</Label>
@@ -294,79 +384,208 @@ const EventCalendar = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Календарь</CardTitle>
-            <CardDescription>
-              Выберите дату для просмотра мероприятий
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              locale={ru}
-              modifiers={{
-                hasEvents: (date) => getEventsForDate(date).length > 0,
-              }}
-              modifiersStyles={{
-                hasEvents: {
-                  backgroundColor: "hsl(var(--primary))",
-                  color: "hsl(var(--primary-foreground))",
-                  fontWeight: "bold",
-                },
-              }}
-              className="rounded-md border"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Мероприятия на {format(selectedDate, "d MMMM yyyy", { locale: ru })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {eventsForSelectedDate.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                Нет мероприятий на эту дату
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {eventsForSelectedDate.map((event) => (
-                  <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                    <CardContent className="p-3" onClick={() => {
-                      setSelectedEvent(event);
-                      setShowEventDialog(true);
-                    }}>
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold line-clamp-1">{event.name}</h4>
-                        <Badge className={getStatusColor(event.status)}>
-                          {getStatusLabel(event.status)}
-                        </Badge>
-                      </div>
-                      {event.location && (
-                        <div className="flex items-center text-sm text-muted-foreground mb-1">
-                          <MapPin className="mr-1 h-3 w-3" />
-                          {event.location}
-                        </div>
-                      )}
-                      {event.event_time && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {event.event_time}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Calendar Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-green-500">
+              <TableHead className="text-center text-black font-bold border-r">Дата</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Праздник</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Чей проект?</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Менеджеры</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Место</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Время</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Аниматоры</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Шоу/Программа</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Подрядчики</TableHead>
+              <TableHead className="text-center text-black font-bold border-r">Фото/Видео</TableHead>
+              <TableHead className="text-center text-black font-bold">Примечания</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: maxDays }, (_, index) => {
+              const day = index + 1;
+              const event = getEventForDay(day);
+              const isHighlighted = isDateHighlighted(day);
+              
+              return (
+                <TableRow key={day}>
+                  <TableCell 
+                    className={cn(
+                      "text-center font-medium border-r text-black",
+                      isHighlighted && "bg-yellow-200"
+                    )}
+                  >
+                    {day}
+                  </TableCell>
+                  
+                  {/* Праздник */}
+                  <TableCell 
+                    className={cn(
+                      "text-center border-r text-black cursor-pointer hover:bg-gray-50",
+                      isHighlighted && "bg-yellow-200"
+                    )}
+                    onClick={() => handleCellEdit(day, 'name', event?.name || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'name' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.name || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Чей проект? */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.project_owner || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Менеджеры */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'manager_ids', event?.manager_ids?.join(', ') || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'manager_ids' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.manager_ids?.join(', ') || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Место */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'location', event?.location || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'location' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.location || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Время */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'event_time' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.event_time || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Аниматоры - пустая колонка */}
+                  <TableCell className="text-center border-r text-black"></TableCell>
+                  
+                  {/* Шоу/Программа */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'contractor_ids', event?.contractor_ids?.join(', ') || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'contractor_ids' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.contractor_ids?.join(', ') || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Подрядчики */}
+                  <TableCell 
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'responsible_manager_ids', event?.responsible_manager_ids?.join(', ') || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'responsible_manager_ids' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.responsible_manager_ids?.join(', ') || ''
+                    )}
+                  </TableCell>
+                  
+                  {/* Фото/Видео */}
+                  <TableCell className="text-center border-r text-black">
+                    {event?.photos?.length || event?.videos?.length ? 'Есть' : ''}
+                  </TableCell>
+                  
+                  {/* Примечания */}
+                  <TableCell 
+                    className="text-center text-black cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
+                  >
+                    {editingCell?.day === day && editingCell?.field === 'notes' ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleCellSave}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                        className="text-center"
+                        autoFocus
+                      />
+                    ) : (
+                      event?.notes || ''
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Event Details Dialog */}
