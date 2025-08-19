@@ -393,206 +393,209 @@ const EventCalendar = () => {
 
       {/* Calendar Table */}
       <div className="border rounded-lg overflow-hidden">
-        <div className="calendar-scroll h-[calc(100vh-300px)] overflow-auto">
+        {/* Fixed Header */}
+        <div className="bg-success border-b sticky top-0 z-20">
+          <div className="grid grid-cols-11 gap-0">
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Дата</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Праздник</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Чей проект?</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Менеджеры</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Место</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Время</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Аниматоры</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Шоу/Программа</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Подрядчики</div>
+            <div className="text-center text-foreground font-bold border-r text-xs py-3">Фото/Видео</div>
+            <div className="text-center text-foreground font-bold text-xs py-3">Примечания</div>
+          </div>
+        </div>
+        
+        {/* Scrollable Content */}
+        <div className="h-[calc(100vh-350px)] overflow-auto">
           <Table>
-            <TableHeader className="sticky top-0 z-10 bg-success">
-              <TableRow>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Дата</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Праздник</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Чей проект?</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Менеджеры</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Место</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Время</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Аниматоры</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Шоу/Программа</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Подрядчики</TableHead>
-                <TableHead className="text-center text-foreground font-bold border-r text-xs sticky top-0 bg-success py-3">Фото/Видео</TableHead>
-                <TableHead className="text-center text-foreground font-bold text-xs sticky top-0 bg-success py-3">Примечания</TableHead>
-              </TableRow>
-            </TableHeader>
-          <TableBody>
+            <TableBody>
             {Array.from({ length: maxDays }, (_, index) => {
               const day = index + 1;
               const event = getEventForDay(day);
               const isHighlighted = isDateHighlighted(day);
               
-              return (
-                <TableRow key={day}>
-                  <TableCell 
-                    className={cn(
-                      "text-center font-medium border-r text-foreground text-xs py-2",
-                      isHighlighted && "bg-warning-light"
-                    )}
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <div>{day}</div>
-                      <div className="text-xs">{getDayOfWeekAbbr(day)}</div>
-                    </div>
-                  </TableCell>
-                  
-                  {/* Праздник */}
-                  <TableCell 
-                    className={cn(
-                      "text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2",
-                      isHighlighted && "bg-warning-light"
-                    )}
-                    onClick={() => handleCellEdit(day, 'name', event?.name || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'name' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.name || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Чей проект? */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.project_owner || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Менеджеры */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'manager_ids', event?.manager_ids?.join(', ') || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'manager_ids' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.manager_ids?.join(', ') || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Место */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'location', event?.location || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'location' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.location || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Время */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'event_time' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.event_time || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Аниматоры - пустая колонка */}
-                  <TableCell className="text-center border-r text-foreground text-xs py-2"></TableCell>
-                  
-                  {/* Шоу/Программа */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'contractor_ids', event?.contractor_ids?.join(', ') || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'contractor_ids' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.contractor_ids?.join(', ') || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Подрядчики */}
-                  <TableCell 
-                    className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'responsible_manager_ids', event?.responsible_manager_ids?.join(', ') || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'responsible_manager_ids' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.responsible_manager_ids?.join(', ') || ''
-                    )}
-                  </TableCell>
-                  
-                  {/* Фото/Видео */}
-                  <TableCell className="text-center border-r text-foreground text-xs py-2">
-                    {event?.photos?.length || event?.videos?.length ? 'Есть' : ''}
-                  </TableCell>
-                  
-                  {/* Примечания */}
-                  <TableCell 
-                    className="text-center text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                    onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
-                  >
-                    {editingCell?.day === day && editingCell?.field === 'notes' ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                        className="text-center text-xs"
-                        autoFocus
-                      />
-                    ) : (
-                      event?.notes || ''
-                    )}
-                  </TableCell>
-                </TableRow>
+               return (
+                 <TableRow key={day} className="grid grid-cols-11 gap-0">
+                   <TableCell 
+                     className={cn(
+                       "text-center font-medium border-r text-foreground text-xs py-2",
+                       isHighlighted && "bg-warning-light"
+                     )}
+                   >
+                     <div className="flex flex-col items-center justify-center">
+                       <div>{day}</div>
+                       <div className="text-xs">{getDayOfWeekAbbr(day)}</div>
+                     </div>
+                   </TableCell>
+                   
+                   {/* Праздник */}
+                   <TableCell 
+                     className={cn(
+                       "text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2",
+                       isHighlighted && "bg-warning-light"
+                     )}
+                     onClick={() => handleCellEdit(day, 'name', event?.name || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'name' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.name || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Чей проект? */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.project_owner || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Менеджеры */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'manager_ids', event?.manager_ids?.join(', ') || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'manager_ids' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.manager_ids?.join(', ') || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Место */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'location', event?.location || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'location' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.location || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Время */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'event_time' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.event_time || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Аниматоры - пустая колонка */}
+                   <TableCell className="text-center border-r text-foreground text-xs py-2"></TableCell>
+                   
+                   {/* Шоу/Программа */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'contractor_ids', event?.contractor_ids?.join(', ') || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'contractor_ids' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.contractor_ids?.join(', ') || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Подрядчики */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'responsible_manager_ids', event?.responsible_manager_ids?.join(', ') || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'responsible_manager_ids' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.responsible_manager_ids?.join(', ') || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Фото/Видео */}
+                   <TableCell className="text-center border-r text-foreground text-xs py-2">
+                     {event?.photos?.length || event?.videos?.length ? 'Есть' : ''}
+                   </TableCell>
+                   
+                   {/* Примечания */}
+                   <TableCell 
+                     className="text-center text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'notes' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.notes || ''
+                     )}
+                   </TableCell>
+                 </TableRow>
               );
             })}
             </TableBody>
