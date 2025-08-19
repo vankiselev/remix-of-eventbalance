@@ -423,7 +423,10 @@ const EventCalendar = () => {
                       isHighlighted && "bg-yellow-200"
                     )}
                   >
-                    {day} {getDayOfWeekAbbr(day)}
+                    <div className="flex flex-col items-center justify-center">
+                      <div>{day}</div>
+                      <div>{getDayOfWeekAbbr(day)}</div>
+                    </div>
                   </TableCell>
                   
                   {/* Праздник */}
