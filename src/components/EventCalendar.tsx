@@ -253,6 +253,13 @@ const EventCalendar = () => {
     "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
   ];
 
+  const getDayOfWeekAbbr = (day: number) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    const dayOfWeek = date.getDay();
+    const daysRu = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
+    return daysRu[dayOfWeek];
+  };
+
   const daysInMonth = getDaysInMonth();
   const maxDays = Math.max(...daysInMonth.map(d => d.getDate()));
 
@@ -416,7 +423,7 @@ const EventCalendar = () => {
                       isHighlighted && "bg-yellow-200"
                     )}
                   >
-                    {day}
+                    {day} {getDayOfWeekAbbr(day)}
                   </TableCell>
                   
                   {/* Праздник */}
