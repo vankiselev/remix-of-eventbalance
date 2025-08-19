@@ -53,6 +53,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     { id: "transaction", label: "Внести Трату/Приход", icon: PlusCircle },
     { id: "finances", label: "Финансы", icon: DollarSign },
     { id: "staff", label: "Сотрудники", icon: Users },
+    { id: "contacts", label: "Контакты", icon: Users },
     ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: Users }] : []),
   ];
 

@@ -7,6 +7,7 @@ import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
 import TransactionForm from "@/components/TransactionForm";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
+import Contacts from "@/components/Contacts";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -27,6 +28,8 @@ const Index = () => {
         return <Staff />;
       case "invitations":
         return <InvitationsManagement />;
+      case "contacts":
+        return <Contacts />;
       default:
         return <Dashboard />;
     }

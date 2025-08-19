@@ -5,18 +5,15 @@ export const formatCurrency = (amount: number, showKopecks: boolean = false): st
     return "0 ₽";
   }
 
-  // Check if amount has kopecks (cents)
-  const hasKopecks = !showKopecks && (amount % 1 !== 0);
-  const shouldShowKopecks = showKopecks || hasKopecks;
-
+  // Never show kopecks - always whole rubles only
   const options: Intl.NumberFormatOptions = {
     style: 'decimal',
-    minimumFractionDigits: shouldShowKopecks ? 2 : 0,
-    maximumFractionDigits: shouldShowKopecks ? 2 : 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   };
 
   // Format with Russian locale for proper spacing (300 000)
-  const formatted = new Intl.NumberFormat('ru-RU', options).format(amount);
+  const formatted = new Intl.NumberFormat('ru-RU', options).format(Math.round(amount));
   
   // Ensure proper spacing for thousands
   const withSpaces = formatted.replace(/\s/g, ' '); // Ensure non-breaking spaces

@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      animators: {
+        Row: {
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          specialization: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          company: string | null
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contractors: {
+        Row: {
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          specialization: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           avatar_url: string | null
@@ -63,75 +171,74 @@ export type Database = {
       }
       events: {
         Row: {
-          actual_cost: number | null
-          animators: string[] | null
-          budget: number
-          contractors: string[] | null
+          contractor_ids: string[] | null
           created_at: string
           created_by: string
           description: string | null
-          end_date: string
           event_time: string | null
           id: string
           location: string | null
-          managers: string[] | null
+          manager_ids: string[] | null
           name: string
           notes: string | null
           photos: string[] | null
           project_owner: string | null
-          show_program: string | null
+          responsible_manager_ids: string[] | null
           start_date: string
           status: string
           updated_at: string
+          venue_id: string | null
           videos: string[] | null
         }
         Insert: {
-          actual_cost?: number | null
-          animators?: string[] | null
-          budget?: number
-          contractors?: string[] | null
+          contractor_ids?: string[] | null
           created_at?: string
           created_by: string
           description?: string | null
-          end_date: string
           event_time?: string | null
           id?: string
           location?: string | null
-          managers?: string[] | null
+          manager_ids?: string[] | null
           name: string
           notes?: string | null
           photos?: string[] | null
           project_owner?: string | null
-          show_program?: string | null
+          responsible_manager_ids?: string[] | null
           start_date: string
           status?: string
           updated_at?: string
+          venue_id?: string | null
           videos?: string[] | null
         }
         Update: {
-          actual_cost?: number | null
-          animators?: string[] | null
-          budget?: number
-          contractors?: string[] | null
+          contractor_ids?: string[] | null
           created_at?: string
           created_by?: string
           description?: string | null
-          end_date?: string
           event_time?: string | null
           id?: string
           location?: string | null
-          managers?: string[] | null
+          manager_ids?: string[] | null
           name?: string
           notes?: string | null
           photos?: string[] | null
           project_owner?: string | null
-          show_program?: string | null
+          responsible_manager_ids?: string[] | null
           start_date?: string
           status?: string
           updated_at?: string
+          venue_id?: string | null
           videos?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -515,6 +622,45 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      venues: {
+        Row: {
+          address: string | null
+          capacity: number | null
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          capacity?: number | null
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          capacity?: number | null
+          contact_person?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
