@@ -74,6 +74,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: "operation_date", direction: "desc" });
   const [filters, setFilters] = useState<FilterConfig>({});
@@ -110,6 +111,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
   const fetchTransactions = async () => {
     try {
+      setError(null);
       let query = supabase
         .from("financial_transactions")
         .select(`
@@ -119,8 +121,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         `)
         .order("operation_date", { ascending: false });
 
-      // If not admin or specific userId provided, filter by user
-      if (!isAdmin || userId) {
+      // If specific userId provided, filter by that user
+      // If not admin and no specific user, filter by current user
+      if (userId) {
         query = query.eq("created_by", userId);
       }
 
@@ -134,6 +137,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       })) || []);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
+      setError("Не удалось загрузить транзакции");
       toast({
         variant: "destructive",
         title: "Ошибка",
@@ -468,13 +472,22 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.length === 0 ? (
+            {error ? (
+              <TableRow>
+                <TableCell 
+                  colSpan={isAdmin ? 9 : 7} 
+                  className="text-center py-12 text-red-600"
+                >
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : filteredTransactions.length === 0 ? (
               <TableRow>
                 <TableCell 
                   colSpan={isAdmin ? 9 : 7} 
                   className="text-center py-12 text-muted-foreground"
                 >
-                  {searchTerm || Object.keys(filters).length > 0 ? "Транзакции не найдены" : "Нет транзакций"}
+                  {searchTerm || Object.keys(filters).length > 0 ? "Транзакции не найдены" : "Транзакций пока нет"}
                 </TableCell>
               </TableRow>
             ) : (

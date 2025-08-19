@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
@@ -43,9 +43,14 @@ const Finances = () => {
   useEffect(() => {
     if (user) {
       checkUserRole();
-      fetchData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && !loading) {
+      fetchData();
+    }
+  }, [user, isAdmin]);
 
   const checkUserRole = async () => {
     try {
@@ -56,9 +61,12 @@ const Finances = () => {
         .single();
 
       if (error) throw error;
-      setIsAdmin(profile?.role === "admin");
+      const isUserAdmin = profile?.role === "admin";
+      setIsAdmin(isUserAdmin);
+      setLoading(false);
     } catch (error) {
       console.error("Error checking user role:", error);
+      setLoading(false);
     }
   };
 
@@ -90,8 +98,6 @@ const Finances = () => {
         title: "Ошибка",
         description: "Не удалось загрузить финансовые данные",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
