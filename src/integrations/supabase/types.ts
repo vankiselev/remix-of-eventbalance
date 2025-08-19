@@ -23,6 +23,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          phone_e164: string | null
           specialization: string | null
           updated_at: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          phone_e164?: string | null
           specialization?: string | null
           updated_at?: string
         }
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          phone_e164?: string | null
           specialization?: string | null
           updated_at?: string
         }
@@ -60,6 +63,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          phone_e164: string | null
           updated_at: string
         }
         Insert: {
@@ -71,6 +75,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          phone_e164?: string | null
           updated_at?: string
         }
         Update: {
@@ -82,6 +87,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          phone_e164?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -95,6 +101,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          phone_e164: string | null
           specialization: string | null
           updated_at: string
         }
@@ -106,6 +113,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          phone_e164?: string | null
           specialization?: string | null
           updated_at?: string
         }
@@ -117,6 +125,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          phone_e164?: string | null
           specialization?: string | null
           updated_at?: string
         }
@@ -593,6 +602,7 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          phone_e164: string | null
           role: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand: number | null
           updated_at: string
@@ -608,6 +618,7 @@ export type Database = {
           full_name: string
           id: string
           phone?: string | null
+          phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
           updated_at?: string
@@ -623,6 +634,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
           updated_at?: string
@@ -640,6 +652,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          phone_e164: string | null
           updated_at: string
         }
         Insert: {
@@ -652,6 +665,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          phone_e164?: string | null
           updated_at?: string
         }
         Update: {
@@ -664,6 +678,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          phone_e164?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -689,6 +704,10 @@ export type Database = {
       can_view_invitation: {
         Args: { invitation_token: string }
         Returns: boolean
+      }
+      format_phone_display: {
+        Args: { phone_e164: string }
+        Returns: string
       }
       get_admin_employee_data: {
         Args: Record<PropertyKey, never>
@@ -812,6 +831,10 @@ export type Database = {
           p_profile_id: string
         }
         Returns: undefined
+      }
+      normalize_phone_to_e164: {
+        Args: { phone_input: string }
+        Returns: string
       }
       request_password_reset: {
         Args: { user_email: string }
