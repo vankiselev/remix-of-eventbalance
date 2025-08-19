@@ -541,6 +541,24 @@ export type Database = {
         Args: { invitation_token: string }
         Returns: boolean
       }
+      get_admin_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          birth_date: string
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+          total_cash_on_hand: number
+          updated_at: string
+        }[]
+      }
       get_company_cash_summary: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -549,6 +567,10 @@ export type Database = {
           cash_vanya: number
           total_cash: number
         }[]
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
       }
       get_employee_cash_summary: {
         Args: { employee_user_id: string }
@@ -580,6 +602,20 @@ export type Database = {
           position: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_user_basic_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          birth_date: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
         }[]
       }
       get_user_role: {

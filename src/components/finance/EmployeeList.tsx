@@ -42,16 +42,18 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
 
   const fetchEmployees = async () => {
     try {
+      // Only admins should be able to see the employee list
       const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .neq("role", "admin");
+        .rpc("get_admin_profiles");
+      
+      // Filter out admins from the list
+      const employeeProfiles = profiles?.filter((p: any) => p.role !== "admin") || [];
 
       if (error) throw error;
 
       // Calculate cash totals for each employee
       const employeesWithTotals = await Promise.all(
-        (profiles || []).map(async (profile) => {
+        employeeProfiles.map(async (profile) => {
           const { data: cashData, error: cashError } = await supabase
             .rpc("calculate_user_cash_totals", { user_uuid: profile.id });
 

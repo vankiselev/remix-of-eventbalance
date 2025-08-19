@@ -22,9 +22,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     const fetchUserRole = async () => {
       if (user) {
         const { data } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
+          .rpc("get_user_basic_profile")
           .single();
         setUserRole(data?.role || 'employee');
       }

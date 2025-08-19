@@ -55,9 +55,7 @@ const Finances = () => {
   const checkUserRole = async () => {
     try {
       const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user?.id)
+        .rpc("get_user_basic_profile")
         .single();
 
       if (error) throw error;

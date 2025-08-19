@@ -61,18 +61,20 @@ const Staff = () => {
     try {
       // Get current user profile to check role
       const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
+        .rpc("get_user_basic_profile")
         .single();
 
       setCurrentUserProfile(currentProfile);
 
-      // Fetch all profiles (including invited users) based on employees or invitations
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      // Fetch all profiles - only admins can see all profiles with financial data
+      let profilesData;
+      if (currentProfile?.role === "admin") {
+        const { data } = await supabase.rpc("get_admin_profiles");
+        profilesData = data;
+      } else {
+        // Non-admin users can only see their own basic profile
+        profilesData = [currentProfile];
+      }
 
       setProfiles(profilesData || []);
 
