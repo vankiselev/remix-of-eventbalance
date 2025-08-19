@@ -394,19 +394,19 @@ const EventCalendar = () => {
       {/* Calendar Table */}
       <div className="border rounded-lg overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-green-500">
-              <TableHead className="text-center text-black font-bold border-r">Дата</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Праздник</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Чей проект?</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Менеджеры</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Место</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Время</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Аниматоры</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Шоу/Программа</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Подрядчики</TableHead>
-              <TableHead className="text-center text-black font-bold border-r">Фото/Видео</TableHead>
-              <TableHead className="text-center text-black font-bold">Примечания</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Дата</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Праздник</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Чей проект?</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Менеджеры</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Место</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Время</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Аниматоры</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Шоу/Программа</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Подрядчики</TableHead>
+              <TableHead className="text-center text-black font-bold border-r text-sm">Фото/Видео</TableHead>
+              <TableHead className="text-center text-black font-bold text-sm">Примечания</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -419,7 +419,7 @@ const EventCalendar = () => {
                 <TableRow key={day}>
                   <TableCell 
                     className={cn(
-                      "text-center font-medium border-r text-black",
+                      "text-center font-medium border-r text-black text-sm",
                       isHighlighted && "bg-yellow-200"
                     )}
                   >
@@ -429,7 +429,7 @@ const EventCalendar = () => {
                   {/* Праздник */}
                   <TableCell 
                     className={cn(
-                      "text-center border-r text-black cursor-pointer hover:bg-gray-50",
+                      "text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm",
                       isHighlighted && "bg-yellow-200"
                     )}
                     onClick={() => handleCellEdit(day, 'name', event?.name || '')}
@@ -450,7 +450,7 @@ const EventCalendar = () => {
                   
                   {/* Чей проект? */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
@@ -469,7 +469,7 @@ const EventCalendar = () => {
                   
                   {/* Менеджеры */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'manager_ids', event?.manager_ids?.join(', ') || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'manager_ids' ? (
@@ -488,7 +488,7 @@ const EventCalendar = () => {
                   
                   {/* Место */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'location', event?.location || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'location' ? (
@@ -507,7 +507,7 @@ const EventCalendar = () => {
                   
                   {/* Время */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'event_time' ? (
@@ -525,11 +525,11 @@ const EventCalendar = () => {
                   </TableCell>
                   
                   {/* Аниматоры - пустая колонка */}
-                  <TableCell className="text-center border-r text-black"></TableCell>
+                  <TableCell className="text-center border-r text-black text-sm"></TableCell>
                   
                   {/* Шоу/Программа */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'contractor_ids', event?.contractor_ids?.join(', ') || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'contractor_ids' ? (
@@ -548,7 +548,7 @@ const EventCalendar = () => {
                   
                   {/* Подрядчики */}
                   <TableCell 
-                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center border-r text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'responsible_manager_ids', event?.responsible_manager_ids?.join(', ') || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'responsible_manager_ids' ? (
@@ -566,13 +566,13 @@ const EventCalendar = () => {
                   </TableCell>
                   
                   {/* Фото/Видео */}
-                  <TableCell className="text-center border-r text-black">
+                  <TableCell className="text-center border-r text-black text-sm">
                     {event?.photos?.length || event?.videos?.length ? 'Есть' : ''}
                   </TableCell>
                   
                   {/* Примечания */}
                   <TableCell 
-                    className="text-center text-black cursor-pointer hover:bg-gray-50"
+                    className="text-center text-black cursor-pointer hover:bg-gray-50 text-sm"
                     onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
                   >
                     {editingCell?.day === day && editingCell?.field === 'notes' ? (
