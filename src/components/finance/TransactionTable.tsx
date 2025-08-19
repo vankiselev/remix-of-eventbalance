@@ -213,6 +213,9 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
         <Table className="table-zebra">
           <TableHeader>
             <TableRow className="table-header border-0">
+              {!userId && (
+                <TableHead className="font-semibold text-slate-700">Имя</TableHead>
+              )}
               <TableHead className="font-semibold text-slate-700">
                 <Button
                   variant="ghost"
@@ -225,11 +228,10 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
               </TableHead>
               <TableHead className="font-semibold text-slate-700">Проект</TableHead>
               <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
-              <TableHead className="font-semibold text-slate-700">Описание</TableHead>
-              <TableHead className="font-semibold text-slate-700">Статья</TableHead>
-              <TableHead className="font-semibold text-slate-700">Касса</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Трата</TableHead>
+              <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
+              <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
+              <TableHead className="font-semibold text-slate-700">Статья прихода/расхода</TableHead>
               {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
             </TableRow>
           </TableHeader>
@@ -237,7 +239,7 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
             {filteredTransactions.length === 0 ? (
               <TableRow>
                 <TableCell 
-                  colSpan={isAdmin ? 9 : 8} 
+                  colSpan={!userId ? (isAdmin ? 9 : 8) : (isAdmin ? 8 : 7)} 
                   className="text-center py-12 text-slate-500"
                 >
                   {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -246,6 +248,12 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
             ) : (
               filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
+                  {!userId && (
+                    <TableCell className="text-sm font-medium">
+                      {/* TODO: Add user name from profiles */}
+                      Пользователь
+                    </TableCell>
+                  )}
                   <TableCell className="text-sm font-medium">
                     {formatDate(transaction.operation_date)}
                   </TableCell>
@@ -265,14 +273,6 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-                      {transaction.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {getCashTypeBadge(transaction.cash_type)}
-                  </TableCell>
                   <TableCell className="text-right font-medium">
                     {transaction.expense_amount 
                       ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
@@ -284,6 +284,11 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
                       ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
                       : "—"
                     }
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
+                      {transaction.category}
+                    </Badge>
                   </TableCell>
                   {isAdmin && (
                     <TableCell className="text-right">

@@ -329,29 +329,43 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Дата</TableHead>
-              <TableHead>Описание</TableHead>
-              <TableHead>Категория</TableHead>
+              {!userId && (
+                <TableHead>Имя</TableHead>
+              )}
+              <TableHead>Дата операции</TableHead>
               <TableHead>Проект</TableHead>
-              <TableHead>Кошелек</TableHead>
-              <TableHead>Тип</TableHead>
-              <TableHead className="text-right">Сумма</TableHead>
+              <TableHead>Чей проект</TableHead>
+              <TableHead>Подробное описание</TableHead>
+              <TableHead className="text-right">Траты</TableHead>
+              <TableHead className="text-right">Приход</TableHead>
+              <TableHead>Статья прихода/расхода</TableHead>
               {(isAdmin || onEdit) && <TableHead className="w-20">Действия</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={!userId ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   {transactions.length === 0 ? "Транзакций пока нет" : "Нет транзакций, соответствующих фильтрам"}
                 </TableCell>
               </TableRow>
             ) : (
               filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id} className="hover:bg-muted/30">
+                  {!userId && (
+                    <TableCell>
+                      {/* TODO: Add user name from profiles */}
+                      Пользователь
+                    </TableCell>
+                  )}
                   <TableCell>
                     {new Date(transaction.operation_date).toLocaleDateString("ru-RU")}
                   </TableCell>
+                  <TableCell>
+                    {/* TODO: Get project name from events table */}
+                    —
+                  </TableCell>
+                  <TableCell>{transaction.project_owner}</TableCell>
                   <TableCell className="max-w-48">
                     <div className="truncate" title={transaction.description}>
                       {transaction.description}
@@ -362,24 +376,20 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{transaction.category}</Badge>
-                  </TableCell>
-                  <TableCell>{transaction.project_owner}</TableCell>
-                  <TableCell>
-                    {transaction.cash_type && (
-                      <Badge variant="secondary">{transaction.cash_type}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
-                      {transaction.type === 'income' ? 'Доход' : 'Расход'}
-                    </Badge>
+                  <TableCell className="text-right">
+                    {transaction.expense_amount 
+                      ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
+                      : "—"
+                    }
                   </TableCell>
                   <TableCell className="text-right">
-                    <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </span>
+                    {transaction.income_amount 
+                      ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
+                      : "—"
+                    }
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{transaction.category}</Badge>
                   </TableCell>
                   {(isAdmin || onEdit) && (
                     <TableCell>
