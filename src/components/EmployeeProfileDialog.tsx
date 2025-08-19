@@ -184,9 +184,12 @@ export const EmployeeProfileDialog = ({
         .from('avatars')
         .getPublicUrl(filePath);
 
+      // Добавляем timestamp для обхода кеша
+      const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: urlData.publicUrl })
+        .update({ avatar_url: avatarUrl })
         .eq("id", employee.profiles.id);
 
       if (updateError) throw updateError;
@@ -196,6 +199,7 @@ export const EmployeeProfileDialog = ({
         description: "Фото профиля обновлено",
       });
       
+      // Обновляем данные сотрудника и закрываем диалог
       onSuccess();
     } catch (error: any) {
       toast({
@@ -294,14 +298,14 @@ export const EmployeeProfileDialog = ({
 
       toast({
         title: "Успешно!",
-        description: "Профиль сотрудника обновлен",
+        description: "Изменения сохранены",
       });
 
       // Refresh the edit history and data immediately
       await fetchEditHistory();
       await fetchCashSummary();
       
-      // Вызываем onSuccess для обновления списка сотрудников
+      // Вызываем onSuccess для обновления списка сотрудников и закрываем диалог
       onSuccess();
     } catch (error: any) {
       toast({
