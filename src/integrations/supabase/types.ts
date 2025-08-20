@@ -180,20 +180,28 @@ export type Database = {
       }
       events: {
         Row: {
+          animators: string | null
           contractor_ids: string[] | null
+          contractors: string | null
           created_at: string
           created_by: string
           description: string | null
           end_time: string | null
           event_time: string | null
+          google_sheets_row_id: string | null
+          holiday: string | null
           id: string
+          is_archived: boolean | null
           location: string | null
           manager_ids: string[] | null
+          managers: string | null
           name: string
           notes: string | null
+          photo_video: string | null
           photos: string[] | null
           project_owner: string | null
           responsible_manager_ids: string[] | null
+          show_program: string | null
           start_date: string
           status: string
           updated_at: string
@@ -201,20 +209,28 @@ export type Database = {
           videos: string[] | null
         }
         Insert: {
+          animators?: string | null
           contractor_ids?: string[] | null
+          contractors?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           end_time?: string | null
           event_time?: string | null
+          google_sheets_row_id?: string | null
+          holiday?: string | null
           id?: string
+          is_archived?: boolean | null
           location?: string | null
           manager_ids?: string[] | null
+          managers?: string | null
           name: string
           notes?: string | null
+          photo_video?: string | null
           photos?: string[] | null
           project_owner?: string | null
           responsible_manager_ids?: string[] | null
+          show_program?: string | null
           start_date: string
           status?: string
           updated_at?: string
@@ -222,20 +238,28 @@ export type Database = {
           videos?: string[] | null
         }
         Update: {
+          animators?: string | null
           contractor_ids?: string[] | null
+          contractors?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           end_time?: string | null
           event_time?: string | null
+          google_sheets_row_id?: string | null
+          holiday?: string | null
           id?: string
+          is_archived?: boolean | null
           location?: string | null
           manager_ids?: string[] | null
+          managers?: string | null
           name?: string
           notes?: string | null
+          photo_video?: string | null
           photos?: string[] | null
           project_owner?: string | null
           responsible_manager_ids?: string[] | null
+          show_program?: string | null
           start_date?: string
           status?: string
           updated_at?: string
@@ -638,6 +662,45 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           total_cash_on_hand?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sync_status: {
+        Row: {
+          archived_count: number | null
+          created_at: string | null
+          created_count: number | null
+          error_message: string | null
+          id: string
+          last_sync_time: string | null
+          sync_month: string
+          sync_status: string | null
+          sync_year: number
+          updated_count: number | null
+        }
+        Insert: {
+          archived_count?: number | null
+          created_at?: string | null
+          created_count?: number | null
+          error_message?: string | null
+          id?: string
+          last_sync_time?: string | null
+          sync_month: string
+          sync_status?: string | null
+          sync_year: number
+          updated_count?: number | null
+        }
+        Update: {
+          archived_count?: number | null
+          created_at?: string | null
+          created_count?: number | null
+          error_message?: string | null
+          id?: string
+          last_sync_time?: string | null
+          sync_month?: string
+          sync_status?: string | null
+          sync_year?: number
+          updated_count?: number | null
         }
         Relationships: []
       }

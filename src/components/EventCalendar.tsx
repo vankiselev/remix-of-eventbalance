@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Edit, RefreshCw } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isPast } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,26 @@ interface Event {
   created_by: string;
   created_at: string;
   updated_at: string;
+  holiday: string | null;
+  managers: string | null;
+  animators: string | null;
+  show_program: string | null;
+  contractors: string | null;
+  photo_video: string | null;
+  is_archived: boolean;
+  google_sheets_row_id: string | null;
+}
+
+interface SyncStatus {
+  id: string;
+  last_sync_time: string;
+  sync_month: string;
+  sync_year: number;
+  created_count: number;
+  updated_count: number;
+  archived_count: number;
+  sync_status: string;
+  error_message: string | null;
 }
 
 const EventCalendar = () => {
@@ -42,6 +62,8 @@ const EventCalendar = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
   const [editValue, setEditValue] = useState("");
   const [formData, setFormData] = useState({
@@ -56,15 +78,25 @@ const EventCalendar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Google Sheets ID (you can make this configurable later)
+  const GOOGLE_SHEETS_ID = "1BdEghO-rD-gHfaVjQGPmw-nPvdaQN-nZgWtGqgO-iC0"; // Example ID
+
+  const monthNames = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+  ];
+
   useEffect(() => {
     fetchEvents();
-  }, []);
+    fetchSyncStatus();
+  }, [currentDate]);
 
   const fetchEvents = async () => {
     try {
       const { data, error } = await supabase
         .from("events")
         .select("*")
+        .eq("is_archived", false)
         .order("start_date", { ascending: true });
 
       if (error) throw error;
@@ -78,6 +110,73 @@ const EventCalendar = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSyncStatus = async () => {
+    try {
+      const monthName = monthNames[currentDate.getMonth()];
+      const year = currentDate.getFullYear();
+      
+      const { data, error } = await supabase
+        .from("sync_status")
+        .select("*")
+        .eq("sync_month", monthName)
+        .eq("sync_year", year)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') { // Ignore "no rows returned" error
+        console.error("Error fetching sync status:", error);
+      } else {
+        setSyncStatus(data);
+      }
+    } catch (error) {
+      console.error("Error fetching sync status:", error);
+    }
+  };
+
+  const handleGoogleSheetsSync = async () => {
+    if (!user || syncing) return;
+
+    setSyncing(true);
+    
+    try {
+      const monthName = monthNames[currentDate.getMonth()];
+      const year = currentDate.getFullYear();
+
+      const { data, error } = await supabase.functions.invoke('sync-google-sheets', {
+        body: {
+          sheetId: GOOGLE_SHEETS_ID,
+          month: monthName, 
+          year: year
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Синхронизация завершена!",
+          description: data.message,
+        });
+        
+        // Refresh events and sync status
+        await fetchEvents();
+        await fetchSyncStatus();
+      } else {
+        throw new Error(data.error || 'Неизвестная ошибка синхронизации');
+      }
+    } catch (error: any) {
+      console.error("Sync error:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка синхронизации",
+        description: error.message || "Не удалось синхронизировать с Google Sheets",
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -248,11 +347,6 @@ const EventCalendar = () => {
     }
   };
 
-  const monthNames = [
-    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
-  ];
-
   const getDayOfWeekAbbr = (day: number) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dayOfWeek = date.getDay();
@@ -278,7 +372,7 @@ const EventCalendar = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with month navigation */}
+      {/* Header with month navigation and sync */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button 
@@ -299,96 +393,124 @@ const EventCalendar = () => {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить мероприятие
+        
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <Button
+              variant="secondary"
+              onClick={handleGoogleSheetsSync}
+              disabled={syncing || !user}
+              className="mb-2"
+            >
+              <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
+              {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Создать новое мероприятие</DialogTitle>
-              <DialogDescription>
-                Заполните информацию о мероприятии
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Праздник</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
+            
+            {syncStatus && (
+              <div className="text-sm text-muted-foreground space-y-1">
+                <div>
+                  Последняя синхронизация: {new Date(syncStatus.last_sync_time).toLocaleString('ru-RU')}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project_owner">Чей проект?</Label>
-                  <Input
-                    id="project_owner"
-                    value={formData.project_owner}
-                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                  />
+                <div className="flex gap-4 text-xs">
+                  <span className="text-green-600">Создано: {syncStatus.created_count}</span>
+                  <span className="text-blue-600">Обновлено: {syncStatus.updated_count}</span>
+                  <span className="text-orange-600">Архивировано: {syncStatus.archived_count}</span>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_time">Время</Label>
-                  <Input
-                    id="event_time"
-                    type="time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Место</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Описание</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Примечания</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              <Button type="submit" className="w-full">
-                Создать мероприятие
+            )}
+          </div>
+          
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить мероприятие
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Создать новое мероприятие</DialogTitle>
+                <DialogDescription>
+                  Заполните информацию о мероприятии
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Праздник</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project_owner">Чей проект?</Label>
+                    <Input
+                      id="project_owner"
+                      value={formData.project_owner}
+                      onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date">Дата</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event_time">Время</Label>
+                    <Input
+                      id="event_time"
+                      type="time"
+                      value={formData.event_time}
+                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Место</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Описание</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Примечания</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full">
+                  Создать мероприятие
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Calendar Table */}
@@ -474,24 +596,24 @@ const EventCalendar = () => {
                      )}
                    </TableCell>
                    
-                   {/* Менеджеры */}
-                   <TableCell 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                     onClick={() => handleCellEdit(day, 'manager_ids', event?.manager_ids?.join(', ') || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'manager_ids' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center text-xs"
-                         autoFocus
-                       />
-                     ) : (
-                       event?.manager_ids?.join(', ') || ''
-                     )}
-                   </TableCell>
+                    {/* Менеджеры */}
+                    <TableCell 
+                      className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                      onClick={() => handleCellEdit(day, 'managers', event?.managers || '')}
+                    >
+                      {editingCell?.day === day && editingCell?.field === 'managers' ? (
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleCellSave}
+                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                          className="text-center text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        event?.managers || ''
+                      )}
+                    </TableCell>
                    
                    {/* Место */}
                    <TableCell 
@@ -531,15 +653,12 @@ const EventCalendar = () => {
                      )}
                    </TableCell>
                    
-                   {/* Аниматоры - пустая колонка */}
-                   <TableCell className="text-center border-r text-foreground text-xs py-2"></TableCell>
-                   
-                   {/* Шоу/Программа */}
+                   {/* Аниматоры */}
                    <TableCell 
                      className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                     onClick={() => handleCellEdit(day, 'contractor_ids', event?.contractor_ids?.join(', ') || '')}
+                     onClick={() => handleCellEdit(day, 'animators', event?.animators || '')}
                    >
-                     {editingCell?.day === day && editingCell?.field === 'contractor_ids' ? (
+                     {editingCell?.day === day && editingCell?.field === 'animators' ? (
                        <Input
                          value={editValue}
                          onChange={(e) => setEditValue(e.target.value)}
@@ -549,16 +668,35 @@ const EventCalendar = () => {
                          autoFocus
                        />
                      ) : (
-                       event?.contractor_ids?.join(', ') || ''
+                       event?.animators || ''
+                     )}
+                   </TableCell>
+                   
+                   {/* Шоу/Программа */}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'show_program', event?.show_program || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'show_program' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.show_program || ''
                      )}
                    </TableCell>
                    
                    {/* Подрядчики */}
                    <TableCell 
                      className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
-                     onClick={() => handleCellEdit(day, 'responsible_manager_ids', event?.responsible_manager_ids?.join(', ') || '')}
+                     onClick={() => handleCellEdit(day, 'contractors', event?.contractors || '')}
                    >
-                     {editingCell?.day === day && editingCell?.field === 'responsible_manager_ids' ? (
+                     {editingCell?.day === day && editingCell?.field === 'contractors' ? (
                        <Input
                          value={editValue}
                          onChange={(e) => setEditValue(e.target.value)}
@@ -568,13 +706,27 @@ const EventCalendar = () => {
                          autoFocus
                        />
                      ) : (
-                       event?.responsible_manager_ids?.join(', ') || ''
+                       event?.contractors || ''
                      )}
                    </TableCell>
                    
                    {/* Фото/Видео */}
-                   <TableCell className="text-center border-r text-foreground text-xs py-2">
-                     {event?.photos?.length || event?.videos?.length ? 'Есть' : ''}
+                   <TableCell 
+                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent text-xs py-2"
+                     onClick={() => handleCellEdit(day, 'photo_video', event?.photo_video || '')}
+                   >
+                     {editingCell?.day === day && editingCell?.field === 'photo_video' ? (
+                       <Input
+                         value={editValue}
+                         onChange={(e) => setEditValue(e.target.value)}
+                         onBlur={handleCellSave}
+                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                         className="text-center text-xs"
+                         autoFocus
+                       />
+                     ) : (
+                       event?.photo_video || ''
+                     )}
                    </TableCell>
                    
                    {/* Примечания */}
