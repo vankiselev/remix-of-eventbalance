@@ -86,16 +86,16 @@ export function DashboardStats({ stats, isLoading = false }: DashboardStatsProps
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="card-stats">
-            <CardContent className="animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 bg-slate-200 rounded-lg"></div>
-                <div className="w-4 h-4 bg-slate-200 rounded"></div>
+            <CardContent className="p-4 animate-pulse">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+                <div className="w-3 h-3 bg-slate-200 rounded"></div>
               </div>
-              <div className="h-8 bg-slate-200 rounded w-20 mb-2"></div>
-              <div className="h-4 bg-slate-200 rounded w-full"></div>
+              <div className="h-6 bg-slate-200 rounded w-16 mb-1"></div>
+              <div className="h-3 bg-slate-200 rounded w-full"></div>
             </CardContent>
           </Card>
         ))}
@@ -104,24 +104,24 @@ export function DashboardStats({ stats, isLoading = false }: DashboardStatsProps
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statItems.map((item, index) => {
         const Icon = item.icon;
         const colors = getColorClasses(item.color);
         
         return (
           <Card key={index} className="card-stats group">
-            <CardContent>
+            <CardContent className="p-4">
               {/* Header with icon */}
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                  <Icon className={`w-5 h-5 ${colors.icon}`} />
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
+                  <Icon className={`w-4 h-4 ${colors.icon}`} />
                 </div>
               </div>
 
               {/* Value */}
-              <div className="mb-2">
-                <div className={`text-2xl font-bold ${colors.text}`}>
+              <div className="mb-1">
+                <div className={`text-lg font-bold ${colors.text}`}>
                   {item.format === "currency" 
                     ? formatCompactCurrency(item.value)
                     : item.value.toLocaleString('ru-RU')
@@ -130,7 +130,7 @@ export function DashboardStats({ stats, isLoading = false }: DashboardStatsProps
               </div>
 
               {/* Title */}
-              <div className="text-sm font-medium text-slate-600">
+              <div className="text-xs font-medium text-slate-600">
                 {item.title}
               </div>
             </CardContent>
