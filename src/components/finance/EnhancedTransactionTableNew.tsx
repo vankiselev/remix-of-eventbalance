@@ -71,8 +71,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof Transaction>("operation_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [attachmentFilter, setAttachmentFilter] = useState<string>("all");
-  const [receiptFilter, setReceiptFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
@@ -108,24 +106,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       );
     }
 
-    // Apply attachment filter
-    if (attachmentFilter !== "all") {
-      if (attachmentFilter === "with_attachments") {
-        filtered = filtered.filter(transaction => transaction.attachments_count && transaction.attachments_count > 0);
-      } else if (attachmentFilter === "without_attachments") {
-        filtered = filtered.filter(transaction => !transaction.attachments_count || transaction.attachments_count === 0);
-      }
-    }
-
-    // Apply receipt filter
-    if (receiptFilter !== "all") {
-      if (receiptFilter === "no_receipt") {
-        filtered = filtered.filter(transaction => transaction.no_receipt);
-      } else if (receiptFilter === "with_receipt") {
-        filtered = filtered.filter(transaction => !transaction.no_receipt);
-      }
-    }
-
     // Apply sorting
     filtered.sort((a, b) => {
       const aValue = a[sortField];
@@ -139,7 +119,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     });
 
     setFilteredTransactions(filtered);
-  }, [transactions, searchTerm, attachmentFilter, receiptFilter, sortField, sortDirection]);
+  }, [transactions, searchTerm, sortField, sortDirection]);
 
   const fetchTransactions = async () => {
     try {
@@ -280,8 +260,8 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filters */}
+    <div className="space-y-4">
+      {/* Search and Scale */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -292,28 +272,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
             className="pl-9 border-slate-200 focus:border-indigo-300 focus:ring-indigo-200"
           />
         </div>
-        
-        <Select value={attachmentFilter} onValueChange={setAttachmentFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Вложения" />
-          </SelectTrigger>
-          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
-            <SelectItem value="all">Все</SelectItem>
-            <SelectItem value="with_attachments">С вложениями</SelectItem>
-            <SelectItem value="without_attachments">Без вложений</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={receiptFilter} onValueChange={setReceiptFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Чеки" />
-          </SelectTrigger>
-          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
-            <SelectItem value="all">Все</SelectItem>
-            <SelectItem value="with_receipt">С чеком</SelectItem>
-            <SelectItem value="no_receipt">Без чека</SelectItem>
-          </SelectContent>
-        </Select>
 
         <Select value={tableScale} onValueChange={setTableScale}>
           <SelectTrigger className="w-full sm:w-[120px]">
@@ -381,12 +339,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 <TableRow>
                   <TableCell 
                     colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
-                    className="text-center py-12 text-slate-500"
-                  >
-                    {searchTerm || attachmentFilter !== "all" || receiptFilter !== "all" 
-                      ? "Транзакции не найдены" 
-                      : "Нет транзакций"
-                    }
+                  className="text-center py-12 text-slate-500"
+                >
+                  {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
                   </TableCell>
                 </TableRow>
               ) : (
