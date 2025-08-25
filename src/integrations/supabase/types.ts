@@ -320,6 +320,50 @@ export type Database = {
           },
         ]
       }
+      financial_attachments: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          mime_type: string
+          original_filename: string
+          size_bytes: number
+          storage_path: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          mime_type: string
+          original_filename: string
+          size_bytes: number
+          storage_path: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          size_bytes?: number
+          storage_path?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_audit_log: {
         Row: {
           action: string
@@ -363,6 +407,8 @@ export type Database = {
           expense_amount: number | null
           id: string
           income_amount: number | null
+          no_receipt: boolean | null
+          no_receipt_reason: string | null
           notes: string | null
           operation_date: string
           project_id: string | null
@@ -379,6 +425,8 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          no_receipt?: boolean | null
+          no_receipt_reason?: string | null
           notes?: string | null
           operation_date?: string
           project_id?: string | null
@@ -395,6 +443,8 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          no_receipt?: boolean | null
+          no_receipt_reason?: string | null
           notes?: string | null
           operation_date?: string
           project_id?: string | null

@@ -9,7 +9,7 @@ import { Plus, ArrowLeft } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTable";
-import { TransactionForm } from "@/components/finance/TransactionForm";
+import { TransactionForm } from "@/components/finance/TransactionFormNew";
 
 interface CashSummary {
   total_cash: number;

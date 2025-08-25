@@ -24,7 +24,8 @@ import {
   Trash2, 
   MoreHorizontal, 
   Search,
-  ArrowUpDown 
+  ArrowUpDown,
+  Paperclip 
 } from "lucide-react";
 
 interface Transaction {
@@ -39,7 +40,10 @@ interface Transaction {
   notes: string | null;
   created_by: string;
   project_id: string | null;
+  no_receipt: boolean;
+  no_receipt_reason: string | null;
   events?: { name: string } | null;
+  attachments_count?: number;
 }
 
 interface TransactionTableProps {
@@ -95,7 +99,8 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
         .from("financial_transactions")
         .select(`
           *,
-          events:project_id(name)
+          events:project_id(name),
+          attachments_count:financial_attachments(count)
         `)
         .order("operation_date", { ascending: false });
 
@@ -108,7 +113,13 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
 
       if (error) throw error;
 
-      setTransactions(data || []);
+      // Transform the data to flatten attachments_count
+      const transformedData = (data || []).map(transaction => ({
+        ...transaction,
+        attachments_count: transaction.attachments_count?.[0]?.count || 0
+      }));
+
+      setTransactions(transformedData);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
       toast({
@@ -229,6 +240,7 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
               <TableHead className="font-semibold text-slate-700">Проект</TableHead>
               <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
               <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
+              <TableHead className="font-semibold text-slate-700 text-center">Вложения</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
               <TableHead className="font-semibold text-slate-700">Статья прихода/расхода</TableHead>
@@ -239,7 +251,7 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
             {filteredTransactions.length === 0 ? (
               <TableRow>
                 <TableCell 
-                  colSpan={!userId ? (isAdmin ? 9 : 8) : (isAdmin ? 8 : 7)} 
+                  colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
                   className="text-center py-12 text-slate-500"
                 >
                   {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -271,6 +283,25 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
                       <div className="text-xs text-slate-500 mt-1 truncate">
                         {transaction.notes}
                       </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {(transaction.attachments_count && transaction.attachments_count > 0) || transaction.no_receipt ? (
+                      <div className="flex items-center justify-center gap-1">
+                        {transaction.attachments_count && transaction.attachments_count > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Paperclip className="h-4 w-4 text-blue-500" />
+                            <span className="text-xs text-gray-600">{transaction.attachments_count}</span>
+                          </div>
+                        )}
+                        {transaction.no_receipt && (
+                          <Badge variant="outline" className="text-xs border-amber-300 text-amber-600 bg-amber-50">
+                            Нет чека
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      "—"
                     )}
                   </TableCell>
                   <TableCell className="text-right font-medium">
