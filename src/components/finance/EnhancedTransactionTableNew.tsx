@@ -34,7 +34,8 @@ import {
   Search,
   ArrowUpDown,
   Paperclip,
-  Eye
+  Eye,
+  ZoomIn
 } from "lucide-react";
 import { TransactionDetailDialog } from './TransactionDetailDialog';
 
@@ -74,7 +75,21 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [receiptFilter, setReceiptFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [tableScale, setTableScale] = useState<string>("100");
   const { toast } = useToast();
+
+  // Load scale from localStorage on mount
+  useEffect(() => {
+    const savedScale = localStorage.getItem('transaction-table-scale');
+    if (savedScale) {
+      setTableScale(savedScale);
+    }
+  }, []);
+
+  // Save scale to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('transaction-table-scale', tableScale);
+  }, [tableScale]);
 
   useEffect(() => {
     fetchTransactions();
@@ -201,6 +216,31 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }
   };
 
+  const getScaleStyles = () => {
+    const scale = parseInt(tableScale) / 100;
+    return {
+      fontSize: `${scale}rem`,
+      transform: `scale(${scale})`,
+      transformOrigin: 'top left',
+      width: `${100 / scale}%`,
+    };
+  };
+
+  const getScaleClasses = () => {
+    switch (tableScale) {
+      case "50":
+        return "text-xs leading-tight";
+      case "75":
+        return "text-sm leading-snug";
+      case "125":
+        return "text-base leading-normal";
+      case "150":
+        return "text-lg leading-relaxed";
+      default:
+        return "text-sm leading-normal";
+    }
+  };
+
   const handleViewDetails = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setDetailDialogOpen(true);
@@ -260,7 +300,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Вложения" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
             <SelectItem value="all">Все</SelectItem>
             <SelectItem value="with_attachments">С вложениями</SelectItem>
             <SelectItem value="without_attachments">Без вложений</SelectItem>
@@ -271,159 +311,175 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Чеки" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
             <SelectItem value="all">Все</SelectItem>
             <SelectItem value="with_receipt">С чеком</SelectItem>
             <SelectItem value="no_receipt">Без чека</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={tableScale} onValueChange={setTableScale}>
+          <SelectTrigger className="w-full sm:w-[120px]">
+            <ZoomIn className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Масштаб" />
+          </SelectTrigger>
+          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
+            <SelectItem value="50">50%</SelectItem>
+            <SelectItem value="75">75%</SelectItem>
+            <SelectItem value="100">100%</SelectItem>
+            <SelectItem value="125">125%</SelectItem>
+            <SelectItem value="150">150%</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Modern Table */}
       <div className="card-modern overflow-hidden">
-        <Table className="table-zebra">
-          <TableHeader>
-            <TableRow className="table-header border-0">
-              {!userId && (
-                <TableHead className="font-semibold text-slate-700">Имя</TableHead>
-              )}
-              <TableHead className="font-semibold text-slate-700">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSort("operation_date")}
-                  className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
-                >
-                  Дата операции
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold text-slate-700">Проект</TableHead>
-              <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
-              <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-center">Вложения</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
-              <TableHead className="text-right font-semibold text-slate-700">Статья прихода/расхода</TableHead>
-              {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.length === 0 ? (
-              <TableRow>
-                <TableCell 
-                  colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
-                  className="text-center py-12 text-slate-500"
-                >
-                  {searchTerm || attachmentFilter !== "all" || receiptFilter !== "all" 
-                    ? "Транзакции не найдены" 
-                    : "Нет транзакций"
-                  }
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table className={`table-zebra ${getScaleClasses()}`}>
+            <TableHeader>
+              <TableRow className="table-header border-0">
+                {!userId && (
+                  <TableHead className="font-semibold text-slate-700">Имя</TableHead>
+                )}
+                <TableHead className="font-semibold text-slate-700">
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("operation_date")}
+                    className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
+                  >
+                    Дата операции
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700">Проект</TableHead>
+                <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
+                <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
+                <TableHead className="font-semibold text-slate-700 text-center">Вложения</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Статья прихода/расхода</TableHead>
+                {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
               </TableRow>
-            ) : (
-              filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
-                  {!userId && (
-                    <TableCell className="text-sm font-medium">
-                      {/* TODO: Add user name from profiles */}
-                      Пользователь
-                    </TableCell>
-                  )}
-                  <TableCell className="text-sm font-medium">
-                    {formatDate(transaction.operation_date)}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {transaction.events?.name || "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {transaction.project_owner}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="truncate text-sm" title={transaction.description}>
-                      {transaction.description}
-                    </div>
-                    {transaction.notes && (
-                      <div className="text-xs text-slate-500 mt-1 truncate">
-                        {transaction.notes}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {(transaction.attachments_count && transaction.attachments_count > 0) || transaction.no_receipt ? (
-                      <div className="flex items-center justify-center gap-1">
-                        {transaction.attachments_count && transaction.attachments_count > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Paperclip className="h-4 w-4 text-blue-500" />
-                            <span className="text-xs text-gray-600">{transaction.attachments_count}</span>
-                          </div>
-                        )}
-                        {transaction.no_receipt && (
-                          <Badge variant="outline" className="text-xs border-amber-300 text-amber-600 bg-amber-50">
-                            Нет чека
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {transaction.expense_amount 
-                      ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
-                      : "—"
+            </TableHeader>
+            <TableBody>
+              {filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell 
+                    colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
+                    className="text-center py-12 text-slate-500"
+                  >
+                    {searchTerm || attachmentFilter !== "all" || receiptFilter !== "all" 
+                      ? "Транзакции не найдены" 
+                      : "Нет транзакций"
                     }
                   </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {transaction.income_amount 
-                      ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
-                      : "—"
-                    }
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-                      {transaction.category}
-                    </Badge>
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem 
-                            onClick={() => handleViewDetails(transaction)}
-                            className="cursor-pointer text-sm"
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Просмотр
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => onEdit?.(transaction)}
-                            className="cursor-pointer text-sm"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Редактировать
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(transaction.id)}
-                            className="cursor-pointer text-red-600 text-sm"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Удалить
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredTransactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
+                    {!userId && (
+                      <TableCell className="font-medium">
+                        {/* TODO: Add user name from profiles */}
+                        Пользователь
+                      </TableCell>
+                    )}
+                    <TableCell className="font-medium">
+                      {formatDate(transaction.operation_date)}
+                    </TableCell>
+                    <TableCell>
+                      {transaction.events?.name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {transaction.project_owner}
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="truncate" title={transaction.description}>
+                        {transaction.description}
+                      </div>
+                      {transaction.notes && (
+                        <div className="text-slate-500 mt-1 truncate opacity-75">
+                          {transaction.notes}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(transaction.attachments_count && transaction.attachments_count > 0) || transaction.no_receipt ? (
+                        <div className="flex items-center justify-center gap-1">
+                          {transaction.attachments_count && transaction.attachments_count > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Paperclip className="h-4 w-4 text-blue-500" />
+                              <span className="text-gray-600">{transaction.attachments_count}</span>
+                            </div>
+                          )}
+                          {transaction.no_receipt && (
+                            <Badge variant="outline" className="border-amber-300 text-amber-600 bg-amber-50">
+                              Нет чека
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {transaction.expense_amount 
+                        ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
+                        : "—"
+                      }
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {transaction.income_amount 
+                        ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
+                        : "—"
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="outline" className="border-slate-300 text-slate-600">
+                        {transaction.category}
+                      </Badge>
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40 bg-white border border-slate-200 shadow-lg z-50">
+                            <DropdownMenuItem 
+                              onClick={() => handleViewDetails(transaction)}
+                              className="cursor-pointer"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Просмотр
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => onEdit?.(transaction)}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Редактировать
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(transaction.id)}
+                              className="cursor-pointer text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Удалить
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Transaction Detail Dialog */}
