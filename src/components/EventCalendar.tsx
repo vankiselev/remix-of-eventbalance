@@ -389,9 +389,112 @@ const EventCalendar = () => {
   }
 
   return (
-    <div className="space-y-4 w-full min-h-screen">
-      {/* Header with month navigation and sync */}
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col w-full h-screen">
+      {/* Action Buttons Row */}
+      <div className="flex justify-end items-center gap-4 p-4 bg-background border-b">
+        <Button
+          variant="secondary"
+          onClick={handleGoogleSheetsSync}
+          disabled={syncing || !user}
+        >
+          <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
+          {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
+        </Button>
+        
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить мероприятие
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Создать новое мероприятие</DialogTitle>
+              <DialogDescription>
+                Заполните информацию о мероприятии
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateEvent} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Праздник</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="project_owner">Чей проект?</Label>
+                  <Input
+                    id="project_owner"
+                    value={formData.project_owner}
+                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Дата</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="event_time">Время</Label>
+                  <Input
+                    id="event_time"
+                    type="time"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Место</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Описание</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Примечания</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+
+              <Button type="submit" className="w-full">
+                Создать мероприятие
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Month Navigation and Scale Control */}
+      <div className="flex justify-between items-center p-4 bg-background border-b">
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
@@ -433,128 +536,26 @@ const EventCalendar = () => {
             </Select>
           </div>
           
-          <div className="text-right">
-            <Button
-              variant="secondary"
-              onClick={handleGoogleSheetsSync}
-              disabled={syncing || !user}
-              className="mb-2"
-            >
-              <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
-              {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
-            </Button>
-            
-            {syncStatus && (
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div>
-                  Последняя синхронизация: {new Date(syncStatus.last_sync_time).toLocaleString('ru-RU')}
-                </div>
-                <div className="flex gap-4 text-xs">
-                  <span className="text-green-600">Создано: {syncStatus.created_count}</span>
-                  <span className="text-blue-600">Обновлено: {syncStatus.updated_count}</span>
-                  <span className="text-orange-600">Архивировано: {syncStatus.archived_count}</span>
-                </div>
+          {syncStatus && (
+            <div className="text-right text-sm text-muted-foreground space-y-1">
+              <div>
+                Последняя синхронизация: {new Date(syncStatus.last_sync_time).toLocaleString('ru-RU')}
               </div>
-            )}
-          </div>
-          
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить мероприятие
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Создать новое мероприятие</DialogTitle>
-                <DialogDescription>
-                  Заполните информацию о мероприятии
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateEvent} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Праздник</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project_owner">Чей проект?</Label>
-                    <Input
-                      id="project_owner"
-                      value={formData.project_owner}
-                      onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start_date">Дата</Label>
-                    <Input
-                      id="start_date"
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="event_time">Время</Label>
-                    <Input
-                      id="event_time"
-                      type="time"
-                      value={formData.event_time}
-                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Место</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Описание</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Примечания</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full">
-                  Создать мероприятие
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              <div className="flex gap-4 text-xs">
+                <span className="text-green-600">Создано: {syncStatus.created_count}</span>
+                <span className="text-blue-600">Обновлено: {syncStatus.updated_count}</span>
+                <span className="text-orange-600">Архивировано: {syncStatus.archived_count}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Calendar Table */}
       <div 
-        className="border rounded-lg overflow-hidden w-full h-full"
+        className="flex-1 overflow-auto border-t"
         style={{
+          WebkitOverflowScrolling: 'touch',
           '--scale-factor': scale / 100,
           '--font-size': `${Math.max(10, scale * 0.12)}px`,
           '--cell-padding': `${Math.max(4, scale * 0.08)}px`,
@@ -562,14 +563,17 @@ const EventCalendar = () => {
           '--header-height': `${Math.max(40, scale * 0.5)}px`,
         } as React.CSSProperties}
       >
-        {/* Fixed Header */}
         <div 
-          className="bg-success border-b sticky top-0 z-20 w-full"
-          style={{ height: 'var(--header-height)' }}
+          className="min-w-[1400px] w-max"
+          style={{ minWidth: '1400px' }}
         >
-          <div className="grid grid-cols-11 gap-0 h-full">
+          {/* Fixed Header */}
+          <div 
+            className="bg-success border-b sticky top-0 z-20 grid grid-cols-11 gap-0"
+            style={{ height: 'var(--header-height)' }}
+          >
             <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
+              className="text-center text-foreground font-bold border-r flex items-center justify-center sticky left-0 bg-success z-30"
               style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
             >
               Дата
@@ -635,16 +639,8 @@ const EventCalendar = () => {
               Примечания
             </div>
           </div>
-        </div>
-        
-        {/* Scrollable Content */}
-        <div 
-          className="overflow-auto w-full"
-          style={{ 
-            height: 'calc(100vh - 300px)',
-            minHeight: `${Math.max(400, scale * 6)}px`
-          }}
-        >
+          
+          {/* Scrollable Content */}
           <div className="w-full">
             {Array.from({ length: maxDays }, (_, index) => {
               const day = index + 1;
@@ -654,12 +650,12 @@ const EventCalendar = () => {
                return (
                  <div 
                    key={day} 
-                   className="grid grid-cols-11 gap-0 border-b hover:bg-accent/50 transition-colors w-full"
+                   className="grid grid-cols-11 gap-0 border-b hover:bg-accent/50 transition-colors"
                    style={{ height: 'var(--cell-height)' }}
                  >
                    <div 
                      className={cn(
-                       "text-center font-medium border-r text-foreground flex flex-col items-center justify-center",
+                       "text-center font-medium border-r text-foreground flex flex-col items-center justify-center sticky left-0 bg-background z-10",
                        isHighlighted && "bg-warning-light"
                      )}
                      style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
@@ -683,12 +679,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.name || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.name || ''}</span>
                      )}
                    </div>
                    
@@ -704,12 +700,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.project_owner || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.project_owner || ''}</span>
                      )}
                    </div>
                    
@@ -725,12 +721,12 @@ const EventCalendar = () => {
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleCellSave}
                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                          className="text-center h-auto border-0 bg-transparent p-1"
+                          className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                           style={{ fontSize: 'var(--font-size)' }}
                           autoFocus
                         />
                       ) : (
-                        <span className="truncate w-full text-center">{event?.managers || ''}</span>
+                        <span className="truncate w-full text-center px-2">{event?.managers || ''}</span>
                       )}
                     </div>
                    
@@ -746,12 +742,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.location || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.location || ''}</span>
                      )}
                    </div>
                    
@@ -767,12 +763,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.event_time || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.event_time || ''}</span>
                      )}
                    </div>
                    
@@ -788,12 +784,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.animators || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.animators || ''}</span>
                      )}
                    </div>
                    
@@ -809,12 +805,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.show_program || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.show_program || ''}</span>
                      )}
                    </div>
                    
@@ -830,12 +826,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.contractors || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.contractors || ''}</span>
                      )}
                    </div>
                    
@@ -851,12 +847,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.photo_video || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.photo_video || ''}</span>
                      )}
                    </div>
                    
@@ -872,12 +868,12 @@ const EventCalendar = () => {
                          onChange={(e) => setEditValue(e.target.value)}
                          onBlur={handleCellSave}
                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1"
+                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
                          style={{ fontSize: 'var(--font-size)' }}
                          autoFocus
                        />
                      ) : (
-                       <span className="truncate w-full text-center">{event?.notes || ''}</span>
+                       <span className="truncate w-full text-center px-2">{event?.notes || ''}</span>
                      )}
                    </div>
                  </div>
