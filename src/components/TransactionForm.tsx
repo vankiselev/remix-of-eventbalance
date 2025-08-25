@@ -16,46 +16,8 @@ import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
 
-const projectOwnerOptions = [
-  "Наличка Настя",
-  "Наличка Лера", 
-  "Наличка Ваня",
-  "Корп. карта Настя",
-  "Корп. карта Лера",
-  "ИП Настя",
-  "ИП Лера",
-  "Оплатил(а) клиент",
-  "Оплатила Настя",
-  "Оплатила Лера",
-  "Получила Лера",
-  "Получила Настя"
-];
-
-const categories = [
-  "Агентская комиссия",
-  "Аниматоры / Шоу программа (мастер-классы, поп-ап, интерактивы, пиньята)",
-  "Аренда (оборудование, костюмы, мебель, декор, аттракционы, шатры)",
-  "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажёры/хелперы)",
-  "Выступление артистов (диджеи, селебрити, кавер-группы)",
-  "Дизайн / Оформление (флористика, шарики, фотозона, услуги дизайнера)",
-  "Доставка / Трансфер / Парковка / Вывоз мусора",
-  "Еда / Напитки (сладкий стол, торт, кейтеринг)",
-  "Закупки / Оплаты (ФИН, офис, склад, компания)",
-  "Залог (внесли/вернули)",
-  "Комиссия за перевод",
-  "Монтаж / Демонтаж",
-  "Накладные расходы (райдер, траты вне сметы)",
-  "Передано или получено от Леры/Насти/Вани",
-  "Передано или получено от сотрудника",
-  "Печать (баннеры, меню, карточки)",
-  "Площадка (депозит, аренда, доп. услуги)",
-  "Получено/Возвращено клиенту",
-  "Производство (декорации, костюмы)",
-  "Прочие специалисты",
-  "Фотограф / Видеограф",
-  "Налог / УСН"
-];
 
 const transactionSchema = z.object({
   operation_date: z.date(),
@@ -166,7 +128,7 @@ const TransactionForm = () => {
     event.name.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
-  const filteredCategories = categories.filter(category =>
+  const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
     category.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
@@ -244,7 +206,7 @@ const TransactionForm = () => {
                 <SelectValue placeholder="Выберите владельца проекта" />
               </SelectTrigger>
               <SelectContent>
-                {projectOwnerOptions.map((option) => (
+                {PROJECT_OWNERS.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

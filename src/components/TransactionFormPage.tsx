@@ -15,8 +15,8 @@ import { FileUpload, UploadedFile } from './finance/FileUpload';
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
 import {
   Form,
   FormControl,
@@ -85,7 +85,6 @@ interface TransactionFormPageProps {
 
 export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPageProps) {
   const { toast } = useToast();
-  const { t } = useTranslation();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -275,31 +274,6 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
     await Promise.all(uploadPromises);
   };
 
-  const categories = [
-    "Реквизит",
-    "Транспорт", 
-    "Питание",
-    "Материалы",
-    "Услуги",
-    "Аренда",
-    "Зарплата",
-    "Другое"
-  ];
-
-  const whoseProjectOptions = [
-    "Наличка Настя",
-    "Наличка Лера", 
-    "Наличка Ваня",
-    "Корп. карта Настя",
-    "Корп. карта Лера",
-    "ИП Настя",
-    "ИП Лера",
-    "Оплатил(а) клиент",
-    "Оплатила Настя",
-    "Оплатила Лера",
-    "Получила Лера",
-    "Получила Настя"
-  ];
 
   if (loading) {
     return (
@@ -412,7 +386,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {whoseProjectOptions.map((option) => (
+                          {PROJECT_OWNERS.map((option) => (
                             <SelectItem key={option} value={option}>
                               {option}
                             </SelectItem>
@@ -503,7 +477,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.map((category) => (
+                          {EXPENSE_INCOME_CATEGORIES.map((category) => (
                             <SelectItem key={category} value={category}>
                               {category}
                             </SelectItem>
