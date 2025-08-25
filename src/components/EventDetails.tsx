@@ -222,9 +222,13 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад
+          <Button 
+            variant="ghost" 
+            onClick={onBack}
+            className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+            <span>Назад</span>
           </Button>
         </div>
         <div className="animate-pulse space-y-4">
@@ -239,9 +243,13 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground mb-4">Данные по мероприятию отсутствуют</p>
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Назад к мероприятиям
+        <Button 
+          variant="ghost" 
+          onClick={onBack}
+          className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+          <span>Назад к мероприятиям</span>
         </Button>
       </div>
     );
@@ -251,9 +259,13 @@ const EventDetails: React.FC<EventDetailsProps> = ({ eventId, onBack }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Назад к мероприятиям
+        <Button 
+          variant="ghost" 
+          onClick={onBack}
+          className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+          <span>Назад к мероприятиям</span>
         </Button>
         <div className="flex items-center gap-2">
           <Badge className={getStatusColor(event.status)}>

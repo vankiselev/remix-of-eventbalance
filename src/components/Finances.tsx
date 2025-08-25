@@ -138,11 +138,11 @@ const Finances = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              size="sm"
               onClick={handleBackToMain}
+              className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Назад
+              <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span>Назад</span>
             </Button>
             <div>
               <h2 className="text-xl font-semibold">

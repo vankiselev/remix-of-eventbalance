@@ -291,10 +291,10 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
         <Button
           variant="ghost"
           onClick={onNavigateToFinances}
-          className="mb-4"
+          className="mb-4 min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Назад к финансам
+          <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+          <span>Назад к финансам</span>
         </Button>
         
         <Card>
