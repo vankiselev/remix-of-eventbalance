@@ -54,30 +54,38 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border/20 backdrop-blur-lg safe-area-inset-bottom">
         <div className="flex items-center justify-around px-4 py-4 max-w-screen-sm mx-auto">
           {/* Dashboard */}
-          <button
-            onClick={() => handleTabChange("dashboard")}
-            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
-              isActiveTab("dashboard") 
-                ? "text-primary" 
-                : "text-foreground hover:text-primary hover:bg-accent/50"
-            }`}
-          >
-            <BarChart3 className="h-5 w-5" strokeWidth={2} />
-            <span className="text-xs font-medium">Главная</span>
-          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("dashboard")}
+              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                isActiveTab("dashboard") 
+                  ? "border-2 border-primary text-primary bg-primary/5" 
+                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+              }`}
+            >
+              <BarChart3 className="h-5 w-5" strokeWidth={2} />
+            </button>
+            <span className={`text-xs font-medium ${
+              isActiveTab("dashboard") ? "text-primary" : "text-foreground"
+            }`}>Главная</span>
+          </div>
 
           {/* Calendar */}
-          <button
-            onClick={() => handleTabChange("calendar")}
-            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
-              isActiveTab("calendar") 
-                ? "text-primary" 
-                : "text-foreground hover:text-primary hover:bg-accent/50"
-            }`}
-          >
-            <Calendar className="h-5 w-5" strokeWidth={2} />
-            <span className="text-xs font-medium">Календарь</span>
-          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("calendar")}
+              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                isActiveTab("calendar") 
+                  ? "border-2 border-primary text-primary bg-primary/5" 
+                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+              }`}
+            >
+              <Calendar className="h-5 w-5" strokeWidth={2} />
+            </button>
+            <span className={`text-xs font-medium ${
+              isActiveTab("calendar") ? "text-primary" : "text-foreground"
+            }`}>Календарь</span>
+          </div>
 
           {/* Add Transaction - Central FAB */}
           <div className="flex flex-col items-center gap-1.5">
@@ -97,25 +105,31 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
           </div>
 
           {/* Finances */}
-          <button
-            onClick={() => handleTabChange("finances")}
-            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
-              isActiveTab("finances") 
-                ? "text-primary" 
-                : "text-foreground hover:text-primary hover:bg-accent/50"
-            }`}
-          >
-            <DollarSign className="h-5 w-5" strokeWidth={2} />
-            <span className="text-xs font-medium">Финансы</span>
-          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("finances")}
+              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                isActiveTab("finances") 
+                  ? "border-2 border-primary text-primary bg-primary/5" 
+                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+              }`}
+            >
+              <DollarSign className="h-5 w-5" strokeWidth={2} />
+            </button>
+            <span className={`text-xs font-medium ${
+              isActiveTab("finances") ? "text-primary" : "text-foreground"
+            }`}>Финансы</span>
+          </div>
 
           {/* More Menu */}
           <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
             <SheetTrigger asChild>
-              <button className="flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 text-foreground hover:text-primary hover:bg-accent/50">
-                <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
-                <span className="text-xs font-medium">Ещё</span>
-              </button>
+              <div className="flex flex-col items-center gap-1.5">
+                <button className="flex items-center justify-center h-12 w-12 rounded-full border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95">
+                  <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+                </button>
+                <span className="text-xs font-medium text-foreground">Ещё</span>
+              </div>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-2xl border-t border-border/20">
               <SheetHeader className="pb-4">
