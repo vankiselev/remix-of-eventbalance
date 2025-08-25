@@ -458,7 +458,7 @@ const EventCalendar = () => {
             size="sm"
           >
             <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
-            {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
+            {syncing ? "Синхронизация..." : "Синхронизировать"}
           </Button>
           
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
