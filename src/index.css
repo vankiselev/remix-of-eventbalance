@@ -465,6 +465,38 @@
     min-height: -webkit-fill-available;
   }
 
+  /* Mobile Safe Area Support */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-inset-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Mobile bottom navigation support */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  .mb-safe {
+    margin-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  /* Mobile viewport fixes */
+  .h-screen-safe {
+    height: 100vh;
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
   /* Badge sizing and truncation */
   .badge-responsive {
     display: inline-flex;
