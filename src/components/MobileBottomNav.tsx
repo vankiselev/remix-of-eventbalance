@@ -80,14 +80,17 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
           </button>
 
           {/* Add Transaction - Central FAB */}
-          <button
-            onClick={() => handleTabChange("transaction")}
-            className={`flex items-center justify-center h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 ${
-              isActiveTab("transaction") ? "ring-2 ring-primary/20 ring-offset-2 shadow-xl" : ""
-            }`}
-          >
-            <Plus className="h-6 w-6" strokeWidth={2.5} />
-          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("transaction")}
+              className={`flex items-center justify-center h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 ${
+                isActiveTab("transaction") ? "ring-2 ring-primary/20 ring-offset-2 shadow-xl" : ""
+              }`}
+            >
+              <Plus className="h-6 w-6" strokeWidth={2.5} />
+            </button>
+            <span className="text-xs font-medium text-muted-foreground">Трата/Приход</span>
+          </div>
 
           {/* Finances */}
           <button
