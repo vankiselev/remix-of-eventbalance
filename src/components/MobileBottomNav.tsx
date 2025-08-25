@@ -59,10 +59,10 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
               isActiveTab("dashboard") 
                 ? "text-primary" 
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "text-foreground hover:text-primary hover:bg-accent/50"
             }`}
           >
-            <BarChart3 className="h-6 w-6" strokeWidth={2} />
+            <BarChart3 className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Главная</span>
           </button>
 
@@ -72,10 +72,10 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
               isActiveTab("calendar") 
                 ? "text-primary" 
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "text-foreground hover:text-primary hover:bg-accent/50"
             }`}
           >
-            <Calendar className="h-6 w-6" strokeWidth={2} />
+            <Calendar className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Календарь</span>
           </button>
 
@@ -83,13 +83,17 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
           <div className="flex flex-col items-center gap-1.5">
             <button
               onClick={() => handleTabChange("transaction")}
-              className={`flex items-center justify-center h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 ${
-                isActiveTab("transaction") ? "ring-2 ring-primary/20 ring-offset-2 shadow-xl" : ""
+              className={`flex items-center justify-center h-12 w-12 rounded-full border-2 transition-all duration-200 active:scale-95 ${
+                isActiveTab("transaction") 
+                  ? "border-primary text-primary bg-primary/5" 
+                  : "border-foreground text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
             >
-              <Plus className="h-6 w-6" strokeWidth={2.5} />
+              <Plus className="h-5 w-5" strokeWidth={2} />
             </button>
-            <span className="text-xs font-medium text-muted-foreground">Трата/Приход</span>
+            <span className={`text-xs font-medium ${
+              isActiveTab("transaction") ? "text-primary" : "text-foreground"
+            }`}>Трата/Приход</span>
           </div>
 
           {/* Finances */}
@@ -98,18 +102,18 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
               isActiveTab("finances") 
                 ? "text-primary" 
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                : "text-foreground hover:text-primary hover:bg-accent/50"
             }`}
           >
-            <DollarSign className="h-6 w-6" strokeWidth={2} />
+            <DollarSign className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Финансы</span>
           </button>
 
           {/* More Menu */}
           <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
             <SheetTrigger asChild>
-              <button className="flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 text-muted-foreground hover:text-foreground hover:bg-accent/50">
-                <MoreHorizontal className="h-6 w-6" strokeWidth={2} />
+              <button className="flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 text-foreground hover:text-primary hover:bg-accent/50">
+                <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
                 <span className="text-xs font-medium">Ещё</span>
               </button>
             </SheetTrigger>
@@ -130,7 +134,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                           : "hover:bg-accent/50 text-foreground"
                       }`}
                     >
-                       <Icon className="h-6 w-6" strokeWidth={2} />
+                       <Icon className="h-5 w-5" strokeWidth={2} />
                        <span className="font-medium">{item.label}</span>
                     </button>
                   );
