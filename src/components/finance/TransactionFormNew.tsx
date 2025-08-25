@@ -12,6 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './FileUpload';
+import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -42,13 +42,11 @@ const transactionSchema = z.object({
   operation_date: z.date({
     required_error: "Дата операции обязательна",
   }),
-  type: z.enum(["expense", "income"], {
-    required_error: "Выберите тип операции",
-  }),
   project_id: z.string().optional(),
+  whose_project: z.string().min(1, "Выберите чей проект"),
   description: z.string().min(1, "Описание обязательно"),
-  amount: z.number().positive("Сумма должна быть положительной"),
-  cash_type: z.string().min(1, "Выберите тип наличных"),
+  expense_amount: z.number().optional(),
+  income_amount: z.number().optional(),
   category: z.string().min(1, "Категория обязательна"),
   no_receipt: z.boolean().default(false),
   no_receipt_reason: z.string().optional(),
@@ -60,6 +58,22 @@ const transactionSchema = z.object({
 }, {
   message: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
   path: ["no_receipt_reason"],
+}).refine((data) => {
+  const hasExpense = data.expense_amount && data.expense_amount > 0;
+  const hasIncome = data.income_amount && data.income_amount > 0;
+  
+  if (!hasExpense && !hasIncome) {
+    return false;
+  }
+  
+  if (hasExpense && hasIncome) {
+    return false;
+  }
+  
+  return true;
+}, {
+  message: "Заполните либо сумму траты, либо сумму прихода (только одно поле)",
+  path: ["expense_amount"],
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -87,16 +101,28 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       operation_date: new Date(),
-      type: "expense",
       project_id: undefined,
+      whose_project: undefined,
       description: "",
-      amount: 0,
-      cash_type: undefined,
+      expense_amount: undefined,
+      income_amount: undefined,
       category: undefined,
-      no_receipt: editTransaction?.no_receipt || false,
-      no_receipt_reason: editTransaction?.no_receipt_reason || "",
+      no_receipt: false,
+      no_receipt_reason: "",
     },
   });
+
+  const watchNoReceipt = form.watch("no_receipt");
+
+  useEffect(() => {
+    if (watchNoReceipt && files.length === 0) {
+      // Auto-focus on reason field when "no receipt" is checked and no files
+      const reasonField = document.querySelector('textarea[name="no_receipt_reason"]') as HTMLTextAreaElement;
+      if (reasonField) {
+        reasonField.focus();
+      }
+    }
+  }, [watchNoReceipt, files.length]);
 
   useEffect(() => {
     if (isOpen) {
@@ -110,17 +136,28 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (editTransaction) {
         form.reset({
           operation_date: new Date(editTransaction.operation_date),
-          type: editTransaction.expense_amount > 0 ? "expense" : "income",
           project_id: editTransaction.project_id || undefined,
+          whose_project: editTransaction.project_owner || undefined,
           description: editTransaction.description,
-          amount: editTransaction.expense_amount || editTransaction.income_amount || 0,
-          cash_type: editTransaction.cash_type || undefined,
+          expense_amount: editTransaction.expense_amount || undefined,
+          income_amount: editTransaction.income_amount || undefined,
           category: editTransaction.category || undefined,
           no_receipt: editTransaction.no_receipt || false,
           no_receipt_reason: editTransaction.no_receipt_reason || "",
         });
+        setFiles([]);
       } else {
-        form.reset();
+        form.reset({
+          operation_date: new Date(),
+          project_id: undefined,
+          whose_project: undefined,
+          description: "",
+          expense_amount: undefined,
+          income_amount: undefined,
+          category: undefined,
+          no_receipt: false,
+          no_receipt_reason: "",
+        });
         setFiles([]);
       }
     }
@@ -130,101 +167,133 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("events")
-        .select("id, name")
-        .order("name");
+        .from('events')
+        .select('id, name')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
-      console.error("Error fetching events:", error);
+      console.error('Error fetching events:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список проектов",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const onSubmit = async (data: TransactionFormData) => {
+    if (submitting) return;
+
+    // Validate files and no_receipt logic
+    if (!data.no_receipt && files.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Загрузите чек или отметьте 'Чека нет' с указанием причины",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (data.no_receipt && files.length > 0) {
+      toast({
+        title: "Ошибка",
+        description: "Нельзя одновременно прикрепить файлы и отметить 'Чека нет'",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Ошибка",
-          description: "Пользователь не авторизован",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!user) throw new Error('User not authenticated');
 
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
         project_id: data.project_id || null,
+        project_owner: data.whose_project,
         description: data.description,
-        project_owner: "", // This could be derived from project or user
-        expense_amount: data.type === "expense" ? data.amount : 0,
-        income_amount: data.type === "income" ? data.amount : 0,
-        cash_type: data.cash_type,
+        expense_amount: data.expense_amount || 0,
+        income_amount: data.income_amount || 0,
+        cash_type: data.whose_project,
         category: data.category,
         no_receipt: data.no_receipt,
-        no_receipt_reason: data.no_receipt_reason || null,
+        no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
       };
 
-      let result;
+      let transactionResult;
+      
       if (editTransaction) {
-        result = await supabase
-          .from("financial_transactions")
+        // Update existing transaction
+        const { data: transaction, error } = await supabase
+          .from('financial_transactions')
           .update(transactionData)
-          .eq("id", editTransaction.id)
+          .eq('id', editTransaction.id)
           .select()
           .single();
+
+        if (error) throw error;
+        transactionResult = transaction;
+
+        // Log audit entry for update
+        await supabase
+          .from('financial_audit_log')
+          .insert([{
+            transaction_id: editTransaction.id,
+            action: 'UPDATE',
+            changed_by: user.id,
+            old_data: editTransaction,
+            new_data: transactionData,
+            change_description: 'Transaction updated'
+          }]);
       } else {
-        result = await supabase
-          .from("financial_transactions")
+        // Create new transaction
+        const { data: transaction, error } = await supabase
+          .from('financial_transactions')
           .insert([transactionData])
           .select()
           .single();
-      }
 
-      if (result.error) throw result.error;
+        if (error) throw error;
+        transactionResult = transaction;
+
+        // Log audit entry for create
+        await supabase
+          .from('financial_audit_log')
+          .insert([{
+            transaction_id: transaction.id,
+            action: 'CREATE',
+            changed_by: user.id,
+            new_data: transactionData,
+            change_description: 'Transaction created'
+          }]);
+      }
 
       // Upload files if any
-      if (files.length > 0 && result.data) {
-        await uploadFiles(result.data.id, user.id);
-      }
-
-      // Log to audit trail
-      if (result.data) {
-        await supabase.from("financial_audit_log").insert([
-          {
-            transaction_id: result.data.id,
-            action: editTransaction ? "update" : "create",
-            changed_by: user.id,
-            new_data: result.data,
-            old_data: editTransaction || null,
-            change_description: editTransaction 
-              ? `Транзакция обновлена: ${data.description}` 
-              : `Новая транзакция: ${data.description}`,
-          },
-        ]);
+      if (files.length > 0) {
+        await uploadFiles(transactionResult.id, user.id);
       }
 
       toast({
-        title: "Успешно",
-        description: editTransaction 
-          ? "Транзакция обновлена" 
-          : "Транзакция добавлена",
+        title: "Успех",
+        description: editTransaction ? "Транзакция обновлена" : "Операция сохранена",
       });
 
       form.reset();
       setFiles([]);
-      onSuccess?.();
       onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
-      console.error("Error submitting transaction:", error);
+      console.error('Error saving transaction:', error);
       toast({
         title: "Ошибка",
-        description: "Не удалось сохранить транзакцию",
+        description: error instanceof Error ? error.message : "Не удалось сохранить операцию",
         variant: "destructive",
       });
     } finally {
@@ -234,18 +303,16 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
   const uploadFiles = async (transactionId: string, userId: string) => {
     const uploadPromises = files.map(async (fileItem) => {
-      const fileExtension = fileItem.file.name.split('.').pop() || '';
-      const fileName = `${fileItem.id}.${fileExtension}`;
-      const storagePath = `transactions/${userId}/${transactionId}/${fileName}`;
+      const fileExtension = fileItem.file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExtension}`;
+      const storagePath = `receipts/${transactionId}/${fileName}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(storagePath, fileItem.file);
 
       if (uploadError) throw uploadError;
 
-      // Save to database
       const { error: dbError } = await supabase
         .from('financial_attachments')
         .insert([
@@ -264,6 +331,32 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
     await Promise.all(uploadPromises);
   };
+
+  const categories = [
+    "Реквизит",
+    "Транспорт", 
+    "Питание",
+    "Материалы",
+    "Услуги",
+    "Аренда",
+    "Зарплата",
+    "Другое"
+  ];
+
+  const whoseProjectOptions = [
+    "Наличка Настя",
+    "Наличка Лера", 
+    "Наличка Ваня",
+    "Корп. карта Настя",
+    "Корп. карта Лера",
+    "ИП Настя",
+    "ИП Лера",
+    "Оплатил(а) клиент",
+    "Оплатила Настя",
+    "Оплатила Лера",
+    "Получила Лера",
+    "Получила Настя"
+  ];
 
   if (loading) {
     return (
@@ -294,7 +387,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="operation_date"
@@ -336,79 +429,57 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Тип операции</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите тип" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="expense">Расход</SelectItem>
-                        <SelectItem value="income">Доход</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Проект</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите проект" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {events.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="project_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Проект (необязательно)</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите проект" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="cash_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Касса</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите кассу" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="nastya">Настя</SelectItem>
-                        <SelectItem value="lera">Лера</SelectItem>
-                        <SelectItem value="vanya">Ваня</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="whose_project"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Чей проект</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {whoseProjectOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -417,10 +488,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 <FormItem>
                   <FormLabel>Подробное описание</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Опишите транзакцию подробно..." 
-                      className="min-h-[80px]"
-                      {...field} 
+                    <Textarea
+                      placeholder="Опишите операцию..."
+                      className="resize-none"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -428,25 +499,53 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Сумма (₽)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="expense_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Сумма Траты (₽)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        value={field.value}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          if (value && value > 0) {
+                            form.setValue("income_amount", undefined);
+                          }
+                        }}
+                        placeholder="Введите сумму"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="income_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Сумма Прихода (₽)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        value={field.value}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          if (value && value > 0) {
+                            form.setValue("expense_amount", undefined);
+                          }
+                        }}
+                        placeholder="Введите сумму"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -461,18 +560,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="catering">Кейтеринг</SelectItem>
-                      <SelectItem value="venue">Аренда площадки</SelectItem>
-                      <SelectItem value="equipment">Оборудование</SelectItem>
-                      <SelectItem value="decoration">Декор</SelectItem>
-                      <SelectItem value="staff">Персонал</SelectItem>
-                      <SelectItem value="marketing">Маркетинг</SelectItem>
-                      <SelectItem value="transport">Транспорт</SelectItem>
-                      <SelectItem value="materials">Материалы</SelectItem>
-                      <SelectItem value="client_payment">Оплата клиента</SelectItem>
-                      <SelectItem value="partner_payment">Оплата партнёра</SelectItem>
-                      <SelectItem value="refund">Возврат</SelectItem>
-                      <SelectItem value="other">Прочее</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -480,34 +572,37 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               )}
             />
 
-            {/* Receipt Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Чек / вложения</h3>
+              <FormLabel>Чек / вложения</FormLabel>
               
-              <FormField
-                control={form.control}
-                name="no_receipt"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">
-                        Чека нет
-                      </FormLabel>
-                      <FormDescription>
-                        Включите если у вас нет чека для этой транзакции
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
+              <FileUpload
+                files={files}
+                onFilesChange={setFiles}
+                maxFiles={5}
+                maxSize={10} // 10MB
               />
 
-              {form.watch("no_receipt") ? (
+              <div className="flex items-center space-x-2">
+                <FormField
+                  control={form.control}
+                  name="no_receipt"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal">
+                        Чека нет
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {watchNoReceipt && (
                 <FormField
                   control={form.control}
                   name="no_receipt_reason"
@@ -517,45 +612,35 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       <FormControl>
                         <Textarea
                           placeholder="Укажите причину отсутствия чека (минимум 10 символов)..."
-                          className="min-h-[80px]"
+                          className="resize-none"
                           {...field}
-                          autoFocus
                         />
                       </FormControl>
                       <FormDescription>
-                        Обязательно укажите причину отсутствия чека
+                        Минимум 10 символов
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              ) : (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Загрузить файлы
-                  </label>
-                  <FileUpload
-                    files={files}
-                    onFilesChange={setFiles}
-                    maxFiles={5}
-                    maxSize={10}
-                    disabled={submitting}
-                  />
-                </div>
               )}
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={submitting}
+                className="flex-1"
               >
                 Отмена
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Сохранение..." : editTransaction ? "Обновить" : "Добавить"}
+              <Button 
+                type="submit" 
+                disabled={submitting}
+                className="flex-1"
+              >
+                {submitting ? "Сохранение..." : editTransaction ? "Обновить" : "Сохранить операцию"}
               </Button>
             </div>
           </form>
