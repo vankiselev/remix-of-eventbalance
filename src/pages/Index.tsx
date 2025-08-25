@@ -5,7 +5,7 @@ import Events from "@/components/Events";
 import EventCalendar from "@/components/EventCalendar";
 import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
-import TransactionForm from "@/components/TransactionForm";
+import { TransactionFormPage } from "@/components/TransactionFormPage";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
 import Contacts from "@/components/Contacts";
 
@@ -21,7 +21,7 @@ const Index = () => {
       case "calendar":
         return <EventCalendar />;
       case "transaction":
-        return <TransactionForm />;
+        return <TransactionFormPage onNavigateToFinances={() => setActiveTab("finances")} />;
       case "finances":
         return <Finances />;
       case "staff":
