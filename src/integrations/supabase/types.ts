@@ -814,6 +814,10 @@ export type Database = {
           total_cash: number
         }[]
       }
+      can_edit_admin_profile: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       can_view_invitation: {
         Args: { invitation_token: string }
         Returns: boolean

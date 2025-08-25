@@ -251,7 +251,7 @@ const Staff = () => {
     if (user.role === 'admin' && currentUserProfile?.role !== 'admin') {
       toast({
         variant: "destructive",
-        title: t('error'),
+        title: "Ошибка",
         description: "У вас нет прав для редактирования администраторов",
       });
       return;
@@ -263,7 +263,7 @@ const Staff = () => {
     if (!canEditThisUser) {
       toast({
         variant: "destructive",
-        title: t('error'),
+        title: "Ошибка", 
         description: "У вас нет прав для редактирования этого пользователя",
       });
       return;

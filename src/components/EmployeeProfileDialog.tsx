@@ -231,7 +231,7 @@ export const EmployeeProfileDialog = ({
       if (updateError) throw updateError;
 
       toast({
-        title: t('success'),
+        title: "Успешно!",
         description: "Фото профиля обновлено",
       });
       
@@ -240,7 +240,7 @@ export const EmployeeProfileDialog = ({
     } catch (error: any) {
         toast({
           variant: "destructive",
-          title: t('error'),
+          title: "Ошибка",
           description: error.message || "Не удалось загрузить фото",
         });
     } finally {
@@ -359,7 +359,7 @@ export const EmployeeProfileDialog = ({
       }
 
       toast({
-        title: t('success'),
+        title: "Успешно!",
         description: "Изменения сохранены",
       });
 
@@ -371,8 +371,8 @@ export const EmployeeProfileDialog = ({
       onSuccess();
     } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: t('error'),
+        variant: "destructive", 
+        title: "Ошибка",
         description: error.message || "Не удалось обновить профиль",
       });
     } finally {
