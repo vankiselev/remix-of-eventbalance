@@ -308,146 +308,152 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       {/* Modern Table */}
       <div className="card-modern overflow-hidden">
         <div className="overflow-x-auto">
-          <Table className={`table-zebra ${getScaleClasses()}`}>
-            <TableHeader>
-              <TableRow className="table-header border-0">
-                {!userId && (
-                  <TableHead className="font-semibold text-slate-700">Имя</TableHead>
-                )}
-                <TableHead className="font-semibold text-slate-700">
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleSort("operation_date")}
-                    className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
-                  >
-                    Дата операции
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700">Проект</TableHead>
-                <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
-                <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-center">Вложения</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Статья прихода/расхода</TableHead>
-                {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.length === 0 ? (
-                <TableRow>
-                  <TableCell 
-                    colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
-                  className="text-center py-12 text-slate-500"
-                >
-                  {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
-                  </TableCell>
+          <div style={{
+            transform: `scale(${parseInt(tableScale) / 100})`,
+            transformOrigin: 'top left',
+            width: `${100 / (parseInt(tableScale) / 100)}%`
+          }}>
+            <Table className={`table-zebra ${getScaleClasses()}`}>
+              <TableHeader>
+                <TableRow className="table-header border-0">
+                  {!userId && (
+                    <TableHead className="font-semibold text-slate-700">Имя</TableHead>
+                  )}
+                  <TableHead className="font-semibold text-slate-700">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort("operation_date")}
+                      className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
+                    >
+                      Дата операции
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="font-semibold text-slate-700">Проект</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
+                  <TableHead className="font-semibold text-slate-700 text-center">Вложения</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">Статья прихода/расхода</TableHead>
+                  {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
                 </TableRow>
-              ) : (
-                filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
-                    {!userId && (
-                      <TableCell className="font-medium">
-                        {/* TODO: Add user name from profiles */}
-                        Пользователь
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium">
-                      {formatDate(transaction.operation_date)}
+              </TableHeader>
+              <TableBody>
+                {filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell 
+                      colSpan={!userId ? (isAdmin ? 10 : 9) : (isAdmin ? 9 : 8)} 
+                      className="text-center py-12 text-slate-500"
+                    >
+                      {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
                     </TableCell>
-                    <TableCell>
-                      {transaction.events?.name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      {transaction.project_owner}
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate" title={transaction.description}>
-                        {transaction.description}
-                      </div>
-                      {transaction.notes && (
-                        <div className="text-slate-500 mt-1 truncate opacity-75">
-                          {transaction.notes}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {(transaction.attachments_count && transaction.attachments_count > 0) || transaction.no_receipt ? (
-                        <div className="flex items-center justify-center gap-1">
-                          {transaction.attachments_count && transaction.attachments_count > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Paperclip className="h-4 w-4 text-blue-500" />
-                              <span className="text-gray-600">{transaction.attachments_count}</span>
-                            </div>
-                          )}
-                          {transaction.no_receipt && (
-                            <Badge variant="outline" className="border-amber-300 text-amber-600 bg-amber-50">
-                              Нет чека
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {transaction.expense_amount 
-                        ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
-                        : "—"
-                      }
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {transaction.income_amount 
-                        ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
-                        : "—"
-                      }
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline" className="border-slate-300 text-slate-600">
-                        {transaction.category}
-                      </Badge>
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40 bg-white border border-slate-200 shadow-lg z-50">
-                            <DropdownMenuItem 
-                              onClick={() => handleViewDetails(transaction)}
-                              className="cursor-pointer"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Просмотр
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => onEdit?.(transaction)}
-                              className="cursor-pointer"
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Редактировать
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(transaction.id)}
-                              className="cursor-pointer text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Удалить
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredTransactions.map((transaction) => (
+                    <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
+                      {!userId && (
+                        <TableCell className="font-medium">
+                          {/* TODO: Add user name from profiles */}
+                          Пользователь
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium">
+                        {formatDate(transaction.operation_date)}
+                      </TableCell>
+                      <TableCell>
+                        {transaction.events?.name || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {transaction.project_owner}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="truncate" title={transaction.description}>
+                          {transaction.description}
+                        </div>
+                        {transaction.notes && (
+                          <div className="text-slate-500 mt-1 truncate opacity-75">
+                            {transaction.notes}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {(transaction.attachments_count && transaction.attachments_count > 0) || transaction.no_receipt ? (
+                          <div className="flex items-center justify-center gap-1">
+                            {transaction.attachments_count && transaction.attachments_count > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Paperclip className="h-4 w-4 text-blue-500" />
+                                <span className="text-gray-600">{transaction.attachments_count}</span>
+                              </div>
+                            )}
+                            {transaction.no_receipt && (
+                              <Badge variant="outline" className="border-amber-300 text-amber-600 bg-amber-50">
+                                Нет чека
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {transaction.expense_amount 
+                          ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
+                          : "—"
+                        }
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {transaction.income_amount 
+                          ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
+                          : "—"
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline" className="border-slate-300 text-slate-600">
+                          {transaction.category}
+                        </Badge>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 bg-white border border-slate-200 shadow-lg z-50">
+                              <DropdownMenuItem 
+                                onClick={() => handleViewDetails(transaction)}
+                                className="cursor-pointer"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Просмотр
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => onEdit?.(transaction)}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Редактировать
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(transaction.id)}
+                                className="cursor-pointer text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Удалить
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
