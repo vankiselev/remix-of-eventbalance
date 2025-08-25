@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +67,7 @@ const EventCalendar = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [scale, setScale] = useState(70); // Default 70% scale
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -89,7 +91,23 @@ const EventCalendar = () => {
   useEffect(() => {
     fetchEvents();
     fetchSyncStatus();
+    
+    // Load saved scale from localStorage
+    const savedScale = localStorage.getItem('calendar-scale');
+    if (savedScale) {
+      setScale(parseInt(savedScale, 10));
+    }
   }, [currentDate]);
+
+  // Save scale to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('calendar-scale', scale.toString());
+  }, [scale]);
+
+  const handleScaleChange = (newScale: string) => {
+    const scaleValue = parseInt(newScale, 10);
+    setScale(scaleValue);
+  };
 
   const fetchEvents = async () => {
     try {
@@ -395,6 +413,26 @@ const EventCalendar = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Scale Control */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Масштаб:</span>
+            <Select value={scale.toString()} onValueChange={handleScaleChange}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="50">50%</SelectItem>
+                <SelectItem value="60">60%</SelectItem>
+                <SelectItem value="70">70%</SelectItem>
+                <SelectItem value="80">80%</SelectItem>
+                <SelectItem value="90">90%</SelectItem>
+                <SelectItem value="100">100%</SelectItem>
+                <SelectItem value="110">110%</SelectItem>
+                <SelectItem value="125">125%</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
           <div className="text-right">
             <Button
               variant="secondary"
@@ -514,7 +552,15 @@ const EventCalendar = () => {
       </div>
 
       {/* Calendar Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div 
+        className="border rounded-lg overflow-hidden" 
+        style={{ 
+          transform: `scale(${scale / 100})`, 
+          transformOrigin: 'top left',
+          width: `${10000 / scale}%`,
+          marginBottom: `${(100 - scale) * 5}px`
+        }}
+      >
         {/* Fixed Header */}
         <div className="bg-success border-b sticky top-0 z-20">
           <div className="grid grid-cols-11 gap-0">
