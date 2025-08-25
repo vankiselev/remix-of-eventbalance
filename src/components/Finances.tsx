@@ -173,7 +173,7 @@ const Finances = () => {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 bg-background pb-4">
+      <div className="sticky top-0 z-10 bg-background pb-2">
         <FinanceSummaryCards 
           summary={selectedEmployee ? companySummary : userSummary} 
           isLoading={false} 
@@ -219,8 +219,8 @@ const Finances = () => {
         </div>
       </div>
 
-      <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="mb-2">
+      <div className="sticky top-0 z-10 bg-background pb-2">
+        <div className="mb-1">
           <h2 className="text-lg font-semibold">Сводка по компании</h2>
         </div>
         <FinanceSummaryCards summary={companySummary} isLoading={false} />

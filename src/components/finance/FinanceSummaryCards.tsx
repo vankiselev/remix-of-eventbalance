@@ -17,15 +17,13 @@ interface FinanceSummaryCardsProps {
 export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="space-y-1">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="card-modern">
-            <CardHeader className="pb-3">
-              <div className="animate-pulse">
-                <div className="bg-slate-200 h-4 w-24 rounded mb-2"></div>
-                <div className="bg-slate-200 h-8 w-32 rounded"></div>
-              </div>
-            </CardHeader>
+          <Card key={i} className="border border-border/50 h-11">
+            <CardContent className="p-3 animate-pulse flex items-center justify-between">
+              <div className="bg-slate-200 h-3 w-20 rounded"></div>
+              <div className="bg-slate-200 h-4 w-16 rounded"></div>
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -72,24 +70,22 @@ export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsP
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-4">
+    <div className="space-y-1">
       {cards.map((card, index) => {
         const Icon = card.icon;
         
         return (
-          <Card key={index} className="card-modern hover:shadow-lg transition-all duration-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-slate-600">
-                  {card.title}
-                </CardTitle>
-                <div className={`w-8 h-8 ${card.bgColor} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`h-4 w-4 ${card.iconColor}`} />
+          <Card key={index} className="border border-border/50 h-11 shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-3 flex items-center justify-between h-full">
+              <div className="flex items-center gap-2">
+                <div className={`w-5 h-5 ${card.bgColor} rounded-md flex items-center justify-center`}>
+                  <Icon className={`h-3 w-3 ${card.iconColor}`} />
                 </div>
+                <span className="text-xs font-medium text-slate-600">
+                  {card.title}
+                </span>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className={`text-2xl font-bold ${card.textColor}`}>
+              <div className={`text-sm font-bold ${card.textColor}`}>
                 {formatCurrency(card.value)}
               </div>
             </CardContent>
