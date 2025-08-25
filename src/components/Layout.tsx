@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from 'react-i18next';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface LayoutProps {
 const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
   const { signOut, user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -34,27 +36,27 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     try {
       await signOut();
       toast({
-        title: "Вы вышли из системы",
+        title: t('signOut'),
         description: "До встречи!",
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Ошибка",
+        title: t('error'),
         description: "Не удалось выйти из системы",
       });
     }
   };
 
   const menuItems = [
-    { id: "dashboard", label: "Панель управления", icon: BarChart3 },
-    { id: "events", label: "Мероприятия", icon: Calendar },
-    { id: "calendar", label: "Календарь", icon: CalendarDays },
-    { id: "transaction", label: "Внести Трату/Приход", icon: PlusCircle },
-    { id: "finances", label: "Финансы", icon: DollarSign },
-    { id: "staff", label: "Сотрудники", icon: Users },
-    { id: "contacts", label: "Контакты", icon: Users },
-    ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: Users }] : []),
+    { id: "dashboard", label: t('dashboard'), icon: BarChart3 },
+    { id: "events", label: t('events'), icon: Calendar },
+    { id: "calendar", label: t('calendar'), icon: CalendarDays },
+    { id: "transaction", label: t('transaction'), icon: PlusCircle },
+    { id: "finances", label: t('finances'), icon: DollarSign },
+    { id: "staff", label: t('staff'), icon: Users },
+    { id: "contacts", label: t('contacts'), icon: Users },
+    ...(userRole === 'admin' ? [{ id: "invitations", label: t('invitations'), icon: Users }] : []),
   ];
 
   const getPageTitle = (activeTab: string) => {

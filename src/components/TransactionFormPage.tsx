@@ -15,6 +15,8 @@ import { FileUpload, UploadedFile } from './finance/FileUpload';
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/utils/dateFormat';
 import {
   Form,
   FormControl,
@@ -83,6 +85,7 @@ interface TransactionFormPageProps {
 
 export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPageProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -344,11 +347,11 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
-                                {field.value ? (
-                                  format(field.value, "dd.MM.yyyy")
-                                ) : (
-                                  <span>Выберите дату</span>
-                                )}
+                                 {field.value ? (
+                                   formatDate(field.value)
+                                 ) : (
+                                   <span>Выберите дату</span>
+                                 )}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
                             </FormControl>

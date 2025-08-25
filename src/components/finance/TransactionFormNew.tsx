@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './FileUpload';
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/utils/dateFormat';
 import {
   Dialog,
   DialogContent,
@@ -92,6 +94,7 @@ interface TransactionFormProps {
 
 export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransaction }: TransactionFormProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -404,11 +407,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
-                              format(field.value, "dd.MM.yyyy")
-                            ) : (
-                              <span>Выберите дату</span>
-                            )}
+                             {field.value ? (
+                               formatDate(field.value)
+                             ) : (
+                               <span>Выберите дату</span>
+                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "./input";
 import { formatCurrency, formatAmount } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
+import { useTranslation } from 'react-i18next';
 
 interface CurrencyInputProps {
   value?: number;
@@ -16,13 +17,14 @@ interface CurrencyInputProps {
 export function CurrencyInput({ 
   value, 
   onChange, 
-  placeholder = "Введите сумму",
+  placeholder,
   disabled,
   className,
   onBlur,
   onFocus,
   ...props 
 }: CurrencyInputProps) {
+  const { t } = useTranslation();
   const [displayValue, setDisplayValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +133,7 @@ export function CurrencyInput({
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      placeholder={placeholder}
+      placeholder={placeholder || t('enterAmount')}
       disabled={disabled}
       className={className}
       {...props}
