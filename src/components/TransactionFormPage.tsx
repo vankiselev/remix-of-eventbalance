@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './finance/FileUpload';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -36,13 +36,11 @@ const transactionSchema = z.object({
   operation_date: z.date({
     required_error: "Дата операции обязательна",
   }),
-  type: z.enum(["expense", "income"], {
-    required_error: "Выберите тип операции",
-  }),
   project_id: z.string().optional(),
+  whose_project: z.string().min(1, "Выберите чей проект"),
   description: z.string().min(1, "Описание обязательно"),
-  amount: z.number().positive("Сумма должна быть положительной"),
-  cash_type: z.string().min(1, "Выберите тип наличных"),
+  expense_amount: z.number().optional(),
+  income_amount: z.number().optional(),
   category: z.string().min(1, "Категория обязательна"),
   no_receipt: z.boolean().default(false),
   no_receipt_reason: z.string().optional(),
@@ -54,6 +52,22 @@ const transactionSchema = z.object({
 }, {
   message: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
   path: ["no_receipt_reason"],
+}).refine((data) => {
+  const hasExpense = data.expense_amount && data.expense_amount > 0;
+  const hasIncome = data.income_amount && data.income_amount > 0;
+  
+  if (!hasExpense && !hasIncome) {
+    return false;
+  }
+  
+  if (hasExpense && hasIncome) {
+    return false;
+  }
+  
+  return true;
+}, {
+  message: "Заполните либо сумму траты, либо сумму прихода (только одно поле)",
+  path: ["expense_amount"],
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -78,11 +92,11 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       operation_date: new Date(),
-      type: "expense",
       project_id: undefined,
+      whose_project: undefined,
       description: "",
-      amount: 0,
-      cash_type: undefined,
+      expense_amount: undefined,
+      income_amount: undefined,
       category: undefined,
       no_receipt: false,
       no_receipt_reason: "",
@@ -130,11 +144,11 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
   const resetForm = () => {
     form.reset({
       operation_date: new Date(),
-      type: "expense",
       project_id: undefined,
+      whose_project: undefined,
       description: "",
-      amount: 0,
-      cash_type: undefined,
+      expense_amount: undefined,
+      income_amount: undefined,
       category: undefined,
       no_receipt: false,
       no_receipt_reason: "",
@@ -173,11 +187,11 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
         project_id: data.project_id || null,
-        project_owner: "Admin", // Default value
+        project_owner: data.whose_project,
         description: data.description,
-        expense_amount: data.type === "expense" ? data.amount : 0,
-        income_amount: data.type === "income" ? data.amount : 0,
-        cash_type: data.cash_type,
+        expense_amount: data.expense_amount || 0,
+        income_amount: data.income_amount || 0,
+        cash_type: data.whose_project,
         category: data.category,
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
@@ -260,7 +274,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
 
   const categories = [
     "Реквизит",
-    "Транспорт",
+    "Транспорт", 
     "Питание",
     "Материалы",
     "Услуги",
@@ -269,10 +283,19 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
     "Другое"
   ];
 
-  const cashTypes = [
-    "Настя",
-    "Лера", 
-    "Ваня"
+  const whoseProjectOptions = [
+    "Наличка Настя",
+    "Наличка Лера", 
+    "Наличка Ваня",
+    "Корп. карта Настя",
+    "Корп. карта Лера",
+    "ИП Настя",
+    "ИП Лера",
+    "Оплатил(а) клиент",
+    "Оплатила Настя",
+    "Оплатила Лера",
+    "Получила Лера",
+    "Получила Настя"
   ];
 
   if (loading) {
@@ -304,7 +327,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="operation_date"
@@ -346,28 +369,6 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Тип операции</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Выберите тип" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="expense">Расход</SelectItem>
-                            <SelectItem value="income">Доход</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <FormField
@@ -386,6 +387,31 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                           {events.map((event) => (
                             <SelectItem key={event.id} value={event.id}>
                               {event.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whose_project"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Чей проект</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {whoseProjectOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -416,17 +442,20 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="amount"
+                    name="expense_amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Сумма</FormLabel>
+                        <FormLabel>Сумма Траты (₽)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          <CurrencyInput
+                            value={field.value}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              if (value && value > 0) {
+                                form.setValue("income_amount", undefined);
+                              }
+                            }}
+                            placeholder="Введите сумму"
                           />
                         </FormControl>
                         <FormMessage />
@@ -436,24 +465,22 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
 
                   <FormField
                     control={form.control}
-                    name="cash_type"
+                    name="income_amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Тип наличных</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Выберите тип" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {cashTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Сумма Прихода (₽)</FormLabel>
+                        <FormControl>
+                          <CurrencyInput
+                            value={field.value}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              if (value && value > 0) {
+                                form.setValue("expense_amount", undefined);
+                              }
+                            }}
+                            placeholder="Введите сумму"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -465,7 +492,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Категория</FormLabel>
+                      <FormLabel>Статья прихода/расхода</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
