@@ -15,7 +15,10 @@ import { PhoneInputRU } from "@/components/ui/phone-input-ru";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from 'react-i18next';
 import { Upload, ChevronDown, History, Wallet } from "lucide-react";
+import { formatDate, formatDateTime } from '@/utils/dateFormat';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Имя обязательно"),
@@ -23,9 +26,11 @@ const profileSchema = z.object({
   phone_display: z.string().optional(),
   phone_e164: z.string().optional(),
   birth_date: z.string().optional(),
-  position: z.string().min(1, "Должность обязательна"),
-  hire_date: z.string().min(1, "Дата трудоустройства обязательна"),
+  position: z.string().optional(), // Made optional for administrators
+  hire_date: z.string().optional(), // Made optional for administrators
   salary: z.string().optional(),
+  role: z.enum(['admin', 'employee']).optional(),
+  notes: z.string().optional(), // Added notes field
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -49,6 +54,18 @@ interface Employee {
   };
 }
 
+interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'admin' | 'employee';
+  phone?: string;
+  phone_e164?: string;
+  birth_date?: string;
+  avatar_url?: string;
+  created_at: string;
+}
+
 interface CashSummary {
   total_cash: number;
   cash_nastya: number;
@@ -69,6 +86,7 @@ interface EditHistory {
 
 interface EmployeeProfileDialogProps {
   employee: Employee | null;
+  profile?: Profile; // Added for administrator users without employee record
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -77,6 +95,7 @@ interface EmployeeProfileDialogProps {
 
 export const EmployeeProfileDialog = ({ 
   employee, 
+  profile,
   isOpen, 
   onOpenChange, 
   onSuccess, 
@@ -95,6 +114,11 @@ export const EmployeeProfileDialog = ({
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Get the current user data (either from employee or profile)
+  const currentUser = employee ? employee.profiles : profile;
+  const isCurrentUserSuperAdmin = user?.email === 'ikiselev@me.com';
+  const canEditRole = isCurrentUserSuperAdmin;
+
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -106,29 +130,36 @@ export const EmployeeProfileDialog = ({
       position: "",
       hire_date: "",
       salary: "",
+      role: "employee",
+      notes: "",
     },
   });
 
   useEffect(() => {
-    if (employee && isOpen) {
+    if ((employee || profile) && isOpen) {
+      const userData = currentUser;
+      if (!userData) return;
+
       form.reset({
-        full_name: employee.profiles.full_name,
-        email: employee.profiles.email,
-        phone_display: employee.profiles.phone || "",
-        phone_e164: employee.profiles.phone_e164 || "",
-        birth_date: employee.profiles.birth_date || "",
-        position: employee.position,
-        hire_date: employee.hire_date,
-        salary: employee.salary?.toString() || "",
+        full_name: userData.full_name,
+        email: userData.email,
+        phone_display: userData.phone || "",
+        phone_e164: userData.phone_e164 || "",
+        birth_date: userData.birth_date || "",
+        position: employee?.position || "",
+        hire_date: employee?.hire_date || "",
+        salary: employee?.salary?.toString() || "",
+        role: userData.role,
+        notes: "", // Will be populated if we add notes to database
       });
       
       fetchEditHistory();
       fetchCashSummary();
     }
-  }, [employee, isOpen, form]);
+  }, [employee, profile, isOpen, form, currentUser]);
 
   const fetchEditHistory = async () => {
-    if (!employee) return;
+    if (!currentUser) return;
 
     try {
       const { data, error } = await supabase
@@ -141,7 +172,7 @@ export const EmployeeProfileDialog = ({
           created_at,
           edited_by:profiles!profile_edit_history_edited_by_fkey(full_name)
         `)
-        .eq("profile_id", employee.profiles.id)
+        .eq("profile_id", currentUser.id)
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -153,11 +184,11 @@ export const EmployeeProfileDialog = ({
   };
 
   const fetchCashSummary = async () => {
-    if (!employee) return;
+    if (!currentUser) return;
 
     try {
       const { data, error } = await supabase
-        .rpc("get_employee_cash_summary", { employee_user_id: employee.user_id });
+        .rpc("get_employee_cash_summary", { employee_user_id: currentUser.id });
 
       if (error) throw error;
       
@@ -171,12 +202,12 @@ export const EmployeeProfileDialog = ({
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !employee) return;
+    if (!file || !currentUser) return;
 
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${employee.user_id}.${fileExt}`;
+      const fileName = `${currentUser.id}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -195,34 +226,34 @@ export const EmployeeProfileDialog = ({
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: avatarUrl })
-        .eq("id", employee.profiles.id);
+        .eq("id", currentUser.id);
 
       if (updateError) throw updateError;
 
       toast({
-        title: "Успешно!",
+        title: t('success'),
         description: "Фото профиля обновлено",
       });
       
-      // Обновляем данные сотрудника и закрываем диалог
+      // Обновляем данные и закрываем диалог
       onSuccess();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось загрузить фото",
-      });
+        toast({
+          variant: "destructive",
+          title: t('error'),
+          description: error.message || "Не удалось загрузить фото",
+        });
     } finally {
       setUploading(false);
     }
   };
 
   const logFieldChange = async (fieldName: string, oldValue: any, newValue: any) => {
-    if (!employee || oldValue === newValue) return;
+    if (!currentUser || oldValue === newValue) return;
 
     try {
       await supabase.rpc("log_profile_edit", {
-        p_profile_id: employee.profiles.id,
+        p_profile_id: currentUser.id,
         p_field_name: fieldName,
         p_old_value: oldValue?.toString() || null,
         p_new_value: newValue?.toString() || null,
@@ -233,11 +264,11 @@ export const EmployeeProfileDialog = ({
   };
 
   const onSubmit = async (data: ProfileFormData) => {
-    if (!employee) return;
+    if (!currentUser) return;
 
     setLoading(true);
     try {
-      const currentProfile = employee.profiles;
+      const currentProfile = currentUser;
       const currentEmployee = employee;
 
       // Update profile data
@@ -251,6 +282,12 @@ export const EmployeeProfileDialog = ({
       // Only admin can update email
       if (isAdmin) {
         profileUpdates.email = data.email;
+      }
+
+      // Only super admin can change role
+      if (canEditRole && data.role && data.role !== currentProfile.role) {
+        profileUpdates.role = data.role;
+        await logFieldChange("role", currentProfile.role, data.role);
       }
 
       // Log changes for profile
@@ -270,40 +307,59 @@ export const EmployeeProfileDialog = ({
       const { error: profileError } = await supabase
         .from("profiles")
         .update(profileUpdates)
-        .eq("id", employee.profiles.id);
+        .eq("id", currentUser.id);
 
       if (profileError) throw profileError;
 
-      // Update employee data
-      const employeeUpdates: any = {
-        position: data.position,
-        hire_date: data.hire_date,
-      };
+      // Handle employee data - create or update
+      if (data.position || data.hire_date || (isAdmin && data.salary)) {
+        const employeeUpdates: any = {
+          position: data.position || "",
+          hire_date: data.hire_date || new Date().toISOString().split('T')[0],
+        };
 
-      if (isAdmin) {
-        employeeUpdates.salary = data.salary ? parseFloat(data.salary) : null;
-      }
+        if (isAdmin) {
+          employeeUpdates.salary = data.salary ? parseFloat(data.salary) : null;
+        }
 
-      // Log changes for employee
-      if (data.position !== currentEmployee.position) {
-        await logFieldChange("position", currentEmployee.position, data.position);
-      }
-      if (data.hire_date !== currentEmployee.hire_date) {
-        await logFieldChange("hire_date", currentEmployee.hire_date, data.hire_date);
-      }
-      if (isAdmin && data.salary !== (currentEmployee.salary?.toString() || "")) {
-        await logFieldChange("salary", currentEmployee.salary?.toString(), data.salary);
-      }
+        if (employee) {
+          // Update existing employee record
+          if (data.position !== currentEmployee?.position) {
+            await logFieldChange("position", currentEmployee?.position, data.position);
+          }
+          if (data.hire_date !== currentEmployee?.hire_date) {
+            await logFieldChange("hire_date", currentEmployee?.hire_date, data.hire_date);
+          }
+          if (isAdmin && data.salary !== (currentEmployee?.salary?.toString() || "")) {
+            await logFieldChange("salary", currentEmployee?.salary?.toString(), data.salary);
+          }
 
-      const { error: employeeError } = await supabase
-        .from("employees")
-        .update(employeeUpdates)
-        .eq("id", employee.id);
+          const { error: employeeError } = await supabase
+            .from("employees")
+            .update(employeeUpdates)
+            .eq("id", employee.id);
 
-      if (employeeError) throw employeeError;
+          if (employeeError) throw employeeError;
+        } else {
+          // Create new employee record for administrator
+          employeeUpdates.user_id = currentUser.id;
+          
+          const { error: employeeError } = await supabase
+            .from("employees")
+            .insert([employeeUpdates]);
+
+          if (employeeError) throw employeeError;
+
+          // Log the creation
+          await logFieldChange("employee_record_created", null, "true");
+          if (data.position) await logFieldChange("position", null, data.position);
+          if (data.hire_date) await logFieldChange("hire_date", null, data.hire_date);
+          if (isAdmin && data.salary) await logFieldChange("salary", null, data.salary);
+        }
+      }
 
       toast({
-        title: "Успешно!",
+        title: t('success'),
         description: "Изменения сохранены",
       });
 
@@ -311,12 +367,12 @@ export const EmployeeProfileDialog = ({
       await fetchEditHistory();
       await fetchCashSummary();
       
-      // Вызываем onSuccess для обновления списка сотрудников и закрываем диалог
+      // Вызываем onSuccess для обновления списка и закрываем диалог
       onSuccess();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Ошибка",
+        title: t('error'),
         description: error.message || "Не удалось обновить профиль",
       });
     } finally {
@@ -332,24 +388,20 @@ export const EmployeeProfileDialog = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU", {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDateTime(dateString);
   };
 
-  if (!employee) return null;
+  if (!currentUser) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Профиль сотрудника</DialogTitle>
+          <DialogTitle>
+            Профиль {currentUser.role === 'admin' ? 'администратора' : 'сотрудника'}
+          </DialogTitle>
           <DialogDescription>
-            Просмотр и редактирование информации о сотруднике
+            Просмотр и редактирование информации о {currentUser.role === 'admin' ? 'администраторе' : 'сотруднике'}
           </DialogDescription>
         </DialogHeader>
 
@@ -357,16 +409,16 @@ export const EmployeeProfileDialog = ({
           {/* Avatar Section */}
           <div className="flex items-center gap-4">
             <Avatar className="w-20 h-20">
-              <AvatarImage src={employee.profiles.avatar_url} />
+              <AvatarImage src={currentUser.avatar_url} />
               <AvatarFallback>
-                {employee.profiles.full_name.split(' ').map(n => n[0]).join('')}
+                {currentUser.full_name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-lg font-semibold">{employee.profiles.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{employee.profiles.email}</p>
-              <Badge variant={employee.profiles.role === 'admin' ? 'default' : 'secondary'}>
-                {employee.profiles.role === 'admin' ? 'Администратор' : 'Сотрудник'}
+              <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
+              <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+              <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'}>
+                {currentUser.role === 'admin' ? 'Администратор' : 'Сотрудник'}
               </Badge>
               <div className="mt-2">
                 <label htmlFor="avatar-upload" className="cursor-pointer">
@@ -491,7 +543,7 @@ export const EmployeeProfileDialog = ({
                     <FormItem>
                       <FormLabel>Должность</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="Введите должность" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -505,12 +557,39 @@ export const EmployeeProfileDialog = ({
                     <FormItem>
                       <FormLabel>Дата трудоустройства</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          placeholder="Выберите дату"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Role field - only super admin can edit */}
+                {canEditRole && (
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Роль</FormLabel>
+                        <FormControl>
+                          <select 
+                            {...field} 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="employee">Сотрудник</option>
+                            <option value="admin">Администратор</option>
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {isAdmin && (
                   <FormField
@@ -520,13 +599,36 @@ export const EmployeeProfileDialog = ({
                       <FormItem>
                         <FormLabel>Зарплата (₽)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" {...field} />
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            {...field} 
+                            placeholder="Введите зарплату"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
+
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Примечания</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Дополнительная информация (необязательно)"
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="flex justify-end gap-2">

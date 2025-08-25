@@ -247,6 +247,28 @@ const Staff = () => {
   };
 
   const handleEditUser = (user: CombinedUser) => {
+    // Check permissions - only admins can edit other admins
+    if (user.role === 'admin' && currentUserProfile?.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: t('error'),
+        description: "У вас нет прав для редактирования администраторов",
+      });
+      return;
+    }
+    
+    // Users can edit their own profile
+    const canEditThisUser = user.id === currentUserProfile?.id || currentUserProfile?.role === 'admin';
+    
+    if (!canEditThisUser) {
+      toast({
+        variant: "destructive",
+        title: t('error'),
+        description: "У вас нет прав для редактирования этого пользователя",
+      });
+      return;
+    }
+
     setSelectedUser(user);
     setShowProfileDialog(true);
   };
@@ -442,12 +464,13 @@ const Staff = () => {
                         <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                         <span className="text-truncate">{getRoleLabel(user.role)}</span>
                       </Badge>
-                      {canManageStaff() && (
+                      {(canManageStaff() || user.id === currentUserProfile?.id) && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditUser(user)}
                           className="p-1 h-8 w-8"
+                          title={user.role === 'admin' ? 'Редактировать администратора' : 'Редактировать сотрудника'}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -518,6 +541,16 @@ const Staff = () => {
               created_at: selectedUser.created_at
             }
           } : null}
+          profile={!selectedUser.employee_id ? {
+            id: selectedUser.id,
+            email: selectedUser.email,
+            full_name: selectedUser.full_name,
+            role: selectedUser.role,
+            phone: selectedUser.phone,
+            birth_date: selectedUser.birth_date,
+            avatar_url: selectedUser.avatar_url,
+            created_at: selectedUser.created_at
+          } : undefined}
           isOpen={showProfileDialog}
           onOpenChange={setShowProfileDialog}
           onSuccess={handleProfileSuccess}
