@@ -51,70 +51,66 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
   return (
     <>
       {/* Fixed bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border/40 backdrop-blur-md bg-card/95">
-        <div className="flex items-center justify-around px-2 py-2 safe-area-inset-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border/20 backdrop-blur-lg">
+        <div className="flex items-center justify-around px-3 py-3 safe-area-inset-bottom">
           {/* Dashboard */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => handleTabChange("dashboard")}
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-3 min-w-0 ${
-              isActiveTab("dashboard") ? "text-primary" : "text-muted-foreground"
+            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
+              isActiveTab("dashboard") 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <BarChart3 className="h-5 w-5" />
+            <BarChart3 className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Главная</span>
-          </Button>
+          </button>
 
           {/* Calendar */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => handleTabChange("calendar")}
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-3 min-w-0 ${
-              isActiveTab("calendar") ? "text-primary" : "text-muted-foreground"
+            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
+              isActiveTab("calendar") 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <Calendar className="h-5 w-5" />
+            <Calendar className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Календарь</span>
-          </Button>
+          </button>
 
           {/* Add Transaction - Central FAB */}
-          <Button
+          <button
             onClick={() => handleTabChange("transaction")}
-            className={`relative h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg ${
-              isActiveTab("transaction") ? "ring-2 ring-primary/20 ring-offset-2" : ""
+            className={`relative h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 ${
+              isActiveTab("transaction") ? "ring-2 ring-primary/20 ring-offset-2 shadow-xl" : ""
             }`}
           >
-            <Plus className="h-6 w-6" />
-          </Button>
+            <Plus className="h-6 w-6" strokeWidth={2.5} />
+          </button>
 
           {/* Finances */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => handleTabChange("finances")}
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-3 min-w-0 ${
-              isActiveTab("finances") ? "text-primary" : "text-muted-foreground"
+            className={`flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 ${
+              isActiveTab("finances") 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" strokeWidth={2} />
             <span className="text-xs font-medium">Финансы</span>
-          </Button>
+          </button>
 
           {/* More Menu */}
           <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex flex-col items-center gap-1 h-auto py-2 px-3 min-w-0 text-muted-foreground"
-              >
-                <MoreHorizontal className="h-5 w-5" />
+              <button className="flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 text-muted-foreground hover:text-foreground hover:bg-accent/50">
+                <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
                 <span className="text-xs font-medium">Ещё</span>
-              </Button>
+              </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl">
+            <SheetContent side="bottom" className="rounded-t-2xl border-t border-border/20">
               <SheetHeader className="pb-4">
                 <SheetTitle>Меню</SheetTitle>
               </SheetHeader>
@@ -122,19 +118,18 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                 {moreMenuItems.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Button
+                    <button
                       key={item.id}
-                      variant={isActiveTab(item.id) ? "secondary" : "ghost"}
                       onClick={() => handleTabChange(item.id)}
-                      className={`w-full justify-start gap-3 h-12 ${
+                      className={`w-full flex items-center justify-start gap-3 h-12 px-4 rounded-lg transition-all duration-200 active:scale-98 ${
                         isActiveTab(item.id) 
                           ? "bg-primary/10 text-primary font-medium" 
-                          : "hover:bg-accent/50"
+                          : "hover:bg-accent/50 text-foreground"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Button>
+                      <Icon className="h-5 w-5" strokeWidth={2} />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
                   );
                 })}
               </div>

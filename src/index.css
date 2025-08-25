@@ -497,6 +497,24 @@
     height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
+  /* Bottom Navigation Styles */
+  .nav-button {
+    @apply transition-all duration-200 active:scale-95;
+  }
+
+  .nav-button-fab {
+    @apply transition-all duration-200 active:scale-95 shadow-lg hover:shadow-xl;
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  }
+
+  .nav-button-fab:hover {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+  }
+
+  .nav-button-fab:active {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  }
+
   /* Badge sizing and truncation */
   .badge-responsive {
     display: inline-flex;
