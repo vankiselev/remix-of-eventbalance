@@ -206,10 +206,7 @@ const Finances = () => {
   // Admin dashboard view
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-sm text-muted-foreground">Управление финансами компании</p>
-        </div>
+      <div className="flex justify-end items-center">
         <div className="flex items-center gap-2">
           <TransactionExport isAdmin={true} />
           <Button onClick={() => setShowTransactionForm(true)}>
