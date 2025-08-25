@@ -227,18 +227,15 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   };
 
   const getScaleClasses = () => {
-    switch (tableScale) {
-      case "50":
-        return "text-xs leading-tight";
-      case "75":
-        return "text-sm leading-snug";
-      case "125":
-        return "text-base leading-normal";
-      case "150":
-        return "text-lg leading-relaxed";
-      default:
-        return "text-sm leading-normal";
-    }
+    const scale = parseInt(tableScale);
+    if (scale <= 20) return "text-[10px] leading-tight";
+    if (scale <= 40) return "text-xs leading-tight";
+    if (scale <= 60) return "text-xs leading-snug";
+    if (scale <= 80) return "text-sm leading-snug";
+    if (scale <= 100) return "text-sm leading-normal";
+    if (scale <= 120) return "text-base leading-normal";
+    if (scale <= 140) return "text-base leading-relaxed";
+    return "text-lg leading-relaxed";
   };
 
   const handleViewDetails = (transaction: Transaction) => {
@@ -323,12 +320,29 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
             <ZoomIn className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Масштаб" />
           </SelectTrigger>
-          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
+          <SelectContent className="bg-white border border-slate-200 shadow-lg z-50 max-h-60 overflow-y-auto">
+            <SelectItem value="5">5%</SelectItem>
+            <SelectItem value="10">10%</SelectItem>
+            <SelectItem value="20">20%</SelectItem>
+            <SelectItem value="30">30%</SelectItem>
+            <SelectItem value="40">40%</SelectItem>
             <SelectItem value="50">50%</SelectItem>
+            <SelectItem value="60">60%</SelectItem>
+            <SelectItem value="70">70%</SelectItem>
             <SelectItem value="75">75%</SelectItem>
+            <SelectItem value="80">80%</SelectItem>
+            <SelectItem value="90">90%</SelectItem>
             <SelectItem value="100">100%</SelectItem>
+            <SelectItem value="110">110%</SelectItem>
+            <SelectItem value="120">120%</SelectItem>
             <SelectItem value="125">125%</SelectItem>
+            <SelectItem value="130">130%</SelectItem>
+            <SelectItem value="140">140%</SelectItem>
             <SelectItem value="150">150%</SelectItem>
+            <SelectItem value="160">160%</SelectItem>
+            <SelectItem value="170">170%</SelectItem>
+            <SelectItem value="180">180%</SelectItem>
+            <SelectItem value="200">200%</SelectItem>
           </SelectContent>
         </Select>
       </div>
