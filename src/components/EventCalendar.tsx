@@ -389,133 +389,136 @@ const EventCalendar = () => {
   }
 
   return (
-    <div className="flex flex-col w-full h-screen">
-      {/* Action Buttons Row */}
-      <div className="flex justify-end items-center gap-4 p-4 bg-background border-b">
-        <Button
-          variant="secondary"
-          onClick={handleGoogleSheetsSync}
-          disabled={syncing || !user}
-        >
-          <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
-          {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
-        </Button>
-        
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить мероприятие
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Создать новое мероприятие</DialogTitle>
-              <DialogDescription>
-                Заполните информацию о мероприятии
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Праздник</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project_owner">Чей проект?</Label>
-                  <Input
-                    id="project_owner"
-                    value={formData.project_owner}
-                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_time">Время</Label>
-                  <Input
-                    id="event_time"
-                    type="time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Место</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Описание</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Примечания</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              <Button type="submit" className="w-full">
-                Создать мероприятие
+    <div className="flex flex-col h-full p-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        {/* Left side - Action buttons */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={handleGoogleSheetsSync}
+            disabled={syncing || !user}
+            size="sm"
+          >
+            <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
+            {syncing ? "Синхронизация..." : "Синхронизировать с Google Sheets"}
+          </Button>
+          
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить мероприятие
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Создать новое мероприятие</DialogTitle>
+                <DialogDescription>
+                  Заполните информацию о мероприятии
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Праздник</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="project_owner">Чей проект?</Label>
+                    <Input
+                      id="project_owner"
+                      value={formData.project_owner}
+                      onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-      {/* Month Navigation and Scale Control */}
-      <div className="flex justify-between items-center p-4 bg-background border-b">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigateMonth('prev')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold text-black">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h1>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigateMonth('next')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date">Дата</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event_time">Время</Label>
+                    <Input
+                      id="event_time"
+                      type="time"
+                      value={formData.event_time}
+                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Место</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Описание</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Примечания</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full">
+                  Создать мероприятие
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-        
-        <div className="flex items-center gap-4">
+
+        {/* Right side - Month navigation and scale */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Month Navigation */}
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigateMonth('prev')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-xl font-semibold text-foreground whitespace-nowrap">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigateMonth('next')}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          
           {/* Scale Control */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Масштаб:</span>
@@ -535,350 +538,354 @@ const EventCalendar = () => {
               </SelectContent>
             </Select>
           </div>
-          
-          {syncStatus && (
-            <div className="text-right text-sm text-muted-foreground space-y-1">
-              <div>
-                Последняя синхронизация: {new Date(syncStatus.last_sync_time).toLocaleString('ru-RU')}
-              </div>
-              <div className="flex gap-4 text-xs">
-                <span className="text-green-600">Создано: {syncStatus.created_count}</span>
-                <span className="text-blue-600">Обновлено: {syncStatus.updated_count}</span>
-                <span className="text-orange-600">Архивировано: {syncStatus.archived_count}</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Calendar Table */}
-      <div 
-        className="flex-1 overflow-auto border-t"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          '--scale-factor': scale / 100,
-          '--font-size': `${Math.max(10, scale * 0.12)}px`,
-          '--cell-padding': `${Math.max(4, scale * 0.08)}px`,
-          '--cell-height': `${Math.max(30, scale * 0.4)}px`,
-          '--header-height': `${Math.max(40, scale * 0.5)}px`,
-        } as React.CSSProperties}
-      >
-        <div 
-          className="min-w-[1400px] w-max"
-          style={{ minWidth: '1400px' }}
-        >
-          {/* Fixed Header */}
-          <div 
-            className="bg-success border-b sticky top-0 z-20 grid grid-cols-11 gap-0"
-            style={{ height: 'var(--header-height)' }}
-          >
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center sticky left-0 bg-success z-30"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Дата
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Праздник
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Чей проект?
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Менеджеры
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Место
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Время
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Аниматоры
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Шоу/Программа
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Подрядчики
-            </div>
-            <div 
-              className="text-center text-foreground font-bold border-r flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Фото/Видео
-            </div>
-            <div 
-              className="text-center text-foreground font-bold flex items-center justify-center"
-              style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-            >
-              Примечания
-            </div>
+      {/* Sync Status */}
+      {syncStatus && (
+        <div className="text-sm text-muted-foreground mb-3 p-2 bg-muted/30 rounded-md">
+          <div className="mb-1">
+            Последняя синхронизация: {new Date(syncStatus.last_sync_time).toLocaleString('ru-RU')}
           </div>
-          
-          {/* Scrollable Content */}
-          <div className="w-full">
-            {Array.from({ length: maxDays }, (_, index) => {
-              const day = index + 1;
-              const event = getEventForDay(day);
-              const isHighlighted = isDateHighlighted(day);
-              
-               return (
-                 <div 
-                   key={day} 
-                   className="grid grid-cols-11 gap-0 border-b hover:bg-accent/50 transition-colors"
-                   style={{ height: 'var(--cell-height)' }}
-                 >
+          <div className="flex gap-4 text-xs">
+            <span className="text-green-600">Создано: {syncStatus.created_count}</span>
+            <span className="text-blue-600">Обновлено: {syncStatus.updated_count}</span>
+            <span className="text-orange-600">Архивировано: {syncStatus.archived_count}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Card Container */}
+      <div className="flex-1 border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+        {/* Calendar Table */}
+        <div 
+          className="h-full overflow-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            '--scale-factor': scale / 100,
+            '--font-size': `${Math.max(10, scale * 0.12)}px`,
+            '--cell-padding': `${Math.max(4, scale * 0.08)}px`,
+            '--cell-height': `${Math.max(30, scale * 0.4)}px`,
+            '--header-height': `${Math.max(40, scale * 0.5)}px`,
+          } as React.CSSProperties}
+        >
+          <div 
+            className="min-w-[1400px] w-max"
+            style={{ minWidth: '1400px' }}
+          >
+            {/* Fixed Header */}
+            <div 
+              className="bg-success border-b sticky top-0 z-20 grid grid-cols-11 gap-0"
+              style={{ height: 'var(--header-height)' }}
+            >
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center sticky left-0 bg-success z-30"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Дата
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Праздник
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Чей проект?
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Менеджеры
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Место
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Время
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Аниматоры
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Шоу/Программа
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Подрядчики
+              </div>
+              <div 
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Фото/Видео
+              </div>
+              <div 
+                className="text-center text-foreground font-bold flex items-center justify-center"
+                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+              >
+                Примечания
+              </div>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="w-full">
+              {Array.from({ length: maxDays }, (_, index) => {
+                const day = index + 1;
+                const event = getEventForDay(day);
+                const isHighlighted = isDateHighlighted(day);
+                
+                 return (
                    <div 
-                     className={cn(
-                       "text-center font-medium border-r text-foreground flex flex-col items-center justify-center sticky left-0 bg-background z-10",
-                       isHighlighted && "bg-warning-light"
-                     )}
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                     key={day} 
+                     className="grid grid-cols-11 gap-0 border-b hover:bg-accent/50 transition-colors"
+                     style={{ height: 'var(--cell-height)' }}
                    >
-                     <div>{day}</div>
-                     <div className="opacity-70">{getDayOfWeekAbbr(day)}</div>
+                     <div 
+                       className={cn(
+                         "text-center font-medium border-r text-foreground flex flex-col items-center justify-center sticky left-0 bg-background z-10",
+                         isHighlighted && "bg-warning-light"
+                       )}
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                     >
+                       <div>{day}</div>
+                       <div className="opacity-70">{getDayOfWeekAbbr(day)}</div>
+                     </div>
+                     
+                     {/* Праздник */}
+                     <div 
+                       className={cn(
+                         "text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center",
+                         isHighlighted && "bg-warning-light"
+                       )}
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'name', event?.name || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'name' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.name || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Чей проект? */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.project_owner || ''}</span>
+                       )}
+                     </div>
+                     
+                      {/* Менеджеры */}
+                      <div 
+                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                        style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                        onClick={() => handleCellEdit(day, 'managers', event?.managers || '')}
+                      >
+                        {editingCell?.day === day && editingCell?.field === 'managers' ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleCellSave}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                            className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                            style={{ fontSize: 'var(--font-size)' }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="truncate w-full text-center px-2">{event?.managers || ''}</span>
+                        )}
+                      </div>
+                     
+                     {/* Место */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'location', event?.location || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'location' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.location || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Время */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'event_time' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.event_time || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Аниматоры */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'animators', event?.animators || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'animators' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.animators || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Шоу/Программа */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'show_program', event?.show_program || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'show_program' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.show_program || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Подрядчики */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'contractors', event?.contractors || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'contractors' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.contractors || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Фото/Видео */}
+                     <div 
+                       className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'photo_video', event?.photo_video || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'photo_video' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.photo_video || ''}</span>
+                       )}
+                     </div>
+                     
+                     {/* Примечания */}
+                     <div 
+                       className="text-center text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
+                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
+                     >
+                       {editingCell?.day === day && editingCell?.field === 'notes' ? (
+                         <Input
+                           value={editValue}
+                           onChange={(e) => setEditValue(e.target.value)}
+                           onBlur={handleCellSave}
+                           onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
+                           className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
+                           style={{ fontSize: 'var(--font-size)' }}
+                           autoFocus
+                         />
+                       ) : (
+                         <span className="truncate w-full text-center px-2">{event?.notes || ''}</span>
+                       )}
+                     </div>
                    </div>
-                   
-                   {/* Праздник */}
-                   <div 
-                     className={cn(
-                       "text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center",
-                       isHighlighted && "bg-warning-light"
-                     )}
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'name', event?.name || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'name' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.name || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Чей проект? */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.project_owner || ''}</span>
-                     )}
-                   </div>
-                   
-                    {/* Менеджеры */}
-                    <div 
-                      className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                      style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                      onClick={() => handleCellEdit(day, 'managers', event?.managers || '')}
-                    >
-                      {editingCell?.day === day && editingCell?.field === 'managers' ? (
-                        <Input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleCellSave}
-                          onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                          className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                          style={{ fontSize: 'var(--font-size)' }}
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="truncate w-full text-center px-2">{event?.managers || ''}</span>
-                      )}
-                    </div>
-                   
-                   {/* Место */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'location', event?.location || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'location' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.location || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Время */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'event_time' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.event_time || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Аниматоры */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'animators', event?.animators || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'animators' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.animators || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Шоу/Программа */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'show_program', event?.show_program || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'show_program' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.show_program || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Подрядчики */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'contractors', event?.contractors || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'contractors' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.contractors || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Фото/Видео */}
-                   <div 
-                     className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'photo_video', event?.photo_video || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'photo_video' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.photo_video || ''}</span>
-                     )}
-                   </div>
-                   
-                   {/* Примечания */}
-                   <div 
-                     className="text-center text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                     style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-                     onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
-                   >
-                     {editingCell?.day === day && editingCell?.field === 'notes' ? (
-                       <Input
-                         value={editValue}
-                         onChange={(e) => setEditValue(e.target.value)}
-                         onBlur={handleCellSave}
-                         onKeyDown={(e) => e.key === 'Enter' && handleCellSave()}
-                         className="text-center h-auto border-0 bg-transparent p-1 min-h-[20px]"
-                         style={{ fontSize: 'var(--font-size)' }}
-                         autoFocus
-                       />
-                     ) : (
-                       <span className="truncate w-full text-center px-2">{event?.notes || ''}</span>
-                     )}
-                   </div>
-                 </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
