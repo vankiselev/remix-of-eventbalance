@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -361,12 +362,9 @@ const Staff = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary">Зарплата (₽)</Label>
-                  <Input
-                    id="salary"
-                    type="number"
-                    step="0.01"
-                    value={formData.salary}
-                    onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                  <CurrencyInput
+                    value={formData.salary ? Number(formData.salary) : undefined}
+                    onChange={(value) => setFormData({ ...formData, salary: value?.toString() || "" })}
                     placeholder="Оставьте пустым, если не указываете"
                   />
                 </div>

@@ -15,6 +15,7 @@ import { FileUpload, UploadedFile } from './FileUpload';
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
 import {
   Dialog,
   DialogContent,
@@ -335,31 +336,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     await Promise.all(uploadPromises);
   };
 
-  const categories = [
-    "Реквизит",
-    "Транспорт", 
-    "Питание",
-    "Материалы",
-    "Услуги",
-    "Аренда",
-    "Зарплата",
-    "Другое"
-  ];
-
-  const whoseProjectOptions = [
-    "Наличка Настя",
-    "Наличка Лера", 
-    "Наличка Ваня",
-    "Корп. карта Настя",
-    "Корп. карта Лера",
-    "ИП Настя",
-    "ИП Лера",
-    "Оплатил(а) клиент",
-    "Оплатила Настя",
-    "Оплатила Лера",
-    "Получила Лера",
-    "Получила Настя"
-  ];
 
   if (loading) {
     return (
@@ -472,7 +448,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {whoseProjectOptions.map((option) => (
+                      {PROJECT_OWNERS.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>
@@ -563,7 +539,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {EXPENSE_INCOME_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>

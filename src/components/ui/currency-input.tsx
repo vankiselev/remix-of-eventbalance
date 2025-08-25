@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "./input";
-import { formatCurrency, formatAmount } from "@/utils/formatCurrency";
+import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
-import { useTranslation } from 'react-i18next';
 
 interface CurrencyInputProps {
   value?: number;
@@ -14,68 +13,88 @@ interface CurrencyInputProps {
   onFocus?: () => void;
 }
 
+// Format number as currency with live mask
+const formatLiveCurrency = (value: string): string => {
+  // Remove all non-digits except decimal separator
+  const cleanValue = value.replace(/[^\d.,]/g, '').replace(',', '.');
+  
+  if (!cleanValue || cleanValue === '.') return '';
+  
+  // Split by decimal point
+  const parts = cleanValue.split('.');
+  const integerPart = parts[0];
+  const decimalPart = parts[1];
+  
+  // Format integer part with spaces for thousands
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  
+  // Combine with decimal part if exists
+  let result = formattedInteger;
+  if (decimalPart !== undefined) {
+    result += '.' + decimalPart.slice(0, 2); // Limit to 2 decimal places
+  }
+  
+  return result + ' ₽';
+};
+
+// Extract numeric value from formatted string
+const extractNumericValue = (formatted: string): number | undefined => {
+  const cleaned = formatted.replace(/[^\d.,]/g, '').replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) || num <= 0 ? undefined : num;
+};
+
 export function CurrencyInput({ 
   value, 
   onChange, 
-  placeholder,
+  placeholder = "Введите сумму",
   disabled,
   className,
   onBlur,
   onFocus,
   ...props 
 }: CurrencyInputProps) {
-  const { t } = useTranslation();
   const [displayValue, setDisplayValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Update display value when value prop changes
   useEffect(() => {
-    if (isFocused) {
-      // When focused, show raw number without formatting
-      setDisplayValue(value && value > 0 ? value.toString() : "");
-    } else {
-      // When not focused, show formatted value with currency
-      if (value && value > 0) {
-        setDisplayValue(formatCurrency(value));
-      } else {
-        setDisplayValue("");
-      }
-    }
-  }, [value, isFocused]);
-
-  const handleFocus = () => {
-    setIsFocused(true);
-    // Clear field if it shows 0 or format with currency
-    const rawValue = value && value > 0 ? value.toString() : "";
-    setDisplayValue(rawValue);
-    
-    // Select all content for quick replacement
-    setTimeout(() => {
-      inputRef.current?.select();
-    }, 0);
-    
-    onFocus?.();
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    
-    // Format the value on blur
     if (value && value > 0) {
       setDisplayValue(formatCurrency(value));
     } else {
       setDisplayValue("");
     }
-    
+  }, [value]);
+
+  const handleFocus = () => {
+    onFocus?.();
+  };
+
+  const handleBlur = () => {
+    // Format the final value on blur
+    if (value && value > 0) {
+      setDisplayValue(formatCurrency(value));
+    } else {
+      setDisplayValue("");
+    }
     onBlur?.();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
+    // Allow empty input
+    if (inputValue === '') {
+      setDisplayValue('');
+      onChange(undefined);
+      return;
+    }
+    
+    // Remove currency symbol and spaces for processing
+    const cleanForProcessing = inputValue.replace(/[₽\s]/g, '');
+    
     // Only allow digits and one decimal separator
-    const cleanValue = inputValue.replace(/[^\d.,]/g, '').replace(',', '.');
+    const cleanValue = cleanForProcessing.replace(/[^\d.,]/g, '').replace(',', '.');
     
     // Prevent multiple decimal points
     const parts = cleanValue.split('.');
@@ -87,16 +106,14 @@ export function CurrencyInput({
     if (cleanValue.length > 1 && cleanValue[0] === '0' && cleanValue[1] !== '.') {
       return;
     }
-
-    setDisplayValue(cleanValue);
     
-    // Convert to number and call onChange
-    const numValue = parseFloat(cleanValue);
-    if (isNaN(numValue) || numValue <= 0) {
-      onChange(undefined);
-    } else {
-      onChange(numValue);
-    }
+    // Format with live mask
+    const formatted = formatLiveCurrency(cleanValue);
+    setDisplayValue(formatted);
+    
+    // Extract numeric value and call onChange
+    const numValue = extractNumericValue(formatted);
+    onChange(numValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -106,18 +123,17 @@ export function CurrencyInput({
       return;
     }
     
-    // Allow backspace, delete, tab, escape, enter
-    if ([8, 9, 27, 13, 46].indexOf(e.keyCode) !== -1 ||
-        // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-        (e.keyCode === 65 && e.ctrlKey === true) ||
-        (e.keyCode === 67 && e.ctrlKey === true) ||
-        (e.keyCode === 86 && e.ctrlKey === true) ||
-        (e.keyCode === 88 && e.ctrlKey === true)) {
+    // Allow backspace, delete, tab, escape, enter, arrows
+    if ([8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+        // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+        (e.ctrlKey && [65, 67, 86, 88, 90].indexOf(e.keyCode) !== -1)) {
       return;
     }
     
-    // Ensure that it is a number or decimal point and stop the keypress
-    if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105) && e.keyCode !== 190 && e.keyCode !== 188) {
+    // Allow digits and decimal separators
+    if (!((e.keyCode >= 48 && e.keyCode <= 57) || // Numbers 0-9
+           (e.keyCode >= 96 && e.keyCode <= 105) || // Numpad 0-9
+           e.keyCode === 190 || e.keyCode === 188)) { // Decimal point and comma
       e.preventDefault();
     }
   };
@@ -126,16 +142,16 @@ export function CurrencyInput({
     <Input
       ref={inputRef}
       type="text"
-      inputMode="decimal"
-      pattern="[0-9]*"
+      inputMode="numeric"
       value={displayValue}
       onChange={handleChange}
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      placeholder={placeholder || t('enterAmount')}
+      placeholder={placeholder}
       disabled={disabled}
-      className={className}
+      className={cn("text-base font-medium", className)} // Ensure font-size >= 16px for iOS
+      style={{ fontSize: '16px' }} // Explicitly set font-size to prevent zoom on iOS
       {...props}
     />
   );

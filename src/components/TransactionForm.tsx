@@ -16,6 +16,7 @@ import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
 
 
@@ -24,12 +25,17 @@ const transactionSchema = z.object({
   project_id: z.string().optional(),
   project_owner: z.string().min(1, "Выберите владельца проекта"),
   description: z.string().min(1, "Введите описание"),
-  expense_amount: z.number().min(0),
-  income_amount: z.number().min(0),
+  expense_amount: z.number().optional(),
+  income_amount: z.number().optional(),
   category: z.string().min(1, "Выберите категорию"),
 }).refine((data) => {
-  return (data.expense_amount > 0 && data.income_amount === 0) || 
-         (data.income_amount > 0 && data.expense_amount === 0);
+  const hasExpense = data.expense_amount && data.expense_amount > 0;
+  const hasIncome = data.income_amount && data.income_amount > 0;
+  
+  if (!hasExpense && !hasIncome) return false;
+  if (hasExpense && hasIncome) return false;
+  
+  return true;
 }, {
   message: "Укажите либо сумму трат, либо сумму прихода",
   path: ["expense_amount"]
@@ -55,8 +61,8 @@ const TransactionForm = () => {
       operation_date: new Date(),
       project_owner: "",
       description: "",
-      expense_amount: 0,
-      income_amount: 0,
+      expense_amount: undefined,
+      income_amount: undefined,
       category: "",
     },
   });
@@ -92,8 +98,8 @@ const TransactionForm = () => {
           project_id: data.project_id || null,
           project_owner: data.project_owner,
           description: data.description,
-          expense_amount: data.expense_amount,
-          income_amount: data.income_amount,
+          expense_amount: data.expense_amount || 0,
+          income_amount: data.income_amount || 0,
           category: data.category,
           created_by: user.id,
         });
@@ -109,8 +115,8 @@ const TransactionForm = () => {
         operation_date: new Date(),
         project_owner: "",
         description: "",
-        expense_amount: 0,
-        income_amount: 0,
+        expense_amount: undefined,
+        income_amount: undefined,
         category: "",
       });
     } catch (error: any) {
@@ -238,22 +244,28 @@ const TransactionForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Сумма Траты (₽)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0"
-                {...form.register("expense_amount", { valueAsNumber: true })}
+              <CurrencyInput
+                value={form.watch("expense_amount")}
+                onChange={(value) => {
+                  form.setValue("expense_amount", value);
+                  if (value && value > 0) {
+                    form.setValue("income_amount", undefined);
+                  }
+                }}
+                placeholder="Введите сумму трат"
               />
             </div>
             <div className="space-y-2">
               <Label>Сумма Прихода (₽)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0"
-                {...form.register("income_amount", { valueAsNumber: true })}
+              <CurrencyInput
+                value={form.watch("income_amount")}
+                onChange={(value) => {
+                  form.setValue("income_amount", value);
+                  if (value && value > 0) {
+                    form.setValue("expense_amount", undefined);
+                  }
+                }}
+                placeholder="Введите сумму прихода"
               />
             </div>
           </div>

@@ -328,14 +328,13 @@ export function TransactionForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Сумма (₽)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
-                    </FormControl>
+                      <FormControl>
+                        <CurrencyInput
+                          value={field.value ? Number(field.value) : undefined}
+                          onChange={(value) => field.onChange(value?.toString() || "")}
+                          placeholder="0.00"
+                        />
+                      </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

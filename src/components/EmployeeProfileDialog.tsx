@@ -5,6 +5,7 @@ import * as z from "zod";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -599,10 +600,9 @@ export const EmployeeProfileDialog = ({
                       <FormItem>
                         <FormLabel>Зарплата (₽)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            {...field} 
+                          <CurrencyInput
+                            value={field.value ? Number(field.value) : undefined}
+                            onChange={(value) => field.onChange(value?.toString() || "")}
                             placeholder="Введите зарплату"
                           />
                         </FormControl>
