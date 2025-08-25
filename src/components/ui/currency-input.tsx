@@ -133,7 +133,7 @@ export function CurrencyInput({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       disabled={disabled}
-      className={cn("text-right", className)}
+      className={className}
       {...props}
     />
   );
