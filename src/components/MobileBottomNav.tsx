@@ -51,8 +51,8 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
   return (
     <>
       {/* Fixed bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border/20 backdrop-blur-lg">
-        <div className="flex items-center justify-around px-3 py-3 safe-area-inset-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border/20 backdrop-blur-lg safe-area-inset-bottom">
+        <div className="flex items-center justify-around px-4 py-4 max-w-screen-sm mx-auto">
           {/* Dashboard */}
           <button
             onClick={() => handleTabChange("dashboard")}
@@ -62,7 +62,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                 : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <BarChart3 className="h-5 w-5" strokeWidth={2} />
+            <BarChart3 className="h-6 w-6" strokeWidth={2} />
             <span className="text-xs font-medium">Главная</span>
           </button>
 
@@ -75,7 +75,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                 : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <Calendar className="h-5 w-5" strokeWidth={2} />
+            <Calendar className="h-6 w-6" strokeWidth={2} />
             <span className="text-xs font-medium">Календарь</span>
           </button>
 
@@ -98,7 +98,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                 : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }`}
           >
-            <DollarSign className="h-5 w-5" strokeWidth={2} />
+            <DollarSign className="h-6 w-6" strokeWidth={2} />
             <span className="text-xs font-medium">Финансы</span>
           </button>
 
@@ -106,7 +106,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
           <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
             <SheetTrigger asChild>
               <button className="flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 active:scale-95 min-w-0 text-muted-foreground hover:text-foreground hover:bg-accent/50">
-                <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+                <MoreHorizontal className="h-6 w-6" strokeWidth={2} />
                 <span className="text-xs font-medium">Ещё</span>
               </button>
             </SheetTrigger>
@@ -127,8 +127,8 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                           : "hover:bg-accent/50 text-foreground"
                       }`}
                     >
-                      <Icon className="h-5 w-5" strokeWidth={2} />
-                      <span className="font-medium">{item.label}</span>
+                       <Icon className="h-6 w-6" strokeWidth={2} />
+                       <span className="font-medium">{item.label}</span>
                     </button>
                   );
                 })}
@@ -139,7 +139,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
       </div>
 
       {/* Bottom padding to prevent content overlap */}
-      <div className="h-20 flex-shrink-0" />
+      <div className="h-24 flex-shrink-0" />
     </>
   );
 };

@@ -197,8 +197,8 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
           </div>
         )}
 
-        {/* Page content */}
-        <main className={`flex-1 main-container overflow-auto ${isMobile ? 'pb-20' : ''}`}>
+        {/* Page content with mobile responsive container */}
+        <main className={`flex-1 overflow-auto ${isMobile ? 'px-4 py-6 pb-28' : 'main-container'}`}>
           {children}
         </main>
 

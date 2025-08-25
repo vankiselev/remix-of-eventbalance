@@ -497,7 +497,94 @@
     height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
-  /* Bottom Navigation Styles */
+  /* Bottom Navigation Styles - Enhanced for mobile */
+  .mobile-nav-container {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border/20;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+    padding-top: 0.75rem;
+  }
+
+  .mobile-nav-content {
+    @apply flex items-center justify-around px-4 max-w-screen-sm mx-auto;
+  }
+
+  .mobile-nav-item {
+    @apply flex flex-col items-center gap-1.5 py-2 px-3 rounded-lg transition-all duration-200 min-w-0;
+    transform-origin: center;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-nav-item-active {
+    @apply text-primary;
+  }
+
+  .mobile-nav-item-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-accent/50;
+  }
+
+  .mobile-fab-button {
+    @apply relative h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200;
+    transform-origin: center;
+  }
+
+  .mobile-fab-button:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-fab-button.active {
+    @apply ring-2 ring-primary/20 ring-offset-2 shadow-xl;
+  }
+
+  /* Mobile content spacing to avoid navigation overlap */
+  .mobile-content {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+
+  /* Enhanced responsive design for mobile devices */
+  @media (max-width: 767px) {
+    .main-container {
+      padding: 1rem;
+      margin-bottom: calc(6rem + env(safe-area-inset-bottom));
+    }
+
+    /* Prevent horizontal scrolling on mobile */
+    body {
+      overflow-x: hidden;
+    }
+
+    /* Mobile viewport height adjustments */
+    .min-h-screen-mobile {
+      min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 6rem);
+    }
+
+    /* Mobile-friendly input sizes */
+    input, textarea, select {
+      min-height: 44px; /* iOS recommended touch target */
+    }
+
+    /* Mobile button improvements */
+    button {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Enhanced tablet support */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .main-container {
+      padding: 1.5rem;
+    }
+  }
+
+  /* Enhanced desktop support */
+  @media (min-width: 1024px) {
+    .main-container {
+      padding: 2rem;
+    }
+  }
   .nav-button {
     @apply transition-all duration-200 active:scale-95;
   }
