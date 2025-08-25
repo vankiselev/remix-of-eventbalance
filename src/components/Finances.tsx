@@ -230,7 +230,14 @@ const Finances = () => {
         </TabsList>
         
         <TabsContent value="employees" className="space-y-4 mt-4">
-          <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Сотрудники</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="transactions" className="space-y-4 mt-4">
