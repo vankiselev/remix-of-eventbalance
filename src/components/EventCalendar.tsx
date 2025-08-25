@@ -527,6 +527,13 @@ const EventCalendar = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="5">5%</SelectItem>
+                <SelectItem value="10">10%</SelectItem>
+                <SelectItem value="15">15%</SelectItem>
+                <SelectItem value="20">20%</SelectItem>
+                <SelectItem value="25">25%</SelectItem>
+                <SelectItem value="30">30%</SelectItem>
+                <SelectItem value="40">40%</SelectItem>
                 <SelectItem value="50">50%</SelectItem>
                 <SelectItem value="60">60%</SelectItem>
                 <SelectItem value="70">70%</SelectItem>
@@ -579,7 +586,7 @@ const EventCalendar = () => {
               style={{ height: 'var(--header-height)' }}
             >
               <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center sticky left-0 bg-success z-30"
+                className="text-center text-foreground font-bold border-r flex items-center justify-center"
                 style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
               >
                 Дата
@@ -661,7 +668,7 @@ const EventCalendar = () => {
                    >
                      <div 
                        className={cn(
-                         "text-center font-medium border-r text-foreground flex flex-col items-center justify-center sticky left-0 bg-background z-10",
+                         "text-center font-medium border-r text-foreground flex flex-col items-center justify-center",
                          isHighlighted && "bg-warning-light"
                        )}
                        style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
