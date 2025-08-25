@@ -223,37 +223,39 @@ const Finances = () => {
         <FinanceSummaryCards summary={companySummary} isLoading={false} />
       </div>
 
-      <Tabs defaultValue="transactions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/60 rounded-lg p-1 border-2 border-gray-200 shadow-sm">
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center justify-center">Все транзакции</TabsTrigger>
-          <TabsTrigger value="employees" className="data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center justify-center">Сотрудники</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="employees" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Сотрудники</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
+      <Card>
+        <Tabs defaultValue="transactions" className="w-full">
+          <CardHeader className="pb-0 border-b border-border">
+            <TabsList className="flex items-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
+              <TabsTrigger 
+                value="transactions" 
+                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+              >
+                Все транзакции
+              </TabsTrigger>
+              <TabsTrigger 
+                value="employees" 
+                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+              >
+                Сотрудники
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          
+          <CardContent className="pt-4">
+            <TabsContent value="employees" className="mt-0">
               <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="transactions" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Все транзакции</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
+            </TabsContent>
+            
+            <TabsContent value="transactions" className="mt-0">
               <EnhancedTransactionTable
                 isAdmin={true}
                 onEdit={handleEditTransaction}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </Card>
 
       <TransactionForm
         isOpen={showTransactionForm}
