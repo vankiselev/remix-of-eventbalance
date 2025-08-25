@@ -68,6 +68,8 @@ const EventCalendar = () => {
   const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
   const [editValue, setEditValue] = useState("");
   const [scale, setScale] = useState(70); // Default 70% scale
+  const [columnWidths, setColumnWidths] = useState<number[]>([80, 150, 120, 120, 150, 100, 120, 150, 120, 120, 150]); // Default widths for 11 columns
+  const [isResizing, setIsResizing] = useState<{ columnIndex: number, startX: number, startWidth: number } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -97,6 +99,12 @@ const EventCalendar = () => {
     if (savedScale) {
       setScale(parseInt(savedScale, 10));
     }
+
+    // Load saved column widths from localStorage
+    const savedWidths = localStorage.getItem('calendar-column-widths');
+    if (savedWidths) {
+      setColumnWidths(JSON.parse(savedWidths));
+    }
   }, [currentDate]);
 
   // Save scale to localStorage when it changes
@@ -104,9 +112,58 @@ const EventCalendar = () => {
     localStorage.setItem('calendar-scale', scale.toString());
   }, [scale]);
 
+  // Save column widths to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('calendar-column-widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
   const handleScaleChange = (newScale: string) => {
     const scaleValue = parseInt(newScale, 10);
     setScale(scaleValue);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, columnIndex: number) => {
+    e.preventDefault();
+    setIsResizing({
+      columnIndex,
+      startX: e.clientX,
+      startWidth: columnWidths[columnIndex]
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const deltaX = e.clientX - isResizing.startX;
+    const newWidth = Math.max(50, isResizing.startWidth + deltaX); // Minimum width of 50px
+    
+    setColumnWidths(prev => {
+      const newWidths = [...prev];
+      newWidths[isResizing.columnIndex] = newWidth;
+      return newWidths;
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(null);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'default';
+      };
+    }
+  }, [isResizing]);
+
+  const getTotalWidth = () => {
+    return columnWidths.reduce((sum, width) => sum + width, 0);
   };
 
   const fetchEvents = async () => {
@@ -577,80 +634,52 @@ const EventCalendar = () => {
           } as React.CSSProperties}
         >
           <div 
-            className="min-w-[1400px] w-max"
-            style={{ minWidth: '1400px' }}
+            className="w-max"
+            style={{ 
+              minWidth: `${getTotalWidth()}px`,
+              width: `${getTotalWidth()}px`
+            }}
           >
             {/* Fixed Header */}
             <div 
-              className="bg-success border-b sticky top-0 z-20 grid grid-cols-11 gap-0"
+              className="bg-success border-b sticky top-0 z-20 flex"
               style={{ height: 'var(--header-height)' }}
             >
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Дата
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Праздник
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Чей проект?
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Менеджеры
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Место
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Время
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Аниматоры
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Шоу/Программа
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Подрядчики
-              </div>
-              <div 
-                className="text-center text-foreground font-bold border-r flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Фото/Видео
-              </div>
-              <div 
-                className="text-center text-foreground font-bold flex items-center justify-center"
-                style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
-              >
-                Примечания
-              </div>
+              {[
+                'Дата',
+                'Праздник', 
+                'Чей проект?',
+                'Менеджеры',
+                'Место',
+                'Время',
+                'Аниматоры',
+                'Шоу/Программа',
+                'Подрядчики',
+                'Фото/Видео',
+                'Примечания'
+              ].map((title, index) => (
+                <div key={title} className="relative flex">
+                  <div 
+                    className="text-center text-foreground font-bold border-r flex items-center justify-center"
+                    style={{ 
+                      fontSize: 'var(--font-size)', 
+                      padding: 'var(--cell-padding)',
+                      width: `${columnWidths[index]}px`,
+                      minWidth: `${columnWidths[index]}px`,
+                      maxWidth: `${columnWidths[index]}px`
+                    }}
+                  >
+                    {title}
+                  </div>
+                  {index < 10 && (
+                    <div 
+                      className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors z-30"
+                      onMouseDown={(e) => handleMouseDown(e, index)}
+                      style={{ right: '-2px' }}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
             
             {/* Scrollable Content */}
@@ -663,15 +692,22 @@ const EventCalendar = () => {
                  return (
                    <div 
                      key={day} 
-                     className="grid grid-cols-11 gap-0 border-b hover:bg-accent/50 transition-colors"
+                     className="flex border-b hover:bg-accent/50 transition-colors"
                      style={{ height: 'var(--cell-height)' }}
                    >
+                     {/* Дата */}
                      <div 
                        className={cn(
                          "text-center font-medium border-r text-foreground flex flex-col items-center justify-center",
                          isHighlighted && "bg-warning-light"
                        )}
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[0]}px`,
+                         minWidth: `${columnWidths[0]}px`,
+                         maxWidth: `${columnWidths[0]}px`
+                       }}
                      >
                        <div>{day}</div>
                        <div className="opacity-70">{getDayOfWeekAbbr(day)}</div>
@@ -683,7 +719,13 @@ const EventCalendar = () => {
                          "text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center",
                          isHighlighted && "bg-warning-light"
                        )}
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[1]}px`,
+                         minWidth: `${columnWidths[1]}px`,
+                         maxWidth: `${columnWidths[1]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'name', event?.name || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'name' ? (
@@ -704,7 +746,13 @@ const EventCalendar = () => {
                      {/* Чей проект? */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[2]}px`,
+                         minWidth: `${columnWidths[2]}px`,
+                         maxWidth: `${columnWidths[2]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'project_owner', event?.project_owner || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'project_owner' ? (
@@ -725,7 +773,13 @@ const EventCalendar = () => {
                       {/* Менеджеры */}
                       <div 
                         className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                        style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                        style={{ 
+                          fontSize: 'var(--font-size)', 
+                          padding: 'var(--cell-padding)',
+                          width: `${columnWidths[3]}px`,
+                          minWidth: `${columnWidths[3]}px`,
+                          maxWidth: `${columnWidths[3]}px`
+                        }}
                         onClick={() => handleCellEdit(day, 'managers', event?.managers || '')}
                       >
                         {editingCell?.day === day && editingCell?.field === 'managers' ? (
@@ -746,7 +800,13 @@ const EventCalendar = () => {
                      {/* Место */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[4]}px`,
+                         minWidth: `${columnWidths[4]}px`,
+                         maxWidth: `${columnWidths[4]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'location', event?.location || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'location' ? (
@@ -767,7 +827,13 @@ const EventCalendar = () => {
                      {/* Время */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[5]}px`,
+                         minWidth: `${columnWidths[5]}px`,
+                         maxWidth: `${columnWidths[5]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'event_time', event?.event_time || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'event_time' ? (
@@ -788,7 +854,13 @@ const EventCalendar = () => {
                      {/* Аниматоры */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[6]}px`,
+                         minWidth: `${columnWidths[6]}px`,
+                         maxWidth: `${columnWidths[6]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'animators', event?.animators || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'animators' ? (
@@ -809,7 +881,13 @@ const EventCalendar = () => {
                      {/* Шоу/Программа */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[7]}px`,
+                         minWidth: `${columnWidths[7]}px`,
+                         maxWidth: `${columnWidths[7]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'show_program', event?.show_program || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'show_program' ? (
@@ -830,7 +908,13 @@ const EventCalendar = () => {
                      {/* Подрядчики */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[8]}px`,
+                         minWidth: `${columnWidths[8]}px`,
+                         maxWidth: `${columnWidths[8]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'contractors', event?.contractors || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'contractors' ? (
@@ -851,7 +935,13 @@ const EventCalendar = () => {
                      {/* Фото/Видео */}
                      <div 
                        className="text-center border-r text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[9]}px`,
+                         minWidth: `${columnWidths[9]}px`,
+                         maxWidth: `${columnWidths[9]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'photo_video', event?.photo_video || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'photo_video' ? (
@@ -872,7 +962,13 @@ const EventCalendar = () => {
                      {/* Примечания */}
                      <div 
                        className="text-center text-foreground cursor-pointer hover:bg-accent flex items-center justify-center"
-                       style={{ fontSize: 'var(--font-size)', padding: 'var(--cell-padding)' }}
+                       style={{ 
+                         fontSize: 'var(--font-size)', 
+                         padding: 'var(--cell-padding)',
+                         width: `${columnWidths[10]}px`,
+                         minWidth: `${columnWidths[10]}px`,
+                         maxWidth: `${columnWidths[10]}px`
+                       }}
                        onClick={() => handleCellEdit(day, 'notes', event?.notes || '')}
                      >
                        {editingCell?.day === day && editingCell?.field === 'notes' ? (
