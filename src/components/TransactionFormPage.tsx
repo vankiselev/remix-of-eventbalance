@@ -383,7 +383,6 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Без проекта</SelectItem>
                           {events.map((event) => (
                             <SelectItem key={event.id} value={event.id}>
                               {event.name}
