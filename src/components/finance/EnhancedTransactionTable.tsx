@@ -240,20 +240,20 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
   const hasActiveFilters = Object.values(filters).some(filter => filter.length > 0);
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded mb-4"></div>
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-muted rounded"></div>
-            ))}
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded mb-4"></div>
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-muted rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
   return (
     <div className="space-y-4">

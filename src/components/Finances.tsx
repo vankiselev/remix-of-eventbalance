@@ -8,8 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
-import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTable";
+import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
+import { TransactionExport } from './finance/TransactionExport';
 
 interface CashSummary {
   total_cash: number;
@@ -153,10 +154,13 @@ const Finances = () => {
             </div>
           </div>
           {isAdmin && (
-            <Button onClick={() => setShowTransactionForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить транзакцию
-            </Button>
+            <div className="flex items-center gap-2">
+              <TransactionExport userId={selectedEmployee?.id} isAdmin={isAdmin} />
+              <Button onClick={() => setShowTransactionForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить транзакцию
+              </Button>
+            </div>
           )}
         </div>
       )}
@@ -206,10 +210,13 @@ const Finances = () => {
         <div>
           <p className="text-sm text-muted-foreground">Управление финансами компании</p>
         </div>
-        <Button onClick={() => setShowTransactionForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Добавить транзакцию
-        </Button>
+        <div className="flex items-center gap-2">
+          <TransactionExport isAdmin={true} />
+          <Button onClick={() => setShowTransactionForm(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить транзакцию
+          </Button>
+        </div>
       </div>
 
       <div className="sticky top-0 z-10 bg-background pb-4">
