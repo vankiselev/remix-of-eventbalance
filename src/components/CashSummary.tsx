@@ -14,52 +14,52 @@ export function CashSummary({ totalCash, cashNastya, cashLera, cashVanya, isComp
   const title = isCompanyWide ? "Сводка по компании" : "Ваши наличные";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <h2 className="text-xl font-semibold">{title}</h2>
-      <div className="grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-3">
-            <CardTitle className="text-xs font-medium">Общая сумма на руках</CardTitle>
-            <Wallet className="h-3 w-3 text-muted-foreground" />
+      <div className="grid gap-2 md:grid-cols-4">
+        <Card className="border border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 px-3 pt-2">
+            <CardTitle className="text-[10px] font-medium">Общая сумма на руках</CardTitle>
+            <Wallet className="h-2.5 w-2.5 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-lg font-bold">
+          <CardContent className="px-3 pb-2">
+            <div className="text-sm font-bold">
               {formatCurrency(totalCash)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-3">
-            <CardTitle className="text-xs font-medium">Наличка Настя</CardTitle>
-            <DollarSign className="h-3 w-3 text-green-600" />
+        <Card className="border border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 px-3 pt-2">
+            <CardTitle className="text-[10px] font-medium">Наличка Настя</CardTitle>
+            <DollarSign className="h-2.5 w-2.5 text-green-600" />
           </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-lg font-bold text-green-600">
+          <CardContent className="px-3 pb-2">
+            <div className="text-sm font-bold text-green-600">
               {formatCurrency(cashNastya)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-3">
-            <CardTitle className="text-xs font-medium">Наличка Лера</CardTitle>
-            <DollarSign className="h-3 w-3 text-blue-600" />
+        <Card className="border border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 px-3 pt-2">
+            <CardTitle className="text-[10px] font-medium">Наличка Лера</CardTitle>
+            <DollarSign className="h-2.5 w-2.5 text-blue-600" />
           </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-lg font-bold text-blue-600">
+          <CardContent className="px-3 pb-2">
+            <div className="text-sm font-bold text-blue-600">
               {formatCurrency(cashLera)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-3">
-            <CardTitle className="text-xs font-medium">Наличка Ваня</CardTitle>
-            <DollarSign className="h-3 w-3 text-purple-600" />
+        <Card className="border border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 px-3 pt-2">
+            <CardTitle className="text-[10px] font-medium">Наличка Ваня</CardTitle>
+            <DollarSign className="h-2.5 w-2.5 text-purple-600" />
           </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-lg font-bold text-purple-600">
+          <CardContent className="px-3 pb-2">
+            <div className="text-sm font-bold text-purple-600">
               {formatCurrency(cashVanya)}
             </div>
           </CardContent>
