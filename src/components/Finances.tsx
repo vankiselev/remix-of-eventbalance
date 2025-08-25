@@ -224,7 +224,7 @@ const Finances = () => {
       </div>
 
       <Tabs defaultValue="transactions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/60 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-2 bg-muted/60 rounded-lg p-1 border-2 border-gray-200 shadow-sm">
           <TabsTrigger value="transactions" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Все транзакции</TabsTrigger>
           <TabsTrigger value="employees" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Сотрудники</TabsTrigger>
         </TabsList>
