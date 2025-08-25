@@ -59,6 +59,7 @@ interface Transaction {
   events?: { name: string } | null;
   attachments_count?: number;
   created_at: string;
+  user_name?: string;
 }
 
 interface TransactionTableProps {
@@ -144,10 +145,27 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
       if (error) throw error;
 
-      // Transform the data to flatten attachments_count
+      // Get unique user IDs to fetch their profiles
+      const userIds = Array.from(new Set((data || []).map(t => t.created_by)));
+      
+      // Fetch user profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+      }
+
+      // Create user map for quick lookup
+      const userMap = new Map((profilesData || []).map(profile => [profile.id, profile]));
+
+      // Transform the data to flatten attachments_count and add user name
       const transformedData = (data || []).map(transaction => ({
         ...transaction,
-        attachments_count: transaction.attachments_count?.[0]?.count || 0
+        attachments_count: transaction.attachments_count?.[0]?.count || 0,
+        user_name: getUserDisplayName(userMap.get(transaction.created_by) || null, transaction.created_by)
       }));
 
       setTransactions(transformedData);
@@ -247,6 +265,26 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         {type.label}
       </Badge>
     );
+  };
+
+  const getUserDisplayName = (profile: { full_name: string; email: string } | null, userId: string) => {
+    // Special case for admin user (super admin email)
+    if (profile?.email === 'ikiselev@me.com') {
+      return 'Иван';
+    }
+    
+    // If we have full_name from profile, use it
+    if (profile?.full_name && profile.full_name !== 'User') {
+      return profile.full_name;
+    }
+    
+    // Fallback to email prefix
+    if (profile?.email) {
+      return profile.email.split('@')[0];
+    }
+    
+    // Final fallback
+    return 'Без имени';
   };
 
   if (loading) {
@@ -357,8 +395,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                     <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
                       {!userId && (
                         <TableCell className="font-medium">
-                          {/* TODO: Add user name from profiles */}
-                          Пользователь
+                          {transaction.user_name}
                         </TableCell>
                       )}
                       <TableCell className="font-medium">
