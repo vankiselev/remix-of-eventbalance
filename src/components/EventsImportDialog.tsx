@@ -66,6 +66,38 @@ const EventsImportDialog = ({
     { value: 'source_event_id', label: 'ID источника' },
   ];
 
+  // Heuristic header detection for Excel/CSV with top banner rows
+  const headerKeywords = ['дат','date','праздник','название','name','проект','owner','менеджер','manager','место','location','place','время','time','аниматор','animator','шоу','программа','program','подрядчик','contractor','фото','photo','видео','video','примечан','note','?'];
+  const findHeaderRow = (rows: any[][]) => {
+    const limit = Math.min(15, rows.length);
+    for (let i = 0; i < limit; i++) {
+      const row = (rows[i] || []).map(v => String(v ?? '').trim());
+      const nonEmpty = row.filter(Boolean);
+      if (nonEmpty.length < 2) continue;
+      const hit = nonEmpty.some(cell => {
+        const lc = cell.toLowerCase();
+        return headerKeywords.some(k => lc.includes(k));
+      });
+      if (hit) return { index: i, headers: row };
+    }
+    for (let i = 0; i < limit; i++) {
+      const row = (rows[i] || []).map(v => String(v ?? '').trim());
+      if (row.filter(Boolean).length >= 2) return { index: i, headers: row };
+    }
+    return { index: 0, headers: (rows[0] || []).map(v => String(v ?? '').trim()) };
+  };
+
+  const buildObjectsFromRows = (rows: any[][], headerIndex: number, headersRow: string[]) => {
+    const objects = rows.slice(headerIndex + 1).map((row) => {
+      const obj: ParsedRow = {};
+      headersRow.forEach((header, idx) => {
+        obj[header] = row[idx] ?? '';
+      });
+      return obj;
+    }).filter(row => Object.values(row).some(v => v !== '' && v !== null && v !== undefined));
+    return objects;
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
@@ -85,36 +117,51 @@ const EventsImportDialog = ({
           const cleanText = csvText.replace(/^\uFEFF/, '');
           
           // Use PapaParse for reliable CSV parsing
-          const parseResult = Papa.parse(cleanText, {
+          let parseResult = Papa.parse(cleanText, {
             header: true,
             skipEmptyLines: true,
             delimiter: "", // auto-detect
             transformHeader: (header: string) => header.trim(),
-            transform: (value: string) => value.trim()
+            transform: (value: any) => typeof value === 'string' ? value.trim() : value
           });
 
           if (parseResult.errors.length > 0) {
             throw new Error(`CSV parsing errors: ${parseResult.errors.map(e => e.message).join(', ')}`);
           }
 
-          fileHeaders = parseResult.meta.fields || [];
-          data = parseResult.data as ParsedRow[];
+          const fields = parseResult.meta.fields || [];
+          const hasKnown = fields.some(h => headerKeywords.some(k => (h || '').toLowerCase().includes(k)));
+
+          if (!hasKnown || fields.length <= 1) {
+            // Fallback: parse without headers and auto-detect
+            const rowsResult = Papa.parse(cleanText, {
+              header: false,
+              skipEmptyLines: true,
+              delimiter: "",
+            });
+            const rows = rowsResult.data as any[][];
+            const { index, headers: hdr } = findHeaderRow(rows);
+            fileHeaders = hdr;
+            data = buildObjectsFromRows(rows, index, fileHeaders);
+            toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
+          } else {
+            fileHeaders = fields;
+            data = parseResult.data as ParsedRow[];
+          }
           
         } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
           const workbook = XLSX.read(event.target?.result, { type: 'binary' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
           
-          if (jsonData.length > 0) {
-            fileHeaders = jsonData[0].map(h => String(h || ''));
-            data = jsonData.slice(1).map(row => {
-              const rowData: ParsedRow = {};
-              fileHeaders.forEach((header, index) => {
-                rowData[header] = row[index] || '';
-              });
-              return rowData;
-            }).filter(row => Object.values(row).some(v => v)); // Remove empty rows
+          if (rows.length > 0) {
+            const { index, headers: hdr } = findHeaderRow(rows);
+            fileHeaders = hdr.map(h => String(h || '').trim());
+            data = buildObjectsFromRows(rows, index, fileHeaders);
+            if (index > 0) {
+              toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
+            }
           }
         }
 
