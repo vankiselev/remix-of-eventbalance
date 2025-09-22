@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,6 +58,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
     { id: "transaction", label: t('transaction'), icon: PlusCircle },
     { id: "finances", label: t('finances'), icon: DollarSign },
     { id: "staff", label: t('staff'), icon: Users },
+    { id: "birthdays", label: "Дни рождения", icon: Cake },
     { id: "contacts", label: t('contacts'), icon: Users },
     ...(userRole === 'admin' ? [{ id: "invitations", label: t('invitations'), icon: Users }] : []),
   ];
