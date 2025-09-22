@@ -399,19 +399,18 @@ const EventsImportDialog = ({
     return null;
   };
 
-  // Fallback: parse date from title prefix like "0109 ..." => 01 September
+  // Fallback: parse date from title prefix like "0209 ..." => 2 сентября
   const parseDateFromTitle = (title: string): string | null => {
     if (!title) return null;
     const t = String(title).trim();
     const m = t.match(/^(\d{2})(\d{2})\b/);
     if (!m) return null;
-    const day = parseInt(m[1], 10);
-    const month = parseInt(m[2], 10);
+    const day = parseInt(m[1], 10);   // Первые 2 цифры = день
+    const month = parseInt(m[2], 10); // Вторые 2 цифры = месяц
     if (day < 1 || day > 31 || month < 1 || month > 12) return null;
     const year = new Date().getFullYear();
-    const d = new Date(year, month - 1, day);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0];
+    // ВАЖНО: не используем toISOString() — это сдвигает дату на -1 день в UTC
+    return formatYMD(year, month, day);
   };
 
   const validateData = () => {
