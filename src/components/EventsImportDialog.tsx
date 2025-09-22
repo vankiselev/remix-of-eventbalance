@@ -397,6 +397,21 @@ const EventsImportDialog = ({
     return null;
   };
 
+  // Fallback: parse date from title prefix like "0109 ..." => 01 September
+  const parseDateFromTitle = (title: string): string | null => {
+    if (!title) return null;
+    const t = String(title).trim();
+    const m = t.match(/^(\d{2})(\d{2})\b/);
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    const year = new Date().getFullYear();
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  };
+
   const validateData = () => {
     const errors: string[] = [];
     let validRows = 0;
@@ -405,10 +420,14 @@ const EventsImportDialog = ({
 
     parsedData.forEach((row, index) => {
       const mappedRow = mapRow(row);
+      const dateFromCell = parseDate(mappedRow.event_date);
+      const dateFromTitle = parseDateFromTitle(mappedRow.title);
+      const finalDate = dateFromCell || dateFromTitle;
       
       console.log(`Row ${index + 2}:`, { 
         originalDate: mappedRow.event_date, 
-        parsedDate: parseDate(mappedRow.event_date),
+        dateFromCell, dateFromTitle,
+        finalDate,
         title: mappedRow.title 
       });
       
@@ -417,8 +436,8 @@ const EventsImportDialog = ({
         return;
       }
 
-      if (!mappedRow.event_date || !parseDate(mappedRow.event_date)) {
-        errors.push(`Строка ${index + 2}: неверная дата "${mappedRow.event_date}"`);
+      if (!finalDate) {
+        errors.push(`Строка ${index + 2}: неверная дата (столбец пуст, не удалось определить из названия "${mappedRow.title}")`);
         return;
       }
 
@@ -461,13 +480,14 @@ const EventsImportDialog = ({
       // Process data in chunks
       const validRows = parsedData.filter(row => {
         const mappedRow = mapRow(row);
-        return mappedRow.title && mappedRow.event_date && parseDate(mappedRow.event_date);
+        const finalDate = parseDate(mappedRow.event_date) || parseDateFromTitle(mappedRow.title);
+        return mappedRow.title && finalDate;
       });
 
       // Normalize data
       const normalizedRows = validRows.map(row => {
         const mappedRow = mapRow(row);
-        const parsedDate = parseDate(mappedRow.event_date);
+        const parsedDate = parseDate(mappedRow.event_date) || parseDateFromTitle(mappedRow.title);
         
         return {
           event_date: parsedDate,
