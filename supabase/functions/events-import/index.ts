@@ -106,6 +106,7 @@ serve(async (req) => {
             place: row.place?.trim() || null,
             location: row.place?.trim() || null, // Keep both for compatibility
             time_range: row.time_range?.trim() || null,
+            event_time: row.time_range?.trim() || null, // Also map to event_time
             animators: row.animators?.trim() || null,
             show_program: row.show_program?.trim() || null,
             contractors: row.contractors?.trim() || null,

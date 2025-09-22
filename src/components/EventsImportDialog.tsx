@@ -50,7 +50,7 @@ const EventsImportDialog = ({
   const { toast } = useToast();
 
   const fieldOptions = [
-    { value: '', label: 'Не импортировать' },
+    { value: 'skip', label: 'Не импортировать' },
     { value: 'event_date', label: 'Дата' },
     { value: 'title', label: 'Праздник' },
     { value: 'project_owner', label: 'Чей проект?' },
@@ -150,16 +150,20 @@ const EventsImportDialog = ({
             autoMapping[header] = 'video';
           } else if (lowerHeader.includes('примечани') || lowerHeader.includes('note')) {
             autoMapping[header] = 'notes';
+          } else {
+            autoMapping[header] = 'skip';
           }
         });
         setColumnMapping(autoMapping);
 
-      } catch (error) {
+      } catch (error: any) {
+        console.error("File parsing error:", error);
         toast({
           variant: "destructive",
-          title: "Ошибка",
-          description: "Не удалось прочитать файл",
+          title: "Ошибка парсинга файла",
+          description: error.message || "Не удалось прочитать файл",
         });
+        setStep(1);
       }
     };
 
@@ -257,7 +261,7 @@ const EventsImportDialog = ({
   const mapRow = (row: ParsedRow): any => {
     const mapped: any = {};
     Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
-      if (dbField && row[fileColumn] !== undefined) {
+      if (dbField && dbField !== 'skip' && row[fileColumn] !== undefined) {
         mapped[dbField] = row[fileColumn];
       }
     });
@@ -408,7 +412,7 @@ const EventsImportDialog = ({
                   <div key={header} className="flex items-center gap-4">
                     <div className="w-48 text-sm font-medium">{header}</div>
                     <Select
-                      value={columnMapping[header] || ''}
+                      value={columnMapping[header] || 'skip'}
                       onValueChange={(value) => 
                         setColumnMapping({ ...columnMapping, [header]: value })
                       }
