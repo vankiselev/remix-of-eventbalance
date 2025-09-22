@@ -612,6 +612,16 @@ const Events = () => {
         </div>
       </div>
 
+      {/* Общее количество праздников */}
+      <div className="bg-card text-card-foreground rounded-lg border p-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Всего праздников</h3>
+        </div>
+        <div className="text-2xl font-bold">{events.length}</div>
+        <p className="text-xs text-muted-foreground">
+          Мероприятий в системе
+        </p>
+      </div>
 
       {events.length === 0 ? (
         <Card>
