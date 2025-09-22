@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Plus, Upload, Minus, PlusIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Upload, Minus, PlusIcon, Trash2 } from "lucide-react";
 import CalendarTable from "./CalendarTable";
-import ImportDialog from "./ImportDialog";
+import EventsImportDialog from "./EventsImportDialog";
 
 interface Event {
   id: string;
@@ -277,6 +277,33 @@ const CalendarPage = () => {
     }
   };
 
+  const handleDeleteAllEvents = async () => {
+    if (!confirm("Вы уверены, что хотите удалить ВСЕ мероприятия? Это действие нельзя отменить!")) return;
+    if (!confirm("Это действие удалит все мероприятия из базы данных. Продолжить?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all records
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно!",
+        description: "Все мероприятия удалены",
+      });
+
+      fetchEvents();
+    } catch (error: any) {
+      toast({
+        variant: "destructive", 
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить мероприятия",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -487,6 +514,16 @@ const CalendarPage = () => {
             <Upload className="mr-1 h-4 w-4" />
             Импорт
           </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleDeleteAllEvents}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="mr-1 h-4 w-4" />
+            Удалить все
+          </Button>
         </div>
       </div>
 
@@ -503,12 +540,10 @@ const CalendarPage = () => {
       </Card>
 
       {/* Import Dialog */}
-      <ImportDialog
+      <EventsImportDialog
         open={showImportDialog}
         onOpenChange={setShowImportDialog}
         onImportComplete={fetchEvents}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
       />
     </div>
   );

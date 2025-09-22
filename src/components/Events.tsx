@@ -9,9 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, Upload } from "lucide-react";
+import { Plus, CalendarIcon } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import EventsImportDialog from "./EventsImportDialog";
 
 interface Event {
   id: string;
@@ -39,7 +38,7 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -192,10 +191,6 @@ const Events = () => {
           <p className="text-muted-foreground">Управляйте вашими мероприятиями</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setShowImportDialog(true)} variant="outline">
-            <Upload className="mr-2 h-4 w-4" />
-            Импорт из Excel/CSV
-          </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button>
@@ -292,11 +287,6 @@ const Events = () => {
         </div>
       </div>
 
-      <EventsImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        onImportComplete={fetchEvents}
-      />
 
       {events.length === 0 ? (
         <Card>
