@@ -127,6 +127,56 @@ const CalendarTable = ({
     }
   };
 
+  // Подготовим плоский список строк: по событию на строку, дату повторяем
+  const displayRows = calendarEvents.flatMap((ce) => {
+    if (ce.events.length > 0) {
+      return ce.events.map((ev) => ({ date: ce.date, dayOfWeek: ce.dayOfWeek, event: ev }));
+    }
+    return [{ date: ce.date, dayOfWeek: ce.dayOfWeek, event: undefined }];
+  });
+
+  const getFieldValue = (row: { date: string; dayOfWeek: string; event?: Event }, field: string) => {
+    const ev = row.event;
+
+    if (field === 'date') {
+      const day = new Date(row.date).getDate();
+      return (
+        <div className="text-center leading-tight">
+          <div className="text-sm font-medium">{day}</div>
+          <div className="text-xs text-muted-foreground">{row.dayOfWeek}</div>
+        </div>
+      );
+    }
+
+    if (!ev) return null;
+    switch (field) {
+      case 'name':
+        return ev.name;
+      case 'project_owner':
+        return ev.project_owner;
+      case 'managers':
+        return ev.managers;
+      case 'location':
+        return ev.location;
+      case 'time':
+        return ev.event_time ? `${ev.event_time.slice(0, 5)}${ev.end_time ? `-${ev.end_time.slice(0, 5)}` : ''}` : '';
+      case 'animators':
+        return ev.animators;
+      case 'show_program':
+        return ev.show_program;
+      case 'contractors':
+        return ev.contractors;
+      case 'photo':
+        return ev.photo_video;
+      case 'video':
+        return ev.photo_video;
+      case 'notes':
+        return ev.notes;
+      default:
+        return '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -182,16 +232,16 @@ const CalendarTable = ({
           
           {/* Body */}
           <tbody>
-            {calendarEvents.map((calendarEvent, index) => (
+            {displayRows.map((row, index) => (
               <tr
-                key={calendarEvent.date}
+                key={row.event ? row.event.id : `${row.date}-empty-${index}`}
                 className={cn(
                   "hover:bg-muted/50 transition-colors",
                   index % 2 === 0 ? "bg-background" : "bg-muted/25",
-                  isWeekend(calendarEvent.date) && "bg-blue-50/50",
-                  calendarEvent.events.length > 0 && "cursor-pointer"
+                  isWeekend(row.date) && "bg-blue-50/50",
+                  row.event && "cursor-pointer"
                 )}
-                onClick={() => handleCellClick(calendarEvent)}
+                onClick={() => row.event && onEventEdit(row.event)}
               >
                 {columns.map((col) => (
                   <td
@@ -203,7 +253,7 @@ const CalendarTable = ({
                     )}
                   >
                     <div className="whitespace-pre-wrap break-words">
-                      {renderCell(calendarEvent, col.field)}
+                      {getFieldValue(row, col.field)}
                     </div>
                   </td>
                 ))}
