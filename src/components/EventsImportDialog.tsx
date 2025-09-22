@@ -194,10 +194,20 @@ const EventsImportDialog = ({
     const worksheet = workbookData.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
     
+    console.log('Original Excel rows:', rows);
+    
     if (rows.length > 0) {
       const { index, headers: hdr } = findHeaderRow(rows);
       const fileHeaders = hdr.map(h => String(h || '').trim());
-      const data = buildObjectsFromRows(rows, index, fileHeaders);
+      
+      console.log('Headers found at row', index + 1, ':', fileHeaders);
+      
+      // Специальная обработка для объединенных ячеек
+      const processedRows = handleMergedCells(rows, index, fileHeaders);
+      console.log('Processed rows after handling merged cells:', processedRows);
+      
+      const data = buildObjectsFromRows(processedRows, index, fileHeaders);
+      console.log('Final data objects:', data);
       
       if (index > 0) {
         toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
@@ -208,6 +218,46 @@ const EventsImportDialog = ({
       setupColumnMapping(fileHeaders);
       setStep(3);
     }
+  };
+
+  const handleMergedCells = (rows: any[][], headerIndex: number, fileHeaders: string[]) => {
+    const dateColumnIndex = fileHeaders.findIndex(header => 
+      header.toLowerCase().includes('дат') || header.toLowerCase().includes('date')
+    );
+    
+    if (dateColumnIndex === -1) return rows;
+    
+    // Копируем массив для безопасного изменения
+    const processedRows = rows.map(row => [...row]);
+    let lastValidDate = null;
+    
+    // Обрабатываем строки начиная с данных (после заголовка)
+    for (let i = headerIndex + 1; i < processedRows.length; i++) {
+      const currentRow = processedRows[i];
+      const dateValue = currentRow[dateColumnIndex];
+      
+      if (dateValue && dateValue !== '') {
+        // Проверяем, является ли это серийным номером Excel или датой
+        if (typeof dateValue === 'number' || /^\d+(\.\d+)?$/.test(String(dateValue))) {
+          lastValidDate = dateValue;
+        } else if (typeof dateValue === 'string' && dateValue.trim()) {
+          lastValidDate = dateValue.trim();
+        }
+      } else if (lastValidDate && hasEventData(currentRow, fileHeaders, dateColumnIndex)) {
+        // Если дата пуста, но есть данные события, используем последнюю валидную дату
+        currentRow[dateColumnIndex] = lastValidDate;
+      }
+    }
+    
+    return processedRows;
+  };
+
+  const hasEventData = (row: any[], fileHeaders: string[], dateColumnIndex: number) => {
+    // Проверяем, есть ли данные в других колонках (кроме даты)
+    return row.some((value, index) => {
+      if (index === dateColumnIndex) return false; // Пропускаем колонку с датой
+      return value && String(value).trim() !== '';
+    });
   };
 
   const handleSheetSelect = () => {
@@ -264,20 +314,56 @@ const EventsImportDialog = ({
     const s = String(dateStr).trim();
     if (!s) return null;
 
+    console.log('Parsing date:', s);
+
     // Excel serial numbers (numbers greater than 1)
     if (/^\d+(\.\d+)?$/.test(s)) {
       const num = parseFloat(s);
+      console.log('Found numeric date:', num);
+      
       if (num > 1 && num < 100000) { // reasonable limits for Excel dates
-        // Excel epoch: 1899-12-30 (accounting for leap year bug in Excel)
-        const excelEpoch = new Date(1899, 11, 30);
-        const date = new Date(excelEpoch.getTime() + num * 86400000);
-        if (!isNaN(date.getTime())) {
-          return date.toISOString().split('T')[0];
+        try {
+          // Excel epoch: 1899-12-30 (accounting for leap year bug in Excel)
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + num * 86400000);
+          if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+            const result = date.toISOString().split('T')[0];
+            console.log('Excel serial date converted to:', result);
+            return result;
+          }
+        } catch (error) {
+          console.warn('Error parsing Excel serial date:', s, error);
         }
       }
     }
     
-    // Russian date formats
+    // Попробуем распарсить текстовые даты на русском языке
+    const russianMonths = {
+      'январ': 1, 'феврал': 2, 'март': 3, 'апрел': 4, 'ма': 5, 'июн': 6,
+      'июл': 7, 'август': 8, 'сентябр': 9, 'октябр': 10, 'ноябр': 11, 'декабр': 12
+    };
+    
+    // Попробуем найти русские названия месяцев (например "1 сентября", "10 сентября")
+    const russianDateMatch = s.toLowerCase().match(/(\d{1,2})\s*([а-яё]+)/);
+    if (russianDateMatch) {
+      const day = parseInt(russianDateMatch[1]);
+      const monthStr = russianDateMatch[2];
+      console.log('Found Russian date pattern:', day, monthStr);
+      
+      for (const [monthName, monthNum] of Object.entries(russianMonths)) {
+        if (monthStr.includes(monthName)) {
+          const currentYear = new Date().getFullYear();
+          const date = new Date(currentYear, monthNum - 1, day);
+          if (!isNaN(date.getTime())) {
+            const result = date.toISOString().split('T')[0];
+            console.log('Russian date converted to:', result);
+            return result;
+          }
+        }
+      }
+    }
+    
+    // Standard date formats
     const formats = [
       /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, // dd.mm.yyyy
       /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, // dd/mm/yyyy
@@ -298,11 +384,14 @@ const EventsImportDialog = ({
         
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
-          return date.toISOString().split('T')[0];
+          const result = date.toISOString().split('T')[0];
+          console.log('Standard date converted to:', result);
+          return result;
         }
       }
     }
 
+    console.log('Date parsing failed for:', s);
     return null;
   };
 
@@ -310,8 +399,16 @@ const EventsImportDialog = ({
     const errors: string[] = [];
     let validRows = 0;
 
+    console.log('Validating data:', parsedData.length, 'rows');
+
     parsedData.forEach((row, index) => {
       const mappedRow = mapRow(row);
+      
+      console.log(`Row ${index + 2}:`, { 
+        originalDate: mappedRow.event_date, 
+        parsedDate: parseDate(mappedRow.event_date),
+        title: mappedRow.title 
+      });
       
       if (!mappedRow.title) {
         errors.push(`Строка ${index + 2}: отсутствует название праздника`);
