@@ -96,51 +96,6 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Key metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-card text-card-foreground rounded-lg border p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Всего событий</h3>
-          </div>
-          <div className="text-2xl font-bold">{data.totalEvents}</div>
-          <p className="text-xs text-muted-foreground">
-            Активных мероприятий в системе
-          </p>
-        </div>
-
-        <div className="bg-card text-card-foreground rounded-lg border p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Общий доход</h3>
-          </div>
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(data.totalIncome)}</div>
-          <p className="text-xs text-muted-foreground">
-            Всего поступлений
-          </p>
-        </div>
-
-        <div className="bg-card text-card-foreground rounded-lg border p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Общие расходы</h3>
-          </div>
-          <div className="text-2xl font-bold text-red-600">{formatCurrency(data.totalExpenses)}</div>
-          <p className="text-xs text-muted-foreground">
-            Всего трат
-          </p>
-        </div>
-
-        <div className="bg-card text-card-foreground rounded-lg border p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Прибыль</h3>
-          </div>
-          <div className={`text-2xl font-bold ${data.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(data.profit)}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Доходы - расходы
-          </p>
-        </div>
-      </div>
-
       {/* Today's information */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <TodayEventsCard />
