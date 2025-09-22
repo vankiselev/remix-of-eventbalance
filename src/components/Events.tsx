@@ -9,9 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, DollarSign, Eye } from "lucide-react";
+import { Plus, CalendarIcon, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import EventDetailsDialog from "@/components/EventDetailsDialog";
 
 interface Event {
   id: string;
@@ -39,8 +38,6 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [showEventDialog, setShowEventDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -158,14 +155,6 @@ const Events = () => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
-  const handleViewEvent = (event: Event) => {
-    setSelectedEvent(event);
-    setShowEventDialog(true);
-  };
-
-  const handleEventUpdated = () => {
-    fetchEvents();
-  };
 
   if (loading) {
     return (
@@ -326,32 +315,16 @@ const Events = () => {
                   {formatDate(event.start_date)}
                   {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="text-muted-foreground">
-                    {event.project_owner && `Проект: ${event.project_owner}`}
+                {event.project_owner && (
+                  <div className="text-sm text-muted-foreground">
+                    Проект: {event.project_owner}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleViewEvent(event)}
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    Просмотр
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
-
-      {/* Event Details Dialog */}
-      <EventDetailsDialog
-        event={selectedEvent}
-        open={showEventDialog}
-        onOpenChange={setShowEventDialog}
-        onEventUpdated={handleEventUpdated}
-      />
     </div>
   );
 };

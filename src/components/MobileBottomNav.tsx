@@ -30,12 +30,11 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
 
   const mainNavItems = [
     { id: "dashboard", label: "Главная", icon: BarChart3 },
-    { id: "calendar", label: "Календарь", icon: Calendar },
     { id: "finances", label: "Финансы", icon: DollarSign },
+    { id: "events", label: "Мероприятия", icon: Calendar },
   ];
 
   const moreMenuItems = [
-    { id: "events", label: "Мероприятия", icon: Calendar },
     { id: "staff", label: "Сотрудники", icon: Users },
     { id: "contacts", label: "Контакты", icon: Briefcase },
     ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: UserPlus }] : []),
@@ -70,12 +69,29 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             }`}>Главная</span>
           </div>
 
-          {/* Calendar */}
+          {/* Finances */}
           <div className="flex flex-col items-center gap-1.5">
             <button
-              onClick={() => handleTabChange("calendar")}
+              onClick={() => handleTabChange("finances")}
               className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("calendar") 
+                isActiveTab("finances") 
+                  ? "border-2 border-primary text-primary bg-primary/5" 
+                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+              }`}
+            >
+              <DollarSign className="h-5 w-5" strokeWidth={2} />
+            </button>
+            <span className={`text-xs font-medium ${
+              isActiveTab("finances") ? "text-primary" : "text-foreground"
+            }`}>Финансы</span>
+          </div>
+
+          {/* Events */}
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("events")}
+              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                isActiveTab("events") 
                   ? "border-2 border-primary text-primary bg-primary/5" 
                   : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
@@ -83,8 +99,8 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
               <Calendar className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
-              isActiveTab("calendar") ? "text-primary" : "text-foreground"
-            }`}>Календарь</span>
+              isActiveTab("events") ? "text-primary" : "text-foreground"
+            }`}>Мероприятия</span>
           </div>
 
           {/* Add Transaction - Central FAB */}
@@ -102,23 +118,6 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             <span className={`text-xs font-medium ${
               isActiveTab("transaction") ? "text-primary" : "text-foreground"
             }`}>Трата/Приход</span>
-          </div>
-
-          {/* Finances */}
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              onClick={() => handleTabChange("finances")}
-              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("finances") 
-                  ? "border-2 border-primary text-primary bg-primary/5" 
-                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
-              }`}
-            >
-              <DollarSign className="h-5 w-5" strokeWidth={2} />
-            </button>
-            <span className={`text-xs font-medium ${
-              isActiveTab("finances") ? "text-primary" : "text-foreground"
-            }`}>Финансы</span>
           </div>
 
           {/* More Menu */}

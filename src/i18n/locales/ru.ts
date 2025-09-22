@@ -2,7 +2,6 @@ export const ru = {
   // Navigation
   dashboard: 'Панель управления',
   events: 'Мероприятия',
-  calendar: 'Календарь',
   transaction: 'Внести трату/приход',
   finances: 'Финансы',
   staff: 'Сотрудники',
