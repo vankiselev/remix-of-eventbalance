@@ -33,7 +33,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const googleApiKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')!;
+    const googleClientEmail = Deno.env.get('GOOGLE_CLIENT_EMAIL')!;
+    const googlePrivateKey = Deno.env.get('GOOGLE_PRIVATE_KEY')!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -44,7 +45,8 @@ serve(async (req) => {
 
     if (action === 'setup') {
       // Create a new Google Sheet for the employee
-      const newSheetResponse = await createEmployeeSheet(userId, googleApiKey);
+      const accessToken = await getGoogleAccessToken(googleClientEmail, googlePrivateKey);
+      const newSheetResponse = await createEmployeeSheet(userId, accessToken);
       
       // Update user profile with sheet information
       const { error: updateError } = await supabase
@@ -89,7 +91,8 @@ serve(async (req) => {
       console.log(`Found ${transactions?.length || 0} transactions for user ${userId}`);
 
       // Sync transactions to Google Sheets
-      const syncResult = await syncTransactionsToSheet(transactions || [], sheetId, googleApiKey);
+      const accessToken = await getGoogleAccessToken(googleClientEmail, googlePrivateKey);
+      const syncResult = await syncTransactionsToSheet(transactions || [], sheetId, accessToken);
 
       return new Response(JSON.stringify({
         success: true,
@@ -118,12 +121,88 @@ serve(async (req) => {
   }
 });
 
-async function createEmployeeSheet(userId: string, apiKey: string) {
+async function getGoogleAccessToken(clientEmail: string, privateKey: string): Promise<string> {
+  // Create JWT token for Google Service Account authentication
+  const header = {
+    "alg": "RS256",
+    "typ": "JWT"
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    "iss": clientEmail,
+    "scope": "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file",
+    "aud": "https://oauth2.googleapis.com/token",
+    "exp": now + 3600, // 1 hour
+    "iat": now
+  };
+
+  // Encode header and payload
+  const encodedHeader = btoa(JSON.stringify(header)).replace(/[+/=]/g, (m) => ({'+': '-', '/': '_', '=': ''})[m] || '');
+  const encodedPayload = btoa(JSON.stringify(payload)).replace(/[+/=]/g, (m) => ({'+': '-', '/': '_', '=': ''})[m] || '');
+
+  // Create signature
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  
+  // Import private key for signing
+  const keyData = privateKey.replace(/\\n/g, '\n');
+  const pemHeader = "-----BEGIN PRIVATE KEY-----";
+  const pemFooter = "-----END PRIVATE KEY-----";
+  const pemContents = keyData.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
+  
+  // Convert PEM to ArrayBuffer
+  const binaryString = atob(pemContents);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    bytes,
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign"]
+  );
+  
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(signatureInput)
+  );
+  
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/[+/=]/g, (m) => ({'+': '-', '/': '_', '=': ''})[m] || '');
+  
+  const jwt = `${signatureInput}.${encodedSignature}`;
+  
+  // Exchange JWT for access token
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+  
+  const tokenData = await tokenResponse.json();
+  
+  if (!tokenResponse.ok) {
+    throw new Error(`Failed to get access token: ${JSON.stringify(tokenData)}`);
+  }
+  
+  return tokenData.access_token;
+}
+
+async function createEmployeeSheet(userId: string, accessToken: string) {
   // Create a new Google Sheet using the Sheets API
   const createResponse = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -157,7 +236,7 @@ async function createEmployeeSheet(userId: string, apiKey: string) {
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values/Транзакции!A1:J1?valueInputOption=RAW`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -171,7 +250,7 @@ async function createEmployeeSheet(userId: string, apiKey: string) {
   };
 }
 
-async function syncTransactionsToSheet(transactions: any[], sheetId: string, apiKey: string) {
+async function syncTransactionsToSheet(transactions: any[], sheetId: string, accessToken: string) {
   const values = transactions.map(transaction => [
     transaction.operation_date,
     transaction.events?.name || '',
@@ -190,7 +269,7 @@ async function syncTransactionsToSheet(transactions: any[], sheetId: string, api
     const clearResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Транзакции!A2:J?majorDimension=ROWS`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
