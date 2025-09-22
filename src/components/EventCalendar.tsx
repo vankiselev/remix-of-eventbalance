@@ -14,7 +14,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isPast } 
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
-import { syncFromSheets } from "@/utils/syncFromSheets";
+import { syncFromSheets, testEdgeFunctionConnection } from "@/utils/syncFromSheets";
 
 interface Event {
   id: string;
@@ -65,6 +65,7 @@ const EventCalendar = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [sheetsItems, setSheetsItems] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
@@ -221,13 +222,16 @@ const EventCalendar = () => {
     setSyncing(true);
     
     try {
+      console.log("Начинаем синхронизацию с Google Sheets...");
       const monthName = monthNames[currentDate.getMonth()];
+      console.log("Месяц для синхронизации:", monthName);
+      
       const res = await syncFromSheets(monthName);
       
       setSheetsItems(res.items);
       toast({
         title: "Синхронизация завершена!",
-        description: `Синхронизировано: ${res.count} записей`,
+        description: `Синхронизировано: ${res.count} записей из листа "${monthName}"`,
       });
       
       // Refresh events and sync status
@@ -242,6 +246,31 @@ const EventCalendar = () => {
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (testing) return;
+
+    setTesting(true);
+    
+    try {
+      console.log("Тестируем подключение к Edge Function...");
+      await testEdgeFunctionConnection();
+      
+      toast({
+        title: "Тест успешен!",
+        description: "Подключение к Edge Function работает корректно",
+      });
+    } catch (error: any) {
+      console.error("Test error:", error);
+      toast({
+        variant: "destructive",
+        title: "Тест подключения failed",
+        description: error.message || "Не удалось подключиться к функции",
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -457,6 +486,16 @@ const EventCalendar = () => {
           >
             <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
             {syncing ? "Синхронизация..." : "Синхронизировать"}
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={handleTestConnection}
+            disabled={testing}
+            size="sm"
+          >
+            <RefreshCw className={cn("mr-2 h-4 w-4", testing && "animate-spin")} />
+            {testing ? "Тестирование..." : "Тест подключения"}
           </Button>
           
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
