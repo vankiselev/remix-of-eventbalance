@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List, Search } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface Event {
@@ -47,6 +47,7 @@ const Events = () => {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -169,39 +170,31 @@ const Events = () => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
-  // Парсит дату из названия события (например, 3108 = 31 августа, 2709 = 27 сентября)
-  const parseDateFromName = (name: string) => {
-    const match = name.match(/(\d{4})/);
-    if (match) {
-      const dateStr = match[1];
-      const day = parseInt(dateStr.substring(0, 2));
-      const month = parseInt(dateStr.substring(2, 4));
-      
-      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-        return new Date(2024, month - 1, day); // используем 2024 как базовый год
-      }
-    }
-    return null;
+  // Фильтрация событий по поисковому запросу
+  const filterEvents = (eventsList: Event[]) => {
+    if (!searchQuery.trim()) return eventsList;
+    
+    const query = searchQuery.toLowerCase();
+    return eventsList.filter(event => 
+      event.name.toLowerCase().includes(query) ||
+      event.description?.toLowerCase().includes(query) ||
+      event.location?.toLowerCase().includes(query) ||
+      event.project_owner?.toLowerCase().includes(query) ||
+      event.managers?.toLowerCase().includes(query) ||
+      event.animators?.toLowerCase().includes(query)
+    );
   };
 
+  // Исправленная сортировка событий - используем start_date
   const sortEvents = (eventsList: Event[]) => {
     if (!sortByName) return eventsList;
 
     return [...eventsList].sort((a, b) => {
-      const dateA = parseDateFromName(a.name);
-      const dateB = parseDateFromName(b.name);
+      // Сортируем по дате начала события
+      const dateA = new Date(a.start_date);
+      const dateB = new Date(b.start_date);
       
-      // Если у обоих событий есть даты в названии, сортируем по дате
-      if (dateA && dateB) {
-        return dateA.getTime() - dateB.getTime();
-      }
-      
-      // Если только у одного есть дата, событие с датой идет первым
-      if (dateA && !dateB) return -1;
-      if (!dateA && dateB) return 1;
-      
-      // Иначе сортируем алфавитно
-      return a.name.localeCompare(b.name, 'ru');
+      return dateA.getTime() - dateB.getTime();
     });
   };
 
@@ -632,6 +625,17 @@ const Events = () => {
         </p>
       </div>
 
+      {/* Поиск */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Поиск по названию, описанию, месту..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       {events.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -644,7 +648,7 @@ const Events = () => {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sortEvents(events).map((event) => (
+          {sortEvents(filterEvents(events)).map((event) => (
             <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -677,7 +681,7 @@ const Events = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {sortEvents(events).map((event) => (
+          {sortEvents(filterEvents(events)).map((event) => (
             <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

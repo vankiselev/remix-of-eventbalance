@@ -689,6 +689,10 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          google_drive_folder_id: string | null
+          google_drive_folder_url: string | null
+          google_sheet_id: string | null
+          google_sheet_url: string | null
           id: string
           phone: string | null
           phone_e164: string | null
@@ -705,6 +709,10 @@ export type Database = {
           created_at?: string
           email: string
           full_name: string
+          google_drive_folder_id?: string | null
+          google_drive_folder_url?: string | null
+          google_sheet_id?: string | null
+          google_sheet_url?: string | null
           id: string
           phone?: string | null
           phone_e164?: string | null
@@ -721,6 +729,10 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
+          google_drive_folder_id?: string | null
+          google_drive_folder_url?: string | null
+          google_sheet_id?: string | null
+          google_sheet_url?: string | null
           id?: string
           phone?: string | null
           phone_e164?: string | null
@@ -766,6 +778,45 @@ export type Database = {
           sync_status?: string | null
           sync_year?: number
           updated_count?: number | null
+        }
+        Relationships: []
+      }
+      vacations: {
+        Row: {
+          created_at: string
+          description: string | null
+          employee_name: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+          vacation_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          employee_name: string
+          end_date: string
+          id?: string
+          start_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          vacation_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          employee_name?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vacation_type?: string
         }
         Relationships: []
       }

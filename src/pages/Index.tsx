@@ -6,6 +6,7 @@ import CalendarPage from "@/components/CalendarPage";
 import Finances from "@/components/Finances";
 import Staff from "@/components/Staff";
 import Birthdays from "@/components/Birthdays";
+import VacationSchedule from "@/components/VacationSchedule";
 import { TransactionFormPage } from "@/components/TransactionFormPage";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
 import Contacts from "@/components/Contacts";
@@ -29,6 +30,8 @@ const Index = () => {
         return <Staff />;
       case "birthdays":
         return <Birthdays />;
+      case "vacations":
+        return <VacationSchedule />;
       case "invitations":
         return <InvitationsManagement />;
       case "contacts":

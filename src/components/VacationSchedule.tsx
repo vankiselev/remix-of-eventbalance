@@ -1,0 +1,601 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+interface Vacation {
+  id: string;
+  user_id: string;
+  employee_name: string;
+  start_date: string;
+  end_date: string;
+  vacation_type: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const VacationSchedule = () => {
+  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingVacation, setEditingVacation] = useState<Vacation | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name: string } | null>(null);
+  
+  const [formData, setFormData] = useState({
+    start_date: undefined as Date | undefined,
+    end_date: undefined as Date | undefined,
+    vacation_type: "annual" as const,
+    description: "",
+  });
+  
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      fetchVacations();
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
+  const fetchVacations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vacations")
+        .select("*")
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      setVacations(data || []);
+    } catch (error) {
+      console.error("Error fetching vacations:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось загрузить график отпусков",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateVacation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !userProfile || !formData.start_date || !formData.end_date) return;
+
+    if (formData.start_date >= formData.end_date) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Дата окончания должна быть позже даты начала",
+      });
+      return;
+    }
+
+    try {
+      const vacationData = {
+        user_id: user.id,
+        employee_name: userProfile.full_name,
+        start_date: formData.start_date.toISOString().split('T')[0],
+        end_date: formData.end_date.toISOString().split('T')[0],
+        vacation_type: formData.vacation_type,
+        description: formData.description || null,
+        status: 'pending',
+      };
+
+      const { error } = await supabase.from("vacations").insert(vacationData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно!",
+        description: "Заявка на отпуск создана",
+      });
+
+      resetForm();
+      fetchVacations();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось создать заявку на отпуск",
+      });
+    }
+  };
+
+  const handleEditVacation = (vacation: Vacation) => {
+    setEditingVacation(vacation);
+    setFormData({
+      start_date: new Date(vacation.start_date),
+      end_date: new Date(vacation.end_date),
+      vacation_type: vacation.vacation_type as any,
+      description: vacation.description || "",
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateVacation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !editingVacation || !formData.start_date || !formData.end_date) return;
+
+    if (formData.start_date >= formData.end_date) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Дата окончания должна быть позже даты начала",
+      });
+      return;
+    }
+
+    try {
+      const vacationData = {
+        start_date: formData.start_date.toISOString().split('T')[0],
+        end_date: formData.end_date.toISOString().split('T')[0],
+        vacation_type: formData.vacation_type,
+        description: formData.description || null,
+      };
+
+      const { error } = await supabase
+        .from("vacations")
+        .update(vacationData)
+        .eq("id", editingVacation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно!",
+        description: "Заявка на отпуск обновлена",
+      });
+
+      resetForm();
+      fetchVacations();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить заявку на отпуск",
+      });
+    }
+  };
+
+  const handleDeleteVacation = async () => {
+    if (!editingVacation) return;
+    if (!confirm("Вы уверены, что хотите удалить эту заявку на отпуск?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("vacations")
+        .delete()
+        .eq("id", editingVacation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно!",
+        description: "Заявка на отпуск удалена",
+      });
+
+      resetForm();
+      fetchVacations();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить заявку на отпуск",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      start_date: undefined,
+      end_date: undefined,
+      vacation_type: "annual" as const,
+      description: "",
+    });
+    setEditingVacation(null);
+    setShowEditDialog(false);
+    setShowCreateDialog(false);
+  };
+
+  const getVacationTypeLabel = (type: string) => {
+    switch (type) {
+      case "annual":
+        return "Ежегодный";
+      case "sick":
+        return "Больничный";
+      case "personal":
+        return "Личный";
+      default:
+        return type;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Ожидание";
+      case "approved":
+        return "Одобрено";
+      case "rejected":
+        return "Отклонено";
+      default:
+        return status;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd MMMM yyyy", { locale: ru });
+  };
+
+  const calculateDays = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">График отпусков</h1>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="bg-muted h-5 w-32 rounded"></div>
+                <div className="bg-muted h-3 w-24 rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="bg-muted h-3 w-full rounded"></div>
+                  <div className="bg-muted h-3 w-3/4 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">График отпусков</h1>
+          <p className="text-muted-foreground">Планирование и управление отпусками сотрудников</p>
+        </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Подать заявку на отпуск
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Новая заявка на отпуск</DialogTitle>
+              <DialogDescription>
+                Заполните информацию о предстоящем отпуске
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateVacation} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Дата начала *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.start_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.start_date ? format(formData.start_date, "dd MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.start_date}
+                      onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Дата окончания *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.end_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.end_date ? format(formData.end_date, "dd MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.end_date}
+                      onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                      disabled={(date) => date < new Date() || (formData.start_date && date <= formData.start_date)}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vacation_type">Тип отпуска</Label>
+                <Select value={formData.vacation_type} onValueChange={(value: any) => setFormData({ ...formData, vacation_type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="annual">Ежегодный</SelectItem>
+                    <SelectItem value="sick">Больничный</SelectItem>
+                    <SelectItem value="personal">Личный</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Примечание</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  placeholder="Дополнительная информация..."
+                />
+              </div>
+
+              <Button type="submit" className="w-full">
+                Подать заявку
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Общее количество заявок на отпуск */}
+      <div className="bg-card text-card-foreground rounded-lg border p-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Всего заявок на отпуск</h3>
+        </div>
+        <div className="text-2xl font-bold">{vacations.length}</div>
+        <p className="text-xs text-muted-foreground">
+          Заявок в системе
+        </p>
+      </div>
+
+      {vacations.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Plane className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Нет заявок на отпуск</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Подайте первую заявку на отпуск, чтобы начать планирование
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {vacations.map((vacation) => (
+            <Card key={vacation.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditVacation(vacation)}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="line-clamp-2">{vacation.employee_name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(vacation.status)}>
+                      {getStatusLabel(vacation.status)}
+                    </Badge>
+                    <Edit className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <CardDescription>
+                  {getVacationTypeLabel(vacation.vacation_type)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formatDate(vacation.start_date)} - {formatDate(vacation.end_date)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Дней: {calculateDays(vacation.start_date, vacation.end_date)}
+                </div>
+                {vacation.description && (
+                  <div className="text-sm text-muted-foreground line-clamp-2">
+                    {vacation.description}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Диалог редактирования */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Редактировать заявку на отпуск</DialogTitle>
+            <DialogDescription>
+              Изменить информацию о заявке на отпуск
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateVacation} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Дата начала *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.start_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.start_date ? format(formData.start_date, "dd MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.start_date}
+                    onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Дата окончания *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.end_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.end_date ? format(formData.end_date, "dd MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.end_date}
+                    onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                    disabled={(date) => date < new Date() || (formData.start_date && date <= formData.start_date)}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-vacation_type">Тип отпуска</Label>
+              <Select value={formData.vacation_type} onValueChange={(value: any) => setFormData({ ...formData, vacation_type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="annual">Ежегодный</SelectItem>
+                  <SelectItem value="sick">Больничный</SelectItem>
+                  <SelectItem value="personal">Личный</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Примечание</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                placeholder="Дополнительная информация..."
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1">
+                Сохранить
+              </Button>
+              {editingVacation && editingVacation.user_id === user?.id && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteVacation}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Удалить
+                </Button>
+              )}
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={resetForm}
+              >
+                Отмена
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default VacationSchedule;
