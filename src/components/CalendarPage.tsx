@@ -282,6 +282,13 @@ const CalendarPage = () => {
     if (!confirm("Это действие удалит все мероприятия из базы данных. Продолжить?")) return;
 
     try {
+      // Сначала обнуляем project_id в связанных финансовых транзакциях
+      await supabase
+        .from("financial_transactions")
+        .update({ project_id: null })
+        .not("project_id", "is", null);
+
+      // Затем удаляем все события
       const { error } = await supabase
         .from("events")
         .delete()
