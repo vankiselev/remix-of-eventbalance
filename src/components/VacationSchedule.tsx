@@ -351,7 +351,11 @@ const VacationSchedule = () => {
                       mode="single"
                       selected={formData.start_date}
                       onSelect={(date) => setFormData({ ...formData, start_date: date })}
-                      disabled={(date) => date < new Date()}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
                       initialFocus
                       className="p-3 pointer-events-auto"
                     />
@@ -379,7 +383,11 @@ const VacationSchedule = () => {
                       mode="single"
                       selected={formData.end_date}
                       onSelect={(date) => setFormData({ ...formData, end_date: date })}
-                      disabled={(date) => date < new Date() || (formData.start_date && date <= formData.start_date)}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today || (formData.start_date && date <= formData.start_date);
+                      }}
                       initialFocus
                       className="p-3 pointer-events-auto"
                     />
@@ -508,7 +516,11 @@ const VacationSchedule = () => {
                     mode="single"
                     selected={formData.start_date}
                     onSelect={(date) => setFormData({ ...formData, start_date: date })}
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -536,7 +548,11 @@ const VacationSchedule = () => {
                     mode="single"
                     selected={formData.end_date}
                     onSelect={(date) => setFormData({ ...formData, end_date: date })}
-                    disabled={(date) => date < new Date() || (formData.start_date && date <= formData.start_date)}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today || (formData.start_date && date <= formData.start_date);
+                    }}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
