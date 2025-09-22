@@ -189,18 +189,18 @@ const CalendarTable = ({
   }
 
   const columns = [
-    { field: 'date', label: 'Дата', defaultSize: 8 },
-    { field: 'name', label: 'Праздник', defaultSize: 20 },
-    { field: 'project_owner', label: 'Чей проект?', defaultSize: 12 },
-    { field: 'managers', label: 'Менеджеры', defaultSize: 12 },
-    { field: 'location', label: 'Место', defaultSize: 12 },
-    { field: 'time', label: 'Время', defaultSize: 8 },
-    { field: 'animators', label: 'Аниматоры', defaultSize: 12 },
-    { field: 'show_program', label: 'Шоу/Программа', defaultSize: 12 },
-    { field: 'contractors', label: 'Подрядчики', defaultSize: 12 },
-    { field: 'photo', label: 'Фото', defaultSize: 8 },
-    { field: 'video', label: 'Видео', defaultSize: 8 },
-    { field: 'notes', label: 'Примечания', defaultSize: 16 },
+    { field: 'date', label: 'Дата', defaultSize: 6 },
+    { field: 'name', label: 'Праздник', defaultSize: 16 },
+    { field: 'project_owner', label: 'Чей проект?', defaultSize: 8 },
+    { field: 'managers', label: 'Менеджеры', defaultSize: 10 },
+    { field: 'location', label: 'Место', defaultSize: 8 },
+    { field: 'time', label: 'Время', defaultSize: 6 },
+    { field: 'animators', label: 'Аниматоры', defaultSize: 8 },
+    { field: 'show_program', label: 'Шоу/Программа', defaultSize: 8 },
+    { field: 'contractors', label: 'Подрядчики', defaultSize: 8 },
+    { field: 'photo', label: 'Фото', defaultSize: 6 },
+    { field: 'video', label: 'Видео', defaultSize: 6 },
+    { field: 'notes', label: 'Примечания', defaultSize: 10 },
   ];
 
   return (
@@ -217,9 +217,8 @@ const CalendarTable = ({
           {/* Header */}
           <ResizablePanelGroup direction="horizontal" className="min-h-8">
             {columns.map((col, index) => (
-              <>
+              <React.Fragment key={col.field}>
                 <ResizablePanel 
-                  key={col.field}
                   defaultSize={col.defaultSize}
                   minSize={5}
                   className="flex flex-col"
@@ -252,7 +251,7 @@ const CalendarTable = ({
                 {index < columns.length - 1 && (
                   <ResizableHandle withHandle />
                 )}
-              </>
+              </React.Fragment>
             ))}
           </ResizablePanelGroup>
         </div>
