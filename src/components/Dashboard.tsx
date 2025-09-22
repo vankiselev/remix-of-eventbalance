@@ -5,6 +5,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
 import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
 import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
+import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
 import CashOnHandCard from "@/components/dashboard/CashOnHandCard";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -97,9 +98,10 @@ const Dashboard = () => {
       </div>
 
       {/* Today's information */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <TodayEventsCard />
         <TodayBirthdaysCard />
+        <TodayVacationsCard />
         <CashOnHandCard />
       </div>
     </div>

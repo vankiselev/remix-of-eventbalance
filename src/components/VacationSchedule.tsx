@@ -41,7 +41,7 @@ const VacationSchedule = () => {
   const [formData, setFormData] = useState({
     start_date: undefined as Date | undefined,
     end_date: undefined as Date | undefined,
-    vacation_type: "annual" as const,
+    vacation_type: "vacation" as const,
     description: "",
   });
   
@@ -224,7 +224,7 @@ const VacationSchedule = () => {
     setFormData({
       start_date: undefined,
       end_date: undefined,
-      vacation_type: "annual" as const,
+      vacation_type: "vacation" as const,
       description: "",
     });
     setEditingVacation(null);
@@ -234,12 +234,18 @@ const VacationSchedule = () => {
 
   const getVacationTypeLabel = (type: string) => {
     switch (type) {
-      case "annual":
-        return "Ежегодный";
+      case "weekend":
+        return "Выходной";
+      case "vacation":
+        return "Отпуск";
       case "sick":
         return "Больничный";
       case "personal":
-        return "Личный";
+        return "Личное";
+      case "fun":
+        return "Кайфануть";
+      case "study":
+        return "Учеба";
       default:
         return type;
     }
@@ -402,9 +408,12 @@ const VacationSchedule = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="annual">Ежегодный</SelectItem>
+                    <SelectItem value="weekend">Выходной</SelectItem>
+                    <SelectItem value="vacation">Отпуск</SelectItem>
                     <SelectItem value="sick">Больничный</SelectItem>
-                    <SelectItem value="personal">Личный</SelectItem>
+                    <SelectItem value="personal">Личное</SelectItem>
+                    <SelectItem value="fun">Кайфануть</SelectItem>
+                    <SelectItem value="study">Учеба</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -567,9 +576,12 @@ const VacationSchedule = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="annual">Ежегодный</SelectItem>
+                  <SelectItem value="weekend">Выходной</SelectItem>
+                  <SelectItem value="vacation">Отпуск</SelectItem>
                   <SelectItem value="sick">Больничный</SelectItem>
-                  <SelectItem value="personal">Личный</SelectItem>
+                  <SelectItem value="personal">Личное</SelectItem>
+                  <SelectItem value="fun">Кайфануть</SelectItem>
+                  <SelectItem value="study">Учеба</SelectItem>
                 </SelectContent>
               </Select>
             </div>
