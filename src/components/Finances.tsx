@@ -11,7 +11,6 @@ import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import { TransactionExport } from './finance/TransactionExport';
-import { GoogleIntegrationSettings } from './admin/GoogleIntegrationSettings';
 import { EmployeeGoogleIntegration } from "@/components/finance/EmployeeGoogleIntegration";
 
 interface CashSummary {
@@ -246,12 +245,6 @@ const Finances = () => {
               >
                 Сотрудники
               </TabsTrigger>
-              <TabsTrigger 
-                value="integration" 
-                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
-              >
-                Google интеграция
-              </TabsTrigger>
             </TabsList>
           </CardHeader>
           
@@ -265,10 +258,6 @@ const Finances = () => {
                 isAdmin={true}
                 onEdit={handleEditTransaction}
               />
-            </TabsContent>
-            
-            <TabsContent value="integration" className="mt-0">
-              <GoogleIntegrationSettings />
             </TabsContent>
           </CardContent>
         </Tabs>

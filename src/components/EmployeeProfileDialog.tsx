@@ -32,6 +32,8 @@ const profileSchema = z.object({
   salary: z.string().optional(),
   role: z.enum(['admin', 'employee']).optional(),
   notes: z.string().optional(), // Added notes field
+  google_sheet_url: z.string().optional(),
+  google_drive_folder_url: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -42,17 +44,19 @@ interface Employee {
   position: string;
   salary: number | null;
   hire_date: string;
-  profiles: {
-    id: string;
-    email: string;
-    full_name: string;
-    role: 'admin' | 'employee';
-    phone?: string;
-    phone_e164?: string;
-    birth_date?: string;
-    avatar_url?: string;
-    created_at: string;
-  };
+    profiles: {
+      id: string;
+      email: string;
+      full_name: string;
+      role: 'admin' | 'employee';
+      phone?: string;
+      phone_e164?: string;
+      birth_date?: string;
+      avatar_url?: string;
+      created_at: string;
+      google_sheet_url?: string;
+      google_drive_folder_url?: string;
+    };
 }
 
 interface Profile {
@@ -65,6 +69,8 @@ interface Profile {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  google_sheet_url?: string;
+  google_drive_folder_url?: string;
 }
 
 interface CashSummary {
@@ -133,6 +139,8 @@ export const EmployeeProfileDialog = ({
       salary: "",
       role: "employee",
       notes: "",
+      google_sheet_url: "",
+      google_drive_folder_url: "",
     },
   });
 
@@ -152,6 +160,8 @@ export const EmployeeProfileDialog = ({
         salary: employee?.salary?.toString() || "",
         role: userData.role,
         notes: "", // Will be populated if we add notes to database
+        google_sheet_url: (userData as any).google_sheet_url || "",
+        google_drive_folder_url: (userData as any).google_drive_folder_url || "",
       });
       
       fetchEditHistory();
@@ -289,6 +299,18 @@ export const EmployeeProfileDialog = ({
       if (canEditRole && data.role && data.role !== currentProfile.role) {
         profileUpdates.role = data.role;
         await logFieldChange("role", currentProfile.role, data.role);
+      }
+
+      // Only admin can update Google integration URLs
+      if (isAdmin) {
+        if (data.google_sheet_url !== ((currentProfile as any).google_sheet_url || "")) {
+          profileUpdates.google_sheet_url = data.google_sheet_url || null;
+          await logFieldChange("google_sheet_url", (currentProfile as any).google_sheet_url, data.google_sheet_url);
+        }
+        if (data.google_drive_folder_url !== ((currentProfile as any).google_drive_folder_url || "")) {
+          profileUpdates.google_drive_folder_url = data.google_drive_folder_url || null;
+          await logFieldChange("google_drive_folder_url", (currentProfile as any).google_drive_folder_url, data.google_drive_folder_url);
+        }
       }
 
       // Log changes for profile
@@ -610,26 +632,67 @@ export const EmployeeProfileDialog = ({
                       </FormItem>
                     )}
                   />
-                )}
+                 )}
 
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Примечания</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="Дополнительная информация (необязательно)"
-                          rows={3}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                 {/* Google Integration Fields - Only for Admins */}
+                 {isAdmin && (
+                   <>
+                     <FormField
+                       control={form.control}
+                       name="google_sheet_url"
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel>Ссылка на Google Таблицу</FormLabel>
+                           <FormControl>
+                             <Input 
+                               {...field} 
+                               placeholder="https://docs.google.com/spreadsheets/d/..."
+                               type="url"
+                             />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+
+                     <FormField
+                       control={form.control}
+                       name="google_drive_folder_url"
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel>Ссылка на папку Google Drive</FormLabel>
+                           <FormControl>
+                             <Input 
+                               {...field} 
+                               placeholder="https://drive.google.com/drive/folders/..."
+                               type="url"
+                             />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                   </>
+                 )}
+
+                 <FormField
+                   control={form.control}
+                   name="notes"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>Примечания</FormLabel>
+                       <FormControl>
+                         <Textarea 
+                           {...field} 
+                           placeholder="Дополнительная информация (необязательно)"
+                           rows={3}
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
 
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

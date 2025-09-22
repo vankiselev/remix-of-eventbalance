@@ -26,6 +26,8 @@ interface Profile {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  google_sheet_url?: string;
+  google_drive_folder_url?: string;
 }
 
 interface Employee {
@@ -46,6 +48,8 @@ interface CombinedUser {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  google_sheet_url?: string;
+  google_drive_folder_url?: string;
   // Employee data (if exists)
   employee_id?: string;
   position?: string;
