@@ -3,12 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { Plane, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface Vacation {
   id: string;
   employee_name: string;
   vacation_type: string;
   description: string | null;
+  start_date: string;
+  end_date: string;
 }
 
 const TodayVacationsCard = () => {
@@ -25,7 +29,7 @@ const TodayVacationsCard = () => {
       
       const { data, error } = await supabase
         .from("vacations")
-        .select("id, employee_name, vacation_type, description")
+        .select("id, employee_name, vacation_type, description, start_date, end_date")
         .lte("start_date", today)
         .gte("end_date", today)
         .eq("status", "approved");
@@ -77,6 +81,18 @@ const TodayVacationsCard = () => {
     }
   };
 
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Если даты в одном месяце
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+      return `${format(start, "d", { locale: ru })}-${format(end, "d MMMM", { locale: ru })}`;
+    }
+    
+    return `${format(start, "d MMM", { locale: ru })} - ${format(end, "d MMM", { locale: ru })}`;
+  };
+
   if (loading) {
     return (
       <Card>
@@ -113,6 +129,9 @@ const TodayVacationsCard = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">
                     {vacation.employee_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateRange(vacation.start_date, vacation.end_date)}
                   </p>
                   {vacation.description && (
                     <p className="text-xs text-muted-foreground truncate">

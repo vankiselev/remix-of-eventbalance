@@ -97,12 +97,16 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Cash on hand - full width */}
+      <div className="w-full">
+        <CashOnHandCard />
+      </div>
+
       {/* Today's information */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <TodayEventsCard />
         <TodayBirthdaysCard />
         <TodayVacationsCard />
-        <CashOnHandCard />
       </div>
     </div>
   );
