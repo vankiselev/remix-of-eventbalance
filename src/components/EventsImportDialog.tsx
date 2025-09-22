@@ -40,6 +40,9 @@ const EventsImportDialog = ({
 }: EventsImportDialogProps) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
@@ -107,102 +110,23 @@ const EventsImportDialog = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        let data: ParsedRow[] = [];
-        let fileHeaders: string[] = [];
-
         if (uploadedFile.name.endsWith('.csv')) {
-          const csvText = event.target?.result as string;
-          
-          // Remove BOM if present
-          const cleanText = csvText.replace(/^\uFEFF/, '');
-          
-          // Use PapaParse for reliable CSV parsing
-          let parseResult = Papa.parse(cleanText, {
-            header: true,
-            skipEmptyLines: true,
-            delimiter: "", // auto-detect
-            transformHeader: (header: string) => header.trim(),
-            transform: (value: any) => typeof value === 'string' ? value.trim() : value
-          });
-
-          if (parseResult.errors.length > 0) {
-            throw new Error(`CSV parsing errors: ${parseResult.errors.map(e => e.message).join(', ')}`);
-          }
-
-          const fields = parseResult.meta.fields || [];
-          const hasKnown = fields.some(h => headerKeywords.some(k => (h || '').toLowerCase().includes(k)));
-
-          if (!hasKnown || fields.length <= 1) {
-            // Fallback: parse without headers and auto-detect
-            const rowsResult = Papa.parse(cleanText, {
-              header: false,
-              skipEmptyLines: true,
-              delimiter: "",
-            });
-            const rows = rowsResult.data as any[][];
-            const { index, headers: hdr } = findHeaderRow(rows);
-            fileHeaders = hdr;
-            data = buildObjectsFromRows(rows, index, fileHeaders);
-            toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
-          } else {
-            fileHeaders = fields;
-            data = parseResult.data as ParsedRow[];
-          }
-          
+          // Для CSV файлов обрабатываем сразу
+          processCSVFile(event.target?.result as string);
         } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
-          const workbook = XLSX.read(event.target?.result, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-          
-          if (rows.length > 0) {
-            const { index, headers: hdr } = findHeaderRow(rows);
-            fileHeaders = hdr.map(h => String(h || '').trim());
-            data = buildObjectsFromRows(rows, index, fileHeaders);
-            if (index > 0) {
-              toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
-            }
+          // Для Excel файлов сначала показываем выбор листов
+          const workbookData = XLSX.read(event.target?.result, { type: 'binary' });
+          setWorkbook(workbookData);
+          setAvailableSheets(workbookData.SheetNames);
+          if (workbookData.SheetNames.length === 1) {
+            // Если только один лист, выбираем его автоматически
+            setSelectedSheet(workbookData.SheetNames[0]);
+            processExcelSheet(workbookData, workbookData.SheetNames[0]);
+          } else {
+            // Показываем выбор листа
+            setStep(2);
           }
         }
-
-        setHeaders(fileHeaders);
-        setParsedData(data);
-        setStep(2);
-
-        // Auto-mapping by similar column names
-        const autoMapping: ColumnMapping = {};
-        fileHeaders.forEach(header => {
-          const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('дат') || lowerHeader.includes('date')) {
-            autoMapping[header] = 'event_date';
-          } else if (lowerHeader.includes('праздник') || lowerHeader.includes('название') || lowerHeader.includes('name')) {
-            autoMapping[header] = 'title';
-          } else if (lowerHeader.includes('проект') || lowerHeader.includes('owner') || lowerHeader === '?') {
-            autoMapping[header] = 'project_owner';
-          } else if (lowerHeader.includes('менеджер') || lowerHeader.includes('manager')) {
-            autoMapping[header] = 'managers';
-          } else if (lowerHeader.includes('место') || lowerHeader.includes('location') || lowerHeader.includes('place')) {
-            autoMapping[header] = 'place';
-          } else if (lowerHeader.includes('время') || lowerHeader.includes('time')) {
-            autoMapping[header] = 'time_range';
-          } else if (lowerHeader.includes('аниматор') || lowerHeader.includes('animator')) {
-            autoMapping[header] = 'animators';
-          } else if (lowerHeader.includes('шоу') || lowerHeader.includes('программа') || lowerHeader.includes('program')) {
-            autoMapping[header] = 'show_program';
-          } else if (lowerHeader.includes('подрядчик') || lowerHeader.includes('contractor')) {
-            autoMapping[header] = 'contractors';
-          } else if (lowerHeader.includes('фото') || lowerHeader.includes('photo')) {
-            autoMapping[header] = 'photo';
-          } else if (lowerHeader.includes('видео') || lowerHeader.includes('video')) {
-            autoMapping[header] = 'video';
-          } else if (lowerHeader.includes('примечани') || lowerHeader.includes('note')) {
-            autoMapping[header] = 'notes';
-          } else {
-            autoMapping[header] = 'skip';
-          }
-        });
-        setColumnMapping(autoMapping);
-
       } catch (error: any) {
         console.error("File parsing error:", error);
         toast({
@@ -219,6 +143,119 @@ const EventsImportDialog = ({
     } else {
       reader.readAsBinaryString(uploadedFile);
     }
+  };
+
+  const processCSVFile = (csvText: string) => {
+    // Remove BOM if present
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    
+    // Use PapaParse for reliable CSV parsing
+    let parseResult = Papa.parse(cleanText, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: "", // auto-detect
+      transformHeader: (header: string) => header.trim(),
+      transform: (value: any) => typeof value === 'string' ? value.trim() : value
+    });
+
+    if (parseResult.errors.length > 0) {
+      throw new Error(`CSV parsing errors: ${parseResult.errors.map(e => e.message).join(', ')}`);
+    }
+
+    const fields = parseResult.meta.fields || [];
+    const hasKnown = fields.some(h => headerKeywords.some(k => (h || '').toLowerCase().includes(k)));
+    let data: ParsedRow[] = [];
+    let fileHeaders: string[] = [];
+
+    if (!hasKnown || fields.length <= 1) {
+      // Fallback: parse without headers and auto-detect
+      const rowsResult = Papa.parse(cleanText, {
+        header: false,
+        skipEmptyLines: true,
+        delimiter: "",
+      });
+      const rows = rowsResult.data as any[][];
+      const { index, headers: hdr } = findHeaderRow(rows);
+      fileHeaders = hdr;
+      data = buildObjectsFromRows(rows, index, fileHeaders);
+      toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
+    } else {
+      fileHeaders = fields;
+      data = parseResult.data as ParsedRow[];
+    }
+
+    setHeaders(fileHeaders);
+    setParsedData(data);
+    setupColumnMapping(fileHeaders);
+    setStep(3);
+  };
+
+  const processExcelSheet = (workbookData: XLSX.WorkBook, sheetName: string) => {
+    const worksheet = workbookData.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    
+    if (rows.length > 0) {
+      const { index, headers: hdr } = findHeaderRow(rows);
+      const fileHeaders = hdr.map(h => String(h || '').trim());
+      const data = buildObjectsFromRows(rows, index, fileHeaders);
+      
+      if (index > 0) {
+        toast({ title: 'Определены заголовки', description: `Найдены на строке ${index + 1}` });
+      }
+
+      setHeaders(fileHeaders);
+      setParsedData(data);
+      setupColumnMapping(fileHeaders);
+      setStep(3);
+    }
+  };
+
+  const handleSheetSelect = () => {
+    if (!workbook || !selectedSheet) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Выберите лист для импорта",
+      });
+      return;
+    }
+    processExcelSheet(workbook, selectedSheet);
+  };
+
+  const setupColumnMapping = (fileHeaders: string[]) => {
+    // Auto-mapping by similar column names
+    const autoMapping: ColumnMapping = {};
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase();
+      if (lowerHeader.includes('дат') || lowerHeader.includes('date')) {
+        autoMapping[header] = 'event_date';
+      } else if (lowerHeader.includes('праздник') || lowerHeader.includes('название') || lowerHeader.includes('name')) {
+        autoMapping[header] = 'title';
+      } else if (lowerHeader.includes('проект') || lowerHeader.includes('owner') || lowerHeader === '?') {
+        autoMapping[header] = 'project_owner';
+      } else if (lowerHeader.includes('менеджер') || lowerHeader.includes('manager')) {
+        autoMapping[header] = 'managers';
+      } else if (lowerHeader.includes('место') || lowerHeader.includes('location') || lowerHeader.includes('place')) {
+        autoMapping[header] = 'place';
+      } else if (lowerHeader.includes('время') || lowerHeader.includes('time')) {
+        autoMapping[header] = 'time_range';
+      } else if (lowerHeader.includes('аниматор') || lowerHeader.includes('animator')) {
+        autoMapping[header] = 'animators';
+      } else if (lowerHeader.includes('шоу') || lowerHeader.includes('программа') || lowerHeader.includes('program')) {
+        autoMapping[header] = 'show_program';
+      } else if (lowerHeader.includes('подрядчик') || lowerHeader.includes('contractor')) {
+        autoMapping[header] = 'contractors';
+      } else if (lowerHeader.includes('фото') || lowerHeader.includes('photo')) {
+        autoMapping[header] = 'photo';
+      } else if (lowerHeader.includes('видео') || lowerHeader.includes('video')) {
+        autoMapping[header] = 'video';
+      } else if (lowerHeader.includes('примечани') || lowerHeader.includes('note')) {
+        autoMapping[header] = 'notes';
+      } else {
+        autoMapping[header] = 'skip';
+      }
+    });
+    setColumnMapping(autoMapping);
   };
 
   const parseDate = (dateStr: string): string | null => {
@@ -410,6 +447,9 @@ const EventsImportDialog = ({
   const handleClose = () => {
     setStep(1);
     setFile(null);
+    setWorkbook(null);
+    setAvailableSheets([]);
+    setSelectedSheet('');
     setParsedData([]);
     setHeaders([]);
     setColumnMapping({});
@@ -450,7 +490,37 @@ const EventsImportDialog = ({
           </div>
         )}
 
-        {step === 2 && (
+        {step === 2 && availableSheets.length > 0 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Выберите лист для импорта</h3>
+              <Label htmlFor="sheet-select">Доступные листы в файле:</Label>
+              <Select value={selectedSheet} onValueChange={setSelectedSheet}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Выберите лист" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSheets.map((sheetName) => (
+                    <SelectItem key={sheetName} value={sheetName}>
+                      {sheetName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={handleSheetSelect} disabled={!selectedSheet}>
+                Продолжить
+              </Button>
+              <Button variant="outline" onClick={handleClose}>
+                Отмена
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium mb-4">Сопоставление столбцов</h3>
@@ -522,7 +592,7 @@ const EventsImportDialog = ({
           </div>
         )}
 
-        {step === 3 && importResult && (
+        {step === 4 && importResult && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Результат импорта</h3>
             <div className="grid grid-cols-2 gap-4">
