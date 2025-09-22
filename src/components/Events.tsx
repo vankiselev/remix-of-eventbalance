@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, DollarSign } from "lucide-react";
+import { Plus, CalendarIcon, Upload } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import EventsImportDialog from "./EventsImportDialog";
 
 interface Event {
   id: string;
@@ -38,6 +39,7 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -189,13 +191,18 @@ const Events = () => {
           <h1 className="text-3xl font-bold">Мероприятия</h1>
           <p className="text-muted-foreground">Управляйте вашими мероприятиями</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Создать мероприятие
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowImportDialog(true)} variant="outline">
+            <Upload className="mr-2 h-4 w-4" />
+            Импорт из Excel/CSV
+          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Создать мероприятие
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Создать новое мероприятие</DialogTitle>
@@ -282,7 +289,14 @@ const Events = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <EventsImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImportComplete={fetchEvents}
+      />
 
       {events.length === 0 ? (
         <Card>

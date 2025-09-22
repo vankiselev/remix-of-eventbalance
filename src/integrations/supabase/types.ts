@@ -197,15 +197,20 @@ export type Database = {
           managers: string | null
           name: string
           notes: string | null
+          photo: string | null
           photo_video: string | null
           photos: string[] | null
+          place: string | null
           project_owner: string | null
           responsible_manager_ids: string[] | null
           show_program: string | null
+          source_event_id: string | null
           start_date: string
           status: string
+          time_range: string | null
           updated_at: string
           venue_id: string | null
+          video: string | null
           videos: string[] | null
         }
         Insert: {
@@ -226,15 +231,20 @@ export type Database = {
           managers?: string | null
           name: string
           notes?: string | null
+          photo?: string | null
           photo_video?: string | null
           photos?: string[] | null
+          place?: string | null
           project_owner?: string | null
           responsible_manager_ids?: string[] | null
           show_program?: string | null
+          source_event_id?: string | null
           start_date: string
           status?: string
+          time_range?: string | null
           updated_at?: string
           venue_id?: string | null
+          video?: string | null
           videos?: string[] | null
         }
         Update: {
@@ -255,15 +265,20 @@ export type Database = {
           managers?: string | null
           name?: string
           notes?: string | null
+          photo?: string | null
           photo_video?: string | null
           photos?: string[] | null
+          place?: string | null
           project_owner?: string | null
           responsible_manager_ids?: string[] | null
           show_program?: string | null
+          source_event_id?: string | null
           start_date?: string
           status?: string
+          time_range?: string | null
           updated_at?: string
           venue_id?: string | null
+          video?: string | null
           videos?: string[] | null
         }
         Relationships: [
