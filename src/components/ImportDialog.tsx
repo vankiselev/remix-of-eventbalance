@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface ImportDialogProps {
   open: boolean;
@@ -71,23 +72,27 @@ const ImportDialog = ({
         let fileHeaders: string[] = [];
 
         if (uploadedFile.name.endsWith('.csv')) {
-          const text = event.target?.result as string;
-          const lines = text.split('\n').filter(line => line.trim());
+          const csvText = event.target?.result as string;
           
-          if (lines.length > 0) {
-            // Определяем разделитель (; или ,)
-            const separator = lines[0].includes(';') ? ';' : ',';
-            fileHeaders = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-            
-            data = lines.slice(1).map(line => {
-              const values = line.split(separator).map(v => v.trim().replace(/"/g, ''));
-              const row: ParsedRow = {};
-              fileHeaders.forEach((header, index) => {
-                row[header] = values[index] || '';
-              });
-              return row;
-            });
+          // Удаляем BOM если есть
+          const cleanText = csvText.replace(/^\uFEFF/, '');
+          
+          // Используем PapaParse для надежного парсинга CSV
+          const parseResult = Papa.parse(cleanText, {
+            header: true,
+            skipEmptyLines: true,
+            delimiter: "", // автоопределение
+            transformHeader: (header: string) => header.trim(),
+            transform: (value: string) => value.trim()
+          });
+
+          if (parseResult.errors.length > 0) {
+            throw new Error(`Ошибки парсинга CSV: ${parseResult.errors.map(e => e.message).join(', ')}`);
           }
+
+          fileHeaders = parseResult.meta.fields || [];
+          data = parseResult.data as ParsedRow[];
+          
         } else if (uploadedFile.name.endsWith('.xlsx')) {
           const workbook = XLSX.read(event.target?.result, { type: 'binary' });
           const sheetName = workbook.SheetNames[0];
@@ -159,25 +164,43 @@ const ImportDialog = ({
   const parseDate = (dateStr: string): string | null => {
     if (!dateStr) return null;
     
-    // Пробуем разные форматы дат
+    const s = String(dateStr).trim();
+    if (!s) return null;
+
+    // Excel серийные номера (числа больше 1)
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      const num = parseFloat(s);
+      if (num > 1 && num < 100000) { // разумные пределы для Excel дат
+        // Excel epoch: 1899-12-30 (учитываем leap year bug в Excel)
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + num * 86400000);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+    }
+    
+    // Русские форматы дат
     const formats = [
       /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, // дд.мм.гггг
       /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, // дд/мм/гггг
+      /^(\d{1,2})-(\d{1,2})-(\d{4})$/, // дд-мм-гггг
       /^(\d{4})-(\d{1,2})-(\d{1,2})$/, // гггг-мм-дд
     ];
 
-    for (const format of formats) {
-      const match = dateStr.match(format);
+    for (let i = 0; i < formats.length; i++) {
+      const format = formats[i];
+      const match = s.match(format);
       if (match) {
         let year, month, day;
-        if (format === formats[2]) { // yyyy-mm-dd
+        if (i === 3) { // yyyy-mm-dd
           [, year, month, day] = match;
-        } else { // dd.mm.yyyy or dd/mm/yyyy
+        } else { // dd.mm.yyyy, dd/mm/yyyy, dd-mm-yyyy
           [, day, month, year] = match;
         }
         
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        if (!isNaN(date.getTime())) {
+        if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
           return date.toISOString().split('T')[0];
         }
       }
@@ -239,73 +262,126 @@ const ImportDialog = ({
     let created = 0;
     let updated = 0;
     let skipped = 0;
+    const errors: string[] = [];
 
     try {
-      for (const row of parsedData) {
+      // Обрабатываем данные чанками по 100 записей
+      const CHUNK_SIZE = 100;
+      const validRows = parsedData.filter(row => {
         const mappedRow = mapRow(row);
-        if (!mappedRow.name || !mappedRow.start_date) continue;
+        return mappedRow.name && mappedRow.start_date && parseDate(mappedRow.start_date);
+      });
 
-        const parsedDate = parseDate(mappedRow.start_date);
-        if (!parsedDate) continue;
+      for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
+        const chunk = validRows.slice(i, i + CHUNK_SIZE);
+        
+        for (const row of chunk) {
+          try {
+            const mappedRow = mapRow(row);
+            const parsedDate = parseDate(mappedRow.start_date);
+            if (!parsedDate) continue;
 
-        // Проверяем на дубликаты по дате + название
-        const { data: existingEvents } = await supabase
-          .from("events")
-          .select("id")
-          .eq("start_date", parsedDate)
-          .eq("name", mappedRow.name);
+            // Очищаем данные
+            const cleanEventData = {
+              name: String(mappedRow.name || '').trim(),
+              start_date: parsedDate,
+              project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
+              managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
+              location: mappedRow.location ? String(mappedRow.location).trim() : null,
+              event_time: mappedRow.event_time ? String(mappedRow.event_time).trim() : null,
+              animators: mappedRow.animators ? String(mappedRow.animators).trim() : null,
+              show_program: mappedRow.show_program ? String(mappedRow.show_program).trim() : null,
+              contractors: mappedRow.contractors ? String(mappedRow.contractors).trim() : null,
+              photo_video: mappedRow.photo_video ? String(mappedRow.photo_video).trim() : null,
+              notes: mappedRow.notes ? String(mappedRow.notes).trim() : null,
+              created_by: user.id,
+            };
 
-        const eventData = {
-          name: mappedRow.name,
-          start_date: parsedDate,
-          project_owner: mappedRow.project_owner || null,
-          managers: mappedRow.managers || null,
-          location: mappedRow.location || null,
-          event_time: mappedRow.event_time || null,
-          animators: mappedRow.animators || null,
-          show_program: mappedRow.show_program || null,
-          contractors: mappedRow.contractors || null,
-          photo_video: mappedRow.photo_video || null,
-          notes: mappedRow.notes || null,
-          created_by: user.id,
-        };
-
-        if (existingEvents && existingEvents.length > 0) {
-          if (duplicateAction === 'skip') {
-            skipped++;
-          } else if (duplicateAction === 'update') {
-            await supabase
+            // Проверяем дубликаты
+            const { data: existingEvents, error: selectError } = await supabase
               .from("events")
-              .update(eventData)
-              .eq("id", existingEvents[0].id);
-            updated++;
-          } else if (duplicateAction === 'create') {
-            await supabase
-              .from("events")
-              .insert(eventData);
-            created++;
+              .select("id")
+              .eq("start_date", parsedDate)
+              .eq("name", cleanEventData.name);
+
+            if (selectError) {
+              errors.push(`Ошибка поиска дубликата: ${selectError.message}`);
+              continue;
+            }
+
+            if (existingEvents && existingEvents.length > 0) {
+              if (duplicateAction === 'skip') {
+                skipped++;
+              } else if (duplicateAction === 'update') {
+                const { error: updateError } = await supabase
+                  .from("events")
+                  .update(cleanEventData)
+                  .eq("id", existingEvents[0].id);
+                
+                if (updateError) {
+                  errors.push(`Ошибка обновления: ${updateError.message}`);
+                } else {
+                  updated++;
+                }
+              } else if (duplicateAction === 'create') {
+                const { error: insertError } = await supabase
+                  .from("events")
+                  .insert(cleanEventData);
+                
+                if (insertError) {
+                  errors.push(`Ошибка создания дубликата: ${insertError.message}`);
+                } else {
+                  created++;
+                }
+              }
+            } else {
+              const { error: insertError } = await supabase
+                .from("events")
+                .insert(cleanEventData);
+              
+              if (insertError) {
+                errors.push(`Ошибка создания записи: ${insertError.message}`);
+              } else {
+                created++;
+              }
+            }
+          } catch (rowError: any) {
+            errors.push(`Ошибка обработки строки: ${rowError.message}`);
           }
-        } else {
-          await supabase
-            .from("events")
-            .insert(eventData);
-          created++;
+        }
+
+        // Показываем прогресс
+        if (chunk.length > 0) {
+          toast({
+            title: "Импорт в процессе",
+            description: `Обработано ${Math.min(i + CHUNK_SIZE, validRows.length)} из ${validRows.length} записей...`,
+          });
         }
       }
 
-      toast({
-        title: "Импорт завершен",
-        description: `Создано: ${created}, Обновлено: ${updated}, Пропущено: ${skipped}`,
-      });
+      if (errors.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Импорт завершен с ошибками",
+          description: `Создано: ${created}, Обновлено: ${updated}, Пропущено: ${skipped}. Ошибок: ${errors.length}`,
+        });
+        console.error("Ошибки импорта:", errors);
+      } else {
+        toast({
+          title: "Импорт успешно завершен",
+          description: `Создано: ${created}, Обновлено: ${updated}, Пропущено: ${skipped}`,
+        });
+      }
 
       onImportComplete();
       handleClose();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Ошибка импорта",
+        title: "Критическая ошибка импорта",
         description: error.message || "Неизвестная ошибка",
       });
+      console.error("Критическая ошибка импорта:", error);
     } finally {
       setImporting(false);
     }
@@ -343,10 +419,11 @@ const ImportDialog = ({
             <div className="text-sm text-muted-foreground">
               <p>Поддерживаемые форматы:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Excel файлы (.xlsx)</li>
-                <li>CSV файлы (.csv) с разделителями ; или ,</li>
+                <li>Excel файлы (.xlsx) - поддержка серийных дат Excel</li>
+                <li>CSV файлы (.csv) с разделителями ; или , - автоопределение, обработка BOM</li>
                 <li>Первая строка должна содержать заголовки столбцов</li>
-                <li>Даты в формате ДД.ММ.ГГГГ или ДД/ММ/ГГГГ</li>
+                <li>Даты: ДД.ММ.ГГГГ, ДД/ММ/ГГГГ, ДД-ММ-ГГГГ или серийные номера Excel</li>
+                <li>Обработка чанками по 100 записей для больших файлов</li>
               </ul>
             </div>
           </div>
