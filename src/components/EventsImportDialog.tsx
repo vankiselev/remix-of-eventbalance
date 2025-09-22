@@ -229,26 +229,28 @@ const EventsImportDialog = ({
     
     // Копируем массив для безопасного изменения
     const processedRows = rows.map(row => [...row]);
-    let lastValidDate = null;
+    let lastValidDate: any = null;
     
     // Обрабатываем строки начиная с данных (после заголовка)
     for (let i = headerIndex + 1; i < processedRows.length; i++) {
       const currentRow = processedRows[i];
       const dateValue = currentRow[dateColumnIndex];
       
-      if (dateValue && dateValue !== '') {
-        // Проверяем, является ли это серийным номером Excel или датой
-        if (typeof dateValue === 'number' || /^\d+(\.\d+)?$/.test(String(dateValue))) {
-          lastValidDate = dateValue;
-        } else if (typeof dateValue === 'string' && dateValue.trim()) {
-          lastValidDate = dateValue.trim();
-        }
+      if (dateValue !== undefined && dateValue !== null && String(dateValue).trim() !== '') {
+        lastValidDate = dateValue; // запомним последнее непустое значение даты (число/строка)
       } else if (lastValidDate && hasEventData(currentRow, fileHeaders, dateColumnIndex)) {
         // Если дата пуста, но есть данные события, используем последнюю валидную дату
         currentRow[dateColumnIndex] = lastValidDate;
       }
     }
     
+    // Нормализуем все значения даты в ISO (yyyy-mm-dd), чтобы и предпросмотр, и валидация видели уже корректные даты
+    for (let i = headerIndex + 1; i < processedRows.length; i++) {
+      const raw = processedRows[i][dateColumnIndex];
+      const normalized = parseDate(raw);
+      if (normalized) processedRows[i][dateColumnIndex] = normalized;
+    }
+
     return processedRows;
   };
 
