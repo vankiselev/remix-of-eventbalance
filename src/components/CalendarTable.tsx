@@ -1,4 +1,6 @@
+import React from "react";
 import { cn } from "@/lib/utils";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Event {
   id: string;
@@ -187,18 +189,18 @@ const CalendarTable = ({
   }
 
   const columns = [
-    { field: 'date', label: 'Дата', width: 'w-16' },
-    { field: 'name', label: 'Праздник', width: 'w-48' },
-    { field: 'project_owner', label: 'Чей проект?', width: 'w-32' },
-    { field: 'managers', label: 'Менеджеры', width: 'w-32' },
-    { field: 'location', label: 'Место', width: 'w-32' },
-    { field: 'time', label: 'Время', width: 'w-24' },
-    { field: 'animators', label: 'Аниматоры', width: 'w-32' },
-    { field: 'show_program', label: 'Шоу/Программа', width: 'w-32' },
-    { field: 'contractors', label: 'Подрядчики', width: 'w-32' },
-    { field: 'photo', label: 'Фото', width: 'w-24' },
-    { field: 'video', label: 'Видео', width: 'w-24' },
-    { field: 'notes', label: 'Примечания', width: 'w-48' },
+    { field: 'date', label: 'Дата', defaultSize: 8 },
+    { field: 'name', label: 'Праздник', defaultSize: 20 },
+    { field: 'project_owner', label: 'Чей проект?', defaultSize: 12 },
+    { field: 'managers', label: 'Менеджеры', defaultSize: 12 },
+    { field: 'location', label: 'Место', defaultSize: 12 },
+    { field: 'time', label: 'Время', defaultSize: 8 },
+    { field: 'animators', label: 'Аниматоры', defaultSize: 12 },
+    { field: 'show_program', label: 'Шоу/Программа', defaultSize: 12 },
+    { field: 'contractors', label: 'Подрядчики', defaultSize: 12 },
+    { field: 'photo', label: 'Фото', defaultSize: 8 },
+    { field: 'video', label: 'Видео', defaultSize: 8 },
+    { field: 'notes', label: 'Примечания', defaultSize: 16 },
   ];
 
   return (
@@ -211,56 +213,49 @@ const CalendarTable = ({
           width: `${100 / (zoom / 100)}%`
         }}
       >
-        <table className="w-full border-collapse border border-border calendar-table">
+        <div className="border border-border">
           {/* Header */}
-          <thead className="sticky top-0 z-10 bg-background">
-            <tr>
-              {columns.map((col) => (
-                <th
+          <ResizablePanelGroup direction="horizontal" className="min-h-8">
+            {columns.map((col, index) => (
+              <>
+                <ResizablePanel 
                   key={col.field}
-                  className={cn(
-                    "border border-border p-2 text-left text-xs font-medium bg-muted text-muted-foreground",
-                    col.width,
-                    getColumnColor(col.field)
-                  )}
+                  defaultSize={col.defaultSize}
+                  minSize={5}
+                  className="flex flex-col"
                 >
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          
-          {/* Body */}
-          <tbody>
-            {displayRows.map((row, index) => (
-              <tr
-                key={row.event ? row.event.id : `${row.date}-empty-${index}`}
-                className={cn(
-                  "hover:bg-muted/50 transition-colors",
-                  index % 2 === 0 ? "bg-background" : "bg-muted/25",
-                  isWeekend(row.date) && "bg-blue-50/50",
-                  row.event && "cursor-pointer"
-                )}
-                onClick={() => row.event && onEventEdit(row.event)}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.field}
-                    className={cn(
-                      "border border-border p-1 text-xs align-top min-h-8",
-                      col.field === 'date' && "sticky left-0 z-5 bg-inherit",
-                      getColumnColor(col.field)
-                    )}
-                  >
-                    <div className="whitespace-pre-wrap break-words">
-                      {getFieldValue(row, col.field)}
+                  <div className={cn(
+                    "border-r border-b border-border p-2 text-xs font-medium bg-white text-center flex items-center justify-center min-h-12",
+                    getColumnColor(col.field)
+                  )}>
+                    {col.label}
+                  </div>
+                  
+                  {/* Body cells for this column */}
+                  {displayRows.map((row, rowIndex) => (
+                    <div
+                      key={row.event ? row.event.id : `${row.date}-empty-${rowIndex}`}
+                      className={cn(
+                        "border-r border-b border-border p-1 text-xs min-h-8 flex items-center justify-center text-center bg-white transition-colors",
+                        isWeekend(row.date) && "bg-blue-50",
+                        row.event && "cursor-pointer hover:bg-gray-50"
+                      )}
+                      onClick={() => row.event && onEventEdit(row.event)}
+                    >
+                      <div className="whitespace-pre-wrap break-words w-full">
+                        {getFieldValue(row, col.field)}
+                      </div>
                     </div>
-                  </td>
-                ))}
-              </tr>
+                  ))}
+                </ResizablePanel>
+                
+                {index < columns.length - 1 && (
+                  <ResizableHandle withHandle />
+                )}
+              </>
             ))}
-          </tbody>
-        </table>
+          </ResizablePanelGroup>
+        </div>
       </div>
     </div>
   );
