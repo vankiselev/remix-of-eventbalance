@@ -689,10 +689,6 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
-          google_drive_folder_id: string | null
-          google_drive_folder_url: string | null
-          google_sheet_id: string | null
-          google_sheet_url: string | null
           id: string
           phone: string | null
           phone_e164: string | null
@@ -709,10 +705,6 @@ export type Database = {
           created_at?: string
           email: string
           full_name: string
-          google_drive_folder_id?: string | null
-          google_drive_folder_url?: string | null
-          google_sheet_id?: string | null
-          google_sheet_url?: string | null
           id: string
           phone?: string | null
           phone_e164?: string | null
@@ -729,10 +721,6 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
-          google_drive_folder_id?: string | null
-          google_drive_folder_url?: string | null
-          google_sheet_id?: string | null
-          google_sheet_url?: string | null
           id?: string
           phone?: string | null
           phone_e164?: string | null

@@ -11,7 +11,6 @@ import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import { TransactionExport } from './finance/TransactionExport';
-import { EmployeeGoogleIntegration } from "@/components/finance/EmployeeGoogleIntegration";
 
 interface CashSummary {
   total_cash: number;
@@ -179,11 +178,6 @@ const Finances = () => {
           summary={selectedEmployee ? companySummary : userSummary} 
           isLoading={false} 
         />
-        {!selectedEmployee && !isAdmin && (
-          <div className="mt-4">
-            <EmployeeGoogleIntegration />
-          </div>
-        )}
       </div>
 
       <Card>
