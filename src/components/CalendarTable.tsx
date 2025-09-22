@@ -1,6 +1,5 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Event {
   id: string;
@@ -189,18 +188,18 @@ const CalendarTable = ({
   }
 
   const columns = [
-    { field: 'date', label: 'Дата', defaultSize: 6 },
-    { field: 'name', label: 'Праздник', defaultSize: 16 },
-    { field: 'project_owner', label: 'Чей проект?', defaultSize: 8 },
-    { field: 'managers', label: 'Менеджеры', defaultSize: 10 },
-    { field: 'location', label: 'Место', defaultSize: 8 },
-    { field: 'time', label: 'Время', defaultSize: 6 },
-    { field: 'animators', label: 'Аниматоры', defaultSize: 8 },
-    { field: 'show_program', label: 'Шоу/Программа', defaultSize: 8 },
-    { field: 'contractors', label: 'Подрядчики', defaultSize: 8 },
-    { field: 'photo', label: 'Фото', defaultSize: 6 },
-    { field: 'video', label: 'Видео', defaultSize: 6 },
-    { field: 'notes', label: 'Примечания', defaultSize: 10 },
+    { field: 'date', label: 'Дата', width: 'w-16' },
+    { field: 'name', label: 'Праздник', width: 'w-48' },
+    { field: 'project_owner', label: 'Чей проект?', width: 'w-32' },
+    { field: 'managers', label: 'Менеджеры', width: 'w-32' },
+    { field: 'location', label: 'Место', width: 'w-32' },
+    { field: 'time', label: 'Время', width: 'w-24' },
+    { field: 'animators', label: 'Аниматоры', width: 'w-32' },
+    { field: 'show_program', label: 'Шоу/Программа', width: 'w-32' },
+    { field: 'contractors', label: 'Подрядчики', width: 'w-32' },
+    { field: 'photo', label: 'Фото', width: 'w-24' },
+    { field: 'video', label: 'Видео', width: 'w-24' },
+    { field: 'notes', label: 'Примечания', width: 'w-48' },
   ];
 
   return (
@@ -213,48 +212,57 @@ const CalendarTable = ({
           width: `${100 / (zoom / 100)}%`
         }}
       >
-        <div className="border border-border">
+        <table className="w-full border-collapse border border-border calendar-table">
           {/* Header */}
-          <ResizablePanelGroup direction="horizontal" className="min-h-8">
-            {columns.map((col, index) => (
-              <React.Fragment key={col.field}>
-                <ResizablePanel 
-                  defaultSize={col.defaultSize}
-                  minSize={5}
-                  className="flex flex-col"
-                >
-                  <div className={cn(
-                    "border-r border-b border-border p-2 text-xs font-medium bg-white text-center flex items-center justify-center min-h-12",
+          <thead className="sticky top-0 z-10 bg-background">
+            <tr>
+              {columns.map((col) => (
+                <th
+                  key={col.field}
+                  className={cn(
+                    "border border-border p-2 text-center text-xs font-medium bg-white resize-x overflow-hidden",
+                    col.width,
                     getColumnColor(col.field)
-                  )}>
-                    {col.label}
-                  </div>
-                  
-                  {/* Body cells for this column */}
-                  {displayRows.map((row, rowIndex) => (
-                    <div
-                      key={row.event ? row.event.id : `${row.date}-empty-${rowIndex}`}
-                      className={cn(
-                        "border-r border-b border-border p-1 text-xs min-h-8 flex items-center justify-center text-center bg-white transition-colors",
-                        isWeekend(row.date) && "bg-blue-50",
-                        row.event && "cursor-pointer hover:bg-gray-50"
-                      )}
-                      onClick={() => row.event && onEventEdit(row.event)}
-                    >
-                      <div className="whitespace-pre-wrap break-words w-full">
-                        {getFieldValue(row, col.field)}
-                      </div>
-                    </div>
-                  ))}
-                </ResizablePanel>
-                
-                {index < columns.length - 1 && (
-                  <ResizableHandle withHandle />
+                  )}
+                  style={{ resize: 'horizontal', minWidth: '80px' }}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          
+          {/* Body */}
+          <tbody>
+            {displayRows.map((row, index) => (
+              <tr
+                key={row.event ? row.event.id : `${row.date}-empty-${index}`}
+                className={cn(
+                  "hover:bg-gray-50 transition-colors",
+                  index % 2 === 0 ? "bg-white" : "bg-white",
+                  isWeekend(row.date) && "bg-blue-50",
+                  row.event && "cursor-pointer"
                 )}
-              </React.Fragment>
+                onClick={() => row.event && onEventEdit(row.event)}
+              >
+                {columns.map((col) => (
+                  <td
+                    key={col.field}
+                    className={cn(
+                      "border border-border p-1 text-xs text-center align-middle bg-white min-h-8",
+                      col.field === 'date' && "sticky left-0 z-5 bg-white",
+                      getColumnColor(col.field)
+                    )}
+                  >
+                    <div className="whitespace-pre-wrap break-words flex items-center justify-center min-h-6">
+                      {getFieldValue(row, col.field)}
+                    </div>
+                  </td>
+                ))}
+              </tr>
             ))}
-          </ResizablePanelGroup>
-        </div>
+          </tbody>
+        </table>
       </div>
     </div>
   );
