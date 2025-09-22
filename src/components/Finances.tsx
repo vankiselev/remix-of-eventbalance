@@ -121,7 +121,10 @@ const Finances = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Финансы</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Финансы</h1>
+          <p className="text-muted-foreground">Управление доходами и расходами компании</p>
+        </div>
         <FinanceSummaryCards summary={companySummary} isLoading={true} />
       </div>
     );
@@ -205,7 +208,12 @@ const Finances = () => {
 
   // Admin dashboard view
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Финансы</h1>
+        <p className="text-muted-foreground">Управление доходами и расходами компании</p>
+      </div>
+
       <div className="flex justify-end items-center">
         <div className="flex items-center gap-2">
           <TransactionExport isAdmin={true} />

@@ -156,7 +156,7 @@ const Birthdays = () => {
           <Cake className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Дни рождения сотрудников</h1>
+          <h1 className="text-3xl font-bold">Дни рождения сотрудников</h1>
           <p className="text-muted-foreground">Не забудьте поздравить коллег!</p>
         </div>
       </div>

@@ -319,8 +319,9 @@ const Events = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div>
           <h1 className="text-3xl font-bold">Мероприятия</h1>
+          <p className="text-muted-foreground">Управляйте вашими мероприятиями</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (

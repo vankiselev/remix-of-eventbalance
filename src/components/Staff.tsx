@@ -285,7 +285,14 @@ const Staff = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">{t('staff')}</h1>
+        <div>
+          <h1 className="text-3xl font-bold">{t('staff')}</h1>
+          <p className="text-muted-foreground">
+            {canManageStaff() 
+              ? "Управляйте командой и зарплатами" 
+              : "Просмотр информации о пользователях"}
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">

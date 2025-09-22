@@ -315,9 +315,10 @@ const CalendarPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center">
-        <h1 className="text-2xl lg:text-3xl font-bold">
-          Расписание праздников {MONTHS[selectedMonth]} {selectedYear}
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold">Календарь</h1>
+          <p className="text-muted-foreground">Расписание праздников {MONTHS[selectedMonth]} {selectedYear}</p>
+        </div>
         
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 text-sm lg:text-base">
