@@ -114,7 +114,7 @@ const VacationSchedule = () => {
         end_date: formData.end_date.toISOString().split('T')[0],
         vacation_type: formData.vacation_type,
         description: formData.description || null,
-        status: 'pending',
+        status: 'approved',
       };
 
       const { error } = await supabase.from("vacations").insert(vacationData);
