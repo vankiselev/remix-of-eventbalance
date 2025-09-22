@@ -422,9 +422,9 @@ const EventsImportDialog = ({
 
     parsedData.forEach((row, index) => {
       const mappedRow = mapRow(row);
-      const dateFromCell = parseDate(mappedRow.event_date);
       const dateFromTitle = parseDateFromTitle(mappedRow.title);
-      const finalDate = dateFromCell || dateFromTitle;
+      const dateFromCell = parseDate(mappedRow.event_date);
+      const finalDate = dateFromTitle || dateFromCell;
       
       console.log(`Row ${index + 2}:`, { 
         originalDate: mappedRow.event_date, 
@@ -482,14 +482,14 @@ const EventsImportDialog = ({
       // Process data in chunks
       const validRows = parsedData.filter(row => {
         const mappedRow = mapRow(row);
-        const finalDate = parseDate(mappedRow.event_date) || parseDateFromTitle(mappedRow.title);
+        const finalDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
         return mappedRow.title && finalDate;
       });
 
       // Normalize data
       const normalizedRows = validRows.map(row => {
         const mappedRow = mapRow(row);
-        const parsedDate = parseDate(mappedRow.event_date) || parseDateFromTitle(mappedRow.title);
+        const parsedDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
         
         return {
           event_date: parsedDate,
