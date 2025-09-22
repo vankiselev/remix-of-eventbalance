@@ -310,6 +310,8 @@ const EventsImportDialog = ({
     setColumnMapping(autoMapping);
   };
 
+  const formatYMD = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
   const parseDate = (dateStr: string): string | null => {
     if (!dateStr) return null;
     
@@ -325,14 +327,15 @@ const EventsImportDialog = ({
       
       if (num > 1 && num < 100000) { // reasonable limits for Excel dates
         try {
-          // Excel epoch: 1899-12-30 (accounting for leap year bug in Excel)
-          const excelEpoch = new Date(1899, 11, 30);
-          const date = new Date(excelEpoch.getTime() + num * 86400000);
-          if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
-            const result = date.toISOString().split('T')[0];
-            console.log('Excel serial date converted to:', result);
-            return result;
-          }
+          // Excel epoch UTC: 1899-12-30
+          const excelEpochUTC = Date.UTC(1899, 11, 30);
+          const dt = new Date(excelEpochUTC + num * 86400000);
+          const y = dt.getUTCFullYear();
+          const m = dt.getUTCMonth() + 1;
+          const d = dt.getUTCDate();
+          const result = formatYMD(y, m, d);
+          console.log('Excel serial date converted to:', result);
+          return result;
         } catch (error) {
           console.warn('Error parsing Excel serial date:', s, error);
         }
@@ -355,12 +358,9 @@ const EventsImportDialog = ({
       for (const [monthName, monthNum] of Object.entries(russianMonths)) {
         if (monthStr.includes(monthName)) {
           const currentYear = new Date().getFullYear();
-          const date = new Date(currentYear, monthNum - 1, day);
-          if (!isNaN(date.getTime())) {
-            const result = date.toISOString().split('T')[0];
-            console.log('Russian date converted to:', result);
-            return result;
-          }
+          const result = formatYMD(currentYear, monthNum as number, day);
+          console.log('Russian date converted to:', result);
+          return result;
         }
       }
     }
@@ -384,9 +384,11 @@ const EventsImportDialog = ({
           [, day, month, year] = match;
         }
         
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
-          const result = date.toISOString().split('T')[0];
+        const y = parseInt(year);
+        const m = parseInt(month);
+        const d = parseInt(day);
+        if (y > 1900 && y < 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const result = formatYMD(y, m, d);
           console.log('Standard date converted to:', result);
           return result;
         }
