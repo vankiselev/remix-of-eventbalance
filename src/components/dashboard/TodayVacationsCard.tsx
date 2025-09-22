@@ -5,39 +5,80 @@ import { Plane, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Vacation {
-  id: string;
+  id?: string;
   employee_name: string;
   vacation_type: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
+  description?: string | null;
+  start_date?: string;
+  end_date?: string;
+}
+
+interface VacationSummary {
+  employee_name: string;
+  vacation_type: string;
 }
 
 const TodayVacationsCard = () => {
   const [todayVacations, setTodayVacations] = useState<Vacation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchTodayVacations();
-  }, []);
+    if (user) {
+      fetchUserRole();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (userRole !== null) {
+      fetchTodayVacations();
+    }
+  }, [userRole]);
+
+  const fetchUserRole = async () => {
+    if (!user) return;
+    
+    try {
+      const { data } = await supabase
+        .rpc("get_user_basic_profile")
+        .single();
+      setUserRole(data?.role || 'employee');
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      setUserRole('employee');
+    }
+  };
 
   const fetchTodayVacations = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
-        .from("vacations")
-        .select("id, employee_name, vacation_type, description, start_date, end_date")
-        .lte("start_date", today)
-        .gte("end_date", today)
-        .eq("status", "approved");
+      if (userRole === 'admin') {
+        // Администраторы видят полную информацию
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data, error } = await supabase
+          .from("vacations")
+          .select("id, employee_name, vacation_type, description, start_date, end_date")
+          .lte("start_date", today)
+          .gte("end_date", today)
+          .eq("status", "approved");
 
-      if (error) throw error;
-      setTodayVacations(data || []);
+        if (error) throw error;
+        setTodayVacations(data || []);
+      } else {
+        // Обычные пользователи видят только базовую информацию через безопасную функцию
+        const { data, error } = await supabase
+          .rpc("get_current_vacations_summary");
+
+        if (error) throw error;
+        setTodayVacations((data as VacationSummary[]) || []);
+      }
     } catch (error) {
       console.error("Error fetching today's vacations:", error);
+      setTodayVacations([]);
     } finally {
       setLoading(false);
     }
@@ -124,16 +165,19 @@ const TodayVacationsCard = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {todayVacations.map((vacation) => (
-              <div key={vacation.id} className="flex items-center justify-between">
+            {todayVacations.map((vacation, index) => (
+              <div key={vacation.id || `vacation-${index}`} className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">
                     {vacation.employee_name}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateRange(vacation.start_date, vacation.end_date)}
-                  </p>
-                  {vacation.description && (
+                  {/* Показываем дополнительную информацию только администраторам */}
+                  {userRole === 'admin' && vacation.start_date && vacation.end_date && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateRange(vacation.start_date, vacation.end_date)}
+                    </p>
+                  )}
+                  {userRole === 'admin' && vacation.description && (
                     <p className="text-xs text-muted-foreground truncate">
                       {vacation.description}
                     </p>

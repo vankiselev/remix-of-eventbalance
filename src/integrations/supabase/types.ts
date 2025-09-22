@@ -938,6 +938,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_current_vacations_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          employee_name: string
+          vacation_type: string
+        }[]
+      }
       get_employee_basic_data: {
         Args: Record<PropertyKey, never>
         Returns: {
