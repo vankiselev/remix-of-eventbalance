@@ -284,6 +284,29 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         await uploadFiles(transactionResult.id, user.id);
       }
 
+      // Sync to Google Sheets if user has one configured
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('google_sheet_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.google_sheet_id && !editTransaction) {
+          // Only sync new transactions, not edits
+          await supabase.functions.invoke('sync-employee-sheets', {
+            body: {
+              userId: user.id,
+              sheetId: profile.google_sheet_id,
+              action: 'sync'
+            }
+          });
+        }
+      } catch (syncError) {
+        console.warn('Failed to sync to Google Sheets:', syncError);
+        // Don't fail the transaction if sync fails
+      }
+
       toast({
         title: "Успех",
         description: editTransaction ? "Транзакция обновлена" : "Операция сохранена",

@@ -2,3 +2,9 @@ project_id = "wpxhmajdeunabximyfln"
 
 [functions.send-password-reset]
 verify_jwt = false
+
+[functions.sync-employee-sheets]
+verify_jwt = true
+
+[functions.setup-employee-drive]
+verify_jwt = true
