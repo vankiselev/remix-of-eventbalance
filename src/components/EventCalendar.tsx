@@ -14,6 +14,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isPast } 
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
+import { syncFromSheets } from "@/utils/syncFromSheets";
 
 interface Event {
   id: string;
@@ -65,6 +66,7 @@ const EventCalendar = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [sheetsItems, setSheetsItems] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{day: number, field: string} | null>(null);
   const [editValue, setEditValue] = useState("");
   const [scale, setScale] = useState(70); // Default 70% scale
@@ -214,36 +216,23 @@ const EventCalendar = () => {
   };
 
   const handleGoogleSheetsSync = async () => {
-    if (!user || syncing) return;
+    if (syncing) return;
 
     setSyncing(true);
     
     try {
       const monthName = monthNames[currentDate.getMonth()];
-      const year = currentDate.getFullYear();
-
-      const { data, error } = await supabase.functions.invoke('sync-google-sheets', {
-        body: {
-          sheetId: GOOGLE_SHEETS_ID,
-          month: monthName, 
-          year: year
-        }
+      const res = await syncFromSheets(monthName);
+      
+      setSheetsItems(res.items);
+      toast({
+        title: "Синхронизация завершена!",
+        description: `Синхронизировано: ${res.count} записей`,
       });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "Синхронизация завершена!",
-          description: data.message,
-        });
-        
-        // Refresh events and sync status
-        await fetchEvents();
-        await fetchSyncStatus();
-      } else {
-        throw new Error(data.error || 'Неизвестная ошибка синхронизации');
-      }
+      
+      // Refresh events and sync status
+      await fetchEvents();
+      await fetchSyncStatus();
     } catch (error: any) {
       console.error("Sync error:", error);
       toast({
@@ -300,10 +289,18 @@ const EventCalendar = () => {
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
+    const dbEvents = events.filter(event => {
       const startDate = new Date(event.start_date);
       return date.toDateString() === startDate.toDateString();
     });
+
+    // Также добавляем события из Google Sheets
+    const sheetsEvents = sheetsItems.filter(item => {
+      const itemDate = new Date(item.date);
+      return date.toDateString() === itemDate.toDateString();
+    });
+
+    return { dbEvents, sheetsEvents };
   };
 
   const getDaysInMonth = () => {
@@ -455,7 +452,7 @@ const EventCalendar = () => {
           <Button
             variant="secondary"
             onClick={handleGoogleSheetsSync}
-            disabled={syncing || !user}
+            disabled={syncing}
             size="sm"
           >
             <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
@@ -687,7 +684,9 @@ const EventCalendar = () => {
             <div className="w-full">
               {Array.from({ length: maxDays }, (_, index) => {
                 const day = index + 1;
-                const event = getEventForDay(day);
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const { dbEvents, sheetsEvents } = getEventsForDate(date);
+                const event = dbEvents[0]; // Берём первое событие из БД для совместимости
                 const isHighlighted = isDateHighlighted(day);
                 
                  return (
@@ -740,7 +739,14 @@ const EventCalendar = () => {
                            autoFocus
                          />
                        ) : (
-                         <span className="truncate w-full text-center px-2">{event?.name || ''}</span>
+                         <div className="truncate w-full text-center px-2">
+                           {/* Показываем событие из БД или из Google Sheets */}
+                           {event?.name || (sheetsEvents.length > 0 ? sheetsEvents[0].title : '')}
+                           {/* Если есть несколько событий, показываем индикатор */}
+                           {(dbEvents.length + sheetsEvents.length) > 1 && (
+                             <span className="text-xs opacity-50 ml-1">+{dbEvents.length + sheetsEvents.length - 1}</span>
+                           )}
+                         </div>
                        )}
                      </div>
                      
@@ -820,9 +826,11 @@ const EventCalendar = () => {
                            style={{ fontSize: 'var(--font-size)' }}
                            autoFocus
                          />
-                       ) : (
-                         <span className="truncate w-full text-center px-2">{event?.location || ''}</span>
-                       )}
+                        ) : (
+                          <div className="truncate w-full text-center px-2">
+                            {event?.location || (sheetsEvents.length > 0 ? sheetsEvents[0].place : '')}
+                          </div>
+                        )}
                      </div>
                      
                      {/* Время */}
@@ -847,9 +855,11 @@ const EventCalendar = () => {
                            style={{ fontSize: 'var(--font-size)' }}
                            autoFocus
                          />
-                       ) : (
-                         <span className="truncate w-full text-center px-2">{event?.event_time || ''}</span>
-                       )}
+                        ) : (
+                          <div className="truncate w-full text-center px-2">
+                            {event?.event_time || (sheetsEvents.length > 0 ? `${sheetsEvents[0].start}-${sheetsEvents[0].end}` : '')}
+                          </div>
+                        )}
                      </div>
                      
                      {/* Аниматоры */}
@@ -982,9 +992,11 @@ const EventCalendar = () => {
                            style={{ fontSize: 'var(--font-size)' }}
                            autoFocus
                          />
-                       ) : (
-                         <span className="truncate w-full text-center px-2">{event?.notes || ''}</span>
-                       )}
+                        ) : (
+                          <div className="truncate w-full text-center px-2">
+                            {event?.notes || (sheetsEvents.length > 0 ? sheetsEvents[0].notes : '')}
+                          </div>
+                        )}
                      </div>
                    </div>
                 );
