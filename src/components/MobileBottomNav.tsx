@@ -89,23 +89,6 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             }`}>Финансы</span>
           </div>
 
-          {/* Events */}
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              onClick={() => handleTabChange("events")}
-              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("events") 
-                  ? "border-2 border-primary text-primary bg-primary/5" 
-                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
-              }`}
-            >
-              <CalendarDays className="h-5 w-5" strokeWidth={2} />
-            </button>
-            <span className={`text-xs font-medium ${
-              isActiveTab("events") ? "text-primary" : "text-foreground"
-            }`}>Мероприятия</span>
-          </div>
-
           {/* Add Transaction - Central FAB */}
           <div className="flex flex-col items-center gap-1.5">
             <button
@@ -121,6 +104,23 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
             <span className={`text-xs font-medium ${
               isActiveTab("transaction") ? "text-primary" : "text-foreground"
             }`}>Трата/Приход</span>
+          </div>
+
+          {/* Events */}
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              onClick={() => handleTabChange("events")}
+              className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                isActiveTab("events") 
+                  ? "border-2 border-primary text-primary bg-primary/5" 
+                  : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+              }`}
+            >
+              <CalendarDays className="h-5 w-5" strokeWidth={2} />
+            </button>
+            <span className={`text-xs font-medium ${
+              isActiveTab("events") ? "text-primary" : "text-foreground"
+            }`}>Мероприятия</span>
           </div>
 
           {/* More Menu */}
