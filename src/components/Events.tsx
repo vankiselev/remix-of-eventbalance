@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Edit } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface Event {
@@ -21,14 +21,19 @@ interface Event {
   end_time?: string | null;
   status: string;
   location: string | null;
+  project_owner: string | null;
+  managers: string | null;
+  animators: string | null;
+  contractors: string | null;
+  show_program: string | null;
+  photo_video: string | null;
+  notes: string | null;
   venue_id: string | null;
   contractor_ids: string[] | null;
   responsible_manager_ids: string[] | null;
   manager_ids: string[] | null;
   photos: string[] | null;
   videos: string[] | null;
-  notes: string | null;
-  project_owner: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -51,6 +56,13 @@ const Events = () => {
     status: "planning" as const,
     venue_id: "",
     project_owner: "",
+    managers: "",
+    animators: "",
+    contractors: "",
+    show_program: "",
+    photo_video: "",
+    notes: "",
+    location: "",
   });
   const { user } = useAuth();
   const { toast } = useToast();
@@ -85,17 +97,24 @@ const Events = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase.from("events").insert({
+      const eventData = {
         name: formData.name,
         description: formData.description,
         start_date: formData.start_date,
         event_time: formData.event_time || null,
         end_time: formData.end_time || null,
-        status: formData.status,
-        venue_id: formData.venue_id || null,
-        project_owner: formData.project_owner,
+        location: formData.location || null,
+        project_owner: formData.project_owner || null,
+        managers: formData.managers || null,
+        animators: formData.animators || null,
+        contractors: formData.contractors || null,
+        show_program: formData.show_program || null,
+        photo_video: formData.photo_video || null,
+        notes: formData.notes || null,
         created_by: user.id,
-      });
+      };
+
+      const { error } = await supabase.from("events").insert(eventData);
 
       if (error) throw error;
 
@@ -104,17 +123,7 @@ const Events = () => {
         description: "Мероприятие создано",
       });
 
-      setFormData({
-        name: "",
-        description: "",
-        start_date: new Date().toISOString().split('T')[0],
-        event_time: "",
-        end_time: "",
-        status: "planning" as const,
-        venue_id: "",
-        project_owner: "",
-      });
-      setShowCreateDialog(false);
+      resetForm();
       fetchEvents();
     } catch (error: any) {
       toast({
@@ -198,14 +207,21 @@ const Events = () => {
   const handleEditEvent = (event: Event) => {
     setEditingEvent(event);
     setFormData({
-      name: event.name,
+      name: event.name || "",
       description: event.description || "",
-      start_date: event.start_date,
+      start_date: event.start_date || "",
       event_time: event.event_time || "",
       end_time: event.end_time || "",
       status: event.status as any,
       venue_id: event.venue_id || "",
       project_owner: event.project_owner || "",
+      managers: event.managers || "",
+      animators: event.animators || "",
+      contractors: event.contractors || "",
+      show_program: event.show_program || "",
+      photo_video: event.photo_video || "",
+      notes: event.notes || "",
+      location: event.location || "",
     });
     setShowEditDialog(true);
   };
@@ -215,18 +231,25 @@ const Events = () => {
     if (!user || !editingEvent) return;
 
     try {
+      const eventData = {
+        name: formData.name,
+        description: formData.description,
+        start_date: formData.start_date,
+        event_time: formData.event_time || null,
+        end_time: formData.end_time || null,
+        location: formData.location || null,
+        project_owner: formData.project_owner || null,
+        managers: formData.managers || null,
+        animators: formData.animators || null,
+        contractors: formData.contractors || null,
+        show_program: formData.show_program || null,
+        photo_video: formData.photo_video || null,
+        notes: formData.notes || null,
+      };
+
       const { error } = await supabase
         .from("events")
-        .update({
-          name: formData.name,
-          description: formData.description,
-          start_date: formData.start_date,
-          event_time: formData.event_time || null,
-          end_time: formData.end_time || null,
-          status: formData.status,
-          venue_id: formData.venue_id || null,
-          project_owner: formData.project_owner,
-        })
+        .update(eventData)
         .eq("id", editingEvent.id);
 
       if (error) throw error;
@@ -236,18 +259,7 @@ const Events = () => {
         description: "Мероприятие обновлено",
       });
 
-      setShowEditDialog(false);
-      setEditingEvent(null);
-      setFormData({
-        name: "",
-        description: "",
-        start_date: new Date().toISOString().split('T')[0],
-        event_time: "",
-        end_time: "",
-        status: "planning" as const,
-        venue_id: "",
-        project_owner: "",
-      });
+      resetForm();
       fetchEvents();
     } catch (error: any) {
       toast({
@@ -256,6 +268,57 @@ const Events = () => {
         description: error.message || "Не удалось обновить мероприятие",
       });
     }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!editingEvent) return;
+    if (!confirm("Вы уверены, что хотите удалить это событие?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", editingEvent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно!",
+        description: "Событие удалено",
+      });
+
+      resetForm();
+      fetchEvents();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить событие",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      start_date: new Date().toISOString().split('T')[0],
+      event_time: "",
+      end_time: "",
+      status: "planning" as const,
+      venue_id: "",
+      project_owner: "",
+      managers: "",
+      animators: "",
+      contractors: "",
+      show_program: "",
+      photo_video: "",
+      notes: "",
+      location: "",
+    });
+    setEditingEvent(null);
+    setShowEditDialog(false);
+    setShowCreateDialog(false);
   };
 
 
@@ -308,7 +371,7 @@ const Events = () => {
                 Создать мероприятие
               </Button>
             </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Создать новое мероприятие</DialogTitle>
               <DialogDescription>
@@ -316,26 +379,18 @@ const Events = () => {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Название</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Описание</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата начала</Label>
+                  <Label htmlFor="name">Праздник *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Дата *</Label>
                   <Input
                     id="start_date"
                     type="date"
@@ -344,49 +399,80 @@ const Events = () => {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="event_time">Время начала</Label>
-                    <Input
-                      id="event_time"
-                      type="time"
-                      value={formData.event_time}
-                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_time">Время окончания</Label>
-                    <Input
-                      id="end_time"
-                      type="time"
-                      value={formData.end_time}
-                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="project_owner">Чей проект?</Label>
+                  <Input
+                    id="project_owner"
+                    value={formData.project_owner}
+                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="managers">Менеджеры</Label>
+                  <Input
+                    id="managers"
+                    value={formData.managers}
+                    onChange={(e) => setFormData({ ...formData, managers: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Место</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="event_time">Время</Label>
+                  <Input
+                    id="event_time"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    placeholder="15:00-18:00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="animators">Аниматоры</Label>
+                  <Input
+                    id="animators"
+                    value={formData.animators}
+                    onChange={(e) => setFormData({ ...formData, animators: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="show_program">Шоу/Программа</Label>
+                  <Input
+                    id="show_program"
+                    value={formData.show_program}
+                    onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contractors">Подрядчики</Label>
+                  <Input
+                    id="contractors"
+                    value={formData.contractors}
+                    onChange={(e) => setFormData({ ...formData, contractors: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="photo_video">Фото/Видео</Label>
+                  <Input
+                    id="photo_video"
+                    value={formData.photo_video}
+                    onChange={(e) => setFormData({ ...formData, photo_video: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="project_owner">Владелец проекта</Label>
-                <Input
-                  id="project_owner"
-                  value={formData.project_owner}
-                  onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                <Label htmlFor="notes">Примечания</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Статус</Label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                >
-                  <option value="planning">Планирование</option>
-                  <option value="confirmed">Подтверждено</option>
-                  <option value="in_progress">В процессе</option>
-                  <option value="completed">Завершено</option>
-                  <option value="cancelled">Отменено</option>
-                </select>
               </div>
               <Button type="submit" className="w-full">
                 Создать мероприятие
@@ -396,34 +482,25 @@ const Events = () => {
         </Dialog>
         
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Редактировать мероприятие</DialogTitle>
-              <DialogDescription>
-                Измените информацию о мероприятии
-              </DialogDescription>
+              <DialogTitle>
+                {editingEvent ? "Редактировать событие" : "Добавить событие"}
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleUpdateEvent} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Название</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Описание</Label>
-                <Textarea
-                  id="edit-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-start_date">Дата начала</Label>
+                  <Label htmlFor="edit-name">Праздник *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-start_date">Дата *</Label>
                   <Input
                     id="edit-start_date"
                     type="date"
@@ -432,53 +509,103 @@ const Events = () => {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-event_time">Время начала</Label>
-                    <Input
-                      id="edit-event_time"
-                      type="time"
-                      value={formData.event_time}
-                      onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-end_time">Время окончания</Label>
-                    <Input
-                      id="edit-end_time"
-                      type="time"
-                      value={formData.end_time}
-                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-project_owner">Чей проект?</Label>
+                  <Input
+                    id="edit-project_owner"
+                    value={formData.project_owner}
+                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-managers">Менеджеры</Label>
+                  <Input
+                    id="edit-managers"
+                    value={formData.managers}
+                    onChange={(e) => setFormData({ ...formData, managers: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Место</Label>
+                  <Input
+                    id="edit-location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-event_time">Время</Label>
+                  <Input
+                    id="edit-event_time"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    placeholder="15:00-18:00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-animators">Аниматоры</Label>
+                  <Input
+                    id="edit-animators"
+                    value={formData.animators}
+                    onChange={(e) => setFormData({ ...formData, animators: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-show_program">Шоу/Программа</Label>
+                  <Input
+                    id="edit-show_program"
+                    value={formData.show_program}
+                    onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contractors">Подрядчики</Label>
+                  <Input
+                    id="edit-contractors"
+                    value={formData.contractors}
+                    onChange={(e) => setFormData({ ...formData, contractors: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-photo_video">Фото/Видео</Label>
+                  <Input
+                    id="edit-photo_video"
+                    value={formData.photo_video}
+                    onChange={(e) => setFormData({ ...formData, photo_video: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-project_owner">Владелец проекта</Label>
-                <Input
-                  id="edit-project_owner"
-                  value={formData.project_owner}
-                  onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
+                <Label htmlFor="edit-notes">Примечания</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Статус</Label>
-                <select
-                  id="edit-status"
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1">
+                  Сохранить
+                </Button>
+                {editingEvent && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDeleteEvent}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить
+                  </Button>
+                )}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={resetForm}
                 >
-                  <option value="planning">Планирование</option>
-                  <option value="confirmed">Подтверждено</option>
-                  <option value="in_progress">В процессе</option>
-                  <option value="completed">Завершено</option>
-                  <option value="cancelled">Отменено</option>
-                </select>
+                  Отмена
+                </Button>
               </div>
-              <Button type="submit" className="w-full">
-                Обновить мероприятие
-              </Button>
             </form>
           </DialogContent>
         </Dialog>
