@@ -98,6 +98,7 @@ serve(async (req) => {
           }
 
           // Prepare data for upsert
+          const { event_time, end_time, normalized } = parseTimeRange(row.time_range);
           const eventData = {
             start_date: row.event_date,
             name: row.title.trim(),
@@ -105,8 +106,9 @@ serve(async (req) => {
             managers: row.managers?.trim() || null,
             place: row.place?.trim() || null,
             location: row.place?.trim() || null, // Keep both for compatibility
-            time_range: row.time_range?.trim() || null,
-            event_time: row.time_range?.trim() || null, // Also map to event_time
+            time_range: normalized ?? (row.time_range?.trim() || null),
+            event_time: event_time, // normalized start time HH:mm or null
+            end_time: end_time,     // normalized end time HH:mm or null
             animators: row.animators?.trim() || null,
             show_program: row.show_program?.trim() || null,
             contractors: row.contractors?.trim() || null,
