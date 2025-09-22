@@ -32,6 +32,85 @@ interface ImportResult {
 }
 
 serve(async (req) => {
+  // --- Time parsing helpers ---
+  function pad2(n: number) { return n.toString().padStart(2, '0'); }
+  function toHM(hours: number, minutes: number) {
+    const h = Math.max(0, Math.min(23, Math.floor(hours)));
+    const m = Math.max(0, Math.min(59, Math.round(minutes)));
+    return `${pad2(h)}:${pad2(m)}`;
+  }
+
+  function parseSingleTime(raw?: string | number | null): string | null {
+    if (raw === null || raw === undefined) return null;
+    let s = typeof raw === 'number' ? String(raw) : String(raw).trim();
+    if (s === '') return null;
+    s = s.replace(/,/g, '.');
+
+    // Pure number (decimal or integer)
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      const num = parseFloat(s);
+      if (!isFinite(num)) return null;
+      // If looks like hour with optional minutes in decimal (e.g., 16, 16.5)
+      if (num >= 0 && num < 24) {
+        const h = Math.floor(num);
+        const m = (num - h) * 60;
+        return toHM(h, m);
+      }
+      // Excel serial date/time -> use fractional part for time
+      const frac = num % 1;
+      if (frac > 0) {
+        const totalHours = frac * 24;
+        const h = Math.floor(totalHours);
+        const m = (totalHours - h) * 60;
+        return toHM(h, m);
+      }
+      return null; // integer day number without time -> ignore
+    }
+
+    // HH or H
+    if (/^\d{1,2}$/.test(s)) {
+      const h = parseInt(s, 10);
+      if (h >= 0 && h < 24) return toHM(h, 0);
+    }
+
+    // HH:MM or HH.MM
+    const m1 = s.match(/^(\d{1,2})[:.](\d{1,2})$/);
+    if (m1) {
+      const h = parseInt(m1[1], 10);
+      const min = parseInt(m1[2], 10);
+      if (h >= 0 && h < 24 && min >= 0 && min < 60) return toHM(h, min);
+    }
+
+    // HHMM (e.g., 1630)
+    const m2 = s.match(/^(\d{1,2})(\d{2})$/);
+    if (m2) {
+      const h = parseInt(m2[1], 10);
+      const min = parseInt(m2[2], 10);
+      if (h >= 0 && h < 24 && min >= 0 && min < 60) return toHM(h, min);
+    }
+
+    return null;
+  }
+
+  function parseTimeRange(input?: string | number | null): { event_time: string | null; end_time: string | null; normalized: string | null } {
+    if (input === null || input === undefined) return { event_time: null, end_time: null, normalized: null };
+    let s = typeof input === 'number' ? String(input) : String(input).trim();
+    if (!s) return { event_time: null, end_time: null, normalized: null };
+    s = s.replace(/,/g, '.');
+
+    const sepMatch = s.match(/(.+?)[–-](.+)/); // hyphen or en dash
+    if (sepMatch) {
+      const startRaw = sepMatch[1].trim();
+      const endRaw = sepMatch[2].trim();
+      const start = parseSingleTime(startRaw);
+      const end = parseSingleTime(endRaw);
+      const normalized = start && end ? `${start}-${end}` : start ? start : null;
+      return { event_time: start, end_time: end, normalized };
+    }
+
+    const single = parseSingleTime(s);
+    return { event_time: single, end_time: null, normalized: single };
+  }
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
