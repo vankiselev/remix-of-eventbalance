@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { BarChart3, Calendar, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase } from "lucide-react";
+import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
@@ -31,10 +31,11 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
   const mainNavItems = [
     { id: "dashboard", label: "Главная", icon: BarChart3 },
     { id: "finances", label: "Финансы", icon: DollarSign },
-    { id: "events", label: "Мероприятия", icon: Calendar },
+    { id: "events", label: "Мероприятия", icon: CalendarDays },
   ];
 
   const moreMenuItems = [
+    { id: "calendar", label: "Календарь", icon: Calendar },
     { id: "staff", label: "Сотрудники", icon: Users },
     { id: "contacts", label: "Контакты", icon: Briefcase },
     ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: UserPlus }] : []),
@@ -96,7 +97,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                   : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
             >
-              <Calendar className="h-5 w-5" strokeWidth={2} />
+              <CalendarDays className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
               isActiveTab("events") ? "text-primary" : "text-foreground"

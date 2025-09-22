@@ -46,6 +46,14 @@
     --cash-lera: 159 73% 46%; /* Green - #10B981 */
     --cash-vanya: 271 91% 56%; /* Purple - #9333EA */
 
+    /* Calendar Column Colors - as per ТЗ */
+    --calendar-animators: 60 100% 96%; /* Light yellow - #FFFDE7 */
+    --calendar-show: 330 100% 96%; /* Light pink - #FDF2F8 */
+    --calendar-contractors: 39 100% 96%; /* Beige - #FFFBEB */
+    --calendar-photo: 350 100% 96%; /* Pink - #FEF7F0 */
+    --calendar-video: 120 100% 96%; /* Light green - #F0FDF4 */
+    --calendar-notes: 0 100% 96%; /* Light red - #FEF2F2 */
+
     /* Sidebar - Pure White */
     --sidebar-background: 0 0% 100%; /* Pure white - #FFFFFF */
     --sidebar-foreground: 0 0% 0%; /* Pure black - #000000 */
@@ -643,5 +651,76 @@
     border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+}
+
+/* Calendar specific styles */
+.calendar-table {
+  font-family: 'Inter', sans-serif;
+}
+
+.calendar-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.calendar-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.calendar-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 15;
+}
+
+/* Calendar column color classes */
+.bg-calendar-animators {
+  background-color: hsl(var(--calendar-animators));
+}
+
+.bg-calendar-show {
+  background-color: hsl(var(--calendar-show));
+}
+
+.bg-calendar-contractors {
+  background-color: hsl(var(--calendar-contractors));
+}
+
+.bg-calendar-photo {
+  background-color: hsl(var(--calendar-photo));
+}
+
+.bg-calendar-video {
+  background-color: hsl(var(--calendar-video));
+}
+
+.bg-calendar-notes {
+  background-color: hsl(var(--calendar-notes));
+}
+
+/* Safe area for mobile */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile specific calendar styles */
+@media (max-width: 768px) {
+  .calendar-table {
+    font-size: 0.75rem;
+  }
+  
+  .calendar-table td,
+  .calendar-table th {
+    padding: 0.25rem;
+    min-width: 80px;
+  }
+  
+  .calendar-table td:first-child,
+  .calendar-table th:first-child {
+    min-width: 60px;
   }
 }
