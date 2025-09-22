@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface Event {
@@ -46,6 +46,7 @@ const Events = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   const [formData, setFormData] = useState({
     name: "",
@@ -364,6 +365,14 @@ const Events = () => {
             <ArrowUpDown className="h-4 w-4" />
             {sortByName ? "Сброс сортировки" : "Сортировка по дате"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            className="flex items-center gap-2"
+          >
+            {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+            {viewMode === 'grid' ? 'Список' : 'Карточки'}
+          </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button>
@@ -633,7 +642,7 @@ const Events = () => {
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sortEvents(events).map((event) => (
             <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
@@ -662,6 +671,43 @@ const Events = () => {
                     Проект: {event.project_owner}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sortEvents(events).map((event) => (
+            <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold truncate">{event.name}</h3>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <div className="flex items-center">
+                            <CalendarIcon className="mr-1 h-3 w-3" />
+                            {formatDate(event.start_date)}
+                            {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
+                          </div>
+                          {event.project_owner && (
+                            <div>Проект: {event.project_owner}</div>
+                          )}
+                          {event.location && (
+                            <div>Место: {event.location}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Badge className={getStatusColor(event.status)}>
+                      {getStatusLabel(event.status)}
+                    </Badge>
+                    <Edit className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
