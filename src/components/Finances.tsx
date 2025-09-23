@@ -5,12 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Upload } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import { TransactionExport } from './finance/TransactionExport';
+import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
 
 interface CashSummary {
   total_cash: number;
@@ -37,6 +38,7 @@ const Finances = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<{id: string, name: string} | null>(null);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [editTransaction, setEditTransaction] = useState(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -159,6 +161,10 @@ const Finances = () => {
           {isAdmin && (
             <div className="flex items-center gap-2">
               <TransactionExport userId={selectedEmployee?.id} isAdmin={isAdmin} />
+              <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Импорт
+              </Button>
               <Button onClick={() => setShowTransactionForm(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить транзакцию
@@ -217,6 +223,10 @@ const Finances = () => {
       <div className="flex justify-end items-center">
         <div className="flex items-center gap-2">
           <TransactionExport isAdmin={true} />
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Импорт
+          </Button>
           <Button onClick={() => setShowTransactionForm(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить транзакцию
@@ -270,6 +280,12 @@ const Finances = () => {
         onOpenChange={setShowTransactionForm}
         onSuccess={handleTransactionSuccess}
         editTransaction={editTransaction}
+      />
+
+      <FinancesImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImportComplete={handleTransactionSuccess}
       />
     </div>
   );
