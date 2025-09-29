@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin } from "lucide-react";
@@ -22,6 +23,7 @@ interface ReportWithEmployee {
   user_id: string;
   employee_name: string;
   employee_email: string;
+  employee_avatar_url?: string;
   car_kilometers?: number;
   without_car?: boolean;
   salary?: {
@@ -74,7 +76,7 @@ const AdminReportsView = () => {
       const userIds = [...new Set(data?.map(r => r.user_id))];
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, avatar_url")
         .in("id", userIds);
 
       if (profilesError) throw profilesError;
@@ -94,6 +96,7 @@ const AdminReportsView = () => {
           ...report,
           employee_name: profile?.full_name || "Неизвестно",
           employee_email: profile?.email || "",
+          employee_avatar_url: profile?.avatar_url,
           salary: salaries?.find(s => s.report_id === report.id && s.employee_user_id === report.user_id),
         };
       });
@@ -352,7 +355,12 @@ const AdminReportsView = () => {
                       <tr key={report.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
                         <td className="border border-border p-2 text-center align-middle bg-white">
                           <div className="flex items-center justify-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={report.employee_avatar_url} />
+                              <AvatarFallback className="text-xs">
+                                {report.employee_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="font-medium">{report.employee_name}</div>
                           </div>
                         </td>
