@@ -65,8 +65,8 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<keyof Transaction>("operation_date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<keyof Transaction>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
@@ -126,17 +126,19 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       );
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-      
-      const result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      return sortDirection === "asc" ? result : -result;
-    });
+    // Apply sorting unless default (created_at asc) to preserve import order
+    if (!(sortField === "created_at" && sortDirection === "asc")) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortField];
+        const bValue = b[sortField];
+        
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        const result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        return sortDirection === "asc" ? result : -result;
+      });
+    }
 
     setFilteredTransactions(filtered);
   }, [transactions, searchTerm, sortField, sortDirection]);
