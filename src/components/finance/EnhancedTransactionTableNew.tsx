@@ -89,6 +89,29 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     fetchTransactions();
   }, [userId]);
 
+  // Realtime subscription for automatic updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('transactions-table-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'financial_transactions'
+        },
+        (payload) => {
+          console.log('Transaction table change detected:', payload);
+          fetchTransactions(); // Refresh table on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   useEffect(() => {
     let filtered = [...transactions];
 

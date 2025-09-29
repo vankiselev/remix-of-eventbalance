@@ -56,6 +56,31 @@ const Finances = () => {
     }
   }, [user, isAdmin]);
 
+  // Realtime subscription for automatic updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('financial-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'financial_transactions'
+        },
+        (payload) => {
+          console.log('Transaction change detected:', payload);
+          fetchData(); // Refresh data on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isAdmin]);
+
   const checkUserRole = async () => {
     try {
       const { data: profile, error } = await supabase
