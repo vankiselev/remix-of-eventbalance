@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 
@@ -23,6 +24,8 @@ const reportSchema = z.object({
   end_time: z.string().min(1, "Укажите время окончания"),
   preparation_work: z.string().min(1, "Опишите работу по подготовке"),
   onsite_work: z.string().min(1, "Опишите работу на площадке"),
+  car_time: z.string().optional(),
+  without_car: z.boolean().optional(),
 });
 
 type ReportFormData = z.infer<typeof reportSchema>;
@@ -35,6 +38,8 @@ interface Report {
   preparation_work: string;
   onsite_work: string;
   created_at: string;
+  car_time?: string;
+  without_car?: boolean;
   salaries?: {
     amount: number;
     wallet_type: string;
@@ -61,6 +66,8 @@ const Reports = () => {
       end_time: "",
       preparation_work: "",
       onsite_work: "",
+      car_time: "",
+      without_car: false,
     },
   });
 
@@ -183,6 +190,8 @@ const Reports = () => {
           end_time: data.end_time,
           preparation_work: data.preparation_work,
           onsite_work: data.onsite_work,
+          car_time: data.car_time || null,
+          without_car: data.without_car || false,
           user_id: (await supabase.auth.getUser()).data.user?.id,
         });
 
@@ -535,6 +544,80 @@ const EmployeeReportsView = ({
                   )}
                 />
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="car_time"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Car className="h-4 w-4" />
+                          Время поездки на машине
+                        </FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
+                              const minute = field.value?.split(':')[1] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ЧЧ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                  <SelectItem key={hour} value={hour}>
+                                    {hour}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="flex items-center text-muted-foreground">:</span>
+                            <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
+                              const hour = field.value?.split(':')[0] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ММ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
+                                  <SelectItem key={minute} value={minute}>
+                                    {minute}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="without_car"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Был без машины
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Отметьте, если работали без использования автомобиля
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <Button type="submit" disabled={submitting} className="w-full">
                   {submitting ? (
                     <>
@@ -609,6 +692,20 @@ const EmployeeReportsView = ({
                         {salary.salary_type}: {salary.amount.toLocaleString('ru-RU')} ₽ ({salary.wallet_type})
                       </div>
                     ))}
+                  </div>
+                )}
+                
+                {(report.car_time || report.without_car) && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Car className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-blue-800">Информация о машине:</span>
+                    </div>
+                    {report.without_car ? (
+                      <div className="text-sm text-blue-700">Работал без машины</div>
+                    ) : report.car_time ? (
+                      <div className="text-sm text-blue-700">Время на машине: {report.car_time.substring(0, 5)}</div>
+                    ) : null}
                   </div>
                 )}
                 
