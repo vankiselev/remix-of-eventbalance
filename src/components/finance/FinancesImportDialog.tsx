@@ -185,59 +185,98 @@ const FinancesImportDialog = ({
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
-    // Теперь маппинг: поле БД -> заголовок файла
+    // Маппинг: поле БД -> заголовок файла
     const autoMapping: ColumnMapping = {};
+    
+    // Проходим по заголовкам в СТРОГОМ порядке приоритета
+    // Сначала ищем специфичные паттерны, потом общие
     
     fileHeaders.forEach(header => {
       const lowerHeader = header.toLowerCase().trim();
       
-      // КРИТИЧЕСКИ ВАЖНО: Проверяем более специфичные паттерны ПЕРВЫМИ
-      // и НЕ перезаписываем уже установленные маппинги
-      
-      // "Чей проект" / "Наличка" / "Касса" -> cash_type (ТОЛЬКО если содержит эти ключевые слова)
-      if ((lowerHeader.includes('чей') || lowerHeader.includes('наличка') || lowerHeader.includes('касс')) 
-          && !autoMapping['cash_type']) {
-        autoMapping['cash_type'] = header;
-      }
-      // "Проект" (но НЕ "Чей проект") -> project_name
-      else if (lowerHeader.includes('проект') && !lowerHeader.includes('чей') && !autoMapping['project_name']) {
-        autoMapping['project_name'] = header;
-      }
-      // Имя
-      else if ((lowerHeader.includes('имя') || lowerHeader.includes('name')) && !autoMapping['creator_name']) {
+      // 1. Имя - первый столбец
+      if ((lowerHeader.includes('имя') || lowerHeader === 'name') && !autoMapping['creator_name']) {
         autoMapping['creator_name'] = header;
       }
-      // Дата операции
-      else if ((lowerHeader.includes('дат') || lowerHeader.includes('date') || lowerHeader.includes('операци')) 
-          && !autoMapping['operation_date']) {
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 2. Дата операции - второй столбец
+      if ((lowerHeader.includes('дата') && lowerHeader.includes('операц')) && !autoMapping['operation_date']) {
         autoMapping['operation_date'] = header;
       }
-      // Описание
-      else if ((lowerHeader.includes('описани') || lowerHeader.includes('подробн')) && !autoMapping['description']) {
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 3. Проект - третий столбец (НЕ "чей проект")
+      if (lowerHeader === 'проект' && !autoMapping['project_name']) {
+        autoMapping['project_name'] = header;
+      }
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 4. Чей проект - четвертый столбец
+      if (lowerHeader.includes('чей') && lowerHeader.includes('проект') && !autoMapping['cash_type']) {
+        autoMapping['cash_type'] = header;
+      }
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 5. Подробное описание - пятый столбец
+      if ((lowerHeader.includes('подробн') && lowerHeader.includes('описан')) && !autoMapping['description']) {
         autoMapping['description'] = header;
       }
-      // Траты/расходы
-      else if ((lowerHeader.includes('трат') || lowerHeader.includes('расход') || lowerHeader.includes('expense')) 
-          && !autoMapping['expense_amount']) {
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 6. Траты - шестой столбец
+      if (lowerHeader === 'траты' && !autoMapping['expense_amount']) {
         autoMapping['expense_amount'] = header;
       }
-      // Приход/доходы
-      else if ((lowerHeader.includes('приход') || lowerHeader.includes('доход') || lowerHeader.includes('income')) 
-          && !autoMapping['income_amount']) {
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 7. Приход - седьмой столбец
+      if (lowerHeader === 'приход' && !autoMapping['income_amount']) {
         autoMapping['income_amount'] = header;
       }
-      // Остаток
-      else if ((lowerHeader.includes('остат') || lowerHeader.includes('balance')) && !autoMapping['balance']) {
-        autoMapping['balance'] = header;
-      }
-      // Категория/статья
-      else if ((lowerHeader.includes('статья') || lowerHeader.includes('категор') || lowerHeader.includes('category')) 
-          && !autoMapping['category']) {
+    });
+    
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      // 8. Статья прихода/расхода - восьмой столбец
+      if (lowerHeader.includes('статья') && !autoMapping['category']) {
         autoMapping['category'] = header;
       }
     });
     
-    console.log('Auto-mapped columns:', autoMapping);
+    // Дополнительные столбцы (если есть)
+    fileHeaders.forEach(header => {
+      const lowerHeader = header.toLowerCase().trim();
+      
+      if (lowerHeader.includes('остат') && !autoMapping['balance']) {
+        autoMapping['balance'] = header;
+      }
+      
+      if (lowerHeader.includes('примеч') && !autoMapping['notes']) {
+        autoMapping['notes'] = header;
+      }
+    });
+    
+    console.log('Mapped columns in order:', autoMapping);
     setColumnMapping(autoMapping);
   };
 
