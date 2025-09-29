@@ -192,10 +192,11 @@ const FinancesImportDialog = ({
         autoMapping[header] = 'creator_name';
       } else if (lowerHeader.includes('дат') || lowerHeader.includes('date') || lowerHeader.includes('операци')) {
         autoMapping[header] = 'operation_date';
+      } else if (lowerHeader.includes('чей') || lowerHeader.includes('наличка') || lowerHeader.includes('касс')) {
+        // Проверяем "чей проект" ПЕРЕД проверкой просто "проект"
+        autoMapping[header] = 'cash_type';
       } else if (lowerHeader.includes('проект') || lowerHeader.includes('project')) {
         autoMapping[header] = 'project_name';
-      } else if (lowerHeader.includes('чей') || lowerHeader.includes('наличка') || lowerHeader.includes('касс')) {
-        autoMapping[header] = 'cash_type';
       } else if (lowerHeader.includes('описани') || lowerHeader.includes('подробн')) {
         autoMapping[header] = 'description';
       } else if (lowerHeader.includes('трат') || lowerHeader.includes('расход') || lowerHeader.includes('expense')) {
