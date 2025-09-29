@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ArrowLeft, Upload } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
@@ -98,6 +99,31 @@ const Finances = () => {
         variant: "destructive",
         title: "Ошибка",
         description: "Не удалось загрузить финансовые данные",
+      });
+    }
+  };
+
+  const handleDeleteAllTransactions = async () => {
+    try {
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all transactions
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно удалено",
+        description: "Все транзакции были удалены",
+      });
+
+      fetchData(); // Обновляем данные после удаления
+    } catch (error: any) {
+      console.error("Error deleting all transactions:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось удалить транзакции",
       });
     }
   };
@@ -227,6 +253,28 @@ const Finances = () => {
             <Upload className="mr-2 h-4 w-4" />
             Импорт
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить все транзакции
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllTransactions} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Удалить все
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button onClick={() => setShowTransactionForm(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить транзакцию
