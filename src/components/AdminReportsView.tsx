@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin } from "lucide-react";
+import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin, Minus, Plus } from "lucide-react";
 import { formatDate } from "@/utils/dateFormat";
 
 interface ReportWithEmployee {
@@ -52,9 +52,23 @@ const AdminReportsView = () => {
     salary_type: "ЗП",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [zoom, setZoom] = useState(100);
 
   const walletTypes = ["Наличка Настя", "Наличка Лера", "Наличка Ваня"];
   const salaryTypes = ["ЗП", "ПРОЦЕНТ/БОНУС"];
+
+  // Load zoom from localStorage
+  useEffect(() => {
+    const savedZoom = localStorage.getItem('reports-table-zoom');
+    if (savedZoom) {
+      setZoom(parseInt(savedZoom));
+    }
+  }, []);
+
+  // Save zoom to localStorage
+  useEffect(() => {
+    localStorage.setItem('reports-table-zoom', zoom.toString());
+  }, [zoom]);
 
   // Format time without seconds
   const formatTime = (time: string) => {
@@ -245,44 +259,65 @@ const AdminReportsView = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Поиск по сотруднику, проекту или email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Поиск по сотруднику, проекту или email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={projectFilter} onValueChange={(value) => setProjectFilter(value === "all" ? "" : value)}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Все проекты" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все проекты</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project} value={project}>
+                  {project}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={employeeFilter} onValueChange={(value) => setEmployeeFilter(value === "all" ? "" : value)}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <User className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Все сотрудники" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все сотрудники</SelectItem>
+              {employees.map((employee) => (
+                <SelectItem key={employee} value={employee}>
+                  {employee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={projectFilter} onValueChange={(value) => setProjectFilter(value === "all" ? "" : value)}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Все проекты" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все проекты</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project} value={project}>
-                {project}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={employeeFilter} onValueChange={(value) => setEmployeeFilter(value === "all" ? "" : value)}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <User className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Все сотрудники" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все сотрудники</SelectItem>
-            {employees.map((employee) => (
-              <SelectItem key={employee} value={employee}>
-                {employee}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZoom(Math.max(50, zoom - 25))}
+            disabled={zoom <= 50}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium w-12 text-center">{zoom}%</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZoom(Math.min(200, zoom + 25))}
+            disabled={zoom >= 200}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -298,16 +333,17 @@ const AdminReportsView = () => {
               <p className="text-muted-foreground">Отчеты не найдены</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" style={{ fontSize: `${zoom}%` }}>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Сотрудник</TableHead>
-                    <TableHead>Проект</TableHead>
-                    <TableHead>Время на площадке</TableHead>
-                    <TableHead>Работа</TableHead>
-                    <TableHead>Зарплата</TableHead>
-                    <TableHead>Действия</TableHead>
+                    <TableHead className="w-48">Сотрудник</TableHead>
+                    <TableHead className="w-40">Проект</TableHead>
+                    <TableHead className="w-32">Время на площадке</TableHead>
+                    <TableHead className="w-64">Подготовка</TableHead>
+                    <TableHead className="w-64">На площадке</TableHead>
+                    <TableHead className="w-32">Зарплата</TableHead>
+                    <TableHead className="w-40">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -330,15 +366,13 @@ const AdminReportsView = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-xs space-y-2">
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground">Подготовка:</div>
-                            <div className="text-sm line-clamp-2">{report.preparation_work}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground">На площадке:</div>
-                            <div className="text-sm line-clamp-2">{report.onsite_work}</div>
-                          </div>
+                        <div className="max-w-xs">
+                          <div className="text-sm line-clamp-3 whitespace-pre-wrap">{report.preparation_work}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <div className="text-sm line-clamp-3 whitespace-pre-wrap">{report.onsite_work}</div>
                         </div>
                       </TableCell>
                       <TableCell>
