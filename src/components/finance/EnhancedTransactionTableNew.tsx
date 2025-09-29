@@ -342,7 +342,8 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       {/* Modern Table */}
       <div className="card-modern overflow-hidden">
         <div className="overflow-x-auto">
-            <table className={`w-full border-collapse border border-border resizable-table ${getScaleClasses()}`}>
+            <div className="min-w-max">
+              <table className={`w-full border-collapse border border-border resizable-table ${getScaleClasses()}`}>
               <thead className="sticky top-0 z-10 bg-background">
                 <tr>
                   {!userId && (
@@ -519,8 +520,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 )}
               </tbody>
             </table>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Transaction Detail Dialog */}
       <TransactionDetailDialog
