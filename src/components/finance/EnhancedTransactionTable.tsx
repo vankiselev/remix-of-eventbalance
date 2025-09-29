@@ -21,6 +21,7 @@ interface Transaction {
   notes: string | null;
   created_by: string;
   project_id: string | null;
+  static_project_name: string | null;
   type: 'income' | 'expense';
   amount: number;
 }
@@ -68,7 +69,8 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           notes,
           created_at,
           created_by,
-          project_id
+          project_id,
+          static_project_name
         `)
         .order("operation_date", { ascending: false });
 
@@ -86,11 +88,26 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         throw error;
       }
 
-      const processedTransactions = (data || []).map(transaction => ({
-        ...transaction,
-        type: (transaction.income_amount && transaction.income_amount > 0) ? 'income' as const : 'expense' as const,
-        amount: (transaction.income_amount && transaction.income_amount > 0) ? transaction.income_amount : (transaction.expense_amount || 0),
-      }));
+      const processedTransactions = (data || []).map(transaction => {
+        // Extract project name from description if it contains "за проект"
+        let projectName = transaction.static_project_name || "";
+        let cleanDescription = transaction.description;
+        
+        const projectMatch = transaction.description.match(/за проект\s+"([^"]+)"/);
+        if (projectMatch) {
+          projectName = projectMatch[1];
+          // Clean the description by removing the project part
+          cleanDescription = transaction.description.replace(/\s+за проект\s+"[^"]+"/, "");
+        }
+        
+        return {
+          ...transaction,
+          static_project_name: projectName,
+          description: cleanDescription,
+          type: (transaction.income_amount && transaction.income_amount > 0) ? 'income' as const : 'expense' as const,
+          amount: (transaction.income_amount && transaction.income_amount > 0) ? transaction.income_amount : (transaction.expense_amount || 0),
+        };
+      });
 
       setTransactions(processedTransactions);
     } catch (error: any) {
@@ -362,8 +379,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                     {new Date(transaction.operation_date).toLocaleDateString("ru-RU")}
                   </TableCell>
                   <TableCell>
-                    {/* TODO: Get project name from events table */}
-                    —
+                    {transaction.static_project_name || "—"}
                   </TableCell>
                   <TableCell>{transaction.project_owner}</TableCell>
                   <TableCell className="max-w-48">
