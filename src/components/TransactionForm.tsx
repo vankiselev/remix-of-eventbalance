@@ -17,12 +17,13 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
 
 
 const transactionSchema = z.object({
   operation_date: z.date(),
   project_id: z.string().optional(),
+  static_project_name: z.string().optional(),
   project_owner: z.string().min(1, "Выберите владельца проекта"),
   description: z.string().min(1, "Введите описание"),
   expense_amount: z.number().optional(),
@@ -53,6 +54,7 @@ const TransactionForm = () => {
   const [loading, setLoading] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
+  const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
   const { toast } = useToast();
 
   const form = useForm<TransactionFormData>({
@@ -80,6 +82,15 @@ const TransactionForm = () => {
       
       if (error) throw error;
       setEvents(data || []);
+      
+      // Combine static projects with events
+      const staticProjects = STATIC_PROJECTS.map(project => ({
+        id: `static_${project}`,
+        name: project,
+        isStatic: true
+      }));
+      
+      setAllProjects([...staticProjects, ...(data || [])]);
     } catch (error) {
       console.error("Error fetching events:", error);
     }
@@ -95,7 +106,8 @@ const TransactionForm = () => {
         .from("financial_transactions")
         .insert({
           operation_date: data.operation_date.toISOString().split('T')[0],
-          project_id: data.project_id || null,
+          project_id: data.static_project_name ? null : (data.project_id || null),
+          static_project_name: data.static_project_name || null,
           project_owner: data.project_owner,
           description: data.description,
           expense_amount: data.expense_amount || 0,
@@ -130,8 +142,8 @@ const TransactionForm = () => {
     }
   };
 
-  const filteredEvents = events.filter(event =>
-    event.name.toLowerCase().includes(projectSearch.toLowerCase())
+  const filteredProjects = allProjects.filter(project =>
+    project.name.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
   const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
@@ -183,9 +195,18 @@ const TransactionForm = () => {
           {/* Project Selection */}
           <div className="space-y-2">
             <Label>Проект</Label>
-            <Select onValueChange={(value) => form.setValue("project_id", value)}>
+            <Select onValueChange={(value) => {
+              if (value.startsWith('static_')) {
+                const staticProjectName = value.replace('static_', '');
+                form.setValue("static_project_name", staticProjectName);
+                form.setValue("project_id", undefined);
+              } else {
+                form.setValue("project_id", value);
+                form.setValue("static_project_name", undefined);
+              }
+            }}>
               <SelectTrigger>
-                <SelectValue placeholder="Выберите проект (опционально)" />
+                <SelectValue placeholder="Выберите проект" />
               </SelectTrigger>
               <SelectContent>
                 <div className="p-2">
@@ -195,9 +216,9 @@ const TransactionForm = () => {
                     onChange={(e) => setProjectSearch(e.target.value)}
                   />
                 </div>
-                {filteredEvents.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
+                {filteredProjects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from '@/utils/dateFormat';
-import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
 import {
   Form,
   FormControl,
@@ -39,6 +39,7 @@ const transactionSchema = z.object({
     required_error: "Дата операции обязательна",
   }),
   project_id: z.string().optional(),
+  static_project_name: z.string().optional(),
   whose_project: z.string().min(1, "Выберите чей проект"),
   description: z.string().min(1, "Описание обязательно"),
   expense_amount: z.number().optional(),
@@ -89,12 +90,16 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
+  const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       operation_date: new Date(),
       project_id: undefined,
+      static_project_name: undefined,
       whose_project: undefined,
       description: "",
       expense_amount: undefined,
@@ -128,6 +133,15 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
 
         if (error) throw error;
         setEvents(data || []);
+        
+        // Combine static projects with events
+        const staticProjects = STATIC_PROJECTS.map(project => ({
+          id: `static_${project}`,
+          name: project,
+          isStatic: true
+        }));
+        
+        setAllProjects([...staticProjects, ...(data || [])]);
       } catch (error) {
         console.error('Error fetching events:', error);
         toast({
@@ -147,6 +161,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
     form.reset({
       operation_date: new Date(),
       project_id: undefined,
+      static_project_name: undefined,
       whose_project: undefined,
       description: "",
       expense_amount: undefined,
@@ -188,7 +203,8 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
 
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
-        project_id: data.project_id || null,
+        project_id: data.static_project_name ? null : (data.project_id || null),
+        static_project_name: data.static_project_name || null,
         project_owner: data.whose_project,
         description: data.description,
         expense_amount: data.expense_amount || 0,
@@ -353,17 +369,37 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                   name="project_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Проект (необязательно)</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <FormLabel>Проект</FormLabel>
+                      <Select value={field.value || (form.watch("static_project_name") ? `static_${form.watch("static_project_name")}` : '')} 
+                              onValueChange={(value) => {
+                                if (value.startsWith('static_')) {
+                                  const staticProjectName = value.replace('static_', '');
+                                  form.setValue("static_project_name", staticProjectName);
+                                  form.setValue("project_id", undefined);
+                                } else {
+                                  form.setValue("project_id", value);
+                                  form.setValue("static_project_name", undefined);
+                                }
+                              }}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Выберите проект" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {events.map((event) => (
-                            <SelectItem key={event.id} value={event.id}>
-                              {event.name}
+                          <div className="p-2">
+                            <input
+                              placeholder="Поиск проекта..."
+                              value={projectSearch}
+                              onChange={(e) => setProjectSearch(e.target.value)}
+                              className="w-full px-3 py-1 text-sm border rounded-md mb-2"
+                            />
+                          </div>
+                          {allProjects
+                            .filter(project => project.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                            .map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -477,7 +513,17 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {EXPENSE_INCOME_CATEGORIES.map((category) => (
+                          <div className="p-2">
+                            <input
+                              placeholder="Поиск категории..."
+                              value={categorySearch}
+                              onChange={(e) => setCategorySearch(e.target.value)}
+                              className="w-full px-3 py-1 text-sm border rounded-md mb-2"
+                            />
+                          </div>
+                          {EXPENSE_INCOME_CATEGORIES
+                            .filter(category => category.toLowerCase().includes(categorySearch.toLowerCase()))
+                            .map((category) => (
                             <SelectItem key={category} value={category}>
                               {category}
                             </SelectItem>

@@ -18,12 +18,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
 import { formatCurrency, parseCurrency } from '@/utils/currency';
 
 const transactionSchema = z.object({
   operation_date: z.date(),
-  project_id: z.string().min(1, 'Выберите проект'),
+  project_id: z.string().optional(),
+  static_project_name: z.string().optional(),
   project_owner: z.string().min(1, 'Выберите владельца проекта'),
   description: z.string().min(1, 'Введите описание'),
   expense_amount: z.string().optional(),
@@ -36,6 +37,11 @@ const transactionSchema = z.object({
 }, {
   message: 'Укажите либо сумму расхода, либо сумму прихода',
   path: ['expense_amount']
+}).refine((data) => {
+  return data.project_id || data.static_project_name;
+}, {
+  message: 'Выберите проект',
+  path: ['project_id']
 });
 
 interface Event {
@@ -49,6 +55,7 @@ const FinancialTransaction = () => {
   const [submitting, setSubmitting] = useState(false);
   const [projectSearch, setProjectSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
+  const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -57,6 +64,7 @@ const FinancialTransaction = () => {
     defaultValues: {
       operation_date: new Date(),
       project_id: '',
+      static_project_name: '',
       project_owner: '',
       description: '',
       expense_amount: '',
@@ -78,6 +86,15 @@ const FinancialTransaction = () => {
 
       if (error) throw error;
       setEvents(data || []);
+      
+      // Combine static projects with events
+      const staticProjects = STATIC_PROJECTS.map(project => ({
+        id: `static_${project}`,
+        name: project,
+        isStatic: true
+      }));
+      
+      setAllProjects([...staticProjects, ...(data || [])]);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -103,7 +120,8 @@ const FinancialTransaction = () => {
         .insert({
           created_by: user.id,
           operation_date: values.operation_date.toISOString().split('T')[0],
-          project_id: values.project_id,
+          project_id: values.static_project_name ? null : (values.project_id || null),
+          static_project_name: values.static_project_name || null,
           project_owner: values.project_owner,
           description: values.description,
           expense_amount: expense || 0,
@@ -121,6 +139,7 @@ const FinancialTransaction = () => {
       form.reset({
         operation_date: new Date(),
         project_id: '',
+        static_project_name: '',
         project_owner: '',
         description: '',
         expense_amount: '',
@@ -139,8 +158,8 @@ const FinancialTransaction = () => {
     }
   };
 
-  const filteredEvents = events.filter(event =>
-    event.name.toLowerCase().includes(projectSearch.toLowerCase())
+  const filteredProjects = allProjects.filter(project =>
+    project.name.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
   const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
@@ -218,7 +237,16 @@ const FinancialTransaction = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Проект</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(value) => {
+                      if (value.startsWith('static_')) {
+                        const staticProjectName = value.replace('static_', '');
+                        form.setValue("static_project_name", staticProjectName);
+                        form.setValue("project_id", '');
+                      } else {
+                        form.setValue("project_id", value);
+                        form.setValue("static_project_name", '');
+                      }
+                    }} value={field.value || form.watch("static_project_name") ? `static_${form.watch("static_project_name")}` : ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Выберите проект" />
@@ -233,9 +261,9 @@ const FinancialTransaction = () => {
                             className="mb-2"
                           />
                         </div>
-                        {filteredEvents.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
+                        {filteredProjects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
