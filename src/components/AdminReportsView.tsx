@@ -298,91 +298,123 @@ const AdminReportsView = () => {
               <p className="text-muted-foreground">Отчеты не найдены</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-48">Сотрудник</TableHead>
-                    <TableHead className="w-40">Проект</TableHead>
-                    <TableHead className="w-32">Время на площадке</TableHead>
-                    <TableHead className="w-72">Подготовка</TableHead>
-                    <TableHead className="w-72">На площадке</TableHead>
-                    <TableHead className="w-40">Зарплата</TableHead>
-                    <TableHead className="w-32">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <div>
+            <div className="overflow-auto">
+              <div className="min-w-max">
+                <table className="w-full border-collapse border border-border">
+                  <thead className="sticky top-0 z-10 bg-background">
+                    <tr>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '120px', width: '200px' }}
+                      >
+                        Сотрудник
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '100px', width: '160px' }}
+                      >
+                        Проект
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '80px', width: '120px' }}
+                      >
+                        Время на площадке
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '150px', width: '300px' }}
+                      >
+                        Подготовка
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '150px', width: '300px' }}
+                      >
+                        На площадке
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '100px', width: '160px' }}
+                      >
+                        Зарплата
+                      </th>
+                      <th
+                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        style={{ resize: 'horizontal', minWidth: '80px', width: '120px' }}
+                      >
+                        Действия
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((report, index) => (
+                      <tr key={report.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
+                        <td className="border border-border p-2 align-top bg-white">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
                             <div className="font-medium">{report.employee_name}</div>
-                            <div className="text-sm text-muted-foreground">{report.employee_email}</div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{report.project_name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {formatTime(report.start_time)} - {formatTime(report.end_time)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-72">
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
+                          <div className="font-medium">{report.project_name}</div>
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{formatTime(report.start_time)} - {formatTime(report.end_time)}</span>
+                          </div>
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
                           <div className="text-sm whitespace-pre-wrap">{report.preparation_work}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-72">
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
                           <div className="text-sm whitespace-pre-wrap">{report.onsite_work}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {report.salary ? (
-                          <div className="space-y-1">
-                            <div className="font-medium">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
-                            <div className="flex flex-col gap-1">
-                              <Badge variant="outline" className="text-xs w-fit">
-                                {report.salary.wallet_type}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs w-fit">
-                                {report.salary.salary_type}
-                              </Badge>
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
+                          {report.salary ? (
+                            <div className="space-y-1">
+                              <div className="font-medium text-sm">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
+                              <div className="flex flex-col gap-1">
+                                <Badge variant="outline" className="text-xs w-fit">
+                                  {report.salary.wallet_type}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs w-fit">
+                                  {report.salary.salary_type}
+                                </Badge>
+                              </div>
                             </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Не назначена</Badge>
+                          )}
+                        </td>
+                        <td className="border border-border p-2 align-top bg-white">
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openViewDialog(report)}
+                              className="text-xs h-7"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Просмотр
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSalaryDialog(report)}
+                              className="text-xs h-7"
+                            >
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              {report.salary ? "Изменить" : "Назначить"}
+                            </Button>
                           </div>
-                        ) : (
-                          <Badge variant="secondary">Не назначена</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openViewDialog(report)}
-                            className="text-xs"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Просмотр
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openSalaryDialog(report)}
-                            className="text-xs"
-                          >
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            {report.salary ? "Изменить" : "Назначить"}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
