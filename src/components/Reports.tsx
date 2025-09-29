@@ -217,7 +217,7 @@ const Reports = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="p-6 space-y-8 w-full max-w-none">
       <div className="flex items-center gap-3">
         <FileText className="h-8 w-8 text-primary" />
         <div>
