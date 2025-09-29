@@ -335,11 +335,11 @@ const FinancesImportDialog = ({
     if (errors.length > 5) {
       toast({
         variant: "destructive",
-        title: "Слишком много ошибок",
-        description: `Найдено ${errors.length} ошибок. Показаны первые 5.`,
+        title: "Обнаружены ошибки",
+        description: `Найдено ${errors.length} ошибок из ${parsedData.length} записей. Будут импортированы только валидные строки.`,
       });
-      console.error("Validation errors:", errors.slice(0, 5));
-      return false;
+      console.error("Validation errors:", errors.slice(0, 10));
+      // Не блокируем импорт, просто показываем предупреждение
     }
 
     if (errors.length > 0) {
