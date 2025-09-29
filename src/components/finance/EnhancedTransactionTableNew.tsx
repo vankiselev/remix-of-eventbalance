@@ -265,26 +265,34 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   };
 
   const getProjectOwnerDisplay = (transaction: Transaction) => {
-    const owner = transaction.project_owner;
+    const ownerRaw = transaction.project_owner;
     const category = transaction.category;
     
-    if (!owner) return "—";
+    if (!ownerRaw) return "—";
+
+    const owner = ownerRaw.trim();
+
+    // If already fully specified, return as is to avoid duplicates
+    if (/^(Наличка|Корп\.\s*карта|ИП|Оплатил|Оплатила|Получил|Получила)/i.test(owner)) {
+      return owner;
+    }
+
+    const baseOwner = owner.replace(/^Наличка\s+/i, '').trim();
     
     // Determine project type based on category and other factors
     if (category.includes("Корп") || category.includes("корп")) {
-      return `Корп. карта ${owner}`;
+      return `Корп. карта ${baseOwner}`;
     } else if (category.includes("ИП") || category.includes("ип")) {
-      return `ИП ${owner}`;
+      return `ИП ${baseOwner}`;
     } else if (category.includes("клиент") || category.includes("Клиент")) {
       return "Оплатил(а) клиент";
     } else if (category.includes("Оплатил") || category.includes("оплатил")) {
-      return `Оплатил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
+      return `Оплатил${baseOwner === "Настя" || baseOwner === "Лера" ? "а" : ""} ${baseOwner}`;
     } else if (category.includes("Получил") || category.includes("получил")) {
-      return `Получил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
-    } else {
-      // Default to "Наличка" for all other cases
-      return `Наличка ${owner}`;
+      return `Получил${baseOwner === "Настя" || baseOwner === "Лера" ? "а" : ""} ${baseOwner}`;
     }
+    // Default to "Наличка"
+    return `Наличка ${baseOwner}`;
   };
 
   const getCashTypeBadge = (cashType: string | null) => {

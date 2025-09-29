@@ -282,15 +282,22 @@ const FinancesImportDialog = ({
     return Math.abs(num); // Всегда положительное число
   };
 
-  const mapCashType = (cashTypeStr: string): string => {
-    if (!cashTypeStr) return 'Наличка Настя';
-    
+  const mapCashType = (cashTypeStr: string): 'nastya' | 'lera' | 'vanya' => {
+    if (!cashTypeStr) return 'nastya';
     const s = String(cashTypeStr).toLowerCase();
-    if (s.includes('настя') || s.includes('nastya')) return 'Наличка Настя';
-    if (s.includes('лера') || s.includes('lera')) return 'Наличка Лера';
-    if (s.includes('ваня') || s.includes('vanya')) return 'Наличка Ваня';
-    
-    return 'Наличка Настя'; // default
+    if (s.includes('настя') || s.includes('nastya')) return 'nastya';
+    if (s.includes('лера') || s.includes('lera')) return 'lera';
+    if (s.includes('ваня') || s.includes('vanya')) return 'vanya';
+    return 'nastya';
+  };
+
+  const getOwnerNameByCashType = (cashType: string): string => {
+    switch (cashType) {
+      case 'nastya': return 'Настя';
+      case 'lera': return 'Лера';
+      case 'vanya': return 'Ваня';
+      default: return 'Настя';
+    }
   };
 
   const mapRow = (row: ParsedRow) => {
@@ -403,7 +410,7 @@ const FinancesImportDialog = ({
             created_by: user?.id,
             operation_date: operationDate,
             static_project_name: mappedRow.project_name || null, // Столбец 3 "Проект" → static_project_name
-            project_owner: cashType, // Для обратной совместимости (из "Чей проект")
+            project_owner: `Наличка ${getOwnerNameByCashType(cashType)}`,
             description: mappedRow.description || '',
             category: mappedRow.category || 'Разное',
             cash_type: cashType, // Столбец 4 "Чей проект" → cash_type (nastya/lera/vanya)
@@ -591,7 +598,7 @@ const FinancesImportDialog = ({
                           <div><strong>Описание:</strong> {mappedRow.description}</div>
                           <div><strong>Расход:</strong> {mappedRow.expense_amount ? formatCurrency(parseAmount(mappedRow.expense_amount)) : '-'}</div>
                           <div><strong>Доход:</strong> {mappedRow.income_amount ? formatCurrency(parseAmount(mappedRow.income_amount)) : '-'}</div>
-                          <div><strong>Касса:</strong> {mapCashType(mappedRow.cash_type)}</div>
+                          <div><strong>Касса:</strong> {`Наличка ${getOwnerNameByCashType(mapCashType(mappedRow.cash_type))}`}</div>
                         </div>
                       );
                     })}
