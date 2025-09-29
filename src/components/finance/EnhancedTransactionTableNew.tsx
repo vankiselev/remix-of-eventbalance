@@ -360,9 +360,17 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
               <TableHeader>
                 <TableRow className="table-header border-0">
                   {!userId && (
-                    <TableHead className="font-semibold text-slate-700">Имя</TableHead>
+                    <TableHead 
+                      className="font-semibold text-slate-700 resize-x overflow-hidden"
+                      style={{ resize: 'horizontal', minWidth: '120px', width: '150px' }}
+                    >
+                      Имя
+                    </TableHead>
                   )}
-                  <TableHead className="font-semibold text-slate-700">
+                  <TableHead 
+                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '120px', width: '140px' }}
+                  >
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("operation_date")}
@@ -372,14 +380,56 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-700">Проект</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Чей проект</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Подробное описание</TableHead>
-                  <TableHead className="text-right font-semibold text-slate-700">Траты</TableHead>
-                  <TableHead className="text-right font-semibold text-slate-700">Приход</TableHead>
-                  <TableHead className="text-right font-semibold text-slate-700">Статья прихода/расхода</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">Скриншот чека</TableHead>
-                  {isAdmin && <TableHead className="text-right font-semibold text-slate-700">Действия</TableHead>}
+                  <TableHead 
+                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '120px', width: '180px' }}
+                  >
+                    Проект
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '140px' }}
+                  >
+                    Чей проект
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '200px', width: '300px' }}
+                  >
+                    Подробное описание
+                  </TableHead>
+                  <TableHead 
+                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
+                  >
+                    Траты
+                  </TableHead>
+                  <TableHead 
+                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
+                  >
+                    Приход
+                  </TableHead>
+                  <TableHead 
+                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '150px', width: '200px' }}
+                  >
+                    Статья прихода/расхода
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-slate-700 text-center resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '120px', width: '150px' }}
+                  >
+                    Скриншот чека
+                  </TableHead>
+                  {isAdmin && (
+                    <TableHead 
+                      className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                      style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
+                    >
+                      Действия
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
