@@ -171,6 +171,39 @@ const AdminReportsView = () => {
     }
   };
 
+  const updateFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+    try {
+      // Find existing transaction for this salary
+      const { data: existingTransactions } = await supabase
+        .from("financial_transactions")
+        .select("id")
+        .eq("description", `${report.salary?.salary_type || "ЗП"} ${report.employee_name} за проект "${report.project_name}"`)
+        .eq("category", "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)")
+        .limit(1);
+
+      if (existingTransactions && existingTransactions.length > 0) {
+        // Update existing transaction
+        const { error } = await supabase
+          .from("financial_transactions")
+          .update({
+            expense_amount: amount,
+            cash_type: walletType,
+            project_owner: walletType.replace("Наличка ", ""),
+            description: `${salaryType} ${report.employee_name} за проект "${report.project_name}"`,
+          })
+          .eq("id", existingTransactions[0].id);
+
+        if (error) throw error;
+      } else {
+        // Create new transaction if not found
+        await createFinancialTransaction(report, amount, walletType, salaryType);
+      }
+    } catch (error) {
+      console.error("Error updating financial transaction:", error);
+      throw error;
+    }
+  };
+
   const handleAssignSalary = async () => {
     if (!selectedReport || !salaryForm.amount || !salaryForm.wallet_type) {
       toast({
@@ -184,6 +217,7 @@ const AdminReportsView = () => {
     setSubmitting(true);
     try {
       const amount = parseFloat(salaryForm.amount);
+      const isExistingSalary = selectedReport.salary;
       
       // Create or update salary record
       const { error: salaryError } = await supabase
@@ -199,12 +233,16 @@ const AdminReportsView = () => {
 
       if (salaryError) throw salaryError;
 
-      // Create financial transaction
-      await createFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
+      // Create or update financial transaction
+      if (isExistingSalary) {
+        await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
+      } else {
+        await createFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
+      }
 
       toast({
         title: "Успешно",
-        description: "Зарплата назначена и добавлена в финансы",
+        description: isExistingSalary ? "Зарплата обновлена в финансах" : "Зарплата назначена и добавлена в финансы",
       });
 
       setSalaryDialog(false);
