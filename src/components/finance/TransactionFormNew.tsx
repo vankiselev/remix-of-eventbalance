@@ -140,9 +140,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   useEffect(() => {
     if (isOpen) {
       if (editTransaction) {
-        // Check if the project is a static one (string) or an event ID (UUID)
-        const projectValue = editTransaction.project_id;
-        const isStaticProject = projectValue && STATIC_PROJECTS.includes(projectValue);
+        // Check if the project is a static one or an event ID
+        // If we have a static_project_name, use that, otherwise use project_id
+        const projectValue = editTransaction.static_project_name || editTransaction.project_id;
         
         form.reset({
           operation_date: new Date(editTransaction.operation_date),
@@ -224,13 +224,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (authError) throw new Error(`Auth error: ${authError.message}`);
       if (!user) throw new Error('User not authenticated');
 
-      // Handle project_id - if it's a static project (string), store it as is, otherwise it's an event ID
+      // Handle project_id - if it's a static project (string), store it in static_project_name, otherwise it's an event ID
       const projectId = data.project_id;
       const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
       
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
         project_id: isStaticProject ? null : (projectId || null), // Only store UUID for events, null for static projects
+        static_project_name: isStaticProject ? projectId : null, // Store static project name
         project_owner: data.whose_project,
         description: data.description,
         expense_amount: data.expense_amount || 0,
@@ -240,8 +241,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
-        // Store static project name in a separate field or in description
-        notes: isStaticProject ? `Проект: ${projectId}` : null,
       };
 
       let transactionResult;

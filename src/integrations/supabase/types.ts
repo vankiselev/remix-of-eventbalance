@@ -429,6 +429,7 @@ export type Database = {
           project_id: string | null
           project_owner: string
           receipt_url: string | null
+          static_project_name: string | null
           updated_at: string
         }
         Insert: {
@@ -447,6 +448,7 @@ export type Database = {
           project_id?: string | null
           project_owner: string
           receipt_url?: string | null
+          static_project_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -465,6 +467,7 @@ export type Database = {
           project_id?: string | null
           project_owner?: string
           receipt_url?: string | null
+          static_project_name?: string | null
           updated_at?: string
         }
         Relationships: [
