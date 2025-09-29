@@ -24,7 +24,6 @@ import {
   Trash2, 
   MoreHorizontal, 
   Search,
-  ArrowUpDown,
   Paperclip,
   Eye,
   ZoomIn,
@@ -343,11 +342,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       {/* Modern Table */}
       <div className="card-modern overflow-hidden">
         <div className="overflow-x-auto">
-          <div style={{
-            transform: `scale(${parseInt(tableScale) / 100})`,
-            transformOrigin: 'top left',
-            width: `${100 / (parseInt(tableScale) / 100)}%`
-          }}>
             <table className={`w-full border-collapse border border-border resizable-table ${getScaleClasses()}`}>
               <thead className="sticky top-0 z-10 bg-background">
                 <tr>
@@ -369,7 +363,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       className="h-auto p-0 font-semibold text-slate-700 hover:text-slate-900"
                     >
                       Дата операции
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </th>
                   <th 
@@ -526,7 +519,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 )}
               </tbody>
             </table>
-          </div>
         </div>
       </div>
 
