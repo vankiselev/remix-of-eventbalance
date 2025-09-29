@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -299,151 +298,91 @@ const AdminReportsView = () => {
               <p className="text-muted-foreground">Отчеты не найдены</p>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <ResizablePanelGroup direction="horizontal" className="min-h-[400px]">
-                <ResizablePanel defaultSize={20} minSize={15}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Сотрудник</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium text-sm">{report.employee_name}</div>
-                              <div className="text-xs text-muted-foreground">{report.employee_email}</div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-48">Сотрудник</TableHead>
+                    <TableHead className="w-40">Проект</TableHead>
+                    <TableHead className="w-32">Время на площадке</TableHead>
+                    <TableHead className="w-72">Подготовка</TableHead>
+                    <TableHead className="w-72">На площадке</TableHead>
+                    <TableHead className="w-40">Зарплата</TableHead>
+                    <TableHead className="w-32">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">{report.employee_name}</div>
+                            <div className="text-sm text-muted-foreground">{report.employee_email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{report.project_name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {formatTime(report.start_time)} - {formatTime(report.end_time)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-72">
+                          <div className="text-sm whitespace-pre-wrap">{report.preparation_work}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-72">
+                          <div className="text-sm whitespace-pre-wrap">{report.onsite_work}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {report.salary ? (
+                          <div className="space-y-1">
+                            <div className="font-medium">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className="text-xs w-fit">
+                                {report.salary.wallet_type}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs w-fit">
+                                {report.salary.salary_type}
+                              </Badge>
                             </div>
                           </div>
+                        ) : (
+                          <Badge variant="secondary">Не назначена</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openViewDialog(report)}
+                            className="text-xs"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Просмотр
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSalaryDialog(report)}
+                            className="text-xs"
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            {report.salary ? "Изменить" : "Назначить"}
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={15} minSize={10}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Проект</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="font-medium text-sm">{report.project_name}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={12} minSize={8}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Время на площадке</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{formatTime(report.start_time)} - {formatTime(report.end_time)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={20} minSize={15}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Подготовка</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="text-sm whitespace-pre-wrap line-clamp-4">{report.preparation_work}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={20} minSize={15}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">На площадке</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="text-sm whitespace-pre-wrap line-clamp-4">{report.onsite_work}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={8} minSize={6}>
-                  <div className="h-full border-r">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Зарплата</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          {report.salary ? (
-                            <div className="space-y-1">
-                              <div className="font-medium text-sm">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
-                              <div className="flex flex-col gap-1">
-                                <Badge variant="outline" className="text-xs w-fit">
-                                  {report.salary.wallet_type}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs w-fit">
-                                  {report.salary.salary_type}
-                                </Badge>
-                              </div>
-                            </div>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Не назначена</Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                
-                <ResizableHandle />
-                
-                <ResizablePanel defaultSize={5} minSize={4}>
-                  <div className="h-full">
-                    <div className="p-3 border-b bg-muted/50 font-medium">Действия</div>
-                    <div className="overflow-y-auto max-h-[360px]">
-                      {filteredReports.map((report, index) => (
-                        <div key={report.id} className={`p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openViewDialog(report)}
-                              className="text-xs p-1 h-auto"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openSalaryDialog(report)}
-                              className="text-xs p-1 h-auto"
-                            >
-                              <DollarSign className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
