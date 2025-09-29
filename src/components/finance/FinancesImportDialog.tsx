@@ -185,30 +185,30 @@ const FinancesImportDialog = ({
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
+    // Теперь маппинг: поле БД -> заголовок файла
     const autoMapping: ColumnMapping = {};
+    
     fileHeaders.forEach(header => {
       const lowerHeader = header.toLowerCase();
-      if (lowerHeader.includes('имя') || lowerHeader.includes('name')) {
-        autoMapping[header] = 'creator_name';
-      } else if (lowerHeader.includes('дат') || lowerHeader.includes('date') || lowerHeader.includes('операци')) {
-        autoMapping[header] = 'operation_date';
-      } else if (lowerHeader.includes('чей') || lowerHeader.includes('наличка') || lowerHeader.includes('касс')) {
+      if (lowerHeader.includes('чей') || lowerHeader.includes('наличка') || lowerHeader.includes('касс')) {
         // Проверяем "чей проект" ПЕРЕД проверкой просто "проект"
-        autoMapping[header] = 'cash_type';
+        autoMapping['cash_type'] = header;
+      } else if (lowerHeader.includes('имя') || lowerHeader.includes('name')) {
+        autoMapping['creator_name'] = header;
+      } else if (lowerHeader.includes('дат') || lowerHeader.includes('date') || lowerHeader.includes('операци')) {
+        autoMapping['operation_date'] = header;
       } else if (lowerHeader.includes('проект') || lowerHeader.includes('project')) {
-        autoMapping[header] = 'project_name';
+        autoMapping['project_name'] = header;
       } else if (lowerHeader.includes('описани') || lowerHeader.includes('подробн')) {
-        autoMapping[header] = 'description';
+        autoMapping['description'] = header;
       } else if (lowerHeader.includes('трат') || lowerHeader.includes('расход') || lowerHeader.includes('expense')) {
-        autoMapping[header] = 'expense_amount';
+        autoMapping['expense_amount'] = header;
       } else if (lowerHeader.includes('приход') || lowerHeader.includes('доход') || lowerHeader.includes('income')) {
-        autoMapping[header] = 'income_amount';
+        autoMapping['income_amount'] = header;
       } else if (lowerHeader.includes('остат') || lowerHeader.includes('balance')) {
-        autoMapping[header] = 'balance';
+        autoMapping['balance'] = header;
       } else if (lowerHeader.includes('статья') || lowerHeader.includes('категор') || lowerHeader.includes('category')) {
-        autoMapping[header] = 'category';
-      } else {
-        autoMapping[header] = 'skip';
+        autoMapping['category'] = header;
       }
     });
     setColumnMapping(autoMapping);
@@ -290,9 +290,10 @@ const FinancesImportDialog = ({
   };
 
   const mapRow = (row: ParsedRow) => {
+    // Теперь маппинг: поле БД -> заголовок файла
     const mapped: any = {};
-    Object.entries(columnMapping).forEach(([header, field]) => {
-      if (field !== 'skip') {
+    Object.entries(columnMapping).forEach(([field, header]) => {
+      if (header && header !== 'skip') {
         mapped[field] = row[header];
       }
     });
@@ -539,20 +540,21 @@ const FinancesImportDialog = ({
             <div>
               <h3 className="text-lg font-semibold mb-4">Настройка соответствия колонок</h3>
               <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                {headers.map(header => (
-                  <div key={header} className="space-y-2">
-                    <Label className="text-sm font-medium">{header}</Label>
+                {fieldOptions.filter(f => f.value !== 'skip').map(field => (
+                  <div key={field.value} className="space-y-2">
+                    <Label className="text-sm font-medium">{field.label}</Label>
                     <Select
-                      value={columnMapping[header] || 'skip'}
-                      onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [header]: value }))}
+                      value={columnMapping[field.value] || 'skip'}
+                      onValueChange={(value) => setColumnMapping(prev => ({ ...prev, [field.value]: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Выберите столбец" />
                       </SelectTrigger>
                       <SelectContent>
-                        {fieldOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        <SelectItem value="skip">Не импортировать</SelectItem>
+                        {headers.map(header => (
+                          <SelectItem key={header} value={header}>
+                            {header}
                           </SelectItem>
                         ))}
                       </SelectContent>
