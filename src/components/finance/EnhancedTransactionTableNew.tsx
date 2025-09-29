@@ -443,10 +443,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                         {transaction.static_project_name || transaction.events?.name || "—"}
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white">
-                        {transaction.static_project_name || transaction.events?.name 
-                          ? `${transaction.static_project_name || transaction.events?.name} ${transaction.project_owner}`
-                          : transaction.project_owner || "—"
-                        }
+                        {transaction.project_owner}
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white max-w-xs">
                         <div className="truncate" title={transaction.description}>
