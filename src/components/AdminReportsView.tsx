@@ -120,7 +120,7 @@ const AdminReportsView = () => {
       );
     }
 
-    if (projectFilter) {
+    if (projectFilter && projectFilter !== "all") {
       filtered = filtered.filter(report => report.project_name === projectFilter);
     }
 
@@ -203,13 +203,13 @@ const AdminReportsView = () => {
             className="pl-10"
           />
         </div>
-        <Select value={projectFilter} onValueChange={setProjectFilter}>
+        <Select value={projectFilter} onValueChange={(value) => setProjectFilter(value === "all" ? "" : value)}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Все проекты" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Все проекты</SelectItem>
+            <SelectItem value="all">Все проекты</SelectItem>
             {projects.map((project) => (
               <SelectItem key={project} value={project}>
                 {project}
