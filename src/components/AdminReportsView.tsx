@@ -304,43 +304,43 @@ const AdminReportsView = () => {
                   <thead className="sticky top-0 z-10 bg-background">
                     <tr>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '120px', width: '200px' }}
                       >
                         Сотрудник
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '100px', width: '160px' }}
                       >
                         Проект
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '80px', width: '120px' }}
                       >
                         Время на площадке
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '150px', width: '300px' }}
                       >
                         Подготовка
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '150px', width: '300px' }}
                       >
                         На площадке
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '100px', width: '160px' }}
                       >
                         Зарплата
                       </th>
                       <th
-                        className="border border-border p-2 text-left text-sm font-medium bg-white resize-x overflow-hidden"
+                        className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                         style={{ resize: 'horizontal', minWidth: '80px', width: '120px' }}
                       >
                         Действия
@@ -350,28 +350,28 @@ const AdminReportsView = () => {
                   <tbody>
                     {filteredReports.map((report, index) => (
                       <tr key={report.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
-                        <td className="border border-border p-2 align-top bg-white">
-                          <div className="flex items-center gap-2">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
+                          <div className="flex items-center justify-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
                             <div className="font-medium">{report.employee_name}</div>
                           </div>
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
                           <div className="font-medium">{report.project_name}</div>
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
-                          <div className="flex items-center gap-1">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
+                          <div className="flex items-center justify-center gap-1">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{formatTime(report.start_time)} - {formatTime(report.end_time)}</span>
                           </div>
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
                           <div className="text-sm whitespace-pre-wrap">{report.preparation_work}</div>
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
                           <div className="text-sm whitespace-pre-wrap">{report.onsite_work}</div>
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
                           {report.salary ? (
                             <div className="space-y-1">
                               <div className="font-medium text-sm">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
@@ -388,8 +388,8 @@ const AdminReportsView = () => {
                             <Badge variant="secondary" className="text-xs">Не назначена</Badge>
                           )}
                         </td>
-                        <td className="border border-border p-2 align-top bg-white">
-                          <div className="flex flex-col gap-1">
+                        <td className="border border-border p-2 text-center align-middle bg-white">
+                          <div className="flex flex-col gap-1 items-center">
                             <Button
                               variant="outline"
                               size="sm"
