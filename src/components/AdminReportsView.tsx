@@ -155,7 +155,7 @@ const AdminReportsView = () => {
         .insert({
           operation_date: new Date().toISOString().split('T')[0],
           project_owner: walletType.replace("Наличка ", ""),
-          description: `${salaryType} ${report.employee_name} за проект "${report.project_name}"`,
+          description: `${salaryType} ${report.employee_name}`,
           category: "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)",
           expense_amount: amount,
           income_amount: 0,
@@ -177,8 +177,9 @@ const AdminReportsView = () => {
       const { data: existingTransactions } = await supabase
         .from("financial_transactions")
         .select("id")
-        .eq("description", `${report.salary?.salary_type || "ЗП"} ${report.employee_name} за проект "${report.project_name}"`)
+        .eq("description", `${report.salary?.salary_type || "ЗП"} ${report.employee_name}`)
         .eq("category", "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)")
+        .eq("static_project_name", report.project_name)
         .limit(1);
 
       if (existingTransactions && existingTransactions.length > 0) {
@@ -189,7 +190,7 @@ const AdminReportsView = () => {
             expense_amount: amount,
             cash_type: walletType,
             project_owner: walletType.replace("Наличка ", ""),
-            description: `${salaryType} ${report.employee_name} за проект "${report.project_name}"`,
+            description: `${salaryType} ${report.employee_name}`,
           })
           .eq("id", existingTransactions[0].id);
 
