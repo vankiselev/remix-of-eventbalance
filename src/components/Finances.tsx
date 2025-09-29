@@ -37,6 +37,12 @@ const Finances = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<{id: string, name: string} | null>(null);
+  const [selectedEmployeeSummary, setSelectedEmployeeSummary] = useState<CashSummary>({
+    total_cash: 0,
+    cash_nastya: 0,
+    cash_lera: 0,
+    cash_vanya: 0,
+  });
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -153,8 +159,27 @@ const Finances = () => {
     }
   };
 
-  const handleEmployeeSelect = (employeeId: string, employeeName: string) => {
+  const handleEmployeeSelect = async (employeeId: string, employeeName: string) => {
     setSelectedEmployee({ id: employeeId, name: employeeName });
+    
+    // Загружаем данные выбранного сотрудника
+    try {
+      const { data: employeeSummaryData, error } = await supabase
+        .rpc("calculate_user_cash_totals", { user_uuid: employeeId });
+
+      if (error) throw error;
+
+      if (employeeSummaryData && employeeSummaryData.length > 0) {
+        setSelectedEmployeeSummary(employeeSummaryData[0]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching employee financial data:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось загрузить данные сотрудника",
+      });
+    }
   };
 
   const handleBackToMain = () => {
@@ -235,7 +260,7 @@ const Finances = () => {
 
       <div className="sticky top-0 z-10 bg-background pb-2">
         <FinanceSummaryCards 
-          summary={selectedEmployee ? companySummary : userSummary} 
+          summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
           isLoading={false} 
         />
       </div>
