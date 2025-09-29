@@ -312,7 +312,7 @@
 @layer utilities {
   /* Container System - ТЗ Compliant */
   .main-container {
-    max-width: 1360px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 1rem;
   }
