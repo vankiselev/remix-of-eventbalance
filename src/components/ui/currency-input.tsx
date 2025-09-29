@@ -37,11 +37,11 @@ const formatLiveCurrency = (value: string): string => {
   return result + ' ₽';
 };
 
-// Extract numeric value from formatted string
+// Extract numeric value from formatted string (supports negative values)
 const extractNumericValue = (formatted: string): number | undefined => {
-  const cleaned = formatted.replace(/[^\d.,]/g, '').replace(',', '.');
+  const cleaned = formatted.replace(/[^\d.,-]/g, '').replace(',', '.');
   const num = parseFloat(cleaned);
-  return isNaN(num) || num <= 0 ? undefined : num;
+  return isNaN(num) ? undefined : num;
 };
 
 export function CurrencyInput({ 
@@ -59,8 +59,8 @@ export function CurrencyInput({
 
   // Update display value when value prop changes
   useEffect(() => {
-    if (value && value > 0) {
-      setDisplayValue(formatCurrency(value));
+    if (value !== undefined && value !== 0) {
+      setDisplayValue(formatCurrency(Math.abs(value)) + (value < 0 ? ' (-)' : ''));
     } else {
       setDisplayValue("");
     }
@@ -72,8 +72,8 @@ export function CurrencyInput({
 
   const handleBlur = () => {
     // Format the final value on blur
-    if (value && value > 0) {
-      setDisplayValue(formatCurrency(value));
+    if (value !== undefined && value !== 0) {
+      setDisplayValue(formatCurrency(Math.abs(value)) + (value < 0 ? ' (-)' : ''));
     } else {
       setDisplayValue("");
     }
@@ -90,8 +90,11 @@ export function CurrencyInput({
       return;
     }
     
-    // Remove currency symbol and spaces for processing
-    const cleanForProcessing = inputValue.replace(/[₽\s]/g, '');
+    // Check for negative indicator
+    const isNegative = inputValue.includes('-') || inputValue.includes('(-)');
+    
+    // Remove currency symbol, spaces, and negative indicators for processing
+    const cleanForProcessing = inputValue.replace(/[₽\s()-]/g, '');
     
     // Only allow digits and one decimal separator
     const cleanValue = cleanForProcessing.replace(/[^\d.,]/g, '').replace(',', '.');
@@ -109,17 +112,19 @@ export function CurrencyInput({
     
     // Format with live mask
     const formatted = formatLiveCurrency(cleanValue);
-    setDisplayValue(formatted);
+    setDisplayValue(formatted + (isNegative ? ' (-)' : ''));
     
     // Extract numeric value and call onChange
-    const numValue = extractNumericValue(formatted);
+    let numValue = extractNumericValue(formatted);
+    if (numValue !== undefined && isNegative) {
+      numValue = -Math.abs(numValue);
+    }
     onChange(numValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent minus sign
+    // Allow minus sign
     if (e.key === '-') {
-      e.preventDefault();
       return;
     }
     
@@ -133,7 +138,8 @@ export function CurrencyInput({
     // Allow digits and decimal separators
     if (!((e.keyCode >= 48 && e.keyCode <= 57) || // Numbers 0-9
            (e.keyCode >= 96 && e.keyCode <= 105) || // Numpad 0-9
-           e.keyCode === 190 || e.keyCode === 188)) { // Decimal point and comma
+           e.keyCode === 190 || e.keyCode === 188 || // Decimal point and comma
+           e.keyCode === 189 || e.keyCode === 109)) { // Minus sign (regular and numpad)
       e.preventDefault();
     }
   };

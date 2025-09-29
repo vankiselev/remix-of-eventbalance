@@ -62,8 +62,8 @@ const transactionSchema = z.object({
   message: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
   path: ["no_receipt_reason"],
 }).refine((data) => {
-  const hasExpense = data.expense_amount && data.expense_amount > 0;
-  const hasIncome = data.income_amount && data.income_amount > 0;
+  const hasExpense = data.expense_amount !== undefined && data.expense_amount !== null && data.expense_amount !== 0;
+  const hasIncome = data.income_amount !== undefined && data.income_amount !== null && data.income_amount !== 0;
   
   if (!hasExpense && !hasIncome) {
     return false;
@@ -75,7 +75,7 @@ const transactionSchema = z.object({
   
   return true;
 }, {
-  message: "Заполните либо сумму траты, либо сумму прихода (только одно поле)",
+  message: "Заполните либо сумму траты, либо сумму прихода (только одно поле). Можно использовать отрицательные значения.",
   path: ["expense_amount"],
 });
 
