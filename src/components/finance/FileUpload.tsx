@@ -29,6 +29,12 @@ export function FileUpload({
 }: FileUploadProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Keep a ref to the latest files to avoid stale closures during progress updates
+  const filesRef = React.useRef<UploadedFile[]>(files);
+  React.useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
     setUploadError(null);
 
@@ -57,18 +63,18 @@ export function FileUpload({
     // Simulate upload progress
     newFiles.forEach(uploadedFile => {
       let progress = 0;
-      const interval = setInterval(() => {
+      const interval = window.setInterval(() => {
         progress += 10 + Math.random() * 20;
         if (progress >= 100) {
           progress = 100;
-          clearInterval(interval);
+          window.clearInterval(interval);
         }
-        
-        onFilesChange(files.map(f => 
-          f.id === uploadedFile.id 
-            ? { ...f, progress }
-            : f
-        ));
+
+        const updated = filesRef.current.map(f =>
+          f.id === uploadedFile.id ? { ...f, progress } : f
+        );
+        filesRef.current = updated;
+        onFilesChange(updated);
       }, 200);
     });
 
@@ -147,7 +153,7 @@ export function FileUpload({
       <div className="block sm:hidden">
         <input
           type="file"
-          accept="*/*"
+          accept=".jpeg,.jpg,.png,.gif,.webp,.pdf,.txt,.csv,.xlsx,.xls,.doc,.docx,image/*,application/pdf"
           capture="environment"
           multiple
           onChange={(e) => {
