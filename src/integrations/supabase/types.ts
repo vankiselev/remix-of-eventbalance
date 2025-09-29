@@ -178,6 +178,50 @@ export type Database = {
           },
         ]
       }
+      event_report_salaries: {
+        Row: {
+          amount: number
+          assigned_by: string
+          created_at: string
+          employee_user_id: string
+          id: string
+          notes: string | null
+          report_id: string
+          updated_at: string
+          wallet_type: string
+        }
+        Insert: {
+          amount?: number
+          assigned_by: string
+          created_at?: string
+          employee_user_id: string
+          id?: string
+          notes?: string | null
+          report_id: string
+          updated_at?: string
+          wallet_type: string
+        }
+        Update: {
+          amount?: number
+          assigned_by?: string
+          created_at?: string
+          employee_user_id?: string
+          id?: string
+          notes?: string | null
+          report_id?: string
+          updated_at?: string
+          wallet_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_report_salaries_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "event_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_reports: {
         Row: {
           created_at: string

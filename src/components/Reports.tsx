@@ -11,9 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminReportsView from "./AdminReportsView";
 
 const reportSchema = z.object({
   project_name: z.string().min(1, "Выберите проект"),
@@ -43,6 +45,7 @@ const Reports = () => {
   const [submitting, setSubmitting] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -112,6 +115,17 @@ const Reports = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
+      
+      // Fetch user role
+      try {
+        const { data: profile, error } = await supabase.rpc('get_user_basic_profile');
+        if (error) throw error;
+        setUserRole(profile?.[0]?.role || 'employee');
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+        setUserRole('employee');
+      }
+      
       await Promise.all([fetchReports(), fetchProjects()]);
       setLoading(false);
     };
@@ -165,13 +179,81 @@ const Reports = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
+      <div className="flex items-center gap-3">
+        <FileText className="h-8 w-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">Отчеты по мероприятиям</h1>
+          <p className="text-muted-foreground">
+            {userRole === 'admin' ? 'Управление отчетами и зарплатами' : 'Ваши отчеты о проведенных мероприятиях'}
+          </p>
+        </div>
+      </div>
+
+      {userRole === 'admin' ? (
+        <Tabs defaultValue="my-reports" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="my-reports" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Мои отчеты
+            </TabsTrigger>
+            <TabsTrigger value="all-reports" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Все отчеты
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="my-reports">
+            <EmployeeReportsView 
+              reports={reports} 
+              dialogOpen={dialogOpen} 
+              setDialogOpen={setDialogOpen}
+              form={form}
+              onSubmit={onSubmit}
+              submitting={submitting}
+              projects={projects}
+              projectOpen={projectOpen}
+              setProjectOpen={setProjectOpen}
+            />
+          </TabsContent>
+          
+          <TabsContent value="all-reports">
+            <AdminReportsView />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <EmployeeReportsView 
+          reports={reports} 
+          dialogOpen={dialogOpen} 
+          setDialogOpen={setDialogOpen}
+          form={form}
+          onSubmit={onSubmit}
+          submitting={submitting}
+          projects={projects}
+          projectOpen={projectOpen}
+          setProjectOpen={setProjectOpen}
+        />
+      )}
+    </div>
+  );
+};
+
+const EmployeeReportsView = ({ 
+  reports, 
+  dialogOpen, 
+  setDialogOpen, 
+  form, 
+  onSubmit, 
+  submitting, 
+  projects, 
+  projectOpen, 
+  setProjectOpen 
+}: any) => {
+  return (
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Отчеты по мероприятиям</h1>
-            <p className="text-muted-foreground">Ваши отчеты о проведенных мероприятиях</p>
-          </div>
+        <div>
+          <h2 className="text-xl font-semibold">Мои отчеты</h2>
+          <p className="text-muted-foreground">Создавайте и управляйте своими отчетами</p>
         </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -209,7 +291,7 @@ const Reports = () => {
                               )}
                             >
                               {field.value
-                                ? projects.find((project) => project === field.value)
+                                ? projects.find((project: string) => project === field.value)
                                 : "Выберите проект"}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -221,7 +303,7 @@ const Reports = () => {
                             <CommandList>
                               <CommandEmpty>Проект не найден.</CommandEmpty>
                               <CommandGroup>
-                                {projects.map((project) => (
+                                {projects.map((project: string) => (
                                   <CommandItem
                                     value={project}
                                     key={project}
@@ -426,7 +508,7 @@ const Reports = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {reports.map((report) => (
+          {reports.map((report: any) => (
             <Card key={report.id}>
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
