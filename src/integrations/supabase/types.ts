@@ -185,8 +185,8 @@ export type Database = {
           created_at: string
           employee_user_id: string
           id: string
-          notes: string | null
           report_id: string
+          salary_type: string
           updated_at: string
           wallet_type: string
         }
@@ -196,8 +196,8 @@ export type Database = {
           created_at?: string
           employee_user_id: string
           id?: string
-          notes?: string | null
           report_id: string
+          salary_type?: string
           updated_at?: string
           wallet_type: string
         }
@@ -207,8 +207,8 @@ export type Database = {
           created_at?: string
           employee_user_id?: string
           id?: string
-          notes?: string | null
           report_id?: string
+          salary_type?: string
           updated_at?: string
           wallet_type?: string
         }

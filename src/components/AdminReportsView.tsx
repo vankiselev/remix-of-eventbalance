@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,7 @@ interface ReportWithEmployee {
     id: string;
     amount: number;
     wallet_type: string;
-    notes?: string;
+    salary_type: string;
   };
 }
 
@@ -37,17 +37,25 @@ const AdminReportsView = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
+  const [employeeFilter, setEmployeeFilter] = useState("");
   const [projects, setProjects] = useState<string[]>([]);
+  const [employees, setEmployees] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<ReportWithEmployee | null>(null);
   const [salaryDialog, setSalaryDialog] = useState(false);
   const [salaryForm, setSalaryForm] = useState({
     amount: "",
     wallet_type: "",
-    notes: "",
+    salary_type: "ЗП",
   });
   const [submitting, setSubmitting] = useState(false);
 
   const walletTypes = ["Наличка Настя", "Наличка Лера", "Наличка Ваня"];
+  const salaryTypes = ["ЗП", "ПРОЦЕНТ/БОНУС"];
+
+  // Format time without seconds
+  const formatTime = (time: string) => {
+    return time.substring(0, 5);
+  };
 
   const fetchReports = async () => {
     try {
@@ -89,9 +97,11 @@ const AdminReportsView = () => {
       setReports(reportsWithEmployees);
       setFilteredReports(reportsWithEmployees);
 
-      // Extract unique projects
+      // Extract unique projects and employees
       const uniqueProjects = [...new Set(reportsWithEmployees.map(r => r.project_name))].sort();
+      const uniqueEmployees = [...new Set(reportsWithEmployees.map(r => r.employee_name))].sort();
       setProjects(uniqueProjects);
+      setEmployees(uniqueEmployees);
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast({
@@ -124,8 +134,35 @@ const AdminReportsView = () => {
       filtered = filtered.filter(report => report.project_name === projectFilter);
     }
 
+    if (employeeFilter && employeeFilter !== "all") {
+      filtered = filtered.filter(report => report.employee_name === employeeFilter);
+    }
+
     setFilteredReports(filtered);
-  }, [searchTerm, projectFilter, reports]);
+  }, [searchTerm, projectFilter, employeeFilter, reports]);
+
+  const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+    try {
+      const { error } = await supabase
+        .from("financial_transactions")
+        .insert({
+          operation_date: new Date().toISOString().split('T')[0],
+          project_owner: walletType.replace("Наличка ", ""),
+          description: `${salaryType} ${report.employee_name} за проект "${report.project_name}"`,
+          category: "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)",
+          expense_amount: amount,
+          income_amount: 0,
+          cash_type: walletType,
+          static_project_name: report.project_name,
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error creating financial transaction:", error);
+      throw error;
+    }
+  };
 
   const handleAssignSalary = async () => {
     if (!selectedReport || !salaryForm.amount || !salaryForm.wallet_type) {
@@ -139,26 +176,32 @@ const AdminReportsView = () => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
+      const amount = parseFloat(salaryForm.amount);
+      
+      // Create or update salary record
+      const { error: salaryError } = await supabase
         .from("event_report_salaries")
         .upsert({
           report_id: selectedReport.id,
           employee_user_id: selectedReport.user_id,
-          amount: parseFloat(salaryForm.amount),
+          amount: amount,
           wallet_type: salaryForm.wallet_type,
-          notes: salaryForm.notes,
+          salary_type: salaryForm.salary_type,
           assigned_by: (await supabase.auth.getUser()).data.user?.id,
         });
 
-      if (error) throw error;
+      if (salaryError) throw salaryError;
+
+      // Create financial transaction
+      await createFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
 
       toast({
         title: "Успешно",
-        description: "Зарплата назначена",
+        description: "Зарплата назначена и добавлена в финансы",
       });
 
       setSalaryDialog(false);
-      setSalaryForm({ amount: "", wallet_type: "", notes: "" });
+      setSalaryForm({ amount: "", wallet_type: "", salary_type: "ЗП" });
       setSelectedReport(null);
       fetchReports();
     } catch (error) {
@@ -178,7 +221,7 @@ const AdminReportsView = () => {
     setSalaryForm({
       amount: report.salary?.amount?.toString() || "",
       wallet_type: report.salary?.wallet_type || "",
-      notes: report.salary?.notes || "",
+      salary_type: report.salary?.salary_type || "ЗП",
     });
     setSalaryDialog(true);
   };
@@ -213,6 +256,20 @@ const AdminReportsView = () => {
             {projects.map((project) => (
               <SelectItem key={project} value={project}>
                 {project}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={employeeFilter} onValueChange={(value) => setEmployeeFilter(value === "all" ? "" : value)}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <User className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Все сотрудники" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все сотрудники</SelectItem>
+            {employees.map((employee) => (
+              <SelectItem key={employee} value={employee}>
+                {employee}
               </SelectItem>
             ))}
           </SelectContent>
@@ -260,7 +317,7 @@ const AdminReportsView = () => {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          {report.start_time} - {report.end_time}
+                          {formatTime(report.start_time)} - {formatTime(report.end_time)}
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(report.created_at)}</TableCell>
@@ -268,9 +325,14 @@ const AdminReportsView = () => {
                         {report.salary ? (
                           <div className="space-y-1">
                             <div className="font-medium">{report.salary.amount.toLocaleString('ru-RU')} ₽</div>
-                            <Badge variant="outline" className="text-xs">
-                              {report.salary.wallet_type}
-                            </Badge>
+                            <div className="flex gap-1">
+                              <Badge variant="outline" className="text-xs">
+                                {report.salary.wallet_type}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {report.salary.salary_type}
+                              </Badge>
+                            </div>
                           </div>
                         ) : (
                           <Badge variant="secondary">Не назначена</Badge>
@@ -316,6 +378,22 @@ const AdminReportsView = () => {
             </div>
             
             <div>
+              <label className="text-sm font-medium">Тип выплаты</label>
+              <Select value={salaryForm.salary_type} onValueChange={(value) => setSalaryForm({...salaryForm, salary_type: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите тип" />
+                </SelectTrigger>
+                <SelectContent>
+                  {salaryTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
               <label className="text-sm font-medium">Кошелек</label>
               <Select value={salaryForm.wallet_type} onValueChange={(value) => setSalaryForm({...salaryForm, wallet_type: value})}>
                 <SelectTrigger>
@@ -329,15 +407,6 @@ const AdminReportsView = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Примечания (необязательно)</label>
-              <Input
-                placeholder="Дополнительные заметки"
-                value={salaryForm.notes}
-                onChange={(e) => setSalaryForm({...salaryForm, notes: e.target.value})}
-              />
             </div>
             
             <Button onClick={handleAssignSalary} disabled={submitting} className="w-full">
