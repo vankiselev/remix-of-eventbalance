@@ -283,14 +283,14 @@ const FinancesImportDialog = ({
   };
 
   const mapCashType = (cashTypeStr: string): string => {
-    if (!cashTypeStr) return 'nastya';
+    if (!cashTypeStr) return 'Наличка Настя';
     
     const s = String(cashTypeStr).toLowerCase();
-    if (s.includes('настя') || s.includes('nastya')) return 'nastya';
-    if (s.includes('лера') || s.includes('lera')) return 'lera';
-    if (s.includes('ваня') || s.includes('vanya')) return 'vanya';
+    if (s.includes('настя') || s.includes('nastya')) return 'Наличка Настя';
+    if (s.includes('лера') || s.includes('lera')) return 'Наличка Лера';
+    if (s.includes('ваня') || s.includes('vanya')) return 'Наличка Ваня';
     
-    return 'nastya'; // default
+    return 'Наличка Настя'; // default
   };
 
   const mapRow = (row: ParsedRow) => {
