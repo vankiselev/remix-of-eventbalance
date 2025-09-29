@@ -15,7 +15,7 @@ import { FileUpload, UploadedFile } from './FileUpload';
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
-import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES } from '@/utils/constants';
+import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
 import {
   Dialog,
   DialogContent,
@@ -100,6 +100,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -138,9 +140,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   useEffect(() => {
     if (isOpen) {
       if (editTransaction) {
+        // Check if the project is a static one (string) or an event ID (UUID)
+        const projectValue = editTransaction.project_id;
+        const isStaticProject = projectValue && STATIC_PROJECTS.includes(projectValue);
+        
         form.reset({
           operation_date: new Date(editTransaction.operation_date),
-          project_id: editTransaction.project_id || undefined,
+          project_id: projectValue || undefined,
           whose_project: editTransaction.project_owner || undefined,
           description: editTransaction.description,
           expense_amount: editTransaction.expense_amount || undefined,
@@ -218,9 +224,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (authError) throw new Error(`Auth error: ${authError.message}`);
       if (!user) throw new Error('User not authenticated');
 
+      // Handle project_id - if it's a static project (string), store it as is, otherwise it's an event ID
+      const projectId = data.project_id;
+      const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
+      
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
-        project_id: data.project_id || null,
+        project_id: isStaticProject ? null : (projectId || null), // Only store UUID for events, null for static projects
         project_owner: data.whose_project,
         description: data.description,
         expense_amount: data.expense_amount || 0,
@@ -230,6 +240,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
+        // Store static project name in a separate field or in description
+        notes: isStaticProject ? `Проект: ${projectId}` : null,
       };
 
       let transactionResult;
@@ -417,26 +429,53 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             <FormField
               control={form.control}
               name="project_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Проект (необязательно)</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите проект" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {events.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
-                          {event.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const filteredStaticProjects = STATIC_PROJECTS.filter(project =>
+                  project.toLowerCase().includes(projectSearch.toLowerCase())
+                );
+                const filteredEvents = events.filter(event =>
+                  event.name.toLowerCase().includes(projectSearch.toLowerCase())
+                );
+
+                return (
+                  <FormItem>
+                    <FormLabel>Проект</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите проект" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <div className="p-2">
+                          <input
+                            type="text"
+                            placeholder="Поиск проекта..."
+                            value={projectSearch}
+                            onChange={(e) => setProjectSearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        {filteredStaticProjects.map((project) => (
+                          <SelectItem key={`static-${project}`} value={project}>
+                            {project}
+                          </SelectItem>
+                        ))}
+                        {filteredStaticProjects.length > 0 && filteredEvents.length > 0 && (
+                          <div className="mx-2 my-1 border-t border-border" />
+                        )}
+                        {filteredEvents.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField
@@ -533,26 +572,42 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             <FormField
               control={form.control}
               name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Статья прихода/расхода</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите категорию" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {EXPENSE_INCOME_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
+                  category.toLowerCase().includes(categorySearch.toLowerCase())
+                );
+
+                return (
+                  <FormItem>
+                    <FormLabel>Статья прихода/расхода</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите категорию" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <div className="p-2">
+                          <input
+                            type="text"
+                            placeholder="Поиск категории..."
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        {filteredCategories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <div className="space-y-4">
