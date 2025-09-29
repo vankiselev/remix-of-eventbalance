@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TimePicker } from "@/components/ui/time-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -262,11 +262,39 @@ const Reports = () => {
                           Время начала на площадке
                         </FormLabel>
                         <FormControl>
-                          <TimePicker 
-                            value={field.value} 
-                            onValueChange={field.onChange}
-                            placeholder="Выберите время начала"
-                          />
+                          <div className="flex gap-2">
+                            <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
+                              const minute = field.value?.split(':')[1] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ЧЧ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                  <SelectItem key={hour} value={hour}>
+                                    {hour}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="flex items-center text-muted-foreground">:</span>
+                            <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
+                              const hour = field.value?.split(':')[0] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ММ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
+                                  <SelectItem key={minute} value={minute}>
+                                    {minute}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -283,11 +311,39 @@ const Reports = () => {
                           Время окончания на площадке
                         </FormLabel>
                         <FormControl>
-                          <TimePicker 
-                            value={field.value} 
-                            onValueChange={field.onChange}
-                            placeholder="Выберите время окончания"
-                          />
+                          <div className="flex gap-2">
+                            <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
+                              const minute = field.value?.split(':')[1] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ЧЧ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                  <SelectItem key={hour} value={hour}>
+                                    {hour}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="flex items-center text-muted-foreground">:</span>
+                            <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
+                              const hour = field.value?.split(':')[0] || "00";
+                              field.onChange(`${hour}:${minute}`);
+                            }}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="ММ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
+                                  <SelectItem key={minute} value={minute}>
+                                    {minute}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
