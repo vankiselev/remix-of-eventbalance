@@ -241,6 +241,31 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
+  const getProjectOwnerDisplay = (transaction: Transaction) => {
+    const owner = transaction.project_owner;
+    const category = transaction.category;
+    
+    if (!owner) return "—";
+    
+    // Determine project type based on category and other factors
+    if (category.includes("Наличка") || category.includes("наличка")) {
+      return `Наличка ${owner}`;
+    } else if (category.includes("Корп") || category.includes("корп")) {
+      return `Корп. карта ${owner}`;
+    } else if (category.includes("ИП") || category.includes("ип")) {
+      return `ИП ${owner}`;
+    } else if (category.includes("клиент") || category.includes("Клиент")) {
+      return "Оплатил(а) клиент";
+    } else if (category.includes("Оплатил") || category.includes("оплатил")) {
+      return `Оплатил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
+    } else if (category.includes("Получил") || category.includes("получил")) {
+      return `Получил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
+    }
+    
+    // Default fallback
+    return `Наличка ${owner}`;
+  };
+
   const getCashTypeBadge = (cashType: string | null) => {
     if (!cashType) return null;
     
@@ -443,7 +468,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                         {transaction.static_project_name || transaction.events?.name || "—"}
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white">
-                        {transaction.project_owner ? `Наличка ${transaction.project_owner}` : "—"}
+                        {getProjectOwnerDisplay(transaction)}
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white max-w-xs">
                         <div className="truncate" title={transaction.description}>
