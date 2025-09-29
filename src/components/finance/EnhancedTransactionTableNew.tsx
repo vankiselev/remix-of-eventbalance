@@ -1,12 +1,4 @@
 import { useState, useEffect } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -356,19 +348,19 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
             transformOrigin: 'top left',
             width: `${100 / (parseInt(tableScale) / 100)}%`
           }}>
-            <Table className={`table-zebra ${getScaleClasses()}`}>
-              <TableHeader>
-                <TableRow className="table-header border-0">
+            <table className={`w-full border-collapse border border-border resizable-table ${getScaleClasses()}`}>
+              <thead className="sticky top-0 z-10 bg-background">
+                <tr>
                   {!userId && (
-                    <TableHead 
-                      className="font-semibold text-slate-700 resize-x overflow-hidden"
+                    <th 
+                      className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                       style={{ resize: 'horizontal', minWidth: '120px', width: '150px' }}
                     >
                       Имя
-                    </TableHead>
+                    </th>
                   )}
-                  <TableHead 
-                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '120px', width: '140px' }}
                   >
                     <Button
@@ -379,87 +371,87 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       Дата операции
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '120px', width: '180px' }}
                   >
                     Проект
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '100px', width: '140px' }}
                   >
                     Чей проект
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '200px', width: '300px' }}
                   >
                     Подробное описание
-                  </TableHead>
-                  <TableHead 
-                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
                   >
                     Траты
-                  </TableHead>
-                  <TableHead 
-                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
                   >
                     Приход
-                  </TableHead>
-                  <TableHead 
-                    className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '150px', width: '200px' }}
                   >
                     Статья прихода/расхода
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-slate-700 text-center resize-x overflow-hidden"
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '120px', width: '150px' }}
                   >
                     Скриншот чека
-                  </TableHead>
+                  </th>
                   {isAdmin && (
-                    <TableHead 
-                      className="text-right font-semibold text-slate-700 resize-x overflow-hidden"
+                    <th 
+                      className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                       style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
                     >
                       Действия
-                    </TableHead>
+                    </th>
                   )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                </tr>
+              </thead>
+              <tbody>
                 {filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell 
+                  <tr>
+                    <td 
                       colSpan={!userId ? (isAdmin ? 11 : 10) : (isAdmin ? 10 : 9)} 
-                      className="text-center py-12 text-slate-500"
+                      className="border border-border p-12 text-center text-slate-500"
                     >
                       {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : (
-                  filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id} className="border-slate-100 hover:bg-slate-50/50">
+                  filteredTransactions.map((transaction, index) => (
+                    <tr key={transaction.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
                       {!userId && (
-                        <TableCell className="font-medium">
+                        <td className="border border-border p-2 text-center align-middle bg-white font-medium">
                           {transaction.user_name}
-                        </TableCell>
+                        </td>
                       )}
-                      <TableCell className="font-medium">
+                      <td className="border border-border p-2 text-center align-middle bg-white font-medium">
                         {formatDate(transaction.operation_date)}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white">
                         {transaction.static_project_name || transaction.events?.name || "—"}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white">
                         {transaction.project_owner}
-                      </TableCell>
-                      <TableCell className="max-w-xs">
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white max-w-xs">
                         <div className="truncate" title={transaction.description}>
                           {transaction.description}
                         </div>
@@ -468,34 +460,34 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                             {transaction.notes}
                           </div>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white text-right font-medium">
                         {transaction.expense_amount 
                           ? <span className="text-red-600">{formatCurrency(transaction.expense_amount)}</span>
                           : "—"
                         }
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white text-right font-medium">
                         {transaction.income_amount 
                           ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
                           : "—"
                         }
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white text-right">
                         <Badge variant="outline" className="border-slate-300 text-slate-600">
                           {transaction.category}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white">
                         <ReceiptPreview
                           transactionId={transaction.id}
                           attachmentsCount={transaction.attachments_count}
                           noReceipt={transaction.no_receipt}
                           noReceiptReason={transaction.no_receipt_reason}
                         />
-                      </TableCell>
+                      </td>
                       {isAdmin && (
-                        <TableCell className="text-right">
+                        <td className="border border-border p-2 text-center align-middle bg-white text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
@@ -527,13 +519,13 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </td>
                       )}
-                    </TableRow>
+                    </tr>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

@@ -724,3 +724,22 @@
     min-width: 60px;
   }
 }
+
+/* Resizable table columns */
+.resizable-table th {
+  resize: horizontal;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  position: relative;
+  background: white;
+}
+
+.resizable-table th:hover {
+  cursor: col-resize;
+}
+
+.resizable-table td {
+  border: 1px solid hsl(var(--border));
+  overflow: hidden;
+  word-wrap: break-word;
+}
