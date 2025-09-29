@@ -185,98 +185,36 @@ const FinancesImportDialog = ({
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
-    // Маппинг: поле БД -> заголовок файла
+    // Маппинг по ПОЗИЦИИ столбца (индексу), а не по названию!
+    // Порядок столбцов ЖЕСТКО задан пользователем:
+    // 1. Имя, 2. Дата, 3. Проект, 4. Чей проект, 5. Описание, 6. Траты, 7. Приход, 8. Статья
+    
     const autoMapping: ColumnMapping = {};
     
-    // Проходим по заголовкам в СТРОГОМ порядке приоритета
-    // Сначала ищем специфичные паттерны, потом общие
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 1. Имя - первый столбец
-      if ((lowerHeader.includes('имя') || lowerHeader === 'name') && !autoMapping['creator_name']) {
-        autoMapping['creator_name'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 2. Дата операции - второй столбец
-      if ((lowerHeader.includes('дата') && lowerHeader.includes('операц')) && !autoMapping['operation_date']) {
-        autoMapping['operation_date'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 3. Проект - третий столбец (НЕ "чей проект")
-      if (lowerHeader === 'проект' && !autoMapping['project_name']) {
-        autoMapping['project_name'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 4. Чей проект - четвертый столбец
-      if (lowerHeader.includes('чей') && lowerHeader.includes('проект') && !autoMapping['cash_type']) {
-        autoMapping['cash_type'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 5. Подробное описание - пятый столбец
-      if ((lowerHeader.includes('подробн') && lowerHeader.includes('описан')) && !autoMapping['description']) {
-        autoMapping['description'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 6. Траты - шестой столбец
-      if (lowerHeader === 'траты' && !autoMapping['expense_amount']) {
-        autoMapping['expense_amount'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 7. Приход - седьмой столбец
-      if (lowerHeader === 'приход' && !autoMapping['income_amount']) {
-        autoMapping['income_amount'] = header;
-      }
-    });
-    
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      // 8. Статья прихода/расхода - восьмой столбец
-      if (lowerHeader.includes('статья') && !autoMapping['category']) {
-        autoMapping['category'] = header;
-      }
-    });
+    // Маппим по индексу столбца
+    if (fileHeaders[0]) autoMapping['creator_name'] = fileHeaders[0];      // 1. Имя
+    if (fileHeaders[1]) autoMapping['operation_date'] = fileHeaders[1];    // 2. Дата операции
+    if (fileHeaders[2]) autoMapping['project_name'] = fileHeaders[2];      // 3. Проект (static_project_name)
+    if (fileHeaders[3]) autoMapping['cash_type'] = fileHeaders[3];         // 4. Чей проект (тип кассы)
+    if (fileHeaders[4]) autoMapping['description'] = fileHeaders[4];       // 5. Подробное описание
+    if (fileHeaders[5]) autoMapping['expense_amount'] = fileHeaders[5];    // 6. Траты
+    if (fileHeaders[6]) autoMapping['income_amount'] = fileHeaders[6];     // 7. Приход
+    if (fileHeaders[7]) autoMapping['category'] = fileHeaders[7];          // 8. Статья прихода/расхода
     
     // Дополнительные столбцы (если есть)
-    fileHeaders.forEach(header => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      if (lowerHeader.includes('остат') && !autoMapping['balance']) {
-        autoMapping['balance'] = header;
-      }
-      
-      if (lowerHeader.includes('примеч') && !autoMapping['notes']) {
-        autoMapping['notes'] = header;
-      }
-    });
+    if (fileHeaders[8]) autoMapping['notes'] = fileHeaders[8];             // 9. Примечания (если есть)
     
-    console.log('Mapped columns in order:', autoMapping);
+    console.log('Column mapping by position:');
+    console.log('1. Имя:', fileHeaders[0], '→ creator_name');
+    console.log('2. Дата:', fileHeaders[1], '→ operation_date');
+    console.log('3. Проект:', fileHeaders[2], '→ project_name');
+    console.log('4. Чей проект:', fileHeaders[3], '→ cash_type');
+    console.log('5. Описание:', fileHeaders[4], '→ description');
+    console.log('6. Траты:', fileHeaders[5], '→ expense_amount');
+    console.log('7. Приход:', fileHeaders[6], '→ income_amount');
+    console.log('8. Статья:', fileHeaders[7], '→ category');
+    console.log('Auto-mapped columns:', autoMapping);
+    
     setColumnMapping(autoMapping);
   };
 
@@ -464,14 +402,22 @@ const FinancesImportDialog = ({
           const transactionData = {
             created_by: user?.id,
             operation_date: operationDate,
-            project_owner: mappedRow.project_name || 'Не указан',
+            static_project_name: mappedRow.project_name || null, // Столбец 3 "Проект" → static_project_name
+            project_owner: cashType, // Для обратной совместимости (из "Чей проект")
             description: mappedRow.description || '',
             category: mappedRow.category || 'Разное',
-            cash_type: cashType,
+            cash_type: cashType, // Столбец 4 "Чей проект" → cash_type (nastya/lera/vanya)
             expense_amount: expenseAmount || null,
             income_amount: incomeAmount || null,
             notes: mappedRow.notes || null
           };
+
+          console.log('Importing transaction:', {
+            project_name_from_file: mappedRow.project_name,
+            cash_type_from_file: mappedRow.cash_type,
+            mapped_cash_type: cashType,
+            transaction_data: transactionData
+          });
 
           const { error } = await supabase
             .from('financial_transactions')
