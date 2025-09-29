@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, DollarSign, Clock, User, Filter } from "lucide-react";
+import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin } from "lucide-react";
 import { formatDate } from "@/utils/dateFormat";
 
 interface ReportWithEmployee {
@@ -22,6 +22,8 @@ interface ReportWithEmployee {
   user_id: string;
   employee_name: string;
   employee_email: string;
+  car_kilometers?: number;
+  without_car?: boolean;
   salary?: {
     id: string;
     amount: number;
@@ -42,6 +44,8 @@ const AdminReportsView = () => {
   const [employees, setEmployees] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<ReportWithEmployee | null>(null);
   const [salaryDialog, setSalaryDialog] = useState(false);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [viewingReport, setViewingReport] = useState<ReportWithEmployee | null>(null);
   const [salaryForm, setSalaryForm] = useState({
     amount: "",
     wallet_type: "",
@@ -226,6 +230,11 @@ const AdminReportsView = () => {
     setSalaryDialog(true);
   };
 
+  const openViewDialog = (report: ReportWithEmployee) => {
+    setViewingReport(report);
+    setViewDialog(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -296,7 +305,7 @@ const AdminReportsView = () => {
                     <TableHead>Сотрудник</TableHead>
                     <TableHead>Проект</TableHead>
                     <TableHead>Время на площадке</TableHead>
-                    <TableHead>Дата создания</TableHead>
+                    <TableHead>Работа</TableHead>
                     <TableHead>Зарплата</TableHead>
                     <TableHead>Действия</TableHead>
                   </TableRow>
@@ -320,7 +329,18 @@ const AdminReportsView = () => {
                           {formatTime(report.start_time)} - {formatTime(report.end_time)}
                         </div>
                       </TableCell>
-                      <TableCell>{formatDate(report.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="max-w-xs space-y-2">
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground">Подготовка:</div>
+                            <div className="text-sm line-clamp-2">{report.preparation_work}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground">На площадке:</div>
+                            <div className="text-sm line-clamp-2">{report.onsite_work}</div>
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {report.salary ? (
                           <div className="space-y-1">
@@ -339,14 +359,24 @@ const AdminReportsView = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openSalaryDialog(report)}
-                        >
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          {report.salary ? "Изменить" : "Назначить"}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openViewDialog(report)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Просмотр
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSalaryDialog(report)}
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            {report.salary ? "Изменить" : "Назначить"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -423,6 +453,101 @@ const AdminReportsView = () => {
               )}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Отчет по мероприятию
+            </DialogTitle>
+            <DialogDescription>
+              Подробная информация об отчете сотрудника {viewingReport?.employee_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingReport && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-2">Проект</h4>
+                  <p className="text-lg">{viewingReport.project_name}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Дата создания</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(viewingReport.created_at).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Время на площадке
+                  </h4>
+                  <p>{formatTime(viewingReport.start_time)} - {formatTime(viewingReport.end_time)}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Сотрудник</h4>
+                  <div>
+                    <p>{viewingReport.employee_name}</p>
+                    <p className="text-sm text-muted-foreground">{viewingReport.employee_email}</p>
+                  </div>
+                </div>
+              </div>
+
+              {(viewingReport.car_kilometers || viewingReport.without_car) && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Car className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-800">Информация о поездке:</span>
+                  </div>
+                  {viewingReport.without_car ? (
+                    <div className="text-sm text-blue-700">Работал без машины</div>
+                  ) : viewingReport.car_kilometers ? (
+                    <div className="text-sm text-blue-700">Пробег: {viewingReport.car_kilometers} км</div>
+                  ) : null}
+                </div>
+              )}
+
+              {viewingReport.salary && (
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-800">Назначенная выплата:</span>
+                  </div>
+                  <div className="text-sm text-green-700">
+                    {viewingReport.salary.salary_type}: {viewingReport.salary.amount.toLocaleString('ru-RU')} ₽ ({viewingReport.salary.wallet_type})
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Работа по подготовке мероприятия:</h4>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{viewingReport.preparation_work}</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Работа на площадке:</h4>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{viewingReport.onsite_work}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
