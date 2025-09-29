@@ -214,7 +214,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     setSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw new Error(`Auth error: ${authError.message}`);
       if (!user) throw new Error('User not authenticated');
 
       const transactionData = {
@@ -330,7 +331,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           },
         ]);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('DB Error for attachment:', dbError);
+        throw dbError;
+      }
     });
 
     await Promise.all(uploadPromises);
