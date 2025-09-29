@@ -233,16 +233,12 @@ const AdminReportsView = () => {
 
       if (salaryError) throw salaryError;
 
-      // Create or update financial transaction
-      if (isExistingSalary) {
-        await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
-      } else {
-        await createFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
-      }
+      // Always check if financial transaction exists and create/update accordingly
+      await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
 
       toast({
         title: "Успешно",
-        description: isExistingSalary ? "Зарплата обновлена в финансах" : "Зарплата назначена и добавлена в финансы",
+        description: isExistingSalary ? "Зарплата обновлена и синхронизирована с финансами" : "Зарплата назначена и добавлена в финансы",
       });
 
       setSalaryDialog(false);
