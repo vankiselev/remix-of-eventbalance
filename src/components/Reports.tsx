@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 
@@ -35,6 +35,11 @@ interface Report {
   preparation_work: string;
   onsite_work: string;
   created_at: string;
+  salaries?: {
+    amount: number;
+    wallet_type: string;
+    salary_type: string;
+  }[];
 }
 
 const Reports = () => {
@@ -46,6 +51,7 @@ const Reports = () => {
   const [projectOpen, setProjectOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -63,14 +69,43 @@ const Reports = () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      const { data: reportsData, error } = await supabase
         .from("event_reports")
         .select("*")
         .eq("user_id", user.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setReports(data || []);
+
+      // Получаем информацию о зарплатах для каждого отчета
+      if (reportsData && reportsData.length > 0) {
+        const { data: salariesData, error: salariesError } = await supabase
+          .from("event_report_salaries")
+          .select("report_id, amount, wallet_type, salary_type")
+          .in("report_id", reportsData.map(r => r.id))
+          .eq("employee_user_id", user.user.id);
+
+        if (salariesError) throw salariesError;
+
+        // Группируем зарплаты по report_id
+        const salariesByReport = (salariesData || []).reduce((acc, salary) => {
+          if (!acc[salary.report_id]) {
+            acc[salary.report_id] = [];
+          }
+          acc[salary.report_id].push(salary);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        // Добавляем информацию о зарплатах к отчетам
+        const reportsWithSalaries = reportsData.map(report => ({
+          ...report,
+          salaries: salariesByReport[report.id] || []
+        }));
+
+        setReports(reportsWithSalaries);
+      } else {
+        setReports([]);
+      }
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast({
@@ -217,6 +252,8 @@ const Reports = () => {
               projects={projects}
               projectOpen={projectOpen}
               setProjectOpen={setProjectOpen}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
             />
           </TabsContent>
           
@@ -235,6 +272,8 @@ const Reports = () => {
           projects={projects}
           projectOpen={projectOpen}
           setProjectOpen={setProjectOpen}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
         />
       )}
     </div>
@@ -250,7 +289,9 @@ const EmployeeReportsView = ({
   submitting, 
   projects, 
   projectOpen, 
-  setProjectOpen 
+  setProjectOpen,
+  viewMode,
+  setViewMode
 }: any) => {
   return (
     <div className="space-y-6">
@@ -260,7 +301,28 @@ const EmployeeReportsView = ({
           <p className="text-muted-foreground">Создавайте и управляйте своими отчетами</p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center gap-3">
+          <div className="flex border rounded-lg">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-r-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-l-none"
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -489,7 +551,8 @@ const EmployeeReportsView = ({
               </form>
             </Form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {reports.length === 0 ? (
@@ -511,27 +574,43 @@ const EmployeeReportsView = ({
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
           {reports.map((report: any) => (
             <Card key={report.id}>
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-semibold">{report.project_name}</h3>
-                  <span className="text-sm text-muted-foreground">
-                    {new Date(report.created_at).toLocaleDateString('ru-RU', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </span>
+                  <div className="text-right">
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(report.created_at).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {report.start_time} - {report.end_time}
+                    {report.start_time.substring(0, 5)} - {report.end_time.substring(0, 5)}
                   </span>
                 </div>
+
+                {report.salaries && report.salaries.length > 0 && (
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Banknote className="h-4 w-4 text-green-600" />
+                      <span className="font-medium text-green-800">Назначенные выплаты:</span>
+                    </div>
+                    {report.salaries.map((salary: any, index: number) => (
+                      <div key={index} className="text-sm text-green-700">
+                        {salary.salary_type}: {salary.amount.toLocaleString('ru-RU')} ₽ ({salary.wallet_type})
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="space-y-4">
                   <div>
