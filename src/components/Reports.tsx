@@ -6,11 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const reportSchema = z.object({
   project_name: z.string().min(1, "Выберите проект"),
@@ -38,6 +40,7 @@ const Reports = () => {
   const [projects, setProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [projectOpen, setProjectOpen] = useState(false);
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -186,20 +189,55 @@ const Reports = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Проект</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите проект" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project} value={project}>
-                            {project}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? projects.find((project) => project === field.value)
+                              : "Выберите проект"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Поиск проекта..." />
+                          <CommandList>
+                            <CommandEmpty>Проект не найден.</CommandEmpty>
+                            <CommandGroup>
+                              {projects.map((project) => (
+                                <CommandItem
+                                  value={project}
+                                  key={project}
+                                  onSelect={() => {
+                                    form.setValue("project_name", project);
+                                    setProjectOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      project === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {project}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
