@@ -60,9 +60,13 @@ const Reports = () => {
 
   const fetchReports = async () => {
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("event_reports")
         .select("*")
+        .eq("user_id", user.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
