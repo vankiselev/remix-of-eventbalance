@@ -229,6 +229,8 @@ const AdminReportsView = () => {
           wallet_type: salaryForm.wallet_type,
           salary_type: salaryForm.salary_type,
           assigned_by: (await supabase.auth.getUser()).data.user?.id,
+        }, {
+          onConflict: 'report_id,employee_user_id'
         });
 
       if (salaryError) throw salaryError;
