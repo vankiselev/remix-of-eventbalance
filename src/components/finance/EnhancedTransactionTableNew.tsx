@@ -60,6 +60,7 @@ interface Transaction {
   attachments_count?: number;
   created_at: string;
   user_name?: string;
+  static_project_name?: string;
 }
 
 interface TransactionTableProps {
@@ -106,6 +107,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.project_owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.static_project_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (transaction.events?.name || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -402,7 +404,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                         {formatDate(transaction.operation_date)}
                       </TableCell>
                       <TableCell>
-                        {transaction.events?.name || "—"}
+                        {transaction.static_project_name || transaction.events?.name || "—"}
                       </TableCell>
                       <TableCell>
                         {transaction.project_owner}
