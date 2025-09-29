@@ -85,7 +85,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
 
           {/* Sidebar */}
           <div
-            className={`fixed inset-y-0 left-0 z-50 bg-card border-r transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+            className={`fixed inset-y-0 left-0 z-50 bg-card border-r transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 flex-shrink-0 ${
               sidebarCollapsed ? "w-16" : "w-64"
             } ${
               sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -201,7 +201,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
         )}
 
         {/* Page content with mobile responsive container */}
-        <main className={`flex-1 overflow-auto ${isMobile ? 'px-4 py-6 pb-28' : 'main-container'}`}>
+        <main className={`flex-1 overflow-auto w-full ${isMobile ? 'px-4 py-6 pb-28' : 'main-container'}`}>
           {children}
         </main>
 

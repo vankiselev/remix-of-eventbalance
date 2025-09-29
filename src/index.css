@@ -312,7 +312,8 @@
 @layer utilities {
   /* Container System - ТЗ Compliant */
   .main-container {
-    max-width: 1600px;
+    width: 100%;
+    max-width: 1920px;
     margin: 0 auto;
     padding: 1rem;
   }
@@ -326,6 +327,18 @@
   @media (min-width: 1024px) {
     .main-container {
       padding: 2rem;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .main-container {
+      padding: 2.5rem 3rem;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .main-container {
+      padding: 3rem 4rem;
     }
   }
 
