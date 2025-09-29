@@ -248,9 +248,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     if (!owner) return "—";
     
     // Determine project type based on category and other factors
-    if (category.includes("Наличка") || category.includes("наличка")) {
-      return `Наличка ${owner}`;
-    } else if (category.includes("Корп") || category.includes("корп")) {
+    if (category.includes("Корп") || category.includes("корп")) {
       return `Корп. карта ${owner}`;
     } else if (category.includes("ИП") || category.includes("ип")) {
       return `ИП ${owner}`;
@@ -260,10 +258,10 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       return `Оплатил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
     } else if (category.includes("Получил") || category.includes("получил")) {
       return `Получил${owner === "Настя" ? "а" : owner === "Лера" ? "а" : ""} ${owner}`;
+    } else {
+      // Default to "Наличка" for all other cases
+      return `Наличка ${owner}`;
     }
-    
-    // Default fallback
-    return `Наличка ${owner}`;
   };
 
   const getCashTypeBadge = (cashType: string | null) => {
