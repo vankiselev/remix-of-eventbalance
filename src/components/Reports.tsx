@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -14,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 
@@ -24,7 +25,7 @@ const reportSchema = z.object({
   end_time: z.string().min(1, "Укажите время окончания"),
   preparation_work: z.string().min(1, "Опишите работу по подготовке"),
   onsite_work: z.string().min(1, "Опишите работу на площадке"),
-  car_time: z.string().optional(),
+  car_kilometers: z.number().min(0, "Количество километров не может быть отрицательным").optional(),
   without_car: z.boolean().optional(),
 });
 
@@ -38,7 +39,7 @@ interface Report {
   preparation_work: string;
   onsite_work: string;
   created_at: string;
-  car_time?: string;
+  car_kilometers?: number;
   without_car?: boolean;
   salaries?: {
     amount: number;
@@ -66,7 +67,7 @@ const Reports = () => {
       end_time: "",
       preparation_work: "",
       onsite_work: "",
-      car_time: "",
+      car_kilometers: 0,
       without_car: false,
     },
   });
@@ -190,7 +191,7 @@ const Reports = () => {
           end_time: data.end_time,
           preparation_work: data.preparation_work,
           onsite_work: data.onsite_work,
-          car_time: data.car_time || null,
+          car_kilometers: data.car_kilometers || null,
           without_car: data.without_car || false,
           user_id: (await supabase.auth.getUser()).data.user?.id,
         });
@@ -547,47 +548,23 @@ const EmployeeReportsView = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="car_time"
+                    name="car_kilometers"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
-                          <Car className="h-4 w-4" />
-                          Время поездки на машине
+                          <MapPin className="h-4 w-4" />
+                          Пробег на машине (км)
                         </FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
-                              const minute = field.value?.split(':')[1] || "00";
-                              field.onChange(`${hour}:${minute}`);
-                            }}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="ЧЧ" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
-                                  <SelectItem key={hour} value={hour}>
-                                    {hour}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <span className="flex items-center text-muted-foreground">:</span>
-                            <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
-                              const hour = field.value?.split(':')[0] || "00";
-                              field.onChange(`${hour}:${minute}`);
-                            }}>
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="ММ" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
-                                  <SelectItem key={minute} value={minute}>
-                                    {minute}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Введите количество километров"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
+                            value={field.value || ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -695,16 +672,16 @@ const EmployeeReportsView = ({
                   </div>
                 )}
                 
-                {(report.car_time || report.without_car) && (
+                {(report.car_kilometers || report.without_car) && (
                   <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Car className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-800">Информация о машине:</span>
+                      <span className="font-medium text-blue-800">Информация о поездке:</span>
                     </div>
                     {report.without_car ? (
                       <div className="text-sm text-blue-700">Работал без машины</div>
-                    ) : report.car_time ? (
-                      <div className="text-sm text-blue-700">Время на машине: {report.car_time.substring(0, 5)}</div>
+                    ) : report.car_kilometers ? (
+                      <div className="text-sm text-blue-700">Пробег: {report.car_kilometers} км</div>
                     ) : null}
                   </div>
                 )}

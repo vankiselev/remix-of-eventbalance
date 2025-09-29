@@ -224,7 +224,7 @@ export type Database = {
       }
       event_reports: {
         Row: {
-          car_time: string | null
+          car_kilometers: number | null
           created_at: string
           end_time: string
           id: string
@@ -237,7 +237,7 @@ export type Database = {
           without_car: boolean | null
         }
         Insert: {
-          car_time?: string | null
+          car_kilometers?: number | null
           created_at?: string
           end_time: string
           id?: string
@@ -250,7 +250,7 @@ export type Database = {
           without_car?: boolean | null
         }
         Update: {
-          car_time?: string | null
+          car_kilometers?: number | null
           created_at?: string
           end_time?: string
           id?: string
