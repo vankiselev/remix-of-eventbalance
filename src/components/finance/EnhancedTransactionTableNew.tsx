@@ -52,6 +52,7 @@ interface Transaction {
   created_at: string;
   user_name?: string;
   static_project_name?: string;
+  balance_after: number | null;
 }
 
 interface TransactionTableProps {
@@ -454,6 +455,12 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                   </th>
                   <th 
                     className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '140px' }}
+                  >
+                    Остаток после операции
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '150px', width: '200px' }}
                   >
                     Статья прихода/расхода
@@ -478,7 +485,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td 
-                      colSpan={!userId ? (isAdmin ? 11 : 10) : (isAdmin ? 10 : 9)} 
+                      colSpan={!userId ? (isAdmin ? 12 : 11) : (isAdmin ? 11 : 10)} 
                       className="border border-border p-12 text-center text-slate-500"
                     >
                       {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -520,6 +527,14 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       <td className="border border-border p-2 text-center align-middle bg-white text-right font-medium">
                         {transaction.income_amount 
                           ? <span className="text-green-600">{formatCurrency(transaction.income_amount)}</span>
+                          : "—"
+                        }
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white text-right font-medium">
+                        {transaction.balance_after !== null && transaction.balance_after !== undefined
+                          ? <span className={transaction.balance_after >= 0 ? "text-blue-600" : "text-red-600"}>
+                              {formatCurrency(transaction.balance_after)}
+                            </span>
                           : "—"
                         }
                       </td>

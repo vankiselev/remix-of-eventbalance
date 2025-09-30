@@ -500,6 +500,7 @@ export type Database = {
       }
       financial_transactions: {
         Row: {
+          balance_after: number | null
           cash_type: string | null
           category: string
           created_at: string
@@ -519,6 +520,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          balance_after?: number | null
           cash_type?: string | null
           category: string
           created_at?: string
@@ -538,6 +540,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          balance_after?: number | null
           cash_type?: string | null
           category?: string
           created_at?: string
