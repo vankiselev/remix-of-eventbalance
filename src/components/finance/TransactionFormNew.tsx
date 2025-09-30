@@ -224,38 +224,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (authError) throw new Error(`Auth error: ${authError.message}`);
       if (!user) throw new Error('User not authenticated');
 
-      // Calculate balance_after by getting balance before this transaction date
-      let balance_after = null;
-      
-      // Get the cash type
-      const cashType = data.whose_project;
-      const operationDate = data.operation_date.toISOString().split('T')[0];
-      
-      // Get the latest transaction BEFORE this operation date for this cash_type
-      const { data: previousTransactions } = await supabase
-        .from('financial_transactions')
-        .select('balance_after, operation_date, created_at')
-        .eq('cash_type', cashType)
-        .or(`operation_date.lt.${operationDate},and(operation_date.eq.${operationDate},created_at.lt.now())`)
-        .order('operation_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      // Calculate starting balance for this transaction
-      let currentBalance = 0;
-      if (previousTransactions && previousTransactions.length > 0 && previousTransactions[0].balance_after !== null) {
-        currentBalance = Number(previousTransactions[0].balance_after);
-      } else {
-        // If no previous transactions, start from 0 (or could get from initial balance if needed)
-        currentBalance = 0;
-      }
-      
-      // Calculate new balance: current + income - expense
-      balance_after = currentBalance + (data.income_amount || 0) - (data.expense_amount || 0);
-
       // Handle project_id - if it's a static project (string), store it in static_project_name, otherwise it's an event ID
       const projectId = data.project_id;
       const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
+      const operationDate = data.operation_date.toISOString().split('T')[0];
       
       const transactionData = {
         operation_date: operationDate,
@@ -270,7 +242,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
-        balance_after: balance_after,
+        // balance_after will be calculated automatically by database trigger
       };
 
       let transactionResult;
