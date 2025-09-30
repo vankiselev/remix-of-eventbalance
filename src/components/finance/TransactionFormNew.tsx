@@ -227,10 +227,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       // Handle project_id - if it's a static project (string), store it in static_project_name, otherwise it's an event ID
       const projectId = data.project_id;
       const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
-      const operationDate = data.operation_date.toISOString().split('T')[0];
       
       const transactionData = {
-        operation_date: operationDate,
+        operation_date: data.operation_date.toISOString().split('T')[0],
         project_id: isStaticProject ? null : (projectId || null), // Only store UUID for events, null for static projects
         static_project_name: isStaticProject ? projectId : null, // Store static project name
         project_owner: data.whose_project,
@@ -242,7 +241,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
-        // balance_after will be calculated automatically by database trigger
       };
 
       let transactionResult;
