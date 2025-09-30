@@ -1118,6 +1118,10 @@ export type Database = {
         Args: { phone_input: string }
         Returns: string
       }
+      recalculate_balances_for_cash_type: {
+        Args: { p_cash_type: string }
+        Returns: undefined
+      }
       request_password_reset: {
         Args: { user_email: string }
         Returns: boolean
