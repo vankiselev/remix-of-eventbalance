@@ -532,11 +532,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         value={field.value}
                         onChange={(value) => {
                           field.onChange(value);
-                          if (value && value > 0) {
+                          if (value !== undefined && value !== null && value !== 0) {
                             form.setValue("income_amount", undefined);
                           }
                         }}
-                        placeholder="Введите сумму"
+                        placeholder="Введите сумму (можно отрицательную)"
                       />
                     </FormControl>
                     <FormMessage />
@@ -555,11 +555,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         value={field.value}
                         onChange={(value) => {
                           field.onChange(value);
-                          if (value && value > 0) {
+                          if (value !== undefined && value !== null && value !== 0) {
                             form.setValue("expense_amount", undefined);
                           }
                         }}
-                        placeholder="Введите сумму"
+                        placeholder="Введите сумму (можно отрицательную)"
                       />
                     </FormControl>
                     <FormMessage />
