@@ -530,7 +530,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                         }
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white text-right">
-                        <Badge variant="outline" className="border-slate-300 text-slate-600">
+                        <Badge variant="secondary" className="text-slate-700 border-0">
                           {transaction.category}
                         </Badge>
                       </td>
