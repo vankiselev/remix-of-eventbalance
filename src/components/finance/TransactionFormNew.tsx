@@ -305,11 +305,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       setFiles([]);
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
+      } catch (error) {
       console.error('Error saving transaction:', error);
+      const err = error as any;
       toast({
         title: "Ошибка",
-        description: error instanceof Error ? error.message : "Не удалось сохранить операцию",
+        description: err?.message || err?.error?.message || err?.details || JSON.stringify(err),
         variant: "destructive",
       });
     } finally {

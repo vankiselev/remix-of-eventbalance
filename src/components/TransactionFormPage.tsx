@@ -249,7 +249,7 @@ export function TransactionFormPage() {
       console.error('Error saving transaction:', error);
       toast({
         title: "Ошибка",
-        description: error instanceof Error ? error.message : "Не удалось сохранить операцию",
+        description: (error as any)?.message || (error as any)?.error?.message || (error as any)?.details || JSON.stringify(error),
         variant: "destructive",
       });
     } finally {
