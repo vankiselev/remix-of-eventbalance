@@ -11,12 +11,27 @@ interface RequestBody {
 }
 
 serve(async (req) => {
+  console.log('send-password-reset function called');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Check environment variables
+    const siteUrl = Deno.env.get('SITE_URL');
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    
+    console.log('Environment check:', {
+      hasSiteUrl: !!siteUrl,
+      hasResendApiKey: !!resendApiKey,
+    });
+
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY is not configured');
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -54,14 +69,13 @@ serve(async (req) => {
       )
     }
 
-    // Get user ID to retrieve the token
-    const { data: userData, error: userError } = await supabaseClient
-      .from('auth.users')
-      .select('id')
-      .eq('email', email)
-      .single()
+    // Get user using admin API
+    const { data: { users }, error: userError } = await supabaseClient.auth.admin.listUsers();
+    
+    const user = users?.find(u => u.email === email);
 
-    if (userError || !userData) {
+    if (userError || !user) {
+      console.log('User not found or error:', userError);
       // User doesn't exist, but don't reveal this
       return new Response(
         JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
@@ -72,11 +86,13 @@ serve(async (req) => {
       )
     }
 
+    console.log('User found:', user.id);
+
     // Get the generated token from the database (for sending email)
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('password_reset_tokens')
       .select('token')
-      .eq('user_id', userData.id)
+      .eq('user_id', user.id)
       .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -94,8 +110,15 @@ serve(async (req) => {
       )
     }
 
+    console.log('Token retrieved successfully');
+
     // Send email using Resend
-    const resetUrl = `${req.headers.get('origin') || 'https://eventbalance.ru'}/reset-password?token=${tokenData.token}`
+    const baseUrl = siteUrl || 'https://eventbalance.ru';
+    const resetUrl = `${baseUrl}/reset-password?token=${tokenData.token}`
+    
+    console.log('Generated reset URL:', resetUrl);
+    
+    console.log('Sending email via Resend...');
     
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -123,7 +146,8 @@ serve(async (req) => {
     });
 
     if (!emailRes.ok) {
-      console.error('Failed to send email:', await emailRes.text())
+      const errorText = await emailRes.text();
+      console.error('Failed to send email:', errorText)
       // Still return success to not leak information
     } else {
       console.log('Password reset email sent successfully')
@@ -137,8 +161,14 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in send-password-reset function:', error)
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 
