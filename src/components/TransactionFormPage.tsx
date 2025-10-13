@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { FileUpload, UploadedFile } from './finance/FileUpload';
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -80,12 +81,9 @@ interface Event {
   name: string;
 }
 
-interface TransactionFormPageProps {
-  onNavigateToFinances: () => void;
-}
-
-export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPageProps) {
+export function TransactionFormPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -246,7 +244,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
       });
 
       resetForm();
-      onNavigateToFinances();
+      navigate('/finances');
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast({
@@ -306,7 +304,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
       <div className="mb-6">
         <Button
           variant="ghost"
-          onClick={onNavigateToFinances}
+          onClick={() => navigate('/finances')}
           className="mb-4 min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
         >
           <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -593,7 +591,7 @@ export function TransactionFormPage({ onNavigateToFinances }: TransactionFormPag
                   <Button
                     type="button"
                     variant="outline" 
-                    onClick={onNavigateToFinances}
+                    onClick={() => navigate('/finances')}
                     className="flex-1"
                   >
                     Отмена

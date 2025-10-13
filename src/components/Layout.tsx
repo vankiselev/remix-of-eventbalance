@@ -6,19 +6,20 @@ import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, 
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
 }
 
-const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
+const Layout = ({ children }: LayoutProps) => {
   const { signOut, user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -52,23 +53,25 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
   };
 
   const menuItems = [
-    { id: "dashboard", label: t('dashboard'), icon: BarChart3 },
-    { id: "events", label: t('events'), icon: CalendarDays },
-    { id: "calendar", label: t('calendar'), icon: Calendar },
-    { id: "transaction", label: t('transaction'), icon: PlusCircle },
-    { id: "finances", label: t('finances'), icon: DollarSign },
-    { id: "staff", label: t('staff'), icon: Users },
-    { id: "birthdays", label: "Дни рождения", icon: Cake },
-    { id: "vacations", label: "График отпусков", icon: Plane },
-    { id: "contacts", label: t('contacts'), icon: Users },
-    { id: "reports", label: "Отчеты", icon: FileText },
-    ...(userRole === 'admin' ? [{ id: "invitations", label: t('invitations'), icon: Users }] : []),
+    { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
+    { path: "/events", label: t('events'), icon: CalendarDays },
+    { path: "/calendar", label: t('calendar'), icon: Calendar },
+    { path: "/transaction", label: t('transaction'), icon: PlusCircle },
+    { path: "/finances", label: t('finances'), icon: DollarSign },
+    { path: "/staff", label: t('staff'), icon: Users },
+    { path: "/birthdays", label: "Дни рождения", icon: Cake },
+    { path: "/vacations", label: "График отпусков", icon: Plane },
+    { path: "/contacts", label: t('contacts'), icon: Users },
+    { path: "/reports", label: "Отчеты", icon: FileText },
+    ...(userRole === 'admin' ? [{ path: "/invitations", label: t('invitations'), icon: Users }] : []),
   ];
 
-  const getPageTitle = (activeTab: string) => {
-    const item = menuItems.find(item => item.id === activeTab);
+  const getPageTitle = () => {
+    const item = menuItems.find(item => item.path === location.pathname);
     return item ? item.label : "EventBalance";
   };
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <div className="min-h-screen-safe bg-background flex w-full">
@@ -122,21 +125,22 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
                 <ul className="space-y-1">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
+                    const active = isActive(item.path);
                     return (
-                      <li key={item.id}>
+                      <li key={item.path}>
                         <Button
-                          variant={activeTab === item.id ? "secondary" : "ghost"}
+                          variant={active ? "secondary" : "ghost"}
                           className={`w-full transition-all duration-200 ${
                             sidebarCollapsed 
                               ? "justify-center px-2" 
                               : "justify-start px-3"
                           } ${
-                            activeTab === item.id 
+                            active 
                               ? "bg-primary/10 text-primary font-medium shadow-sm" 
                               : "hover:bg-accent/50"
                           }`}
                           onClick={() => {
-                            onTabChange(item.id);
+                            navigate(item.path);
                             setSidebarOpen(false);
                           }}
                           title={sidebarCollapsed ? item.label : undefined}
@@ -194,7 +198,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
                 <Menu className="h-4 w-4" />
               </Button>
               <h1 className="text-lg font-semibold text-foreground">
-                {getPageTitle(activeTab)}
+                {getPageTitle()}
               </h1>
             </div>
           </div>
@@ -207,7 +211,7 @@ const Layout = ({ children, activeTab, onTabChange }: LayoutProps) => {
 
         {/* Mobile bottom navigation */}
         {isMobile && (
-          <MobileBottomNav activeTab={activeTab} onTabChange={onTabChange} />
+          <MobileBottomNav />
         )}
       </div>
     </div>

@@ -1,18 +1,14 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase, Cake, Plane } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-interface MobileBottomNavProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
-
-const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
+const MobileBottomNav = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
@@ -29,26 +25,26 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
   }, [user]);
 
   const mainNavItems = [
-    { id: "dashboard", label: "Главная", icon: BarChart3 },
-    { id: "finances", label: "Финансы", icon: DollarSign },
-    { id: "events", label: "Мероприятия", icon: CalendarDays },
+    { path: "/dashboard", label: "Главная", icon: BarChart3 },
+    { path: "/finances", label: "Финансы", icon: DollarSign },
+    { path: "/events", label: "Мероприятия", icon: CalendarDays },
   ];
 
   const moreMenuItems = [
-    { id: "calendar", label: "Календарь", icon: Calendar },
-    { id: "staff", label: "Сотрудники", icon: Users },
-    { id: "birthdays", label: "Дни рождения", icon: Cake },
-    { id: "vacations", label: "График отпусков", icon: Plane },
-    { id: "contacts", label: "Контакты", icon: Briefcase },
-    ...(userRole === 'admin' ? [{ id: "invitations", label: "Приглашения", icon: UserPlus }] : []),
+    { path: "/calendar", label: "Календарь", icon: Calendar },
+    { path: "/staff", label: "Сотрудники", icon: Users },
+    { path: "/birthdays", label: "Дни рождения", icon: Cake },
+    { path: "/vacations", label: "График отпусков", icon: Plane },
+    { path: "/contacts", label: "Контакты", icon: Briefcase },
+    ...(userRole === 'admin' ? [{ path: "/invitations", label: "Приглашения", icon: UserPlus }] : []),
   ];
 
-  const handleTabChange = (tabId: string) => {
-    onTabChange(tabId);
+  const handleNavigation = (path: string) => {
+    navigate(path);
     setIsMoreMenuOpen(false);
   };
 
-  const isActiveTab = (tabId: string) => activeTab === tabId;
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <>
@@ -58,9 +54,9 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
           {/* Dashboard */}
           <div className="flex flex-col items-center gap-1.5">
             <button
-              onClick={() => handleTabChange("dashboard")}
+              onClick={() => handleNavigation("/dashboard")}
               className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("dashboard") 
+                isActive("/dashboard") 
                   ? "border-2 border-primary text-primary bg-primary/5" 
                   : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
@@ -68,16 +64,16 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
               <BarChart3 className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
-              isActiveTab("dashboard") ? "text-primary" : "text-foreground"
+              isActive("/dashboard") ? "text-primary" : "text-foreground"
             }`}>Главная</span>
           </div>
 
           {/* Finances */}
           <div className="flex flex-col items-center gap-1.5">
             <button
-              onClick={() => handleTabChange("finances")}
+              onClick={() => handleNavigation("/finances")}
               className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("finances") 
+                isActive("/finances") 
                   ? "border-2 border-primary text-primary bg-primary/5" 
                   : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
@@ -85,16 +81,16 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
               <DollarSign className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
-              isActiveTab("finances") ? "text-primary" : "text-foreground"
+              isActive("/finances") ? "text-primary" : "text-foreground"
             }`}>Финансы</span>
           </div>
 
           {/* Add Transaction - Central FAB */}
           <div className="flex flex-col items-center gap-1.5">
             <button
-              onClick={() => handleTabChange("transaction")}
+              onClick={() => handleNavigation("/transaction")}
               className={`flex items-center justify-center h-12 w-12 rounded-full border-2 transition-all duration-200 active:scale-95 ${
-                isActiveTab("transaction") 
+                isActive("/transaction") 
                   ? "border-primary text-primary bg-primary/5" 
                   : "border-foreground text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
@@ -102,16 +98,16 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
               <Plus className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
-              isActiveTab("transaction") ? "text-primary" : "text-foreground"
+              isActive("/transaction") ? "text-primary" : "text-foreground"
             }`}>Трата/Приход</span>
           </div>
 
           {/* Events */}
           <div className="flex flex-col items-center gap-1.5">
             <button
-              onClick={() => handleTabChange("events")}
+              onClick={() => handleNavigation("/events")}
               className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                isActiveTab("events") 
+                isActive("/events") 
                   ? "border-2 border-primary text-primary bg-primary/5" 
                   : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
               }`}
@@ -119,7 +115,7 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
               <CalendarDays className="h-5 w-5" strokeWidth={2} />
             </button>
             <span className={`text-xs font-medium ${
-              isActiveTab("events") ? "text-primary" : "text-foreground"
+              isActive("/events") ? "text-primary" : "text-foreground"
             }`}>Мероприятия</span>
           </div>
 
@@ -142,10 +138,10 @@ const MobileBottomNav = ({ activeTab, onTabChange }: MobileBottomNavProps) => {
                   const Icon = item.icon;
                   return (
                     <button
-                      key={item.id}
-                      onClick={() => handleTabChange(item.id)}
+                      key={item.path}
+                      onClick={() => handleNavigation(item.path)}
                       className={`w-full flex items-center justify-start gap-3 h-12 px-4 rounded-lg transition-all duration-200 active:scale-98 ${
-                        isActiveTab(item.id) 
+                        isActive(item.path) 
                           ? "bg-primary/10 text-primary font-medium" 
                           : "hover:bg-accent/50 text-foreground"
                       }`}
