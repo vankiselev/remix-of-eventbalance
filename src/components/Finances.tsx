@@ -77,17 +77,17 @@ const Finances = () => {
         },
         (payload) => {
           try {
-            const excludedCategory = 'Передано или получено от Леры/Насти/Вани';
             const calc = (row: any) => {
               if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
               const income = Number(row.income_amount || 0);
               const expense = Number(row.expense_amount || 0);
-              const delta = row.category === excludedCategory ? 0 : (income - expense);
+              const delta = income - expense; // учитываем все категории, включая переводы
+              const cashType = row.cash_type;
               return {
                 total: delta,
-                nastya: row.cash_type === 'Наличка Настя' ? delta : 0,
-                lera: row.cash_type === 'Наличка Лера' ? delta : 0,
-                vanya: row.cash_type === 'Наличка Ваня' ? delta : 0,
+                nastya: cashType === 'Наличка Настя' ? delta : 0,
+                lera: cashType === 'Наличка Лера' ? delta : 0,
+                vanya: cashType === 'Наличка Ваня' ? delta : 0,
                 created_by: row.created_by
               };
             };
