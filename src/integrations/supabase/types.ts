@@ -500,6 +500,7 @@ export type Database = {
       }
       financial_transactions: {
         Row: {
+          balance_after: number | null
           cash_type: string | null
           category: string
           created_at: string
@@ -519,6 +520,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          balance_after?: number | null
           cash_type?: string | null
           category: string
           created_at?: string
@@ -538,6 +540,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          balance_after?: number | null
           cash_type?: string | null
           category?: string
           created_at?: string
@@ -973,6 +976,22 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      can_update_profile_fields: {
+        Args: {
+          new_cash_lera: number
+          new_cash_nastya: number
+          new_cash_vanya: number
+          new_role: Database["public"]["Enums"]["user_role"]
+          new_total_cash: number
+          old_cash_lera: number
+          old_cash_nastya: number
+          old_cash_vanya: number
+          old_role: Database["public"]["Enums"]["user_role"]
+          old_total_cash: number
+          target_user_id: string
+        }
+        Returns: boolean
+      }
       can_view_invitation: {
         Args: { invitation_token: string }
         Returns: boolean
@@ -1114,6 +1133,10 @@ export type Database = {
       normalize_phone_to_e164: {
         Args: { phone_input: string }
         Returns: string
+      }
+      recalculate_balances_for_cash_type: {
+        Args: { p_cash_type: string }
+        Returns: undefined
       }
       request_password_reset: {
         Args: { user_email: string }
