@@ -60,7 +60,7 @@ const Finances = () => {
     if (user && !loading) {
       fetchData();
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, loading]);
 
   // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
