@@ -21,6 +21,7 @@ import VacationsPage from "./pages/VacationsPage";
 import ContactsPage from "./pages/ContactsPage";
 import ReportsPage from "./pages/ReportsPage";
 import InvitationsPage from "./pages/InvitationsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/vacations" element={<ProtectedRoute><VacationsPage /></ProtectedRoute>} />
             <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             
             {/* Admin-only routes */}
             <Route path="/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />

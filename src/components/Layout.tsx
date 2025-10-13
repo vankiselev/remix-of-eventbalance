@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake, Plane, FileText } from "lucide-react";
+import { LogOut, Menu, X, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake, Plane, FileText, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -158,7 +158,7 @@ const Layout = ({ children }: LayoutProps) => {
 
               {/* User info and logout */}
               <div className="border-t p-3">
-                <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
+                <div className={`flex items-center gap-2 ${sidebarCollapsed ? "justify-center flex-col" : "justify-between"}`}>
                   {!sidebarCollapsed && (
                     <div className="text-sm min-w-0 flex-1">
                       <p className="font-medium text-foreground truncate">{user?.email}</p>
@@ -167,15 +167,26 @@ const Layout = ({ children }: LayoutProps) => {
                       </p>
                     </div>
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleSignOut}
-                    className="h-8 w-8 flex-shrink-0"
-                    title="Выйти"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => navigate('/profile')}
+                      className="h-8 w-8 flex-shrink-0"
+                      title="Настройки профиля"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={handleSignOut}
+                      className="h-8 w-8 flex-shrink-0"
+                      title="Выйти"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
