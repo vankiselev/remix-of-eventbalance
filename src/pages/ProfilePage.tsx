@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2 } from "lucide-react";
 import { formatDate } from '@/utils/dateFormat';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Имя обязательно"),
@@ -359,6 +360,8 @@ const ProfilePage = () => {
             </Form>
           </CardContent>
         </Card>
+
+        <NotificationSettings />
       </div>
     </Layout>
   );

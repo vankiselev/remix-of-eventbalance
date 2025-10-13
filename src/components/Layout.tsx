@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { NotificationsMenu } from "@/components/NotificationsMenu";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -211,6 +212,10 @@ const Layout = ({ children }: LayoutProps) => {
               <h1 className="text-lg font-semibold text-foreground">
                 {getPageTitle()}
               </h1>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <NotificationsMenu />
             </div>
           </div>
         )}
