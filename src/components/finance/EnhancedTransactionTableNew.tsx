@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
   SelectContent,
@@ -71,6 +72,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Load scale from localStorage on mount
   useEffect(() => {
@@ -199,8 +201,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }
   };
 
-  const handleDelete = async (transactionId: string) => {
-    if (!isAdmin) return;
+  const handleDelete = async (transactionId: string, createdBy: string) => {
+    // Allow admins to delete any transaction, or users to delete their own
+    if (!isAdmin && createdBy !== user?.id) return;
 
     try {
       const { error } = await supabase
@@ -224,6 +227,11 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         description: "Не удалось удалить транзакцию",
       });
     }
+  };
+
+  const canEditTransaction = (transaction: Transaction) => {
+    // Admins can edit any transaction, users can edit their own
+    return isAdmin || transaction.created_by === user?.id;
   };
 
   const handleSort = (field: keyof Transaction) => {
@@ -464,21 +472,19 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                   >
                     Скриншот чека
                   </th>
-                  {isAdmin && (
-                    <th 
-                      className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
-                      style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
-                    >
-                      Действия
-                    </th>
-                  )}
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
+                  >
+                    Действия
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td 
-                      colSpan={!userId ? (isAdmin ? 11 : 10) : (isAdmin ? 10 : 9)} 
+                      colSpan={!userId ? 11 : 10} 
                       className="border border-border p-12 text-center text-slate-500"
                     >
                       {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -536,7 +542,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                           noReceiptReason={transaction.no_receipt_reason}
                         />
                       </td>
-                      {isAdmin && (
+                      {canEditTransaction(transaction) && (
                         <td className="border border-border p-2 text-center align-middle bg-white text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -561,7 +567,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                                 Редактировать
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(transaction.id)}
+                                onClick={() => handleDelete(transaction.id, transaction.created_by)}
                                 className="cursor-pointer text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -588,7 +594,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           setSelectedTransaction(null);
         }}
         transaction={selectedTransaction}
-        canEdit={isAdmin}
+        canEdit={selectedTransaction ? canEditTransaction(selectedTransaction) : false}
       />
     </div>
   );

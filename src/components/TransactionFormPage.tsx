@@ -244,7 +244,9 @@ export function TransactionFormPage() {
       });
 
       resetForm();
-      navigate('/finances');
+      
+      // Force refresh by navigating with state
+      navigate('/finances', { replace: true, state: { refresh: Date.now() } });
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast({
