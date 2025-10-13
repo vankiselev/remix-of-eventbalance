@@ -134,9 +134,8 @@ const Finances = () => {
               }));
             }
           } catch (e) {
-            console.warn('Realtime delta apply failed, fallback to refetch.', e);
-          } finally {
-            // Fallback to full refetch to reconcile (handles edge cases and replica lag)
+            console.error('Realtime delta apply failed:', e);
+            // Only refetch on error to reconcile
             fetchData();
           }
         }
