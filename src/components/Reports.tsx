@@ -188,6 +188,7 @@ const Reports = () => {
   const onSubmit = async (data: ReportFormData) => {
     setSubmitting(true);
     try {
+      const userData = await supabase.auth.getUser();
       const { error } = await supabase
         .from("event_reports")
         .insert({
@@ -198,10 +199,25 @@ const Reports = () => {
           onsite_work: data.onsite_work,
           car_kilometers: data.car_kilometers || null,
           without_car: data.without_car || false,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userData.data.user?.id,
         });
 
       if (error) throw error;
+
+      // Send notification to admins
+      const { sendNotificationToAdmins } = await import('@/utils/notifications');
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userData.data.user?.id)
+        .single();
+
+      await sendNotificationToAdmins(
+        'Новый отчет',
+        `${profile?.full_name || 'Сотрудник'} создал отчет по проекту "${data.project_name}"`,
+        'report',
+        { project_name: data.project_name }
+      );
 
       toast({
         title: "Успешно",

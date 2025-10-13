@@ -239,6 +239,21 @@ const AdminReportsView = () => {
       // Always check if financial transaction exists and create/update accordingly
       await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
 
+      // Send notification to employee
+      const { sendNotification } = await import('@/utils/notifications');
+      await sendNotification({
+        userId: selectedReport.user_id,
+        title: isExistingSalary ? 'Зарплата обновлена' : 'Зарплата назначена',
+        message: `${salaryForm.salary_type} ${amount.toLocaleString('ru-RU')} ₽ за отчет "${selectedReport.project_name}"`,
+        type: 'salary',
+        data: { 
+          report_id: selectedReport.id,
+          amount,
+          wallet_type: salaryForm.wallet_type,
+          salary_type: salaryForm.salary_type
+        }
+      });
+
       toast({
         title: "Успешно",
         description: isExistingSalary ? "Зарплата обновлена и синхронизирована с финансами" : "Зарплата назначена и добавлена в финансы",

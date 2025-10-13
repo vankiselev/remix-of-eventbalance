@@ -121,6 +121,28 @@ const VacationSchedule = () => {
 
       if (error) throw error;
 
+      // Send notification to admins
+      const { sendNotificationToAdmins } = await import('@/utils/notifications');
+      const vacationType = {
+        weekend: "Выходной",
+        vacation: "Отпуск",
+        sick: "Больничный",
+        personal: "Личное",
+        fun: "Кайфануть",
+        study: "Учеба"
+      }[formData.vacation_type] || formData.vacation_type;
+
+      await sendNotificationToAdmins(
+        'Новая заявка на отпуск',
+        `${userProfile.full_name} подал заявку: ${vacationType} с ${formData.start_date.toLocaleDateString('ru-RU')} по ${formData.end_date.toLocaleDateString('ru-RU')}`,
+        'vacation',
+        { 
+          vacation_type: formData.vacation_type,
+          start_date: vacationData.start_date,
+          end_date: vacationData.end_date
+        }
+      );
+
       toast({
         title: "Успешно!",
         description: "Заявка на отпуск создана",

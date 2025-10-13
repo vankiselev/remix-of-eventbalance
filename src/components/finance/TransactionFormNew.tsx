@@ -289,6 +289,29 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             new_data: transactionData,
             change_description: 'Transaction created'
           }]);
+
+        // Send notification to admins for large transactions (over 10000)
+        const amount = data.expense_amount || data.income_amount || 0;
+        if (amount >= 10000) {
+          const { sendNotificationToAdmins } = await import('@/utils/notifications');
+          const type = data.expense_amount ? 'расход' : 'приход';
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          await sendNotificationToAdmins(
+            'Крупная транзакция',
+            `${profile?.full_name || 'Сотрудник'} внес ${type} ${amount.toLocaleString('ru-RU')} ₽ (${data.category})`,
+            'transaction',
+            { 
+              amount,
+              category: data.category,
+              description: data.description
+            }
+          );
+        }
       }
 
       // Upload files if any

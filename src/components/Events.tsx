@@ -120,6 +120,25 @@ const Events = () => {
 
       if (error) throw error;
 
+      // Send notification to all users about new event
+      const { sendNotificationToAdmins } = await import('@/utils/notifications');
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      await sendNotificationToAdmins(
+        'Новое мероприятие',
+        `${profile?.full_name || 'Сотрудник'} создал мероприятие "${formData.name}" на ${new Date(formData.start_date).toLocaleDateString('ru-RU')}`,
+        'event',
+        { 
+          event_name: formData.name,
+          start_date: formData.start_date,
+          location: formData.location
+        }
+      );
+
       toast({
         title: "Успешно!",
         description: "Мероприятие создано",
