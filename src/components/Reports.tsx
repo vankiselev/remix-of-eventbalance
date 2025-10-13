@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 
@@ -56,6 +57,10 @@ const Reports = () => {
   const [submitting, setSubmitting] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [deletingReport, setDeletingReport] = useState<Report | null>(null);
   const [userRole, setUserRole] = useState<string>("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
@@ -218,6 +223,93 @@ const Reports = () => {
     }
   };
 
+  const handleEdit = (report: Report) => {
+    setEditingReport(report);
+    form.reset({
+      project_name: report.project_name,
+      start_time: report.start_time,
+      end_time: report.end_time,
+      preparation_work: report.preparation_work,
+      onsite_work: report.onsite_work,
+      car_kilometers: report.car_kilometers || 0,
+      without_car: report.without_car || false,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const onUpdate = async (data: ReportFormData) => {
+    if (!editingReport) return;
+    
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("event_reports")
+        .update({
+          project_name: data.project_name,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          preparation_work: data.preparation_work,
+          onsite_work: data.onsite_work,
+          car_kilometers: data.car_kilometers || null,
+          without_car: data.without_car || false,
+        })
+        .eq("id", editingReport.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: "Отчет обновлен",
+      });
+
+      form.reset();
+      setEditDialogOpen(false);
+      setEditingReport(null);
+      fetchReports();
+    } catch (error) {
+      console.error("Error updating report:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить отчет",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingReport) return;
+    
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("event_reports")
+        .delete()
+        .eq("id", deletingReport.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: "Отчет удален",
+      });
+
+      setDeleteDialogOpen(false);
+      setDeletingReport(null);
+      fetchReports();
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить отчет",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -256,8 +348,18 @@ const Reports = () => {
               reports={reports} 
               dialogOpen={dialogOpen} 
               setDialogOpen={setDialogOpen}
+              editDialogOpen={editDialogOpen}
+              setEditDialogOpen={setEditDialogOpen}
+              deleteDialogOpen={deleteDialogOpen}
+              setDeleteDialogOpen={setDeleteDialogOpen}
+              editingReport={editingReport}
+              deletingReport={deletingReport}
+              setDeletingReport={setDeletingReport}
               form={form}
               onSubmit={onSubmit}
+              onUpdate={onUpdate}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
               submitting={submitting}
               projects={projects}
               projectOpen={projectOpen}
@@ -276,8 +378,18 @@ const Reports = () => {
           reports={reports} 
           dialogOpen={dialogOpen} 
           setDialogOpen={setDialogOpen}
+          editDialogOpen={editDialogOpen}
+          setEditDialogOpen={setEditDialogOpen}
+          deleteDialogOpen={deleteDialogOpen}
+          setDeleteDialogOpen={setDeleteDialogOpen}
+          editingReport={editingReport}
+          deletingReport={deletingReport}
+          setDeletingReport={setDeletingReport}
           form={form}
           onSubmit={onSubmit}
+          onUpdate={onUpdate}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
           submitting={submitting}
           projects={projects}
           projectOpen={projectOpen}
@@ -293,9 +405,19 @@ const Reports = () => {
 const EmployeeReportsView = ({ 
   reports, 
   dialogOpen, 
-  setDialogOpen, 
+  setDialogOpen,
+  editDialogOpen,
+  setEditDialogOpen,
+  deleteDialogOpen,
+  setDeleteDialogOpen,
+  editingReport,
+  deletingReport,
+  setDeletingReport,
   form, 
-  onSubmit, 
+  onSubmit,
+  onUpdate,
+  handleEdit,
+  handleDelete,
   submitting, 
   projects, 
   projectOpen, 
@@ -696,11 +818,340 @@ const EmployeeReportsView = ({
                     <p className="text-sm text-muted-foreground">{report.onsite_work}</p>
                   </div>
                 </div>
+
+                <div className="flex gap-2 mt-4 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(report)}
+                    className="flex-1"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Редактировать
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDeletingReport(report);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="flex-1 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Редактировать отчет</DialogTitle>
+            <DialogDescription>
+              Внесите изменения в отчет по мероприятию
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onUpdate)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="project_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Проект</FormLabel>
+                    <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? projects.find((project: string) => project === field.value)
+                              : "Выберите проект"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Поиск проекта..." />
+                          <CommandList>
+                            <CommandEmpty>Проект не найден.</CommandEmpty>
+                            <CommandGroup>
+                              {projects.map((project: string) => (
+                                <CommandItem
+                                  value={project}
+                                  key={project}
+                                  onSelect={() => {
+                                    form.setValue("project_name", project);
+                                    setProjectOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      project === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {project}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="start_time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Время начала на площадке
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
+                            const minute = field.value?.split(':')[1] || "00";
+                            field.onChange(`${hour}:${minute}`);
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="ЧЧ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                <SelectItem key={hour} value={hour}>
+                                  {hour}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="flex items-center text-muted-foreground">:</span>
+                          <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
+                            const hour = field.value?.split(':')[0] || "00";
+                            field.onChange(`${hour}:${minute}`);
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="ММ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
+                                <SelectItem key={minute} value={minute}>
+                                  {minute}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="end_time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Время окончания на площадке
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Select value={field.value?.split(':')[0] || ""} onValueChange={(hour) => {
+                            const minute = field.value?.split(':')[1] || "00";
+                            field.onChange(`${hour}:${minute}`);
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="ЧЧ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                <SelectItem key={hour} value={hour}>
+                                  {hour}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="flex items-center text-muted-foreground">:</span>
+                          <Select value={field.value?.split(':')[1] || ""} onValueChange={(minute) => {
+                            const hour = field.value?.split(':')[0] || "00";
+                            field.onChange(`${hour}:${minute}`);
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="ММ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((minute) => (
+                                <SelectItem key={minute} value={minute}>
+                                  {minute}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="preparation_work"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Работа по подготовке мероприятия</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Опишите что было сделано для подготовки мероприятия..."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="onsite_work"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Работа на площадке</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Опишите работу, проделанную на площадке..."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="car_kilometers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Пробег на машине (км)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Введите количество километров"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="without_car"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Был без машины
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Отметьте, если работали без использования автомобиля
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Сохранение...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Сохранить изменения
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить отчет?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить отчет по проекту "{deletingReport?.project_name}"? 
+              Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Удаление...
+                </>
+              ) : (
+                'Удалить'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
