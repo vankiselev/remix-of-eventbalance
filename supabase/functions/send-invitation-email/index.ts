@@ -18,22 +18,43 @@ interface InvitationEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("send-invitation-email function called");
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, token, firstName, lastName, role }: InvitationEmailRequest = await req.json();
+    // Check environment variables
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const siteUrl = Deno.env.get("SITE_URL");
+    
+    console.log("Environment check:", {
+      hasResendApiKey: !!resendApiKey,
+      siteUrl: siteUrl || "not set (using default)",
+    });
 
-    const baseUrl = Deno.env.get("SITE_URL") || "https://eventbalance.ru";
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+
+    const { email, token, firstName, lastName, role }: InvitationEmailRequest = await req.json();
+    
+    console.log("Processing invitation for:", { email, role, hasFirstName: !!firstName, hasLastName: !!lastName });
+
+    const baseUrl = siteUrl || "https://eventbalance.ru";
     const inviteUrl = `${baseUrl}/invite?token=${token}`;
+    
+    console.log("Generated invite URL:", inviteUrl);
     
     const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
     const roleDisplay = role === 'admin' ? 'Администратор' : 'Сотрудник';
 
+    console.log("Sending email via Resend...");
+    
     const emailResponse = await resend.emails.send({
-      from: "EventBalance <onboarding@resend.dev>",
+      from: "EventBalance <noreply@eventbalance.ru>",
       to: [email],
       subject: "Приглашение в EventBalance",
       html: `
@@ -72,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Invitation email sent successfully:", emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify(emailResponse), {
       status: 200,
@@ -83,8 +104,17 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-invitation-email function:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
