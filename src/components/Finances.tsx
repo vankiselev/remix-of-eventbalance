@@ -62,7 +62,7 @@ const Finances = () => {
     }
   }, [user, isAdmin]);
 
-  // Realtime subscription for automatic updates
+  // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
     if (!user) return;
 
@@ -76,8 +76,69 @@ const Finances = () => {
           table: 'financial_transactions'
         },
         (payload) => {
-          console.log('Transaction change detected:', payload);
-          fetchData(); // Refresh data on any change
+          try {
+            const excludedCategory = 'Передано или получено от Леры/Насти/Вани';
+            const calc = (row: any) => {
+              if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
+              const income = Number(row.income_amount || 0);
+              const expense = Number(row.expense_amount || 0);
+              const delta = row.category === excludedCategory ? 0 : (income - expense);
+              return {
+                total: delta,
+                nastya: row.cash_type === 'Наличка Настя' ? delta : 0,
+                lera: row.cash_type === 'Наличка Лера' ? delta : 0,
+                vanya: row.cash_type === 'Наличка Ваня' ? delta : 0,
+                created_by: row.created_by
+              };
+            };
+
+            let d = { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined as string | undefined };
+            if (payload.eventType === 'INSERT') {
+              d = calc(payload.new);
+            } else if (payload.eventType === 'DELETE') {
+              const x = calc(payload.old);
+              d = { ...x, total: -x.total, nastya: -x.nastya, lera: -x.lera, vanya: -x.vanya };
+            } else if (payload.eventType === 'UPDATE') {
+              const n = calc(payload.new);
+              const o = calc(payload.old);
+              d = { total: n.total - o.total, nastya: n.nastya - o.nastya, lera: n.lera - o.lera, vanya: n.vanya - o.vanya, created_by: payload.new?.created_by } as any;
+            }
+
+            // Update personal summary instantly
+            if (d.created_by && d.created_by === user.id) {
+              setUserSummary(prev => ({
+                total_cash: prev.total_cash + d.total,
+                cash_nastya: prev.cash_nastya + d.nastya,
+                cash_lera: prev.cash_lera + d.lera,
+                cash_vanya: prev.cash_vanya + d.vanya,
+              }));
+            }
+
+            // Update selected employee summary instantly (for admin viewing employee)
+            if (selectedEmployee?.id && d.created_by === selectedEmployee.id) {
+              setSelectedEmployeeSummary(prev => ({
+                total_cash: prev.total_cash + d.total,
+                cash_nastya: prev.cash_nastya + d.nastya,
+                cash_lera: prev.cash_lera + d.lera,
+                cash_vanya: prev.cash_vanya + d.vanya,
+              }));
+            }
+
+            // Update company summary instantly for admins
+            if (isAdmin) {
+              setCompanySummary(prev => ({
+                total_cash: prev.total_cash + d.total,
+                cash_nastya: prev.cash_nastya + d.nastya,
+                cash_lera: prev.cash_lera + d.lera,
+                cash_vanya: prev.cash_vanya + d.vanya,
+              }));
+            }
+          } catch (e) {
+            console.warn('Realtime delta apply failed, fallback to refetch.', e);
+          } finally {
+            // Fallback to full refetch to reconcile (handles edge cases and replica lag)
+            fetchData();
+          }
         }
       )
       .subscribe();
@@ -85,7 +146,7 @@ const Finances = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, isAdmin]);
+  }, [user, isAdmin, selectedEmployee]);
 
   const checkUserRole = async () => {
     try {
