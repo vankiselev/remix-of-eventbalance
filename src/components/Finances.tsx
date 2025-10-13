@@ -81,15 +81,14 @@ const Finances = () => {
               if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
               const income = Number(row.income_amount || 0);
               const expense = Number(row.expense_amount || 0);
-              const delta = income - expense; // учитываем все категории, включая переводы
-              const cashType = row.cash_type;
-              return {
-                total: delta,
-                nastya: cashType === 'Наличка Настя' ? delta : 0,
-                lera: cashType === 'Наличка Лера' ? delta : 0,
-                vanya: cashType === 'Наличка Ваня' ? delta : 0,
-                created_by: row.created_by
-              };
+              const delta = income - expense; // дельта по транзакции
+              const cashType = row.cash_type as string | undefined;
+              const nastya = cashType === 'Наличка Настя' ? delta : 0;
+              const lera = cashType === 'Наличка Лера' ? delta : 0;
+              const vanya = cashType === 'Наличка Ваня' ? delta : 0;
+              // ВАЖНО: total = сумма дельт по кошелькам, чтобы он всегда соответствовал их сумме
+              const total = nastya + lera + vanya;
+              return { total, nastya, lera, vanya, created_by: row.created_by };
             };
 
             let d = { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined as string | undefined };
