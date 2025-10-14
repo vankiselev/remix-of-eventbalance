@@ -84,11 +84,14 @@ const Layout = ({ children }: LayoutProps) => {
         <>
           {/* Desktop Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-            <div className="flex h-16 items-center justify-between px-6">
-              {/* Logo and Menu */}
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground" style={{ width: sidebarCollapsed ? '64px' : '256px' }}>EventBalance</h1>
-                
+            <div className="flex h-16 items-center px-6">
+              {/* Logo - fixed width matching sidebar */}
+              <div className={`flex-shrink-0 ${sidebarCollapsed ? 'w-4' : 'w-52'} transition-all duration-300`}>
+                <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
+              </div>
+              
+              {/* Menu items */}
+              <div className="flex items-center gap-2 flex-1">
                 {location.pathname === '/finances' && userRole === 'admin' && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -96,7 +99,6 @@ const Layout = ({ children }: LayoutProps) => {
                         variant="ghost" 
                         size="sm"
                         className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
-                        style={{ marginLeft: '-12px' }}
                       >
                         Редактирование
                       </Button>
