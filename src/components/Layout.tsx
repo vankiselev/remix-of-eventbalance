@@ -26,6 +26,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [headerHovered, setHeaderHovered] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   
   const sidebarCollapsed = !sidebarHovered;
@@ -85,7 +86,11 @@ const Layout = ({ children }: LayoutProps) => {
       {!isMobile ? (
         <>
           {/* Desktop Header */}
-          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
+          <header 
+            className="sticky top-0 z-50 w-full border-b bg-card shadow-sm"
+            onMouseEnter={() => setHeaderHovered(true)}
+            onMouseLeave={() => setHeaderHovered(false)}
+          >
             <div className="flex h-16 items-center px-6">
               {/* Logo - fixed width matching sidebar with safe zone */}
               <div className={`flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'min-w-[180px]' : 'w-64'}`}>
@@ -94,13 +99,13 @@ const Layout = ({ children }: LayoutProps) => {
               
               {/* Menu items */}
               <div className="flex items-center gap-2 flex-1">
-                {location.pathname === '/finances' && userRole === 'admin' && (
+                {location.pathname === '/finances' && userRole === 'admin' && headerHovered && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0 animate-fade-in"
                       >
                         Редактирование
                       </Button>
