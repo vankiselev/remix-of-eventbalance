@@ -70,7 +70,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     { path: "/reports", label: "Отчеты", icon: FileText },
-    ...(userRole === 'admin' ? [{ path: "/invitations", label: t('invitations'), icon: UserPlus }] : []),
+    ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
   const getPageTitle = () => {
