@@ -578,9 +578,7 @@ const Staff = () => {
                       {hasPermission('staff.view_all') && user.salary && (
                         <div className="text-sm">
                           <span className="font-medium">Зарплата:</span>{" "}
-                          <span className="text-green-600 font-semibold">
-                            {formatCurrency(user.salary)}
-                          </span>
+                          <span>{formatCurrency(user.salary)}</span>
                         </div>
                       )}
                       {user.hire_date && (
@@ -607,7 +605,7 @@ const Staff = () => {
                       {/* Cash on hand summary */}
                       {hasPermission('staff.view_all') && user.total_cash !== undefined && (
                         <div className="pt-3 border-t space-y-2">
-                          <div className="text-sm font-semibold">
+                          <div className="text-sm font-semibold text-center">
                             Деньги на руках: {" "}
                             <span className={user.total_cash >= 0 ? "text-green-600" : "text-red-600"}>
                               {formatCurrency(user.total_cash)}
