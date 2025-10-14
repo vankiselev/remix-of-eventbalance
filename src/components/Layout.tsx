@@ -48,6 +48,15 @@ const Layout = ({ children }: LayoutProps) => {
     fetchUserProfile();
   }, [user]);
 
+  const displayName = userProfile?.full_name || (user as any)?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Пользователь';
+  const avatarUrl = userProfile?.avatar_url || (user as any)?.user_metadata?.avatar_url || null;
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -157,16 +166,16 @@ const Layout = ({ children }: LayoutProps) => {
                   className="gap-2"
                 >
                   <Avatar className="h-8 w-8">
-                    {userProfile?.avatar_url && (
-                      <AvatarImage src={userProfile.avatar_url} alt={userProfile.full_name} />
+                    {avatarUrl && (
+                      <AvatarImage src={avatarUrl} alt={displayName} />
                     )}
                     <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {userProfile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden lg:flex flex-col items-start">
                     <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
-                      {userProfile?.full_name || 'Пользователь'}
+                      {displayName}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                       {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
