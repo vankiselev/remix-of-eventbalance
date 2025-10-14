@@ -1213,10 +1213,6 @@ export type Database = {
         Args: { token_value: string }
         Returns: string
       }
-      is_active_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
       log_profile_edit: {
         Args: {
           p_field_name: string
