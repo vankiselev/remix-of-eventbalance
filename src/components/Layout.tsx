@@ -3,9 +3,8 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake, Plane, FileText, Settings, MoreVertical, Download, Upload, Trash2 } from "lucide-react";
+import { LogOut, Menu, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake, Plane, FileText, Settings, Download, Upload, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -96,8 +95,11 @@ const Layout = ({ children }: LayoutProps) => {
                 {location.pathname === '/finances' && userRole === 'admin' && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <MoreVertical className="h-4 w-4 mr-2" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
+                      >
                         Редактирование
                       </Button>
                     </DropdownMenuTrigger>
