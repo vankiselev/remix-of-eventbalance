@@ -85,25 +85,22 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Desktop Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-16 items-center justify-between px-6">
-              {/* Logo */}
+              {/* Logo and Menu */}
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
-              </div>
-
-              {/* User Profile & Actions */}
-              <div className="flex items-center gap-3">
+                
                 {location.pathname === '/finances' && userRole === 'admin' && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0 ml-4"
                       >
                         Редактирование
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-background z-50">
+                    <DropdownMenuContent align="start" className="w-56 bg-background z-50">
                       <DropdownMenuItem onClick={onExport}>
                         <Download className="mr-2 h-4 w-4" />
                         Экспорт CSV
@@ -122,6 +119,10 @@ const Layout = ({ children }: LayoutProps) => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
+              </div>
+
+              {/* User Profile & Actions */}
+              <div className="flex items-center gap-3">
                 <NotificationsMenu />
                 <Button
                   variant="ghost"
