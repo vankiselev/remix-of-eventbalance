@@ -7,6 +7,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  userRole: string | null;
+  userProfile: { full_name: string; avatar_url: string | null } | null;
   signOut: () => Promise<void>;
 }
 
@@ -24,35 +26,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
 
-  // Check employment status when user changes (backup check for existing sessions)
+  // Load user profile and check employment status
   useEffect(() => {
-    const checkEmploymentStatus = async () => {
-      if (!user) return;
+    const loadUserProfile = async () => {
+      if (!user) {
+        setUserRole(null);
+        setUserProfile(null);
+        return;
+      }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('employment_status, termination_date')
-        .eq('id', user.id)
+      const { data } = await supabase
+        .rpc("get_user_basic_profile")
         .single();
+      
+      if (data) {
+        setUserRole(data.role || 'employee');
+        setUserProfile({
+          full_name: data.full_name || 'Пользователь',
+          avatar_url: data.avatar_url || null
+        });
 
-      if (profile?.employment_status === 'terminated') {
-        const terminationDate = profile.termination_date 
-          ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
-          : '';
-        const message = terminationDate 
-          ? `Доступ закрыт! Вы были уволены ${terminationDate}`
-          : 'Доступ закрыт! Вы были уволены';
-        toast.error(message, { duration: 10000 });
-        await supabase.auth.signOut();
-        setSession(null);
-        setUser(null);
-        window.location.href = '/auth';
+        // Check employment status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('employment_status, termination_date')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.employment_status === 'terminated') {
+          const terminationDate = profile.termination_date 
+            ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
+            : '';
+          const message = terminationDate 
+            ? `Доступ закрыт! Вы были уволены ${terminationDate}`
+            : 'Доступ закрыт! Вы были уволены';
+          toast.error(message, { duration: 10000 });
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setUserProfile(null);
+          window.location.href = '/auth';
+        }
       }
     };
 
     if (user) {
-      checkEmploymentStatus();
+      loadUserProfile();
     }
   }, [user]);
 
@@ -81,6 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
+      setUserRole(null);
+      setUserProfile(null);
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -90,6 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     user,
     loading,
+    userRole,
+    userProfile,
     signOut,
   };
 

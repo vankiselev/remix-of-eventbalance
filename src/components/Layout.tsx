@@ -18,7 +18,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { signOut, user } = useAuth();
+  const { signOut, user, userRole, userProfile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -26,30 +26,9 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (user) {
-        setProfileLoading(true);
-        const { data } = await supabase
-          .rpc("get_user_basic_profile")
-          .single();
-        setUserRole(data?.role || 'employee');
-        setUserProfile({
-          full_name: data?.full_name || 'Пользователь',
-          avatar_url: data?.avatar_url || null
-        });
-        setProfileLoading(false);
-      }
-    };
-    fetchUserProfile();
-  }, [user]);
 
   const displayName = userProfile?.full_name || (user as any)?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Пользователь';
   const avatarUrl = userProfile?.avatar_url || (user as any)?.user_metadata?.avatar_url || null;
@@ -162,7 +141,7 @@ const Layout = ({ children }: LayoutProps) => {
               {/* User Profile & Actions */}
               <div className="flex items-center gap-3">
                 <NotificationsMenu />
-                {!profileLoading && (
+                {userProfile && (
                   <Button
                     variant="ghost"
                     size="sm"
