@@ -86,9 +86,9 @@ const CashOnHandCard = () => {
 
   const getCashTypeDisplay = (type: string, amount: number) => {
     const names = {
-      nastya: 'Настя',
-      lera: 'Лера', 
-      vanya: 'Ваня'
+      nastya: 'Наличка Настя',
+      lera: 'Наличка Лера', 
+      vanya: 'Наличка Ваня'
     };
     
     return {
