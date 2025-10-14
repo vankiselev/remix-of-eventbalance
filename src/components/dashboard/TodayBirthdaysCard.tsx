@@ -57,14 +57,14 @@ const TodayBirthdaysCard = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Cake className="w-5 h-5 text-primary" />
             День рождения сегодня
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground py-4">
             Загрузка...
           </div>
@@ -74,17 +74,17 @@ const TodayBirthdaysCard = () => {
   }
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Cake className="w-5 h-5 text-primary" />
           День рождения сегодня 🎉
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col">
         {birthdayEmployees.length === 0 ? (
-          <div className="text-center text-muted-foreground py-4">
-            <Cake className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
+            <Cake className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>Сегодня нет именинников</p>
           </div>
         ) : (

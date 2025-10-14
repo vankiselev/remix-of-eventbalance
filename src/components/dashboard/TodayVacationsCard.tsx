@@ -96,15 +96,17 @@ const TodayVacationsCard = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Кто сегодня в отпуске</CardTitle>
-          <Plane className="h-4 w-4 text-muted-foreground" />
+      <Card className="h-full flex flex-col">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plane className="w-5 h-5 text-primary" />
+            Кто сегодня в отпуске
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="animate-pulse">
-            <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-muted rounded w-1/2"></div>
+        <CardContent className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-center">
+            <div className="h-4 bg-muted rounded w-3/4 mb-2 mx-auto"></div>
+            <div className="h-3 bg-muted rounded w-1/2 mx-auto"></div>
           </div>
         </CardContent>
       </Card>
@@ -112,37 +114,41 @@ const TodayVacationsCard = () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Кто сегодня в отпуске</CardTitle>
-        <Plane className="h-4 w-4 text-muted-foreground" />
+    <Card className="h-full flex flex-col">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Plane className="w-5 h-5 text-primary" />
+          Кто сегодня в отпуске
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col">
         {todayVacations.length === 0 ? (
-          <div className="text-center py-4">
-            <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Все на работе!</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>Все на работе!</p>
           </div>
         ) : (
           <div className="space-y-3">
             {todayVacations.map((vacation, index) => (
-              <div key={vacation.id || `vacation-${index}`} className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">
-                    {vacation.employee_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateRange(vacation.start_date, vacation.end_date)}
-                  </p>
-                  {vacation.description && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {vacation.description}
+              <div key={vacation.id || `vacation-${index}`} className="border rounded-lg p-3 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {vacation.employee_name}
                     </p>
-                  )}
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateRange(vacation.start_date, vacation.end_date)}
+                    </p>
+                    {vacation.description && (
+                      <p className="text-xs text-muted-foreground truncate mt-1">
+                        {vacation.description}
+                      </p>
+                    )}
+                  </div>
+                  <Badge className={getVacationTypeColor(vacation.vacation_type)} variant="secondary">
+                    {getVacationTypeLabel(vacation.vacation_type)}
+                  </Badge>
                 </div>
-                <Badge className={getVacationTypeColor(vacation.vacation_type)} variant="secondary">
-                  {getVacationTypeLabel(vacation.vacation_type)}
-                </Badge>
               </div>
             ))}
           </div>
