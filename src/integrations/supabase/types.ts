@@ -1486,6 +1486,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_admin_user: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       log_profile_edit: {
         Args: {
           p_field_name: string
