@@ -90,14 +90,17 @@ const Staff = () => {
 
       setCurrentUserProfile(currentProfile);
 
-      // Fetch all profiles - only admins can see all profiles with financial data
+      // Fetch all profiles - admins see full data, employees see basic data only
       let profilesData;
       if (currentProfile?.role === "admin") {
         const { data } = await supabase.rpc("get_admin_profiles");
         profilesData = data;
       } else {
-        // Non-admin users can only see their own basic profile
-        profilesData = [currentProfile];
+        // Non-admin users can see all basic profiles (without financial data)
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, email, full_name, role, phone, birth_date, avatar_url, created_at");
+        profilesData = data;
       }
 
       setProfiles(profilesData || []);
