@@ -948,36 +948,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_roles: {
-        Row: {
-          assigned_at: string
-          assigned_by: string | null
-          id: string
-          revoked_at: string | null
-          revoked_by: string | null
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          assigned_at?: string
-          assigned_by?: string | null
-          id?: string
-          revoked_at?: string | null
-          revoked_by?: string | null
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          assigned_at?: string
-          assigned_by?: string | null
-          id?: string
-          revoked_at?: string | null
-          revoked_by?: string | null
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
       vacations: {
         Row: {
           created_at: string
@@ -1066,13 +1036,6 @@ export type Database = {
     Functions: {
       accept_invitation: {
         Args: { invitation_token: string }
-        Returns: boolean
-      }
-      assign_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
         Returns: boolean
       }
       calculate_user_cash_totals: {
@@ -1242,20 +1205,9 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_user_highest_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
       get_user_role: {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
       }
       hash_token: {
         Args: { token_value: string }
@@ -1294,13 +1246,6 @@ export type Database = {
         Args: { new_password: string; reset_token: string }
         Returns: boolean
       }
-      revoke_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       terminate_employee: {
         Args: { employee_user_id: string; termination_reason_text?: string }
         Returns: boolean
@@ -1311,7 +1256,6 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "admin" | "employee"
       user_role: "admin" | "employee"
     }
     CompositeTypes: {
@@ -1440,7 +1384,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "employee"],
       user_role: ["admin", "employee"],
     },
   },

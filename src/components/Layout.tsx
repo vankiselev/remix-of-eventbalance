@@ -81,7 +81,7 @@ const Layout = ({ children }: LayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full">
+    <div className="min-h-screen-safe bg-background flex flex-col w-full">
       {!isMobile ? (
         <>
           {/* Desktop Header */}
@@ -232,10 +232,10 @@ const Layout = ({ children }: LayoutProps) => {
             </main>
           </div>
 
-          {/* Footer - Always at Bottom */}
-          <footer className="border-t bg-card mt-auto h-24 flex-shrink-0">
-            <div className="px-6 h-full flex items-center">
-              <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
+          {/* Footer */}
+          <footer className="border-t bg-card">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <p>© 2025 EventBalance. Все права защищены.</p>
                 <div className="flex items-center gap-4">
                   <a href="#" className="hover:text-foreground transition-colors">О компании</a>
