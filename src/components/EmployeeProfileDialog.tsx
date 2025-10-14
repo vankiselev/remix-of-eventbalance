@@ -603,15 +603,15 @@ export const EmployeeProfileDialog = ({
               {/* Individual Balances - 3 columns */}
               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Настя</p>
+                  <p className="text-xs text-muted-foreground mb-1">Наличка Настя</p>
                   <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_nastya)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Лера</p>
+                  <p className="text-xs text-muted-foreground mb-1">Наличка Лера</p>
                   <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_lera)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Ваня</p>
+                  <p className="text-xs text-muted-foreground mb-1">Наличка Ваня</p>
                   <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_vanya)}</p>
                 </div>
               </div>
