@@ -553,35 +553,37 @@ export const EmployeeProfileDialog = ({
         <div className="space-y-6">
           {/* Avatar Section */}
           <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={currentUser.avatar_url} />
-              <AvatarFallback>
-                {currentUser.full_name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <label htmlFor="avatar-upload" className="cursor-pointer">
+                <Avatar className="w-20 h-20">
+                  <AvatarImage src={currentUser.avatar_url} />
+                  <AvatarFallback>
+                    {currentUser.full_name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Overlay on hover */}
+                <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                  <div className="text-white text-center">
+                    <Upload className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-xs font-medium">Изменить фото</span>
+                  </div>
+                </div>
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </div>
             <div>
               <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
               <p className="text-sm text-muted-foreground">{currentUser.email}</p>
               <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'}>
                 {currentUser.role === 'admin' ? 'Администратор' : 'Сотрудник'}
               </Badge>
-              <div className="mt-2">
-                <label htmlFor="avatar-upload" className="cursor-pointer">
-                  <Button variant="outline" size="sm" disabled={uploading} asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      {uploading ? "Загрузка..." : "Изменить фото"}
-                    </span>
-                  </Button>
-                </label>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
-              </div>
             </div>
           </div>
 
