@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, BellOff, Smartphone, Globe } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   subscribeToPushNotifications, 
@@ -123,6 +124,16 @@ export const NotificationSettings = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Status indicator */}
+            {isPushEnabled && (
+              <Alert className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20">
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertDescription className="text-green-900 dark:text-green-100">
+                  Web Push-уведомления активны. Вы будете получать уведомления даже при закрытой вкладке.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-primary" />
@@ -134,8 +145,14 @@ export const NotificationSettings = () => {
                     Получайте уведомления в браузере, даже когда вкладка закрыта
                   </p>
                   {notificationPermission === 'denied' && (
-                    <p className="text-xs text-destructive mt-1">
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
                       Разрешение отклонено. Измените настройки браузера.
+                    </p>
+                  )}
+                  {notificationPermission === 'granted' && !isPushEnabled && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Разрешение получено. Включите уведомления.
                     </p>
                   )}
                 </div>

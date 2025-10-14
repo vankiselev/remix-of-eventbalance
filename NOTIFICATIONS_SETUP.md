@@ -58,16 +58,42 @@ await supabase.functions.invoke('send-push-notification', {
 
 ### Генерация VAPID ключей
 
-1. Перейдите на https://www.stephane-quantin.com/en/tools/generators/vapid-keys
-2. Сгенерируйте пару ключей (публичный и приватный)
-3. Замените `VAPID_PUBLIC_KEY` в файле `src/utils/pushNotifications.ts`
-4. Сохраните приватный ключ для настройки отправки push-уведомлений
+**Способ 1: Используя скрипт**
+```bash
+npx tsx scripts/generate-vapid-keys.ts
+```
 
-### Включение Web Push
+**Способ 2: Онлайн генератор**
+1. Перейдите на https://www.stephane-quantin.com/en/tools/generators/vapid-keys
+2. Сгенерируйте пару ключей
+
+### Настройка ключей
+
+1. **Публичный ключ** - добавьте в `.env`:
+   ```
+   VITE_VAPID_PUBLIC_KEY=ваш_публичный_ключ
+   ```
+
+2. **Приватный ключ** - добавьте в Supabase Secrets:
+   - Откройте [Supabase Dashboard → Settings → Edge Functions](https://supabase.com/dashboard/project/wpxhmajdeunabximyfln/settings/functions)
+   - Добавьте секрет: `VAPID_PRIVATE_KEY` со значением вашего приватного ключа
+   - Также добавьте: `VAPID_PUBLIC_KEY` со значением публичного ключа
+
+### Включение Web Push для пользователей
 
 Пользователи могут включить push-уведомления:
-1. Нажав на колокольчик в верхней панели
-2. В настройках профиля (если добавите `NotificationSettings`)
+1. Через меню уведомлений (колокольчик в верхней панели)
+2. В настройках профиля
+3. При первом входе система может предложить включить уведомления
+
+### Проверка работы
+
+После настройки ключей:
+1. Откройте приложение в браузере
+2. Включите Web Push-уведомления в настройках
+3. Создайте тестовое уведомление (например, новую транзакцию)
+4. Закройте вкладку браузера
+5. Вы должны увидеть системное уведомление
 
 ## 📱 Мобильные уведомления (iOS/Android)
 
@@ -168,12 +194,22 @@ await supabase.functions.invoke('send-push-notification', {
 - Push-подписки привязаны к конкретному пользователю
 - Edge Function использует Service Role для создания уведомлений
 
-## 📝 TODO для полной реализации Web Push
+## ✅ Web Push полностью реализован!
 
-1. Установить npm пакет `web-push` в Edge Function
-2. Настроить VAPID ключи в Supabase Secrets
-3. Обновить Edge Function для отправки реальных push-уведомлений
-4. Протестировать на разных браузерах
+Система Web Push готова к использованию:
+- ✅ VAPID ключи настраиваются через скрипт или онлайн
+- ✅ Edge Function отправляет реальные push-уведомления
+- ✅ Service Worker обрабатывает уведомления и навигацию
+- ✅ Поддержка как веб, так и нативных платформ
+- ✅ Автоматическая очистка невалидных подписок
+
+### Поддержка браузеров
+
+- ✅ Chrome/Edge (desktop & mobile)
+- ✅ Firefox (desktop & mobile)
+- ✅ Safari (desktop, macOS 16.4+)
+- ⚠️ Safari iOS - только в PWA режиме (iOS 16.4+)
+- ✅ Opera (desktop & mobile)
 
 ## 🎯 Рекомендации
 

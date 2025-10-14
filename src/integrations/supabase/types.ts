@@ -940,28 +940,37 @@ export type Database = {
         Row: {
           auth: string
           created_at: string
+          device_token: string | null
           device_type: string
           endpoint: string
           id: string
           p256dh: string
+          platform: string
+          subscription_data: Json | null
           user_id: string
         }
         Insert: {
           auth: string
           created_at?: string
+          device_token?: string | null
           device_type?: string
           endpoint: string
           id?: string
           p256dh: string
+          platform: string
+          subscription_data?: Json | null
           user_id: string
         }
         Update: {
           auth?: string
           created_at?: string
+          device_token?: string | null
           device_type?: string
           endpoint?: string
           id?: string
           p256dh?: string
+          platform?: string
+          subscription_data?: Json | null
           user_id?: string
         }
         Relationships: []

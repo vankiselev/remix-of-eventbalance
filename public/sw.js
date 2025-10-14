@@ -8,6 +8,7 @@ self.addEventListener('push', function(event) {
     body: 'У вас новое уведомление',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
+    data: {},
   };
 
   if (event.data) {
@@ -15,13 +16,27 @@ self.addEventListener('push', function(event) {
       const data = event.data.json();
       notificationData = {
         title: data.title || notificationData.title,
-        body: data.message || data.body || notificationData.body,
+        body: data.body || data.message || notificationData.body,
         icon: data.icon || notificationData.icon,
         badge: data.badge || notificationData.badge,
         data: data.data || {},
       };
+      
+      // Add action buttons based on notification type
+      const actions = [];
+      if (data.data?.type) {
+        actions.push({
+          action: 'open',
+          title: 'Открыть',
+          icon: '/favicon.ico'
+        });
+      }
+      notificationData.actions = actions;
+      
     } catch (e) {
       console.error('Error parsing push data:', e);
+      // If not JSON, try to use as plain text
+      notificationData.body = event.data.text();
     }
   }
 
@@ -31,8 +46,11 @@ self.addEventListener('push', function(event) {
       icon: notificationData.icon,
       badge: notificationData.badge,
       data: notificationData.data,
+      actions: notificationData.actions || [],
       vibrate: [200, 100, 200],
-      tag: 'notification-' + Date.now(),
+      tag: notificationData.data?.notificationId || 'notification-' + Date.now(),
+      requireInteraction: false,
+      silent: false,
     })
   );
 });
@@ -42,19 +60,55 @@ self.addEventListener('notificationclick', function(event) {
   
   event.notification.close();
 
+  // Determine URL based on notification data
+  let targetUrl = '/';
+  const notificationData = event.notification.data;
+  
+  if (notificationData) {
+    // Route to specific pages based on notification type
+    switch (notificationData.type) {
+      case 'transaction':
+        targetUrl = '/finances';
+        break;
+      case 'salary':
+        targetUrl = '/finances';
+        break;
+      case 'event':
+        targetUrl = '/events';
+        break;
+      case 'vacation':
+        targetUrl = '/vacations';
+        break;
+      case 'report':
+        targetUrl = '/reports';
+        break;
+      case 'system':
+        targetUrl = '/';
+        break;
+      default:
+        targetUrl = '/';
+    }
+  }
+
+  // Handle action buttons
+  if (event.action === 'open') {
+    // Same as clicking the notification
+  }
+
   // Open the app when notification is clicked
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(function(clientList) {
-        // If a window is already open, focus it
+        // If a window is already open, focus it and navigate
         for (let client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return client.focus();
+            client.focus();
+            return client.navigate(targetUrl);
           }
         }
         // Otherwise, open a new window
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow(targetUrl);
         }
       })
   );

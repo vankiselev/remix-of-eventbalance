@@ -18,9 +18,10 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
-// VAPID public key - you'll need to generate this
-// Generate keys at: https://www.stephane-quantin.com/en/tools/generators/vapid-keys
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr6xi1nWSqxPwUu5Y2XAW5U';
+// VAPID public key for web push
+// To generate new keys, run: npx tsx scripts/generate-vapid-keys.ts
+// Or use: https://www.stephane-quantin.com/en/tools/generators/vapid-keys
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr6xi1nWSqxPwUu5Y2XAW5U';
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
@@ -72,13 +73,16 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
           // Save token to database
           const { error } = await supabase
             .from('push_subscriptions')
-            .upsert({
+            .upsert([{
               user_id: user.user.id,
+              platform: Capacitor.getPlatform(), // 'ios' or 'android'
               endpoint: token.value,
-              p256dh: '', // Not needed for native
-              auth: '', // Not needed for native
-              device_type: Capacitor.getPlatform(), // 'ios' or 'android'
-            }, {
+              device_token: token.value,
+              subscription_data: { token: token.value },
+              auth: '',
+              p256dh: '',
+              device_type: Capacitor.getPlatform(),
+            }], {
               onConflict: 'user_id,endpoint',
             });
 
@@ -135,13 +139,18 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       
       const { error } = await supabase
         .from('push_subscriptions')
-        .upsert({
+        .upsert([{
           user_id: user.user.id,
+          platform: 'web',
           endpoint: subscriptionJson.endpoint!,
-          p256dh: subscriptionJson.keys!.p256dh,
+          subscription_data: {
+            endpoint: subscriptionJson.endpoint,
+            keys: subscriptionJson.keys,
+          },
           auth: subscriptionJson.keys!.auth,
+          p256dh: subscriptionJson.keys!.p256dh,
           device_type: 'web',
-        }, {
+        }], {
           onConflict: 'user_id,endpoint',
         });
 
@@ -171,7 +180,7 @@ export const unsubscribeFromPushNotifications = async (): Promise<boolean> => {
           .from('push_subscriptions')
           .delete()
           .eq('user_id', user.user.id)
-          .eq('device_type', Capacitor.getPlatform());
+          .eq('platform', Capacitor.getPlatform());
 
         if (error) throw error;
       }
@@ -225,7 +234,7 @@ export const checkPushSubscription = async (): Promise<boolean> => {
         .from('push_subscriptions')
         .select('id')
         .eq('user_id', user.user.id)
-        .eq('device_type', Capacitor.getPlatform())
+        .eq('platform', Capacitor.getPlatform())
         .single();
 
       return !!data;
