@@ -119,7 +119,7 @@ const CashOnHandCard = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center justify-center gap-2">
           <Wallet className="w-5 h-5 text-primary" />
           Деньги на руках
         </CardTitle>
