@@ -14,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PhoneInputRU } from "@/components/ui/phone-input-ru";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
+import { useRoles } from "@/hooks/useRoles";
 import { Upload, ChevronDown, History, Wallet, UserX, Trash2, UserCheck } from "lucide-react";
 import {
   AlertDialog,
@@ -41,7 +43,7 @@ const profileSchema = z.object({
   position: z.string().optional(), // Made optional for administrators
   hire_date: z.string().optional(), // Made optional for administrators
   salary: z.string().optional(),
-  role: z.enum(['admin', 'employee']).optional(),
+  role_id: z.string().optional(),
   notes: z.string().optional(), // Added notes field
 });
 
@@ -82,6 +84,10 @@ interface Profile {
   employment_status?: string;
   termination_date?: string;
   termination_reason?: string;
+}
+
+interface RoleAssignment {
+  role_id: string;
 }
 
 interface CashSummary {
@@ -133,8 +139,10 @@ export const EmployeeProfileDialog = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
+  const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { roles } = useRoles();
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
@@ -152,7 +160,7 @@ export const EmployeeProfileDialog = ({
       position: "",
       hire_date: "",
       salary: "",
-      role: "employee",
+      role_id: "",
       notes: "",
     },
   });
@@ -161,6 +169,21 @@ export const EmployeeProfileDialog = ({
     if ((employee || profile) && isOpen) {
       const userData = currentUser;
       if (!userData) return;
+
+      // Fetch user role assignments
+      const fetchUserRoles = async () => {
+        const { data } = await supabase
+          .from('user_role_assignments')
+          .select('role_id')
+          .eq('user_id', userData.id);
+        
+        if (data && data.length > 0) {
+          setUserRoleAssignments(data);
+          form.setValue('role_id', data[0].role_id);
+        }
+      };
+
+      fetchUserRoles();
 
       form.reset({
         full_name: userData.full_name,
@@ -171,7 +194,7 @@ export const EmployeeProfileDialog = ({
         position: employee?.position || "",
         hire_date: employee?.hire_date || "",
         salary: employee?.salary?.toString() || "",
-        role: userData.role,
+        role_id: "",
         notes: "", // Will be populated if we add notes to database
       });
       
@@ -307,9 +330,25 @@ export const EmployeeProfileDialog = ({
       }
 
       // Only super admin can change role
-      if (canEditRole && data.role && data.role !== currentProfile.role) {
-        profileUpdates.role = data.role;
-        await logFieldChange("role", currentProfile.role, data.role);
+      if (canEditRole && data.role_id && data.role_id !== userRoleAssignments[0]?.role_id) {
+        // Remove old role assignment
+        await supabase
+          .from('user_role_assignments')
+          .delete()
+          .eq('user_id', currentUser.id);
+        
+        // Add new role assignment
+        await supabase
+          .from('user_role_assignments')
+          .insert({
+            user_id: currentUser.id,
+            role_id: data.role_id,
+            assigned_by: user?.id
+          });
+        
+        const oldRole = roles.find(r => r.id === userRoleAssignments[0]?.role_id)?.name || 'неизвестно';
+        const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
+        await logFieldChange("role", oldRole, newRole);
       }
 
       // Log changes for profile
@@ -722,19 +761,24 @@ export const EmployeeProfileDialog = ({
                 {canEditRole && (
                   <FormField
                     control={form.control}
-                    name="role"
+                    name="role_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Роль</FormLabel>
-                        <FormControl>
-                          <select 
-                            {...field} 
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                          >
-                            <option value="employee">Сотрудник</option>
-                            <option value="admin">Администратор</option>
-                          </select>
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите роль" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useRoles } from "@/hooks/useRoles";
 
 const inviteSchema = z.object({
   email: z.string().email("Введите корректный email"),
-  role: z.enum(["admin", "employee"]),
+  role_id: z.string().min(1, "Выберите роль"),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
 });
@@ -29,11 +30,12 @@ interface InviteUserDialogProps {
 export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { roles } = useRoles();
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
-      role: "employee",
+      role_id: "",
       firstName: "",
       lastName: "",
       email: "",
@@ -82,7 +84,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
         .from("invitations")
         .insert({
           email: data.email,
-          role: data.role,
+          role: 'employee', // Legacy field, will be ignored
           first_name: data.firstName || null,
           last_name: data.lastName || null,
           invited_by: (await supabase.auth.getUser()).data.user?.id!,
@@ -93,6 +95,19 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
       if (invitationError) throw invitationError;
 
+      // Assign role via user_role_assignments (will be done after user accepts)
+      // Store role_id in invitation audit log for later processing
+      await supabase.from("invitation_audit_log").insert({
+        invitation_id: invitation.id,
+        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        action: "created",
+        details: { 
+          email: data.email, 
+          role_id: data.role_id,
+          role_name: roles.find(r => r.id === data.role_id)?.name 
+        },
+      });
+
       // Send invitation email
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
@@ -100,7 +115,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           token: invitation.token,
           firstName: data.firstName,
           lastName: data.lastName,
-          role: data.role,
+          role: roles.find(r => r.id === data.role_id)?.name || 'employee',
         },
       });
 
@@ -113,14 +128,6 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           variant: "destructive",
         });
       }
-
-      // Log audit event
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: invitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
-        action: "created",
-        details: { email: data.email, role: data.role },
-      });
 
       toast({
         title: "Приглашение отправлено",
@@ -167,19 +174,22 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
             <FormField
               control={form.control}
-              name="role"
+              name="role_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Роль *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите роль" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="employee">Сотрудник</SelectItem>
-                      <SelectItem value="admin">Администратор</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
