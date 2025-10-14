@@ -48,6 +48,7 @@ const Finances = () => {
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("my-transactions");
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -466,7 +467,11 @@ const Finances = () => {
             <h1 className="text-3xl font-bold">Финансы</h1>
             <p className="text-muted-foreground">Управление доходами и расходами компании</p>
           </div>
-          <FinanceSummaryCards summary={companySummary} isLoading={false} />
+          {/* Show user summary for "my-transactions", company summary for "all-transactions" */}
+          <FinanceSummaryCards 
+            summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
+            isLoading={false} 
+          />
         </div>
         
         <div className="flex items-center gap-2">
@@ -478,7 +483,7 @@ const Finances = () => {
       </div>
 
       <Card>
-        <Tabs defaultValue="my-transactions" className="w-full">
+        <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="pb-0 border-b border-border">
             <TabsList className="flex items-center justify-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
               <TabsTrigger 
