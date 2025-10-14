@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Phone, Mail, User, MapPin, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface Venue {
   id: string;
@@ -21,6 +22,7 @@ interface Venue {
 }
 
 const VenuesTab = () => {
+  const { hasPermission } = useUserPermissions();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -152,24 +154,25 @@ const VenuesTab = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Площадки</h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingVenue(null);
-              setFormData({
-                name: "",
-                address: "",
-                contact_person: "",
-                phone: "",
-                email: "",
-                capacity: "",
-                description: ""
-              });
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить площадку
-            </Button>
-          </DialogTrigger>
+        {hasPermission('contacts.create') && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => {
+                setEditingVenue(null);
+                setFormData({
+                  name: "",
+                  address: "",
+                  contact_person: "",
+                  phone: "",
+                  email: "",
+                  capacity: "",
+                  description: ""
+                });
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить площадку
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -247,6 +250,7 @@ const VenuesTab = () => {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -255,22 +259,28 @@ const VenuesTab = () => {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{venue.name}</CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(venue)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(venue.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {(hasPermission('contacts.edit') || hasPermission('contacts.delete')) && (
+                  <div className="flex gap-1">
+                    {hasPermission('contacts.edit') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(venue)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {hasPermission('contacts.delete') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(venue.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
               {venue.address && (
                 <CardDescription className="flex items-center gap-1">
@@ -316,13 +326,15 @@ const VenuesTab = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-6">
             <p className="text-muted-foreground">Нет добавленных площадок</p>
-            <Button 
-              variant="outline" 
-              className="mt-2"
-              onClick={() => setDialogOpen(true)}
-            >
-              Добавить первую площадку
-            </Button>
+            {hasPermission('contacts.create') && (
+              <Button 
+                variant="outline" 
+                className="mt-2"
+                onClick={() => setDialogOpen(true)}
+              >
+                Добавить первую площадку
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

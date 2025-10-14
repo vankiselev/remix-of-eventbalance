@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Phone, Mail, User, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface Client {
   id: string;
@@ -20,6 +21,7 @@ interface Client {
 }
 
 const ClientsTab = () => {
+  const { hasPermission } = useUserPermissions();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -143,23 +145,24 @@ const ClientsTab = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Клиенты</h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingClient(null);
-              setFormData({
-                name: "",
-                contact_person: "",
-                phone: "",
-                email: "",
-                company: "",
-                description: ""
-              });
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить клиента
-            </Button>
-          </DialogTrigger>
+        {hasPermission('contacts.create') && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => {
+                setEditingClient(null);
+                setFormData({
+                  name: "",
+                  contact_person: "",
+                  phone: "",
+                  email: "",
+                  company: "",
+                  description: ""
+                });
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить клиента
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -228,6 +231,7 @@ const ClientsTab = () => {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -236,22 +240,28 @@ const ClientsTab = () => {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{client.name}</CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(client)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(client.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {(hasPermission('contacts.edit') || hasPermission('contacts.delete')) && (
+                  <div className="flex gap-1">
+                    {hasPermission('contacts.edit') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(client)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {hasPermission('contacts.delete') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(client.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
               {client.company && (
                 <CardDescription>{client.company}</CardDescription>
@@ -288,13 +298,15 @@ const ClientsTab = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-6">
             <p className="text-muted-foreground">Нет добавленных клиентов</p>
-            <Button 
-              variant="outline" 
-              className="mt-2"
-              onClick={() => setDialogOpen(true)}
-            >
-              Добавить первого клиента
-            </Button>
+            {hasPermission('contacts.create') && (
+              <Button 
+                variant="outline" 
+                className="mt-2"
+                onClick={() => setDialogOpen(true)}
+              >
+                Добавить первого клиента
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
