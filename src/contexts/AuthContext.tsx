@@ -32,12 +32,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('employment_status')
+        .select('employment_status, termination_date')
         .eq('id', user.id)
         .single();
 
       if (profile?.employment_status === 'terminated') {
-        toast.error('Ваш доступ к системе был прекращен');
+        const terminationDate = profile.termination_date 
+          ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
+          : '';
+        const message = terminationDate 
+          ? `Доступ закрыт! Вы были уволены ${terminationDate}`
+          : 'Доступ закрыт! Вы были уволены';
+        toast.error(message);
         await supabase.auth.signOut();
         setSession(null);
         setUser(null);
