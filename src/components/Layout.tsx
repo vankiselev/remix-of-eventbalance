@@ -196,10 +196,10 @@ const Layout = ({ children }: LayoutProps) => {
           </header>
 
           {/* Main Layout with Sidebar */}
-          <div className="flex flex-1 w-full overflow-hidden">
-            {/* Collapsible Sidebar */}
+          <div className="flex flex-1 w-full">
+            {/* Collapsible Sidebar - Fixed */}
             <aside
-              className={`border-r bg-card transition-all duration-300 sticky top-0 h-[calc(100vh-4rem)] overflow-y-auto ${
+              className={`fixed top-16 left-0 bottom-0 border-r bg-card transition-all duration-300 overflow-y-auto z-40 ${
                 sidebarCollapsed ? "w-16" : "w-64"
               }`}
               onMouseEnter={() => setSidebarHovered(true)}
@@ -241,8 +241,12 @@ const Layout = ({ children }: LayoutProps) => {
               </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 overflow-auto">
+            {/* Main Content with margin to account for fixed sidebar */}
+            <main 
+              className={`flex-1 overflow-auto transition-all duration-300 ${
+                sidebarCollapsed ? "ml-16" : "ml-64"
+              }`}
+            >
               <div className="main-container">
                 {children}
               </div>
