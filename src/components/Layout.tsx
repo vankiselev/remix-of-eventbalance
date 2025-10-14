@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2 } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -64,13 +64,13 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
-    { path: "/finances", label: t('finances'), icon: DollarSign },
-    { path: "/staff", label: t('staff'), icon: Users },
+    { path: "/finances", label: t('finances'), icon: RussianRuble },
+    { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
-    { path: "/contacts", label: t('contacts'), icon: Users },
+    { path: "/contacts", label: t('contacts'), icon: Contact },
     { path: "/reports", label: "Отчеты", icon: FileText },
-    ...(userRole === 'admin' ? [{ path: "/invitations", label: t('invitations'), icon: Users }] : []),
+    ...(userRole === 'admin' ? [{ path: "/invitations", label: t('invitations'), icon: UserPlus }] : []),
   ];
 
   const getPageTitle = () => {
