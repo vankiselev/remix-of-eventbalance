@@ -220,9 +220,8 @@ const CalendarTable = ({
                 <th
                   key={col.field}
                   className={cn(
-                    "border border-border p-2 text-center text-xs font-medium bg-white resize-x overflow-hidden",
-                    col.width,
-                    getColumnColor(col.field)
+                    "border border-border p-2 text-center text-xs font-medium bg-blue-500 text-white resize-x overflow-hidden",
+                    col.width
                   )}
                   style={{ resize: 'horizontal', minWidth: '80px' }}
                 >
@@ -238,9 +237,7 @@ const CalendarTable = ({
               <tr
                 key={row.event ? row.event.id : `${row.date}-empty-${index}`}
                 className={cn(
-                  "hover:bg-gray-50 transition-colors",
-                  index % 2 === 0 ? "bg-white" : "bg-white",
-                  isWeekend(row.date) && "bg-blue-50",
+                  "hover:bg-gray-50 transition-colors bg-white",
                   row.event && "cursor-pointer"
                 )}
                 onClick={() => row.event && onEventEdit(row.event)}
@@ -250,8 +247,7 @@ const CalendarTable = ({
                     key={col.field}
                     className={cn(
                       "border border-border p-1 text-xs text-center align-middle bg-white min-h-8",
-                      col.field === 'date' && "sticky left-0 z-5 bg-white",
-                      getColumnColor(col.field)
+                      col.field === 'date' && "sticky left-0 z-5 bg-white"
                     )}
                   >
                     <div className="whitespace-pre-wrap break-words flex items-center justify-center min-h-6">
