@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -25,56 +25,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check employment status when user changes (backup check for existing sessions)
-  useEffect(() => {
-    const checkEmploymentStatus = async () => {
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('employment_status, termination_date')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.employment_status === 'terminated') {
-        const terminationDate = profile.termination_date 
-          ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
-          : '';
-        const message = terminationDate 
-          ? `Доступ закрыт! Вы были уволены ${terminationDate}`
-          : 'Доступ закрыт! Вы были уволены';
-        toast.error(message, { duration: 10000 });
-        await supabase.auth.signOut();
-        setSession(null);
-        setUser(null);
-        window.location.href = '/auth';
-      }
-    };
-
-    if (user) {
-      checkEmploymentStatus();
+  // Check employment status and update session/user
+  const checkEmploymentStatusAndSetUser = useCallback(async (currentSession: Session | null) => {
+    if (!currentSession?.user) {
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+      return;
     }
-  }, [user]);
+
+    // Check employment status before setting user
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('employment_status, termination_date')
+      .eq('id', currentSession.user.id)
+      .single();
+
+    if (profile?.employment_status === 'terminated') {
+      const terminationDate = profile.termination_date 
+        ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
+        : '';
+      const message = terminationDate 
+        ? `Доступ закрыт! Вы были уволены ${terminationDate}`
+        : 'Доступ закрыт! Вы были уволены';
+      toast.error(message, { duration: 10000 });
+      await supabase.auth.signOut();
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    // If not terminated, set the session and user
+    setSession(currentSession);
+    setUser(currentSession.user);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        } else {
+          await checkEmploymentStatusAndSetUser(session);
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      await checkEmploymentStatusAndSetUser(session);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkEmploymentStatusAndSetUser]);
 
   const signOut = async () => {
     try {
