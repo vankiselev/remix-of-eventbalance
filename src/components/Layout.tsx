@@ -254,10 +254,17 @@ const Layout = ({ children }: LayoutProps) => {
       ) : (
         /* Mobile Layout */
         <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto px-4 py-6 pb-28">
+          <main className="flex-1 overflow-auto px-4 py-6 pb-36">
             {children}
           </main>
           <MobileBottomNav />
+          
+          {/* Mobile Footer */}
+          <footer className="fixed bottom-24 left-0 right-0 bg-card/95 border-t border-border/20 backdrop-blur-lg z-40">
+            <div className="px-4 py-3">
+              <p className="text-xs text-center text-muted-foreground">© 2025 EventBalance</p>
+            </div>
+          </footer>
         </div>
       )}
     </div>
