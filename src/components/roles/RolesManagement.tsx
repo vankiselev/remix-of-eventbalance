@@ -6,9 +6,75 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PermissionsTable } from "./PermissionsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const RolesManagement = () => {
   const { roles, isLoading, error, userCounts, permissionCounts, totalPermissions, deleteRole } = useRoles();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleCode, setNewRoleCode] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [newRoleIsAdmin, setNewRoleIsAdmin] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const handleCreateRole = async () => {
+    if (!newRoleName.trim() || !newRoleCode.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Название и код роли обязательны для заполнения",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const { error } = await supabase
+        .from('role_definitions')
+        .insert([{
+          name: newRoleName.trim(),
+          code: newRoleCode.trim().toLowerCase().replace(/\s+/g, '_'),
+          description: newRoleDescription.trim() || null,
+          is_admin_role: newRoleIsAdmin,
+          is_system: false,
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Роль создана",
+        description: "Новая роль успешно добавлена в систему",
+      });
+
+      // Reset form
+      setNewRoleName("");
+      setNewRoleCode("");
+      setNewRoleDescription("");
+      setNewRoleIsAdmin(false);
+      setIsCreateDialogOpen(false);
+
+      // Refresh roles list
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка создания роли",
+        description: error.message || "Не удалось создать роль",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleDeleteRole = (roleId: string) => {
     if (confirm('Вы уверены, что хотите удалить эту роль?')) {
@@ -37,10 +103,78 @@ export const RolesManagement = () => {
             Создавайте и настраивайте роли с различными правами доступа
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Создать роль
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Создать роль
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Создание новой роли</DialogTitle>
+              <DialogDescription>
+                Создайте новую роль с уникальным именем и кодом
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="role-name">Название роли *</Label>
+                <Input
+                  id="role-name"
+                  placeholder="Например: Менеджер"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role-code">Код роли *</Label>
+                <Input
+                  id="role-code"
+                  placeholder="Например: manager"
+                  value={newRoleCode}
+                  onChange={(e) => setNewRoleCode(e.target.value)}
+                  disabled={isCreating}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Код будет автоматически преобразован в нижний регистр
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role-description">Описание</Label>
+                <Textarea
+                  id="role-description"
+                  placeholder="Описание роли и её назначения"
+                  value={newRoleDescription}
+                  onChange={(e) => setNewRoleDescription(e.target.value)}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is-admin">Административная роль</Label>
+                <Switch
+                  id="is-admin"
+                  checked={newRoleIsAdmin}
+                  onCheckedChange={setNewRoleIsAdmin}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  disabled={isCreating}
+                >
+                  Отмена
+                </Button>
+                <Button onClick={handleCreateRole} disabled={isCreating}>
+                  {isCreating ? "Создание..." : "Создать"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {isLoading ? (
