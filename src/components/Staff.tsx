@@ -59,6 +59,11 @@ interface CombinedUser {
   position?: string;
   salary?: number | null;
   hire_date?: string;
+  // Cash on hand
+  total_cash?: number;
+  cash_nastya?: number;
+  cash_lera?: number;
+  cash_vanya?: number;
 }
 
 const Staff = () => {
@@ -151,9 +156,27 @@ const Staff = () => {
         });
       });
 
-      // Combine profiles with employee data
+      // Fetch cash data for all users if admin
+      const cashDataMap = new Map();
+      if (currentProfile?.role === 'admin') {
+        const cashPromises = (profilesData || []).map(async (profile: Profile) => {
+          const { data } = await supabase
+            .rpc('calculate_user_cash_totals', { user_uuid: profile.id })
+            .maybeSingle();
+          return { userId: profile.id, cashData: data };
+        });
+        const cashResults = await Promise.all(cashPromises);
+        cashResults.forEach(result => {
+          if (result.cashData) {
+            cashDataMap.set(result.userId, result.cashData);
+          }
+        });
+      }
+
+      // Combine profiles with employee data and cash data
       const combinedUsers: CombinedUser[] = (profilesData || []).map((profile: Profile) => {
         const employeeData = employeeMap.get(profile.id);
+        const cashData = cashDataMap.get(profile.id);
         return {
           id: profile.id,
           email: profile.email,
@@ -166,7 +189,13 @@ const Staff = () => {
           employment_status: profile.employment_status,
           termination_date: profile.termination_date,
           termination_reason: profile.termination_reason,
-          ...employeeData
+          ...employeeData,
+          ...(cashData && {
+            total_cash: cashData.total_cash,
+            cash_nastya: cashData.cash_nastya,
+            cash_lera: cashData.cash_lera,
+            cash_vanya: cashData.cash_vanya
+          })
         };
       });
 
@@ -226,6 +255,8 @@ const Staff = () => {
     return new Intl.NumberFormat("ru-RU", {
       style: "currency",
       currency: "RUB",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -534,13 +565,9 @@ const Staff = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {user.position && (
-                        <div className="text-sm space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Должность:</span> 
-                            <TextTruncate className="text-right max-w-[120px]">
-                              {user.position}
-                            </TextTruncate>
-                          </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Должность: </span>
+                          <span>{user.position}</span>
                         </div>
                       )}
                       {user.phone && (
@@ -576,9 +603,32 @@ const Staff = () => {
                           <span className="font-medium">Дата рождения:</span> {formatDate(user.birth_date)}
                         </div>
                       )}
-                      <div className="text-xs text-muted-foreground pt-2 border-t">
-                        <span className="font-medium">В системе с:</span> {formatDate(user.created_at)}
-                      </div>
+                      
+                      {/* Cash on hand summary */}
+                      {hasPermission('staff.view_all') && user.total_cash !== undefined && (
+                        <div className="pt-3 border-t space-y-2">
+                          <div className="text-sm font-semibold">
+                            Деньги на руках: {" "}
+                            <span className={user.total_cash >= 0 ? "text-green-600" : "text-red-600"}>
+                              {formatCurrency(user.total_cash)}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="text-center p-1.5 rounded bg-muted/50">
+                              <div className="text-muted-foreground">Настя</div>
+                              <div className="font-medium">{formatCurrency(user.cash_nastya || 0)}</div>
+                            </div>
+                            <div className="text-center p-1.5 rounded bg-muted/50">
+                              <div className="text-muted-foreground">Лера</div>
+                              <div className="font-medium">{formatCurrency(user.cash_lera || 0)}</div>
+                            </div>
+                            <div className="text-center p-1.5 rounded bg-muted/50">
+                              <div className="text-muted-foreground">Ваня</div>
+                              <div className="font-medium">{formatCurrency(user.cash_vanya || 0)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </ResponsiveCard>
                 );
