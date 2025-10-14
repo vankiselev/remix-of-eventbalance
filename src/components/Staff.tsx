@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { Plus, Users, Shield, User, Edit, UserPlus, Search, Filter } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
 
@@ -70,6 +71,7 @@ const Staff = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "employee">("all");
+  const [statusTab, setStatusTab] = useState<"active" | "terminated">("active");
   const [formData, setFormData] = useState({
     user_id: "",
     position: "",
@@ -229,6 +231,12 @@ const Staff = () => {
   useEffect(() => {
     let filtered = allUsers;
 
+    // Apply employment status filter
+    filtered = filtered.filter(user => {
+      const isTerminated = user.employment_status === 'terminated';
+      return statusTab === 'terminated' ? isTerminated : !isTerminated;
+    });
+
     // Apply role filter
     if (roleFilter !== "all") {
       filtered = filtered.filter(user => user.role === roleFilter);
@@ -245,7 +253,7 @@ const Staff = () => {
     }
 
     setFilteredUsers(filtered);
-  }, [allUsers, roleFilter, searchTerm]);
+  }, [allUsers, roleFilter, searchTerm, statusTab]);
 
   const getRoleIcon = (role: string) => {
     return role === "admin" ? Shield : User;
@@ -415,67 +423,81 @@ const Staff = () => {
         )}
       </div>
 
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Поиск по имени, email или должности..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={roleFilter} onValueChange={(value: any) => setRoleFilter(value)}>
-          <SelectTrigger className="w-full sm:w-48">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Фильтр по роли" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все пользователи</SelectItem>
-            <SelectItem value="admin">Администраторы</SelectItem>
-            <SelectItem value="employee">Сотрудники</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Tabs for Active/Terminated */}
+      <Tabs value={statusTab} onValueChange={(value: any) => setStatusTab(value)}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="active">
+            Активные сотрудники
+          </TabsTrigger>
+          <TabsTrigger value="terminated">
+            Уволенные
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Results Summary */}
-      <div className="text-sm text-muted-foreground">
-        Найдено пользователей: {filteredUsers.length} из {allUsers.length}
-        {roleFilter !== "all" && ` (фильтр: ${roleFilter === "admin" ? "Администраторы" : "Сотрудники"})`}
-      </div>
+        <TabsContent value={statusTab} className="space-y-4">
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Поиск по имени, email или должности..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={(value: any) => setRoleFilter(value)}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Фильтр по роли" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все пользователи</SelectItem>
+                <SelectItem value="admin">Администраторы</SelectItem>
+                <SelectItem value="employee">Сотрудники</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {filteredUsers.length === 0 ? (
-        <ResponsiveCard className="text-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            {searchTerm || roleFilter !== "all" ? "Не найдено пользователей" : "Нет пользователей"}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm || roleFilter !== "all" 
-              ? "Попробуйте изменить параметры поиска или фильтра"
-              : "Пользователи не найдены"}
-          </p>
-        </ResponsiveCard>
-      ) : (
-        <ResponsiveGrid type="cards">
-          {filteredUsers.map((user) => {
-            const RoleIcon = getRoleIcon(user.role);
-            return (
-              <ResponsiveCard key={user.id} hover={true}>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="avatar-responsive flex-shrink-0">
-                        <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback>
-                          {user.full_name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-base leading-tight">
-                          <TextTruncate lines={2}>
-                            {user.full_name}
+          {/* Results Summary */}
+          <div className="text-sm text-muted-foreground">
+            Найдено пользователей: {filteredUsers.length}
+            {roleFilter !== "all" && ` (фильтр: ${roleFilter === "admin" ? "Администраторы" : "Сотрудники"})`}
+          </div>
+
+          {filteredUsers.length === 0 ? (
+            <ResponsiveCard className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {searchTerm || roleFilter !== "all" ? "Не найдено пользователей" : "Нет пользователей"}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm || roleFilter !== "all" 
+                  ? "Попробуйте изменить параметры поиска или фильтра"
+                  : statusTab === "terminated" ? "Нет уволенных сотрудников" : "Нет активных сотрудников"}
+              </p>
+            </ResponsiveCard>
+          ) : (
+            <ResponsiveGrid type="cards">
+              {filteredUsers.map((user) => {
+                const RoleIcon = getRoleIcon(user.role);
+                const isTerminated = user.employment_status === 'terminated';
+                
+                return (
+                  <ResponsiveCard key={user.id} hover={true} className={isTerminated ? 'opacity-75' : ''}>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Avatar className="avatar-responsive flex-shrink-0">
+                            <AvatarImage src={user.avatar_url} />
+                            <AvatarFallback>
+                              {user.full_name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-base leading-tight">
+                              <TextTruncate lines={2}>
+                                {user.full_name}
                           </TextTruncate>
                         </CardTitle>
                         <CardDescription className="text-sm">
@@ -510,50 +532,62 @@ const Staff = () => {
                       )}
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {user.position && (
-                    <div className="text-sm space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Должность:</span> 
-                        <TextTruncate className="text-right max-w-[120px]">
-                          {user.position}
-                        </TextTruncate>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {user.position && (
+                        <div className="text-sm space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Должность:</span> 
+                            <TextTruncate className="text-right max-w-[120px]">
+                              {user.position}
+                            </TextTruncate>
+                          </div>
+                        </div>
+                      )}
+                      {user.phone && (
+                        <div className="text-sm">
+                          <span className="font-medium">Телефон:</span> {user.phone}
+                        </div>
+                      )}
+                      {canViewSalary(user) && user.salary && (
+                        <div className="text-sm">
+                          <span className="font-medium">Зарплата:</span>{" "}
+                          <span className="text-green-600 font-semibold">
+                            {formatCurrency(user.salary)}
+                          </span>
+                        </div>
+                      )}
+                      {user.hire_date && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Дата найма:</span> {formatDate(user.hire_date)}
+                        </div>
+                      )}
+                      {isTerminated && user.termination_date && (
+                        <div className="text-sm text-destructive">
+                          <span className="font-medium">Дата увольнения:</span> {formatDate(user.termination_date)}
+                        </div>
+                      )}
+                      {isTerminated && user.termination_reason && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Причина:</span> {user.termination_reason}
+                        </div>
+                      )}
+                      {user.birth_date && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Дата рождения:</span> {formatDate(user.birth_date)}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground pt-2 border-t">
+                        <span className="font-medium">В системе с:</span> {formatDate(user.created_at)}
                       </div>
-                    </div>
-                  )}
-                  {user.phone && (
-                    <div className="text-sm">
-                      <span className="font-medium">Телефон:</span> {user.phone}
-                    </div>
-                  )}
-                  {canViewSalary(user) && user.salary && (
-                    <div className="text-sm">
-                      <span className="font-medium">Зарплата:</span>{" "}
-                      <span className="text-green-600 font-semibold">
-                        {formatCurrency(user.salary)}
-                      </span>
-                    </div>
-                  )}
-                  {user.hire_date && (
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">Дата найма:</span> {formatDate(user.hire_date)}
-                    </div>
-                  )}
-                  {user.birth_date && (
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">Дата рождения:</span> {formatDate(user.birth_date)}
-                    </div>
-                  )}
-                  <div className="text-xs text-muted-foreground pt-2 border-t">
-                    <span className="font-medium">В системе с:</span> {formatDate(user.created_at)}
-                  </div>
-                </CardContent>
-              </ResponsiveCard>
-            );
-          })}
-        </ResponsiveGrid>
-      )}
+                    </CardContent>
+                  </ResponsiveCard>
+                );
+              })}
+            </ResponsiveGrid>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {selectedUser && (
         <EmployeeProfileDialog
@@ -571,7 +605,10 @@ const Staff = () => {
               phone: selectedUser.phone,
               birth_date: selectedUser.birth_date,
               avatar_url: selectedUser.avatar_url,
-              created_at: selectedUser.created_at
+              created_at: selectedUser.created_at,
+              employment_status: selectedUser.employment_status,
+              termination_date: selectedUser.termination_date,
+              termination_reason: selectedUser.termination_reason
             }
           } : null}
           profile={!selectedUser.employee_id ? {
@@ -582,7 +619,10 @@ const Staff = () => {
             phone: selectedUser.phone,
             birth_date: selectedUser.birth_date,
             avatar_url: selectedUser.avatar_url,
-            created_at: selectedUser.created_at
+            created_at: selectedUser.created_at,
+            employment_status: selectedUser.employment_status,
+            termination_date: selectedUser.termination_date,
+            termination_reason: selectedUser.termination_reason
           } : undefined}
           isOpen={showProfileDialog}
           onOpenChange={setShowProfileDialog}
