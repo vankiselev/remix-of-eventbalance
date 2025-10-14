@@ -136,7 +136,9 @@ const AuthPage = () => {
           return;
         }
 
-        // Only show welcome message if employee is active
+        toast.success("Вход выполнен успешно!", {
+          description: "Добро пожаловать в систему.",
+        });
         window.location.href = '/';
       }
     } catch (error: any) {
