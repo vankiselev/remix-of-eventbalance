@@ -59,7 +59,7 @@ const TodayBirthdaysCard = () => {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 justify-center">
             <Cake className="w-5 h-5 text-primary" />
             День рождения сегодня
           </CardTitle>
@@ -76,9 +76,9 @@ const TodayBirthdaysCard = () => {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 justify-center">
           <Cake className="w-5 h-5 text-primary" />
-          День рождения сегодня 🎉
+          День рождения сегодня
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">

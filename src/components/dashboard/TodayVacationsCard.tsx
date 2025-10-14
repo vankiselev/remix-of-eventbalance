@@ -98,7 +98,7 @@ const TodayVacationsCard = () => {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 justify-center">
             <Plane className="w-5 h-5 text-primary" />
             Кто сегодня в отпуске
           </CardTitle>
@@ -116,7 +116,7 @@ const TodayVacationsCard = () => {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 justify-center">
           <Plane className="w-5 h-5 text-primary" />
           Кто сегодня в отпуске
         </CardTitle>

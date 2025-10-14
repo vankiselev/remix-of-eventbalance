@@ -81,7 +81,7 @@ const TodayEventsCard = () => {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 justify-center">
             <CalendarDays className="w-5 h-5 text-primary" />
             Мероприятия сегодня
           </CardTitle>
@@ -98,7 +98,7 @@ const TodayEventsCard = () => {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 justify-center">
           <CalendarDays className="w-5 h-5 text-primary" />
           Мероприятия сегодня
         </CardTitle>
