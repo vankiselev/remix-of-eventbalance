@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
@@ -23,6 +24,7 @@ interface CashSummary {
 }
 
 const Finances = () => {
+  const { hasPermission } = useUserPermissions();
   const [companySummary, setCompanySummary] = useState<CashSummary>({
     total_cash: 0,
     cash_nastya: 0,
@@ -162,17 +164,21 @@ const Finances = () => {
 
   // Set actions for the Layout dropdown menu
   useEffect(() => {
-    if (isAdmin) {
-      setActions({
-        onExport: handleExportClick,
-        onImport: handleImportClick,
-        onDeleteAll: handleDeleteClick,
-      });
+    const actions: any = {};
+    if (hasPermission('finances.export')) {
+      actions.onExport = handleExportClick;
     }
+    if (hasPermission('finances.import')) {
+      actions.onImport = handleImportClick;
+    }
+    if (hasPermission('finances.delete_all')) {
+      actions.onDeleteAll = handleDeleteClick;
+    }
+    setActions(actions);
     return () => {
       setActions({});
     };
-  }, [isAdmin, setActions, handleExportClick, handleImportClick, handleDeleteClick]);
+  }, [hasPermission, setActions, handleExportClick, handleImportClick, handleDeleteClick]);
 
   // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
@@ -420,11 +426,12 @@ const Finances = () => {
         </div>
       )}
 
-      {!selectedEmployee && !isAdmin && (
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            Ваши персональные финансы
-          </p>
+      {!selectedEmployee && !isAdmin && hasPermission('finances.create') && (
+        <div className="flex justify-end">
+          <Button onClick={() => setShowTransactionForm(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить транзакцию
+          </Button>
         </div>
       )}
 
@@ -468,12 +475,14 @@ const Finances = () => {
             <p className="text-muted-foreground">Управление доходами и расходами компании</p>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setShowTransactionForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить транзакцию
-            </Button>
-          </div>
+          {hasPermission('finances.create') && (
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowTransactionForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить транзакцию
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Show user summary for "my-transactions", company summary for "all-transactions" */}

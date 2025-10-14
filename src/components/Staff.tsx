@@ -17,6 +17,7 @@ import { Plus, Users, Shield, User, Edit, UserPlus, Search, Filter } from "lucid
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface Profile {
   id: string;
@@ -61,6 +62,7 @@ interface CombinedUser {
 }
 
 const Staff = () => {
+  const { hasPermission } = useUserPermissions();
   const [allUsers, setAllUsers] = useState<CombinedUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<CombinedUser[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -267,15 +269,6 @@ const Staff = () => {
     return role === "admin" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800";
   };
 
-  const canViewSalary = (user: CombinedUser) => {
-    // Only admins can see salaries - employees cannot see salary information even their own
-    return currentUserProfile?.role === "admin";
-  };
-
-  const canManageStaff = () => {
-    return currentUserProfile?.role === "admin";
-  };
-
   const handleEditUser = (user: CombinedUser) => {
     // Check permissions - only admins can edit other admins
     if (user.role === 'admin' && currentUserProfile?.role !== 'admin') {
@@ -323,7 +316,7 @@ const Staff = () => {
         <div>
           <h1 className="text-3xl font-bold">{t('staff')}</h1>
           <p className="text-muted-foreground">
-            {canManageStaff() 
+            {hasPermission('staff.manage')
               ? "Управляйте командой и зарплатами" 
               : "Просмотр информации о пользователях"}
           </p>
@@ -354,12 +347,12 @@ const Staff = () => {
         <div>
           <h1 className="text-3xl font-bold">{t('staff')}</h1>
           <p className="text-muted-foreground">
-            {canManageStaff() 
+            {hasPermission('staff.manage')
               ? "Управляйте командой и зарплатами" 
               : "Просмотр информации о пользователях"}
           </p>
         </div>
-        {canManageStaff() && (
+        {hasPermission('staff.manage') && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button>
@@ -525,7 +518,7 @@ const Staff = () => {
                           </Badge>
                         )}
                       </div>
-                      {(canManageStaff() || user.id === currentUserProfile?.id) && (
+                      {(hasPermission('staff.edit_all') || user.id === currentUserProfile?.id) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -555,7 +548,7 @@ const Staff = () => {
                           <span className="font-medium">Телефон:</span> {user.phone}
                         </div>
                       )}
-                      {canViewSalary(user) && user.salary && (
+                      {hasPermission('staff.view_all') && user.salary && (
                         <div className="text-sm">
                           <span className="font-medium">Зарплата:</span>{" "}
                           <span className="text-green-600 font-semibold">
@@ -633,7 +626,7 @@ const Staff = () => {
           isOpen={showProfileDialog}
           onOpenChange={setShowProfileDialog}
           onSuccess={handleProfileSuccess}
-          isAdmin={canManageStaff()}
+          isAdmin={hasPermission('staff.manage')}
         />
       )}
     </div>

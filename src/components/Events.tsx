@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List, Search } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface Event {
   id: string;
@@ -40,6 +41,7 @@ interface Event {
 }
 
 const Events = () => {
+  const { hasPermission } = useUserPermissions();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -218,6 +220,27 @@ const Events = () => {
   };
 
   const handleEditEvent = (event: Event) => {
+    // Check permissions
+    if (event.created_by === user?.id) {
+      if (!hasPermission('events.edit_own')) {
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "У вас нет прав для редактирования своих событий"
+        });
+        return;
+      }
+    } else {
+      if (!hasPermission('events.edit_all')) {
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "У вас нет прав для редактирования чужих событий"
+        });
+        return;
+      }
+    }
+    
     setEditingEvent(event);
     setFormData({
       name: event.name || "",
@@ -285,6 +308,28 @@ const Events = () => {
 
   const handleDeleteEvent = async () => {
     if (!editingEvent) return;
+    
+    // Check permissions
+    if (editingEvent.created_by === user?.id) {
+      if (!hasPermission('events.delete_own')) {
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "У вас нет прав для удаления своих событий"
+        });
+        return;
+      }
+    } else {
+      if (!hasPermission('events.delete_all')) {
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "У вас нет прав для удаления чужих событий"
+        });
+        return;
+      }
+    }
+    
     if (!confirm("Вы уверены, что хотите удалить это событие?")) return;
 
     try {
@@ -386,13 +431,14 @@ const Events = () => {
             {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
             {viewMode === 'grid' ? 'Список' : 'Карточки'}
           </Button>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Создать мероприятие
-              </Button>
-            </DialogTrigger>
+          {hasPermission('events.create') && (
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Создать мероприятие
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Создать новое мероприятие</DialogTitle>
@@ -502,6 +548,7 @@ const Events = () => {
             </form>
           </DialogContent>
         </Dialog>
+        )}
         
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -610,7 +657,7 @@ const Events = () => {
                 <Button type="submit" className="flex-1">
                   Сохранить
                 </Button>
-                {editingEvent && (
+                {editingEvent && ((editingEvent.created_by === user?.id && hasPermission('events.delete_own')) || hasPermission('events.delete_all')) && (
                   <Button
                     type="button"
                     variant="destructive"
