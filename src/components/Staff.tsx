@@ -93,11 +93,19 @@ const Staff = () => {
       // Fetch all profiles - admins see full data, employees see basic data only
       let profilesData;
       if (currentProfile?.role === "admin") {
-        const { data } = await supabase.rpc("get_admin_profiles");
+        const { data, error: adminError } = await supabase.rpc("get_admin_profiles");
+        if (adminError) {
+          console.error("Error fetching admin profiles:", adminError);
+          throw adminError;
+        }
         profilesData = data;
       } else {
         // Non-admin users can see all basic profiles (without financial data)
-        const { data } = await supabase.rpc("get_all_basic_profiles");
+        const { data, error: basicError } = await supabase.rpc("get_all_basic_profiles");
+        if (basicError) {
+          console.error("Error fetching basic profiles:", basicError);
+          throw basicError;
+        }
         profilesData = data;
       }
 
@@ -112,12 +120,15 @@ const Staff = () => {
           position,
           hire_date,
           created_at,
-          updated_at,
-          ${currentProfile?.role === 'admin' ? 'salary' : ''}
+          updated_at
+          ${currentProfile?.role === 'admin' ? ', salary' : ''}
         `)
         .order("hire_date", { ascending: false });
 
-      if (employeesError) throw employeesError;
+      if (employeesError) {
+        console.error("Error fetching employees:", employeesError);
+        throw employeesError;
+      }
 
       // Create a map of employee data by user_id for quick lookup
       const employeeMap = new Map();
