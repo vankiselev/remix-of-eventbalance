@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
+import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, ArrowLeft, Upload, Trash2, MoreVertical, Download } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { TransactionExport } from './finance/TransactionExport';
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
-import { TransactionExport } from './finance/TransactionExport';
 import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
 
 interface CashSummary {
@@ -48,9 +48,11 @@ const Finances = () => {
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exportRef, setExportRef] = useState<{ exportToCSV: () => void } | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setActions } = useFinancesActions();
 
   useEffect(() => {
     if (user) {
@@ -63,6 +65,20 @@ const Finances = () => {
       fetchData();
     }
   }, [user, isAdmin, loading]);
+
+  // Set actions for the Layout dropdown menu
+  useEffect(() => {
+    if (isAdmin) {
+      setActions({
+        onExport: () => exportRef?.exportToCSV(),
+        onImport: () => setShowImportDialog(true),
+        onDeleteAll: () => setShowDeleteDialog(true),
+      });
+    }
+    return () => {
+      setActions({});
+    };
+  }, [isAdmin, exportRef, setActions]);
 
   // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
@@ -366,30 +382,15 @@ const Finances = () => {
             <Plus className="mr-2 h-4 w-4" />
             Добавить транзакцию
           </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <MoreVertical className="h-4 w-4 mr-2" />
-                Редактирование
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-background z-50">
-              <TransactionExport isAdmin={true} />
-              <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Импорт
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Удалить все транзакции
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
+      </div>
+
+      {/* Hidden TransactionExport to get ref */}
+      <div className="hidden">
+        <TransactionExport 
+          isAdmin={true} 
+          ref={(ref: any) => setExportRef(ref)}
+        />
       </div>
 
       <Card>

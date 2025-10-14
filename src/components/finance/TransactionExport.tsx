@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +27,8 @@ interface TransactionExportProps {
   isAdmin: boolean;
 }
 
-export function TransactionExport({ userId, isAdmin }: TransactionExportProps) {
+export const TransactionExport = forwardRef<{ exportToCSV: () => void }, TransactionExportProps>(
+  ({ userId, isAdmin }, ref) => {
   const { toast } = useToast();
 
   const fetchTransactionsForExport = async () => {
@@ -130,13 +131,11 @@ export function TransactionExport({ userId, isAdmin }: TransactionExportProps) {
     }
   };
 
-  return (
-    <div 
-      onClick={exportToCSV}
-      className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
-    >
-      <Download className="mr-2 h-4 w-4" />
-      Экспорт CSV
-    </div>
-  );
-}
+  useImperativeHandle(ref, () => ({
+    exportToCSV
+  }));
+
+  return null;
+});
+
+TransactionExport.displayName = 'TransactionExport';
