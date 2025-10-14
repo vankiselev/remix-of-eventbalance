@@ -26,6 +26,9 @@ interface Profile {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  employment_status?: string;
+  termination_date?: string;
+  termination_reason?: string;
 }
 
 interface Employee {
@@ -46,6 +49,9 @@ interface CombinedUser {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  employment_status?: string;
+  termination_date?: string;
+  termination_reason?: string;
   // Employee data (if exists)
   employee_id?: string;
   position?: string;
@@ -153,6 +159,9 @@ const Staff = () => {
           birth_date: profile.birth_date,
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
+          employment_status: profile.employment_status,
+          termination_date: profile.termination_date,
+          termination_reason: profile.termination_reason,
           ...employeeData
         };
       });
@@ -477,10 +486,17 @@ const Staff = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <Badge className={`${getRoleColor(user.role)} badge-responsive`}>
-                        <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <span className="text-truncate">{getRoleLabel(user.role)}</span>
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-end">
+                        <Badge className={`${getRoleColor(user.role)} badge-responsive`}>
+                          <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="text-truncate">{getRoleLabel(user.role)}</span>
+                        </Badge>
+                        {user.employment_status === 'terminated' && (
+                          <Badge variant="destructive" className="badge-responsive">
+                            <span className="text-truncate">Уволен</span>
+                          </Badge>
+                        )}
+                      </div>
                       {(canManageStaff() || user.id === currentUserProfile?.id) && (
                         <Button
                           variant="ghost"

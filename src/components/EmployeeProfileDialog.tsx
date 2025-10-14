@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
-import { Upload, ChevronDown, History, Wallet } from "lucide-react";
+import { Upload, ChevronDown, History, Wallet, UserX, Trash2, UserCheck } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDate, formatDateTime } from '@/utils/dateFormat';
 import { formatCurrency } from '@/utils/formatCurrency';
 
@@ -52,6 +63,9 @@ interface Employee {
     birth_date?: string;
     avatar_url?: string;
     created_at: string;
+    employment_status?: string;
+    termination_date?: string;
+    termination_reason?: string;
   };
 }
 
@@ -65,6 +79,9 @@ interface Profile {
   birth_date?: string;
   avatar_url?: string;
   created_at: string;
+  employment_status?: string;
+  termination_date?: string;
+  termination_reason?: string;
 }
 
 interface CashSummary {
@@ -112,6 +129,10 @@ export const EmployeeProfileDialog = ({
     cash_lera: 0,
     cash_vanya: 0,
   });
+  const [showTerminateDialog, setShowTerminateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReactivateDialog, setShowReactivateDialog] = useState(false);
+  const [terminationReason, setTerminationReason] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -392,7 +413,102 @@ export const EmployeeProfileDialog = ({
     return formatDateTime(dateString);
   };
 
+  const handleTerminateEmployee = async () => {
+    if (!currentUser?.id) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.rpc('terminate_employee', {
+        employee_user_id: currentUser.id,
+        termination_reason_text: terminationReason || null
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Сотрудник уволен",
+        description: "Доступ к системе заблокирован. Все записи сохранены.",
+      });
+
+      setShowTerminateDialog(false);
+      setTerminationReason("");
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось уволить сотрудника",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReactivateEmployee = async () => {
+    if (!currentUser?.id) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.rpc('reactivate_employee', {
+        employee_user_id: currentUser.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Сотрудник восстановлен",
+        description: "Доступ к системе возобновлен.",
+      });
+
+      setShowReactivateDialog(false);
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось восстановить сотрудника",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!currentUser?.id) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.rpc('delete_employee_permanently', {
+        employee_user_id: currentUser.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Сотрудник удален",
+        description: "Все данные сотрудника безвозвратно удалены из системы.",
+      });
+
+      setShowDeleteDialog(false);
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить сотрудника",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!currentUser) return null;
+
+  const isTerminated = currentUser.employment_status === 'terminated';
+  const canManageEmployee = isAdmin && currentUser.id !== user?.id;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -631,13 +747,51 @@ export const EmployeeProfileDialog = ({
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Отмена
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Сохранение..." : "Сохранить"}
-                </Button>
+              <div className="flex justify-between items-center gap-2">
+                {/* Employee Management Buttons (only for admins managing other users) */}
+                {canManageEmployee && (
+                  <div className="flex gap-2">
+                    {isTerminated ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowReactivateDialog(true)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Восстановить
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowTerminateDialog(true)}
+                        className="text-orange-600 hover:text-orange-700"
+                      >
+                        <UserX className="w-4 h-4 mr-2" />
+                        Уволить
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Удалить
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex gap-2 ml-auto">
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Отмена
+                  </Button>
+                  <Button type="submit" disabled={loading || isTerminated}>
+                    {loading ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
@@ -680,8 +834,116 @@ export const EmployeeProfileDialog = ({
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Termination Status Banner */}
+          {isTerminated && (
+            <Card className="bg-destructive/10 border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">Сотрудник уволен</CardTitle>
+                <CardDescription>
+                  Дата увольнения: {currentUser.termination_date ? formatDate(currentUser.termination_date) : 'Не указана'}
+                  {currentUser.termination_reason && (
+                    <>
+                      <br />
+                      Причина: {currentUser.termination_reason}
+                    </>
+                  )}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
         </div>
       </DialogContent>
+
+      {/* Terminate Employee Dialog */}
+      <AlertDialog open={showTerminateDialog} onOpenChange={setShowTerminateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Уволить сотрудника?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Доступ сотрудника к системе будет заблокирован, но все записи останутся в базе данных.
+              Вы сможете восстановить доступ позже.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4">
+            <Label htmlFor="termination-reason">Причина увольнения (необязательно)</Label>
+            <Textarea
+              id="termination-reason"
+              value={terminationReason}
+              onChange={(e) => setTerminationReason(e.target.value)}
+              placeholder="Укажите причину увольнения..."
+              rows={3}
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleTerminateEmployee}
+              className="bg-orange-600 hover:bg-orange-700"
+              disabled={loading}
+            >
+              {loading ? "Увольнение..." : "Уволить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reactivate Employee Dialog */}
+      <AlertDialog open={showReactivateDialog} onOpenChange={setShowReactivateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Восстановить сотрудника?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Доступ сотрудника к системе будет восстановлен. Он сможет снова входить и работать с данными.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReactivateEmployee}
+              className="bg-green-600 hover:bg-green-700"
+              disabled={loading}
+            >
+              {loading ? "Восстановление..." : "Восстановить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Employee Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить сотрудника навсегда?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p className="font-semibold text-destructive">
+                ⚠️ Это действие необратимо!
+              </p>
+              <p>
+                Будут безвозвратно удалены:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Профиль сотрудника</li>
+                <li>Все финансовые транзакции</li>
+                <li>Все события и мероприятия</li>
+                <li>История изменений</li>
+                <li>Все связанные данные</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEmployee}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={loading}
+            >
+              {loading ? "Удаление..." : "Удалить навсегда"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

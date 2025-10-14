@@ -816,6 +816,7 @@ export type Database = {
           cash_vanya: number | null
           created_at: string
           email: string
+          employment_status: string
           full_name: string
           google_drive_folder_id: string | null
           google_drive_folder_url: string | null
@@ -825,6 +826,8 @@ export type Database = {
           phone: string | null
           phone_e164: string | null
           role: Database["public"]["Enums"]["user_role"]
+          termination_date: string | null
+          termination_reason: string | null
           total_cash_on_hand: number | null
           updated_at: string
         }
@@ -836,6 +839,7 @@ export type Database = {
           cash_vanya?: number | null
           created_at?: string
           email: string
+          employment_status?: string
           full_name: string
           google_drive_folder_id?: string | null
           google_drive_folder_url?: string | null
@@ -845,6 +849,8 @@ export type Database = {
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          termination_date?: string | null
+          termination_reason?: string | null
           total_cash_on_hand?: number | null
           updated_at?: string
         }
@@ -856,6 +862,7 @@ export type Database = {
           cash_vanya?: number | null
           created_at?: string
           email?: string
+          employment_status?: string
           full_name?: string
           google_drive_folder_id?: string | null
           google_drive_folder_url?: string | null
@@ -865,6 +872,8 @@ export type Database = {
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          termination_date?: string | null
+          termination_reason?: string | null
           total_cash_on_hand?: number | null
           updated_at?: string
         }
@@ -1062,6 +1071,10 @@ export type Database = {
         Args: { invitation_token: string }
         Returns: boolean
       }
+      delete_employee_permanently: {
+        Args: { employee_user_id: string }
+        Returns: boolean
+      }
       format_phone_display: {
         Args: { phone_e164: string }
         Returns: string
@@ -1213,6 +1226,10 @@ export type Database = {
         Args: { phone_input: string }
         Returns: string
       }
+      reactivate_employee: {
+        Args: { employee_user_id: string }
+        Returns: boolean
+      }
       recalculate_balances_for_cash_type: {
         Args: { p_cash_type: string }
         Returns: undefined
@@ -1223,6 +1240,10 @@ export type Database = {
       }
       reset_password_with_token: {
         Args: { new_password: string; reset_token: string }
+        Returns: boolean
+      }
+      terminate_employee: {
+        Args: { employee_user_id: string; termination_reason_text?: string }
         Returns: boolean
       }
       validate_password_reset_token: {
