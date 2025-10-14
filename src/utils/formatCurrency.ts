@@ -1,5 +1,5 @@
 // Modern currency formatting utility for EventBalance
-export const formatCurrency = (amount: number, showKopecks: boolean = false): string => {
+export const formatCurrency = (amount: number): string => {
   // Handle edge cases
   if (amount === null || amount === undefined || isNaN(amount)) {
     return "0 ₽";
@@ -22,21 +22,18 @@ export const formatCurrency = (amount: number, showKopecks: boolean = false): st
 };
 
 // Format amount without currency symbol
-export const formatAmount = (amount: number, showKopecks: boolean = false): string => {
+export const formatAmount = (amount: number): string => {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return "0";
   }
 
-  const hasKopecks = !showKopecks && (amount % 1 !== 0);
-  const shouldShowKopecks = showKopecks || hasKopecks;
-
   const options: Intl.NumberFormatOptions = {
     style: 'decimal',
-    minimumFractionDigits: shouldShowKopecks ? 2 : 0,
-    maximumFractionDigits: shouldShowKopecks ? 2 : 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   };
 
-  return new Intl.NumberFormat('ru-RU', options).format(amount);
+  return new Intl.NumberFormat('ru-RU', options).format(Math.round(amount));
 };
 
 // Get color class for money display

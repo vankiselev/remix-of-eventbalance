@@ -87,7 +87,7 @@ const CashOnHand = () => {
       <div className="text-center">
         <h2 className="text-2xl font-bold">Итого денег на руках</h2>
         <p className="text-3xl font-bold text-primary mt-2">
-          {formatCurrency(totalCash, true)}
+          {formatCurrency(totalCash)}
         </p>
       </div>
       
@@ -100,7 +100,7 @@ const CashOnHand = () => {
             <p className={`text-2xl font-bold ${
               cashSummary.nastya_cash >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {formatCurrency(cashSummary.nastya_cash, true)}
+              {formatCurrency(cashSummary.nastya_cash)}
             </p>
           </CardContent>
         </Card>
@@ -113,7 +113,7 @@ const CashOnHand = () => {
             <p className={`text-2xl font-bold ${
               cashSummary.lera_cash >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {formatCurrency(cashSummary.lera_cash, true)}
+              {formatCurrency(cashSummary.lera_cash)}
             </p>
           </CardContent>
         </Card>
@@ -126,7 +126,7 @@ const CashOnHand = () => {
             <p className={`text-2xl font-bold ${
               cashSummary.vanya_cash >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {formatCurrency(cashSummary.vanya_cash, true)}
+              {formatCurrency(cashSummary.vanya_cash)}
             </p>
           </CardContent>
         </Card>

@@ -1,15 +1,15 @@
 // Utility functions for currency formatting according to the specification
 
-export const formatCurrency = (amount: number | string, showDecimals: boolean = false): string => {
+export const formatCurrency = (amount: number | string): string => {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
   
   if (isNaN(numAmount)) return '0 ₽';
   
-  // Format with thousands separators and optional decimals
+  // Never show decimals - always whole rubles
   const formatted = new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: showDecimals ? 2 : 0,
-    maximumFractionDigits: showDecimals ? 2 : 0,
-  }).format(numAmount);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(numAmount));
   
   return `${formatted} ₽`;
 };

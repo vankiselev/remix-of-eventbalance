@@ -13,34 +13,23 @@ interface CurrencyInputProps {
   onFocus?: () => void;
 }
 
-// Format number as currency with live mask
+// Format number as currency with live mask (whole rubles only)
 const formatLiveCurrency = (value: string): string => {
-  // Remove all non-digits except decimal separator
-  const cleanValue = value.replace(/[^\d.,]/g, '').replace(',', '.');
+  // Remove all non-digits
+  const cleanValue = value.replace(/\D/g, '');
   
-  if (!cleanValue || cleanValue === '.') return '';
+  if (!cleanValue) return '';
   
-  // Split by decimal point
-  const parts = cleanValue.split('.');
-  const integerPart = parts[0];
-  const decimalPart = parts[1];
+  // Format with spaces for thousands
+  const formatted = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   
-  // Format integer part with spaces for thousands
-  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  
-  // Combine with decimal part if exists
-  let result = formattedInteger;
-  if (decimalPart !== undefined) {
-    result += '.' + decimalPart.slice(0, 2); // Limit to 2 decimal places
-  }
-  
-  return result + ' ₽';
+  return formatted + ' ₽';
 };
 
 // Extract numeric value from formatted string (supports negative values)
 const extractNumericValue = (formatted: string): number | undefined => {
-  const cleaned = formatted.replace(/[^\d.,-]/g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
+  const cleaned = formatted.replace(/\D/g, '');
+  const num = parseInt(cleaned, 10);
   return isNaN(num) ? undefined : num;
 };
 
@@ -96,17 +85,11 @@ export function CurrencyInput({
     // Remove currency symbol, spaces, and negative indicators for processing
     const cleanForProcessing = inputValue.replace(/[₽\s()-]/g, '');
     
-    // Only allow digits and one decimal separator
-    const cleanValue = cleanForProcessing.replace(/[^\d.,]/g, '').replace(',', '.');
+    // Only allow digits (no decimals)
+    const cleanValue = cleanForProcessing.replace(/\D/g, '');
     
-    // Prevent multiple decimal points
-    const parts = cleanValue.split('.');
-    if (parts.length > 2) {
-      return;
-    }
-    
-    // Prevent leading zeros (except for 0.xx)
-    if (cleanValue.length > 1 && cleanValue[0] === '0' && cleanValue[1] !== '.') {
+    // Prevent leading zeros
+    if (cleanValue.length > 1 && cleanValue[0] === '0') {
       return;
     }
     
@@ -135,10 +118,9 @@ export function CurrencyInput({
       return;
     }
     
-    // Allow digits and decimal separators
+    // Allow only digits (no decimal separators)
     if (!((e.keyCode >= 48 && e.keyCode <= 57) || // Numbers 0-9
            (e.keyCode >= 96 && e.keyCode <= 105) || // Numpad 0-9
-           e.keyCode === 190 || e.keyCode === 188 || // Decimal point and comma
            e.keyCode === 189 || e.keyCode === 109)) { // Minus sign (regular and numpad)
       e.preventDefault();
     }

@@ -17,6 +17,7 @@ import { Plus, Users, Shield, User, Edit, UserPlus, Search, Filter } from "lucid
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface Profile {
@@ -249,15 +250,6 @@ const Staff = () => {
         description: error.message || "Не удалось создать запись о сотруднике",
       });
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
 
   // Filter and search functionality

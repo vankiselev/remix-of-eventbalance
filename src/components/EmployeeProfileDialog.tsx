@@ -402,13 +402,6 @@ export const EmployeeProfileDialog = ({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return formatDateTime(dateString);
   };
