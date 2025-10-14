@@ -83,34 +83,12 @@ const Layout = ({ children }: LayoutProps) => {
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-16 items-center justify-between px-6">
               {/* Logo */}
-              <div className="flex items-center gap-2 min-w-[200px]">
+              <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
               </div>
 
-              {/* Horizontal Menu */}
-              <nav className="flex-1 flex justify-center">
-                <div className="flex items-center gap-1">
-                  {menuItems.slice(0, 6).map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.path);
-                    return (
-                      <Button
-                        key={item.path}
-                        variant={active ? "secondary" : "ghost"}
-                        size="sm"
-                        className={`gap-2 ${active ? "bg-primary/10 text-primary font-medium" : ""}`}
-                        onClick={() => navigate(item.path)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="hidden xl:inline">{item.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </nav>
-
               {/* User Profile & Actions */}
-              <div className="flex items-center gap-3 min-w-[200px] justify-end">
+              <div className="flex items-center gap-3">
                 <NotificationsMenu />
                 <Button
                   variant="ghost"
