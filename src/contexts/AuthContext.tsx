@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check employment status when user changes
+  // Check employment status when user changes (backup check for existing sessions)
   useEffect(() => {
     const checkEmploymentStatus = async () => {
       if (!user) return;
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const message = terminationDate 
           ? `Доступ закрыт! Вы были уволены ${terminationDate}`
           : 'Доступ закрыт! Вы были уволены';
-        toast.error(message);
+        toast.error(message, { duration: 10000 });
         await supabase.auth.signOut();
         setSession(null);
         setUser(null);

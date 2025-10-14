@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 const AuthPage = () => {
@@ -61,17 +61,14 @@ const AuthPage = () => {
       });
 
       if (error) {
-        toast({
-          title: "Ошибка регистрации",
+        toast.error("Ошибка регистрации", {
           description: error.message,
-          variant: "destructive",
         });
         return;
       }
 
       if (data.user) {
-        toast({
-          title: "Регистрация успешна!",
+        toast.success("Регистрация успешна!", {
           description: "Проверьте почту для подтверждения аккаунта.",
         });
         
@@ -81,10 +78,8 @@ const AuthPage = () => {
         }
       }
     } catch (error: any) {
-      toast({
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Произошла ошибка при регистрации",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -110,26 +105,45 @@ const AuthPage = () => {
       });
 
       if (error) {
-        toast({
-          title: "Ошибка входа",
+        toast.error("Ошибка входа", {
           description: error.message,
-          variant: "destructive",
         });
         return;
       }
 
       if (data.user) {
-        toast({
-          title: "Вход выполнен успешно!",
+        // Check employment status before allowing access
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('employment_status, termination_date')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.employment_status === 'terminated') {
+          // Sign out immediately
+          await supabase.auth.signOut();
+          
+          const terminationDate = profile.termination_date 
+            ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
+            : '';
+          const message = terminationDate 
+            ? `Доступ закрыт! Вы были уволены ${terminationDate}`
+            : 'Доступ закрыт! Вы были уволены';
+          
+          toast.error(message, {
+            duration: 10000,
+          });
+          return;
+        }
+
+        toast.success("Вход выполнен успешно!", {
           description: "Добро пожаловать в систему.",
         });
         window.location.href = '/';
       }
     } catch (error: any) {
-      toast({
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Произошла ошибка при входе",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -149,18 +163,15 @@ const AuthPage = () => {
         throw error;
       }
 
-      toast({
-        title: "Ссылка отправлена",
+      toast.success("Ссылка отправлена", {
         description: "Если email существует в системе, ссылка для сброса пароля была отправлена на почту.",
       });
       
       setShowForgotPassword(false);
       setResetEmail('');
     } catch (error: any) {
-      toast({
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Не удалось отправить ссылку для сброса пароля",
-        variant: "destructive",
       });
     } finally {
       setResetLoading(false);
