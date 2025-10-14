@@ -350,58 +350,55 @@ const Finances = () => {
   // Admin dashboard view
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Финансы</h1>
-        <p className="text-muted-foreground">Управление доходами и расходами компании</p>
-      </div>
-
-      <div className="flex justify-end items-center">
-        <div className="flex items-center gap-2">
-          <TransactionExport isAdmin={true} />
-          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Импорт
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Удалить все транзакции
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAllTransactions} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Удалить все
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button onClick={() => setShowTransactionForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить транзакцию
-          </Button>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Финансы</h1>
+          <p className="text-muted-foreground">Управление доходами и расходами компании</p>
         </div>
-      </div>
-
-      <div className="sticky top-0 z-10 bg-background pb-2">
-        <div className="mb-1">
-          <h2 className="text-lg font-semibold">Сводка по компании</h2>
+        
+        <div className="flex flex-col gap-2 md:items-end">
+          <FinanceSummaryCards summary={companySummary} isLoading={false} />
+          
+          <div className="flex flex-col gap-2 mt-2">
+            <Button onClick={() => setShowTransactionForm(true)} className="w-full md:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить транзакцию
+            </Button>
+            <TransactionExport isAdmin={true} />
+            <Button variant="outline" onClick={() => setShowImportDialog(true)} className="w-full md:w-auto">
+              <Upload className="mr-2 h-4 w-4" />
+              Импорт
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full md:w-auto">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Удалить все транзакции
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllTransactions} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Удалить все
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-        <FinanceSummaryCards summary={companySummary} isLoading={false} />
       </div>
 
       <Card>
         <Tabs defaultValue="my-transactions" className="w-full">
           <CardHeader className="pb-0 border-b border-border">
-            <TabsList className="flex items-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
+            <TabsList className="flex items-center justify-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
               <TabsTrigger 
                 value="my-transactions" 
                 className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
