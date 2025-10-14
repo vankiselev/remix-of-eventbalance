@@ -1099,6 +1099,19 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_all_basic_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          birth_date: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       get_company_cash_summary: {
         Args: Record<PropertyKey, never>
         Returns: {

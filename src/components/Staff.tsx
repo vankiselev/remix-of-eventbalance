@@ -97,9 +97,7 @@ const Staff = () => {
         profilesData = data;
       } else {
         // Non-admin users can see all basic profiles (without financial data)
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, email, full_name, role, phone, birth_date, avatar_url, created_at");
+        const { data } = await supabase.rpc("get_all_basic_profiles");
         profilesData = data;
       }
 
