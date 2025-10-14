@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Edit } from "lucide-react";
 import { useRoles } from "@/hooks/useRoles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -15,10 +15,14 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { RoleEditDialog } from "./RoleEditDialog";
+import { Role } from "@/types/roles";
 
 export const RolesManagement = () => {
-  const { roles, isLoading, error, userCounts, permissionCounts, totalPermissions, deleteRole } = useRoles();
+  const { roles, isLoading, error, userCounts, permissionCounts, totalPermissions, deleteRole, updateRole } = useRoles();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleCode, setNewRoleCode] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
@@ -26,6 +30,20 @@ export const RolesManagement = () => {
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveRole = (roleId: string, updates: Partial<Role>) => {
+    updateRole.mutate({ roleId, updates }, {
+      onSuccess: () => {
+        setIsEditDialogOpen(false);
+        setEditingRole(null);
+      }
+    });
+  };
 
   const handleCreateRole = async () => {
     if (!newRoleName.trim() || !newRoleCode.trim()) {
@@ -209,10 +227,12 @@ export const RolesManagement = () => {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {roles.map(role => (
-                  <div key={role.id} className="p-4 border rounded-lg">
-                    <h3 className="font-semibold text-lg">{role.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
-                    <div className="flex gap-2 mt-3">
+                  <div key={role.id} className="p-4 border rounded-lg space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{role.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                    </div>
+                    <div className="flex gap-2">
                       {role.is_system && (
                         <span className="text-xs px-2 py-1 bg-secondary rounded">Системная</span>
                       )}
@@ -220,12 +240,19 @@ export const RolesManagement = () => {
                         <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">Админ</span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground mt-3">
-                      Пользователей: {userCounts[role.id] || 0}
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>Пользователей: {userCounts[role.id] || 0}</div>
+                      <div>Разрешений: {permissionCounts[role.id] || 0} / {totalPermissions}</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      Разрешений: {permissionCounts[role.id] || 0} / {totalPermissions}
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleEditRole(role)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Редактировать
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -233,6 +260,14 @@ export const RolesManagement = () => {
           </TabsContent>
         </Tabs>
       )}
+      
+      <RoleEditDialog
+        role={editingRole}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSave={handleSaveRole}
+        isSaving={updateRole.isPending}
+      />
     </div>
   );
 };

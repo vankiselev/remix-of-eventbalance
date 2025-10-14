@@ -130,6 +130,34 @@ export const useRoles = () => {
     }
   });
 
+  const updateRole = useMutation({
+    mutationFn: async ({ roleId, updates }: { roleId: string; updates: Partial<Role> }) => {
+      const { data, error } = await supabase
+        .from('role_definitions')
+        .update(updates)
+        .eq('id', roleId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast({
+        title: "Роль обновлена",
+        description: "Изменения успешно сохранены",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить роль",
+      });
+    }
+  });
+
   return {
     roles: roles || [],
     isLoading,
@@ -138,6 +166,7 @@ export const useRoles = () => {
     permissionCounts: permissionCounts || {},
     totalPermissions: totalPermissions || 0,
     createRole,
-    deleteRole
+    deleteRole,
+    updateRole
   };
 };
