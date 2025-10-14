@@ -916,22 +916,22 @@ export const EmployeeProfileDialog = ({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить сотрудника навсегда?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p className="font-semibold text-destructive">
-                ⚠️ Это действие необратимо!
-              </p>
-              <p>
-                Будут безвозвратно удалены:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Профиль сотрудника</li>
-                <li>Все финансовые транзакции</li>
-                <li>Все события и мероприятия</li>
-                <li>История изменений</li>
-                <li>Все связанные данные</li>
-              </ul>
+            <AlertDialogDescription>
+              ⚠️ Это действие необратимо! Будут безвозвратно удалены: профиль сотрудника, все финансовые транзакции, все события и мероприятия, история изменений и все связанные данные.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <p className="font-semibold text-destructive text-sm">
+              Будут безвозвратно удалены:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+              <li>Профиль сотрудника</li>
+              <li>Все финансовые транзакции</li>
+              <li>Все события и мероприятия</li>
+              <li>История изменений</li>
+              <li>Все связанные данные</li>
+            </ul>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction
