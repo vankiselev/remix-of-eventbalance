@@ -303,9 +303,15 @@ const Staff = () => {
     setShowProfileDialog(true);
   };
 
-  const handleProfileSuccess = async () => {
+  const handleProfileSuccess = async (wasTerminated?: boolean) => {
     // Принудительно обновляем все данные
     await fetchData();
+    // Переключаем вкладку в зависимости от действия
+    if (wasTerminated === true) {
+      setStatusTab('terminated'); // Переключаем на "Уволенные"
+    } else if (wasTerminated === false) {
+      setStatusTab('active'); // Переключаем на "Активные"
+    }
     // Закрываем диалог и сбрасываем состояние
     setShowProfileDialog(false);
     setSelectedUser(null);

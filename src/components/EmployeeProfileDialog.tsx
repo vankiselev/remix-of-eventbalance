@@ -107,7 +107,7 @@ interface EmployeeProfileDialogProps {
   profile?: Profile; // Added for administrator users without employee record
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (wasTerminated?: boolean) => void;
   isAdmin: boolean;
 }
 
@@ -432,7 +432,7 @@ export const EmployeeProfileDialog = ({
 
       setShowTerminateDialog(false);
       setTerminationReason("");
-      onSuccess();
+      onSuccess(true); // Передаем флаг что был уволен
       onOpenChange(false);
     } catch (error: any) {
       toast({
@@ -462,7 +462,7 @@ export const EmployeeProfileDialog = ({
       });
 
       setShowReactivateDialog(false);
-      onSuccess();
+      onSuccess(false); // Передаем флаг что не уволен
       onOpenChange(false);
     } catch (error: any) {
       toast({
