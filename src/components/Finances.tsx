@@ -461,25 +461,26 @@ const Finances = () => {
   // Admin dashboard view
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="mb-4">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
             <h1 className="text-3xl font-bold">Финансы</h1>
             <p className="text-muted-foreground">Управление доходами и расходами компании</p>
           </div>
-          {/* Show user summary for "my-transactions", company summary for "all-transactions" */}
-          <FinanceSummaryCards 
-            summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
-            isLoading={false} 
-          />
+          
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowTransactionForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить транзакцию
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setShowTransactionForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить транзакцию
-          </Button>
-        </div>
+
+        {/* Show user summary for "my-transactions", company summary for "all-transactions" */}
+        <FinanceSummaryCards 
+          summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
+          isLoading={false} 
+        />
       </div>
 
       <Card>
