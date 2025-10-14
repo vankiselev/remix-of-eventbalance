@@ -151,14 +151,21 @@ export const RolesManagement = () => {
                   disabled={isCreating}
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="is-admin">Административная роль</Label>
-                <Switch
-                  id="is-admin"
-                  checked={newRoleIsAdmin}
-                  onCheckedChange={setNewRoleIsAdmin}
-                  disabled={isCreating}
-                />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="is-admin">Административная роль</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Админ роли имеют полный доступ к системе
+                    </p>
+                  </div>
+                  <Switch
+                    id="is-admin"
+                    checked={newRoleIsAdmin}
+                    onCheckedChange={setNewRoleIsAdmin}
+                    disabled={isCreating}
+                  />
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <Button
