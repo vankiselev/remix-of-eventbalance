@@ -399,14 +399,14 @@ const Finances = () => {
       </div>
 
       <Card>
-        <Tabs defaultValue="transactions" className="w-full">
+        <Tabs defaultValue="my-transactions" className="w-full">
           <CardHeader className="pb-0 border-b border-border">
             <TabsList className="flex items-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
               <TabsTrigger 
-                value="transactions" 
+                value="my-transactions" 
                 className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
               >
-                Все транзакции
+                Мои транзакции
               </TabsTrigger>
               <TabsTrigger 
                 value="employees" 
@@ -414,15 +414,29 @@ const Finances = () => {
               >
                 Сотрудники
               </TabsTrigger>
+              <TabsTrigger 
+                value="all-transactions" 
+                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+              >
+                Все транзакции
+              </TabsTrigger>
             </TabsList>
           </CardHeader>
           
           <CardContent className="pt-4">
+            <TabsContent value="my-transactions" className="mt-0">
+              <EnhancedTransactionTable
+                userId={user?.id}
+                isAdmin={true}
+                onEdit={handleEditTransaction}
+              />
+            </TabsContent>
+
             <TabsContent value="employees" className="mt-0">
               <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
             </TabsContent>
             
-            <TabsContent value="transactions" className="mt-0">
+            <TabsContent value="all-transactions" className="mt-0">
               <EnhancedTransactionTable
                 isAdmin={true}
                 onEdit={handleEditTransaction}
