@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   session: Session | null;
@@ -23,6 +24,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Check employment status when user changes
+  useEffect(() => {
+    const checkEmploymentStatus = async () => {
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('employment_status')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.employment_status === 'terminated') {
+        toast.error('Ваш доступ к системе был прекращен');
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        window.location.href = '/auth';
+      }
+    };
+
+    if (user) {
+      checkEmploymentStatus();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
