@@ -87,7 +87,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex h-16 items-center justify-between px-6">
               {/* Logo and Menu */}
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
+                <h1 className="text-xl font-bold text-foreground" style={{ width: sidebarCollapsed ? '64px' : '256px' }}>EventBalance</h1>
                 
                 {location.pathname === '/finances' && userRole === 'admin' && (
                   <DropdownMenu>
@@ -95,7 +95,8 @@ const Layout = ({ children }: LayoutProps) => {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0 ml-4"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
+                        style={{ marginLeft: '-12px' }}
                       >
                         Редактирование
                       </Button>
