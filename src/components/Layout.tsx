@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, ChevronLeft, ChevronRight, Cake, Plane, FileText, Settings, Download, Upload, Trash2 } from "lucide-react";
+import { LogOut, Menu, DollarSign, Calendar, CalendarDays, Users, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -25,8 +25,10 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  
+  const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
   useEffect(() => {
@@ -167,27 +169,10 @@ const Layout = ({ children }: LayoutProps) => {
               className={`border-r bg-card transition-all duration-300 ${
                 sidebarCollapsed ? "w-16" : "w-64"
               }`}
+              onMouseEnter={() => setSidebarHovered(true)}
+              onMouseLeave={() => setSidebarHovered(false)}
             >
               <div className="flex h-full flex-col">
-                {/* Sidebar Header with Toggle */}
-                <div className="flex items-center justify-between p-3 border-b">
-                  {!sidebarCollapsed && (
-                    <span className="text-sm font-medium text-muted-foreground">Меню</span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="h-8 w-8 ml-auto"
-                  >
-                    {sidebarCollapsed ? (
-                      <ChevronRight className="h-4 w-4" />
-                    ) : (
-                      <ChevronLeft className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-
                 {/* Sidebar Navigation */}
                 <nav className="flex-1 p-3 overflow-y-auto">
                   <ul className="space-y-1">
