@@ -85,8 +85,8 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Desktop Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-16 items-center px-6">
-              {/* Logo - fixed width matching sidebar */}
-              <div className={`flex-shrink-0 ${sidebarCollapsed ? 'w-4' : 'w-52'} transition-all duration-300`}>
+              {/* Logo - fixed width matching sidebar with safe zone */}
+              <div className={`flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-16 min-w-[180px]' : 'w-52'}`}>
                 <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
               </div>
               
