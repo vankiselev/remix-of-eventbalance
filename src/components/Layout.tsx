@@ -77,7 +77,7 @@ const Layout = ({ children }: LayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen-safe bg-background flex flex-col w-full">
+    <div className="min-h-screen bg-background flex flex-col w-full">
       {!isMobile ? (
         <>
           {/* Desktop Header */}
@@ -180,7 +180,7 @@ const Layout = ({ children }: LayoutProps) => {
           </header>
 
           {/* Main Layout with Sidebar */}
-          <div className="flex flex-1 w-full">
+          <div className="flex flex-1 w-full min-h-0">
             {/* Collapsible Sidebar - Fixed */}
             <aside
               className={`fixed top-16 left-0 bottom-0 border-r bg-card transition-all duration-300 overflow-y-auto z-40 ${
@@ -227,44 +227,37 @@ const Layout = ({ children }: LayoutProps) => {
 
             {/* Main Content with margin to account for fixed sidebar */}
             <main 
-              className={`flex-1 overflow-auto transition-all duration-300 ${
+              className={`flex-1 flex flex-col transition-all duration-300 ${
                 sidebarCollapsed ? "ml-16" : "ml-64"
               }`}
             >
-              <div className="main-container">
+              <div className="flex-1 main-container">
                 {children}
               </div>
+              
+              {/* Footer */}
+              <footer className="border-t bg-card mt-auto">
+                <div className="px-6 py-4">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <p>© 2025 EventBalance. Все права защищены.</p>
+                    <div className="flex items-center gap-4">
+                      <a href="#" className="hover:text-foreground transition-colors">О компании</a>
+                      <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
+                      <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
+                    </div>
+                  </div>
+                </div>
+              </footer>
             </main>
           </div>
-
-          {/* Footer */}
-          <footer className="border-t bg-card">
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <p>© 2025 EventBalance. Все права защищены.</p>
-                <div className="flex items-center gap-4">
-                  <a href="#" className="hover:text-foreground transition-colors">О компании</a>
-                  <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
-                  <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
-                </div>
-              </div>
-            </div>
-          </footer>
         </>
       ) : (
         /* Mobile Layout */
         <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto px-4 py-6 pb-36">
+          <main className="flex-1 overflow-auto px-4 py-6 pb-28">
             {children}
           </main>
           <MobileBottomNav />
-          
-          {/* Mobile Footer */}
-          <footer className="fixed bottom-24 left-0 right-0 bg-card/95 border-t border-border/20 backdrop-blur-lg z-40">
-            <div className="px-4 py-3">
-              <p className="text-xs text-center text-muted-foreground">© 2025 EventBalance</p>
-            </div>
-          </footer>
         </div>
       )}
     </div>
