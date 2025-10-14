@@ -61,7 +61,7 @@ const TodayBirthdaysCard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-center">
             <Cake className="w-5 h-5 text-primary" />
-            День рождения сегодня
+            Именинники
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center">
@@ -78,7 +78,7 @@ const TodayBirthdaysCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 justify-center">
           <Cake className="w-5 h-5 text-primary" />
-          День рождения сегодня
+          Именинники
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
