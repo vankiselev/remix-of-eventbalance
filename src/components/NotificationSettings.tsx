@@ -64,9 +64,10 @@ export const NotificationSettings = () => {
             description: 'Вы будете получать уведомления даже когда приложение закрыто',
           });
         } else {
+          setIsPushEnabled(await checkPushSubscription());
           toast({
-            title: 'Ошибка',
-            description: 'Не удалось включить push-уведомления',
+            title: 'Не удалось включить',
+            description: 'Попробуйте ещё раз. Если не включается — откройте консоль (F12) → Console и пришлите ошибку.',
             variant: 'destructive',
           });
         }

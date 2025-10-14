@@ -115,19 +115,29 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       }
 
       // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('Service worker registered:', registration);
 
-      // Wait for the service worker to be ready
-      await navigator.serviceWorker.ready;
+      // Wait for the service worker to be ready (activated)
+      const swReg = await navigator.serviceWorker.ready;
+      console.log('Service worker ready:', swReg);
 
-      // Subscribe to push notifications
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
-      console.log('Push subscription:', subscription);
+      // Reuse existing subscription if present
+      let subscription = await swReg.pushManager.getSubscription();
+      if (!subscription) {
+        try {
+          subscription = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+          console.log('Created new push subscription:', subscription);
+        } catch (err) {
+          console.error('pushManager.subscribe failed:', err);
+          throw err;
+        }
+      } else {
+        console.log('Existing push subscription found:', subscription);
+      }
 
       // Save subscription to database
       const { data: user } = await supabase.auth.getUser();
