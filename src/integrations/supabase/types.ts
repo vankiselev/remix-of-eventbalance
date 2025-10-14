@@ -1471,6 +1471,10 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      has_permission: {
+        Args: { p_code: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
