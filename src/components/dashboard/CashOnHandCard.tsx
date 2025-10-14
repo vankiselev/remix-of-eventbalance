@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { DollarSign, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -126,9 +127,9 @@ const CashOnHandCard = () => {
       <CardContent>
         {userRole === 'admin' ? (
           /* Для админа - две колонки */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:divide-x">
             {/* Колонка 1: Деньги администратора */}
-            <div className="space-y-4">
+            <div className="space-y-4 md:pr-6">
               <h3 className="text-sm font-semibold text-muted-foreground border-b pb-2">
                 Мои деньги на руках
               </h3>
@@ -158,7 +159,7 @@ const CashOnHandCard = () => {
             </div>
 
             {/* Колонка 2: Общие деньги компании */}
-            <div className="space-y-4">
+            <div className="space-y-4 md:pl-6">
               <h3 className="text-sm font-semibold text-muted-foreground border-b pb-2">
                 Всего у всех сотрудников
               </h3>
