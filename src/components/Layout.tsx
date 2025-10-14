@@ -28,6 +28,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
@@ -35,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
+        setProfileLoading(true);
         const { data } = await supabase
           .rpc("get_user_basic_profile")
           .single();
@@ -43,6 +45,7 @@ const Layout = ({ children }: LayoutProps) => {
           full_name: data?.full_name || 'Пользователь',
           avatar_url: data?.avatar_url || null
         });
+        setProfileLoading(false);
       }
     };
     fetchUserProfile();
@@ -159,29 +162,31 @@ const Layout = ({ children }: LayoutProps) => {
               {/* User Profile & Actions */}
               <div className="flex items-center gap-3">
                 <NotificationsMenu />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/profile')}
-                  className="gap-2"
-                >
-                  <Avatar className="h-8 w-8">
-                    {avatarUrl && (
-                      <AvatarImage src={avatarUrl} alt={displayName} />
-                    )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="hidden lg:flex flex-col items-start">
-                    <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
-                      {displayName}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
-                    </span>
-                  </div>
-                </Button>
+                {!profileLoading && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/profile')}
+                    className="gap-2"
+                  >
+                    <Avatar className="h-8 w-8">
+                      {avatarUrl && (
+                        <AvatarImage src={avatarUrl} alt={displayName} />
+                      )}
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden lg:flex flex-col items-start">
+                      <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
+                        {displayName}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                      </span>
+                    </div>
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
