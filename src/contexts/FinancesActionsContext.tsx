@@ -11,7 +11,9 @@ interface FinancesActionsContextType {
   }) => void;
 }
 
-const FinancesActionsContext = createContext<FinancesActionsContextType | undefined>(undefined);
+const FinancesActionsContext = createContext<FinancesActionsContextType>({
+  setActions: () => {},
+});
 
 export const FinancesActionsProvider = ({ children }: { children: ReactNode }) => {
   const [actions, setActionsState] = useState<{
@@ -36,9 +38,5 @@ export const FinancesActionsProvider = ({ children }: { children: ReactNode }) =
 };
 
 export const useFinancesActions = () => {
-  const context = useContext(FinancesActionsContext);
-  if (context === undefined) {
-    throw new Error('useFinancesActions must be used within a FinancesActionsProvider');
-  }
-  return context;
+  return useContext(FinancesActionsContext);
 };

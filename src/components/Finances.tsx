@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
-import { TransactionExport } from './finance/TransactionExport';
+
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
@@ -48,11 +48,104 @@ const Finances = () => {
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [exportRef, setExportRef] = useState<{ exportToCSV: () => void } | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
   const { setActions } = useFinancesActions();
+
+  // Create stable functions with useCallback
+  const handleExportClick = useCallback(async () => {
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { formatCurrency } = await import("@/utils/formatCurrency");
+      
+      let query = supabase
+        .from("financial_transactions")
+        .select(`
+          *,
+          events:project_id(name),
+          attachments_count:financial_attachments(count)
+        `)
+        .order("operation_date", { ascending: false });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const transactions = (data || []).map(transaction => ({
+        ...transaction,
+        attachments_count: transaction.attachments_count?.[0]?.count || 0
+      }));
+      
+      const headers = [
+        'Дата операции',
+        'Проект',
+        'Чей проект',
+        'Описание',
+        'Траты',
+        'Приход',
+        'Категория',
+        'Касса',
+        'Количество вложений',
+        'Нет чека',
+        'Причина отсутствия чека',
+        'Заметки',
+        'Дата создания'
+      ];
+
+      const csvData = transactions.map(transaction => [
+        new Date(transaction.operation_date).toLocaleDateString("ru-RU"),
+        transaction.events?.name || '',
+        transaction.project_owner || '',
+        transaction.description || '',
+        transaction.expense_amount ? formatCurrency(transaction.expense_amount) : '',
+        transaction.income_amount ? formatCurrency(transaction.income_amount) : '',
+        transaction.category || '',
+        transaction.cash_type || '',
+        transaction.attachments_count || 0,
+        transaction.no_receipt ? 'Да' : 'Нет',
+        transaction.no_receipt_reason || '',
+        transaction.notes || '',
+        new Date(transaction.created_at).toLocaleDateString("ru-RU")
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => 
+          row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+        )
+      ].join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Успешно",
+        description: "Данные экспортированы в CSV файл"
+      });
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось экспортировать данные",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
+
+  const handleImportClick = useCallback(() => {
+    setShowImportDialog(true);
+  }, []);
+
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteDialog(true);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -70,15 +163,15 @@ const Finances = () => {
   useEffect(() => {
     if (isAdmin) {
       setActions({
-        onExport: () => exportRef?.exportToCSV(),
-        onImport: () => setShowImportDialog(true),
-        onDeleteAll: () => setShowDeleteDialog(true),
+        onExport: handleExportClick,
+        onImport: handleImportClick,
+        onDeleteAll: handleDeleteClick,
       });
     }
     return () => {
       setActions({});
     };
-  }, [isAdmin, exportRef, setActions]);
+  }, [isAdmin, setActions, handleExportClick, handleImportClick, handleDeleteClick]);
 
   // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
@@ -313,7 +406,6 @@ const Finances = () => {
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
-              <TransactionExport userId={selectedEmployee?.id} isAdmin={isAdmin} />
               <Button variant="outline" onClick={() => setShowImportDialog(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Импорт
@@ -383,14 +475,6 @@ const Finances = () => {
             Добавить транзакцию
           </Button>
         </div>
-      </div>
-
-      {/* Hidden TransactionExport to get ref */}
-      <div className="hidden">
-        <TransactionExport 
-          isAdmin={true} 
-          ref={(ref: any) => setExportRef(ref)}
-        />
       </div>
 
       <Card>
