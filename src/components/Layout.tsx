@@ -199,7 +199,7 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex flex-1 w-full overflow-hidden">
             {/* Collapsible Sidebar */}
             <aside
-              className={`border-r bg-card transition-all duration-300 ${
+              className={`border-r bg-card transition-all duration-300 sticky top-0 h-[calc(100vh-4rem)] overflow-y-auto ${
                 sidebarCollapsed ? "w-16" : "w-64"
               }`}
               onMouseEnter={() => setSidebarHovered(true)}
