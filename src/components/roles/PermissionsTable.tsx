@@ -50,11 +50,6 @@ export const PermissionsTable = () => {
 
   // Helper to handle checkbox change
   const handleToggle = (roleId: string, permissionId: string, currentValue: boolean) => {
-    // Don't allow editing system roles
-    const role = roles.find(r => r.id === roleId);
-    if (role?.is_system) {
-      return;
-    }
     togglePermission.mutate({ roleId, permissionId, granted: !currentValue });
   };
 
@@ -101,7 +96,6 @@ export const PermissionsTable = () => {
                 </TableCell>
                 {roles.map(role => {
                   const granted = isPermissionGranted(role.id, permission.id);
-                  const isSystemRole = role.is_system;
                   
                   return (
                     <TableCell key={role.id} className="text-center">
@@ -109,8 +103,6 @@ export const PermissionsTable = () => {
                         <Checkbox
                           checked={granted}
                           onCheckedChange={() => handleToggle(role.id, permission.id, granted)}
-                          disabled={isSystemRole}
-                          className={isSystemRole ? "cursor-not-allowed" : ""}
                         />
                       </div>
                     </TableCell>
