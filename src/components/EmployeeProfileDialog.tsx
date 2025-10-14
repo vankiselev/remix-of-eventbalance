@@ -413,6 +413,41 @@ export const EmployeeProfileDialog = ({
     return formatDateTime(dateString);
   };
 
+  const translateFieldName = (fieldName: string): string => {
+    const translations: Record<string, string> = {
+      'employment_status': 'Статус занятости',
+      'full_name': 'ФИО',
+      'email': 'Email',
+      'phone': 'Телефон',
+      'birth_date': 'Дата рождения',
+      'position': 'Должность',
+      'hire_date': 'Дата найма',
+      'salary': 'Зарплата',
+      'role': 'Роль',
+      'avatar_url': 'Фото профиля',
+      'employee_record_created': 'Создание записи сотрудника'
+    };
+    return translations[fieldName] || fieldName;
+  };
+
+  const translateFieldValue = (value: string | null, fieldName: string): string => {
+    if (!value) return 'не указано';
+    
+    // Translate employment_status values
+    if (fieldName === 'employment_status') {
+      if (value === 'active') return 'Активен';
+      if (value === 'terminated') return 'Уволен';
+    }
+    
+    // Translate role values
+    if (fieldName === 'role') {
+      if (value === 'admin') return 'Администратор';
+      if (value === 'employee') return 'Сотрудник';
+    }
+    
+    return value;
+  };
+
   const handleTerminateEmployee = async () => {
     if (!currentUser?.id) return;
 
@@ -813,13 +848,13 @@ export const EmployeeProfileDialog = ({
                   editHistory.map((entry) => (
                     <div key={entry.id} className="p-3 border rounded-lg text-sm">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{entry.field_name}</p>
+                        <div className="flex-1">
+                          <p className="font-medium">{translateFieldName(entry.field_name)}</p>
                           <p className="text-muted-foreground">
-                            {entry.old_value} → {entry.new_value}
+                            {translateFieldValue(entry.old_value, entry.field_name)} → {translateFieldValue(entry.new_value, entry.field_name)}
                           </p>
                         </div>
-                        <div className="text-xs text-muted-foreground text-right">
+                        <div className="text-xs text-muted-foreground text-right ml-4">
                           <p>{entry.edited_by.full_name}</p>
                           <p>{formatDate(entry.created_at)}</p>
                         </div>
