@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2 } from "lucide-react";
-import { formatDate } from '@/utils/dateFormat';
 import { NotificationSettings } from '@/components/NotificationSettings';
 
 const profileSchema = z.object({
@@ -80,7 +79,7 @@ const ProfilePage = () => {
           full_name: data.full_name || "",
           email: data.email || "",
           phone_display: data.phone || "",
-          birth_date: data.birth_date ? formatDate(data.birth_date) : "",
+          birth_date: data.birth_date || "",
         });
       }
     } catch (error: any) {
