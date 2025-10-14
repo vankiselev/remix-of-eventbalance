@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { Plus, ArrowLeft, Upload, Trash2, MoreVertical, Download } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
@@ -46,6 +47,7 @@ const Finances = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -350,48 +352,43 @@ const Finances = () => {
   // Admin dashboard view
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Финансы</h1>
-          <p className="text-muted-foreground">Управление доходами и расходами компании</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold">Финансы</h1>
+            <p className="text-muted-foreground">Управление доходами и расходами компании</p>
+          </div>
+          <FinanceSummaryCards summary={companySummary} isLoading={false} />
         </div>
         
-        <div className="flex flex-col gap-2 md:items-end">
-          <FinanceSummaryCards summary={companySummary} isLoading={false} />
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowTransactionForm(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить транзакцию
+          </Button>
           
-          <div className="flex flex-col gap-2 mt-2">
-            <Button onClick={() => setShowTransactionForm(true)} className="w-full md:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить транзакцию
-            </Button>
-            <TransactionExport isAdmin={true} />
-            <Button variant="outline" onClick={() => setShowImportDialog(true)} className="w-full md:w-auto">
-              <Upload className="mr-2 h-4 w-4" />
-              Импорт
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full md:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Удалить все транзакции
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Отмена</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAllTransactions} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Удалить все
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <MoreVertical className="h-4 w-4 mr-2" />
+                Редактирование
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-background z-50">
+              <TransactionExport isAdmin={true} />
+              <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Импорт
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить все транзакции
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -455,6 +452,29 @@ const Finances = () => {
         onOpenChange={setShowImportDialog}
         onImportComplete={handleTransactionSuccess}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                handleDeleteAllTransactions();
+                setShowDeleteDialog(false);
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Удалить все
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

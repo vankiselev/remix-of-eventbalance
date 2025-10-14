@@ -131,14 +131,12 @@ export function TransactionExport({ userId, isAdmin }: TransactionExportProps) {
   };
 
   return (
-    <Button 
+    <div 
       onClick={exportToCSV}
-      variant="outline"
-      size="sm"
-      className="flex items-center gap-2"
+      className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
     >
-      <Download className="h-4 w-4" />
+      <Download className="mr-2 h-4 w-4" />
       Экспорт CSV
-    </Button>
+    </div>
   );
 }
