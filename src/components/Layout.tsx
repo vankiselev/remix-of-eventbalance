@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,20 +27,25 @@ const Layout = ({ children }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserProfile = async () => {
       if (user) {
         const { data } = await supabase
           .rpc("get_user_basic_profile")
           .single();
         setUserRole(data?.role || 'employee');
+        setUserProfile({
+          full_name: data?.full_name || 'Пользователь',
+          avatar_url: data?.avatar_url || null
+        });
       }
     };
-    fetchUserRole();
+    fetchUserProfile();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -152,13 +157,16 @@ const Layout = ({ children }: LayoutProps) => {
                   className="gap-2"
                 >
                   <Avatar className="h-8 w-8">
+                    {userProfile?.avatar_url && (
+                      <AvatarImage src={userProfile.avatar_url} alt={userProfile.full_name} />
+                    )}
                     <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {user?.email?.charAt(0).toUpperCase()}
+                      {userProfile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden lg:flex flex-col items-start">
                     <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
-                      {user?.email?.split('@')[0]}
+                      {userProfile?.full_name || 'Пользователь'}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                       {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
