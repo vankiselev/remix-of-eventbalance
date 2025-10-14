@@ -149,9 +149,24 @@ const Staff = () => {
         });
       });
 
-      // Combine profiles with employee data
+      // Build status map for employment info (admins only)
+      let statusMap = new Map<string, any>();
+      if (currentProfile?.role === 'admin' && (profilesData?.length ?? 0) > 0) {
+        const { data: statusRows, error: statusError } = await supabase
+          .from('profiles')
+          .select('id, employment_status, termination_date, termination_reason')
+          .in('id', (profilesData as any[]).map((p: any) => p.id));
+        if (statusError) {
+          console.error('Error fetching employment statuses:', statusError);
+        } else {
+          (statusRows || []).forEach((row: any) => statusMap.set(row.id, row));
+        }
+      }
+
+      // Combine profiles with employee and employment data
       const combinedUsers: CombinedUser[] = (profilesData || []).map((profile: Profile) => {
         const employeeData = employeeMap.get(profile.id);
+        const status = statusMap.get(profile.id);
         return {
           id: profile.id,
           email: profile.email,
@@ -161,9 +176,9 @@ const Staff = () => {
           birth_date: profile.birth_date,
           avatar_url: profile.avatar_url,
           created_at: profile.created_at,
-          employment_status: profile.employment_status,
-          termination_date: profile.termination_date,
-          termination_reason: profile.termination_reason,
+          employment_status: status?.employment_status ?? profile.employment_status,
+          termination_date: status?.termination_date ?? profile.termination_date,
+          termination_reason: status?.termination_reason ?? profile.termination_reason,
           ...employeeData
         };
       });
