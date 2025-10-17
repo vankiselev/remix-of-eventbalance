@@ -116,12 +116,18 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     }
   };
 
-  // Calculate breakdown by category
+  // Only cash wallets counted in totals/breakdowns
+  const cashWallets = useMemo(() => new Set(['Наличка Настя','Наличка Лера','Наличка Ваня']), []);
+
+  const transactionsForCashTotals = useMemo(() => (
+    transactions.filter(t => t.cash_type != null && cashWallets.has(String(t.cash_type)))
+  ), [transactions, cashWallets]);
+
   const expensesBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
     let total = 0;
 
-    transactions.forEach(t => {
+    transactionsForCashTotals.forEach(t => {
       if (t.expense_amount > 0) {
         totals[t.category] = (totals[t.category] || 0) + t.expense_amount;
         total += t.expense_amount;
@@ -131,15 +137,15 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return Object.entries(totals).map(([category, amount]) => ({
       category,
       amount,
-      percentage: (amount / total) * 100,
+      percentage: total ? (amount / total) * 100 : 0,
     }));
-  }, [transactions]);
+  }, [transactionsForCashTotals]);
 
   const incomesBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
     let total = 0;
 
-    transactions.forEach(t => {
+    transactionsForCashTotals.forEach(t => {
       if (t.income_amount > 0) {
         totals[t.category] = (totals[t.category] || 0) + t.income_amount;
         total += t.income_amount;
@@ -149,18 +155,18 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return Object.entries(totals).map(([category, amount]) => ({
       category,
       amount,
-      percentage: (amount / total) * 100,
+      percentage: total ? (amount / total) * 100 : 0,
     }));
-  }, [transactions]);
+  }, [transactionsForCashTotals]);
 
   const totalExpenses = useMemo(() => 
-    transactions.reduce((sum, t) => sum + t.expense_amount, 0), 
-    [transactions]
+    transactionsForCashTotals.reduce((sum, t) => sum + t.expense_amount, 0), 
+    [transactionsForCashTotals]
   );
 
   const totalIncomes = useMemo(() => 
-    transactions.reduce((sum, t) => sum + t.income_amount, 0), 
-    [transactions]
+    transactionsForCashTotals.reduce((sum, t) => sum + t.income_amount, 0), 
+    [transactionsForCashTotals]
   );
 
   // Group transactions by date
