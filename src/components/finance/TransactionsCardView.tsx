@@ -83,12 +83,11 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         .order('operation_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Filter by user if not admin or if userId is provided
+      // Filter by user only for non-admin viewing their own transactions
       if (!isAdmin && userId) {
         query = query.eq('created_by', userId);
-      } else if (userId) {
-        query = query.eq('created_by', userId);
       }
+      // Admins see all transactions when no specific userId is provided
 
       // Filter by period
       if (selectedPeriod === "current") {
