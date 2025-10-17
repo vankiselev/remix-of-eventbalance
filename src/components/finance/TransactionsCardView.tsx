@@ -33,7 +33,7 @@ interface Transaction {
 }
 
 interface TransactionsCardViewProps {
-  userId: string;
+  userId?: string;
   isAdmin: boolean;
   onEdit?: (transaction: any) => void;
 }
@@ -83,8 +83,10 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         .order('operation_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Filter by user if not admin
-      if (!isAdmin) {
+      // Filter by user if not admin or if userId is provided
+      if (!isAdmin && userId) {
+        query = query.eq('user_id', userId);
+      } else if (userId) {
         query = query.eq('user_id', userId);
       }
 

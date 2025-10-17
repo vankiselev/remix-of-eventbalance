@@ -15,6 +15,7 @@ import { EmployeeList } from "@/components/finance/EmployeeList";
 import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
+import { TransactionsCardView } from "@/components/finance/TransactionsCardView";
 
 interface CashSummary {
   total_cash: number;
@@ -51,6 +52,7 @@ const Finances = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("my-transactions");
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -443,15 +445,29 @@ const Finances = () => {
       </div>
 
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 space-y-4">
           <CardTitle className="text-lg">Транзакции</CardTitle>
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
+            <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+              <TabsTrigger value="cards">📱 Карточки</TabsTrigger>
+              <TabsTrigger value="table">📊 Таблица</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
         <CardContent className="pt-0">
-          <EnhancedTransactionTable
-            userId={currentUserId}
-            isAdmin={isAdmin}
-            onEdit={handleEditTransaction}
-          />
+          {viewMode === 'cards' ? (
+            <TransactionsCardView
+              userId={currentUserId}
+              isAdmin={isAdmin}
+              onEdit={handleEditTransaction}
+            />
+          ) : (
+            <EnhancedTransactionTable
+              userId={currentUserId}
+              isAdmin={isAdmin}
+              onEdit={handleEditTransaction}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -518,23 +534,50 @@ const Finances = () => {
           </CardHeader>
           
           <CardContent className="pt-4">
-            <TabsContent value="my-transactions" className="mt-0">
-              <EnhancedTransactionTable
-                userId={user?.id}
-                isAdmin={true}
-                onEdit={handleEditTransaction}
-              />
+            <TabsContent value="my-transactions" className="mt-0 space-y-4">
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
+                <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+                  <TabsTrigger value="cards">📱 Карточки</TabsTrigger>
+                  <TabsTrigger value="table">📊 Таблица</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {viewMode === 'cards' ? (
+                <TransactionsCardView
+                  userId={user?.id}
+                  isAdmin={true}
+                  onEdit={handleEditTransaction}
+                />
+              ) : (
+                <EnhancedTransactionTable
+                  userId={user?.id}
+                  isAdmin={true}
+                  onEdit={handleEditTransaction}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="employees" className="mt-0">
               <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
             </TabsContent>
             
-            <TabsContent value="all-transactions" className="mt-0">
-              <EnhancedTransactionTable
-                isAdmin={true}
-                onEdit={handleEditTransaction}
-              />
+            <TabsContent value="all-transactions" className="mt-0 space-y-4">
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
+                <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+                  <TabsTrigger value="cards">📱 Карточки</TabsTrigger>
+                  <TabsTrigger value="table">📊 Таблица</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {viewMode === 'cards' ? (
+                <TransactionsCardView
+                  isAdmin={true}
+                  onEdit={handleEditTransaction}
+                />
+              ) : (
+                <EnhancedTransactionTable
+                  isAdmin={true}
+                  onEdit={handleEditTransaction}
+                />
+              )}
             </TabsContent>
           </CardContent>
         </Tabs>
