@@ -195,7 +195,7 @@ const FinancesImportDialog = ({
     if (fileHeaders[0]) autoMapping['creator_name'] = fileHeaders[0];      // 1. Имя
     if (fileHeaders[1]) autoMapping['operation_date'] = fileHeaders[1];    // 2. Дата операции
     if (fileHeaders[2]) autoMapping['project_name'] = fileHeaders[2];      // 3. Проект (static_project_name)
-    if (fileHeaders[3]) autoMapping['cash_type'] = fileHeaders[3];         // 4. Чей проект (тип кассы)
+    if (fileHeaders[3]) autoMapping['project_owner'] = fileHeaders[3];     // 4. Чей проект (project_owner, НЕ cash_type!)
     if (fileHeaders[4]) autoMapping['description'] = fileHeaders[4];       // 5. Подробное описание
     if (fileHeaders[5]) autoMapping['expense_amount'] = fileHeaders[5];    // 6. Траты
     if (fileHeaders[6]) autoMapping['income_amount'] = fileHeaders[6];     // 7. Приход
@@ -208,7 +208,7 @@ const FinancesImportDialog = ({
     console.log('1. Имя:', fileHeaders[0], '→ creator_name');
     console.log('2. Дата:', fileHeaders[1], '→ operation_date');
     console.log('3. Проект:', fileHeaders[2], '→ project_name');
-    console.log('4. Чей проект:', fileHeaders[3], '→ cash_type');
+    console.log('4. Чей проект:', fileHeaders[3], '→ project_owner');
     console.log('5. Описание:', fileHeaders[4], '→ description');
     console.log('6. Траты:', fileHeaders[5], '→ expense_amount');
     console.log('7. Приход:', fileHeaders[6], '→ income_amount');
@@ -282,13 +282,17 @@ const FinancesImportDialog = ({
     return Math.abs(num); // Всегда положительное число
   };
 
-  const mapCashType = (cashTypeStr: string): 'nastya' | 'lera' | 'vanya' => {
-    if (!cashTypeStr) return 'nastya';
-    const s = String(cashTypeStr).toLowerCase();
-    if (s.includes('настя') || s.includes('nastya')) return 'nastya';
-    if (s.includes('лера') || s.includes('lera')) return 'lera';
-    if (s.includes('ваня') || s.includes('vanya')) return 'vanya';
-    return 'nastya';
+  const mapCashType = (projectOwner: string): 'nastya' | 'lera' | 'vanya' | null => {
+    if (!projectOwner) return null;
+    const s = String(projectOwner).toLowerCase().trim();
+    
+    // Точное совпадение для наличных касс
+    if (s === 'наличка настя' || s === 'настя') return 'nastya';
+    if (s === 'наличка лера' || s === 'лера') return 'lera';
+    if (s === 'наличка ваня' || s === 'ваня') return 'vanya';
+    
+    // Если не совпало - это не касса, возвращаем null
+    return null;
   };
 
   const getOwnerNameByCashType = (cashType: string): string => {
@@ -400,7 +404,8 @@ const FinancesImportDialog = ({
           const operationDate = parseDate(mappedRow.operation_date);
           const expenseAmount = parseAmount(mappedRow.expense_amount);
           const incomeAmount = parseAmount(mappedRow.income_amount);
-          const cashType = mapCashType(mappedRow.cash_type);
+          const projectOwner = mappedRow.project_owner || null;
+          const cashType = mapCashType(projectOwner); // Извлекаем cash_type из project_owner, если это наличка
 
           if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
             throw new Error("Некорректные данные");
@@ -410,10 +415,10 @@ const FinancesImportDialog = ({
             created_by: user?.id,
             operation_date: operationDate,
             static_project_name: mappedRow.project_name || null, // Столбец 3 "Проект" → static_project_name
-            project_owner: `Наличка ${getOwnerNameByCashType(cashType)}`,
+            project_owner: projectOwner, // Столбец 4 "Чей проект" → project_owner (например, "ИП Настя" или "Наличка Настя")
             description: mappedRow.description || '',
             category: mappedRow.category || 'Разное',
-            cash_type: `Наличка ${getOwnerNameByCashType(cashType)}`,
+            cash_type: cashType, // Если project_owner = "Наличка X", то cashType = 'nastya'/'lera'/'vanya', иначе null
             expense_amount: expenseAmount || null,
             income_amount: incomeAmount || null,
             notes: mappedRow.notes || null
@@ -421,8 +426,8 @@ const FinancesImportDialog = ({
 
           console.log('Importing transaction:', {
             project_name_from_file: mappedRow.project_name,
-            cash_type_from_file: mappedRow.cash_type,
-            mapped_cash_type: cashType,
+            project_owner_from_file: mappedRow.project_owner,
+            extracted_cash_type: cashType,
             transaction_data: transactionData
           });
 
@@ -595,10 +600,11 @@ const FinancesImportDialog = ({
                       return (
                         <div key={index} className="border-b pb-2 mb-2 text-sm">
                           <div><strong>Дата:</strong> {mappedRow.operation_date}</div>
+                          <div><strong>Проект:</strong> {mappedRow.project_name || '-'}</div>
+                          <div><strong>Чей проект:</strong> {mappedRow.project_owner || '-'}</div>
                           <div><strong>Описание:</strong> {mappedRow.description}</div>
                           <div><strong>Расход:</strong> {mappedRow.expense_amount ? formatCurrency(parseAmount(mappedRow.expense_amount)) : '-'}</div>
                           <div><strong>Доход:</strong> {mappedRow.income_amount ? formatCurrency(parseAmount(mappedRow.income_amount)) : '-'}</div>
-                          <div><strong>Касса:</strong> {`Наличка ${getOwnerNameByCashType(mapCashType(mappedRow.cash_type))}`}</div>
                         </div>
                       );
                     })}
