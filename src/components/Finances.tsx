@@ -62,7 +62,7 @@ const Finances = () => {
   const handleExportClick = useCallback(async () => {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { formatCurrency } = await import("@/utils/formatCurrency");
+      const Papa = (await import("papaparse")).default;
       
       let query = supabase
         .from("financial_transactions")
@@ -81,46 +81,31 @@ const Finances = () => {
         attachments_count: transaction.attachments_count?.[0]?.count || 0
       }));
       
-      const headers = [
-        'Дата операции',
-        'Проект',
-        'Чей проект',
-        'Описание',
-        'Траты',
-        'Приход',
-        'Категория',
-        'Касса',
-        'Количество вложений',
-        'Нет чека',
-        'Причина отсутствия чека',
-        'Заметки',
-        'Дата создания'
-      ];
+      // Prepare data for CSV export
+      const csvData = transactions.map(transaction => ({
+        'Дата операции': new Date(transaction.operation_date).toLocaleDateString("ru-RU"),
+        'Проект': transaction.events?.name || '',
+        'Чей проект': transaction.project_owner || '',
+        'Описание': transaction.description || '',
+        'Траты': transaction.expense_amount || '',
+        'Приход': transaction.income_amount || '',
+        'Категория': transaction.category || '',
+        'Касса': transaction.cash_type || '',
+        'Количество вложений': transaction.attachments_count || 0,
+        'Нет чека': transaction.no_receipt ? 'Да' : 'Нет',
+        'Причина отсутствия чека': transaction.no_receipt_reason || '',
+        'Заметки': transaction.notes || '',
+        'Дата создания': new Date(transaction.created_at).toLocaleDateString("ru-RU")
+      }));
 
-      const csvData = transactions.map(transaction => [
-        new Date(transaction.operation_date).toLocaleDateString("ru-RU"),
-        transaction.events?.name || '',
-        transaction.project_owner || '',
-        transaction.description || '',
-        transaction.expense_amount ? formatCurrency(transaction.expense_amount) : '',
-        transaction.income_amount ? formatCurrency(transaction.income_amount) : '',
-        transaction.category || '',
-        transaction.cash_type || '',
-        transaction.attachments_count || 0,
-        transaction.no_receipt ? 'Да' : 'Нет',
-        transaction.no_receipt_reason || '',
-        transaction.notes || '',
-        new Date(transaction.created_at).toLocaleDateString("ru-RU")
-      ]);
+      // Use papaparse for proper CSV formatting
+      const csv = Papa.unparse(csvData, {
+        delimiter: ";",
+        header: true,
+        quotes: true,
+      });
 
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => 
-          row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-        )
-      ].join('\n');
-
-      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
