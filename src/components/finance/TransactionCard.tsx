@@ -14,6 +14,7 @@ interface TransactionCardProps {
     income_amount: number;
     project_owner?: string;
     cash_type?: string;
+    static_project_name?: string;
   };
   onClick: () => void;
 }
@@ -22,6 +23,10 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
   const time = format(new Date(transaction.created_at), 'HH:mm');
+  
+  // Для категории "Передано или получено от сотрудника" показываем проект, иначе - чей проект
+  const isTransferCategory = transaction.category === 'Передано или получено от сотрудника';
+  const secondaryInfo = isTransferCategory ? transaction.static_project_name : transaction.project_owner;
 
   return (
     <div
@@ -38,10 +43,10 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
           <span>{transaction.category}</span>
-          {transaction.project_owner && (
+          {secondaryInfo && (
             <>
               <span>•</span>
-              <span>{transaction.project_owner}</span>
+              <span>{secondaryInfo}</span>
             </>
           )}
         </div>
