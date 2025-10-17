@@ -39,24 +39,36 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPicke
     'Settings', 'Tool', 'Wrench', 'Zap', 'Star', 'Heart', 'ThumbsUp', 'Check',
   ];
 
+  // Все доступные иконки lucide-react (только валидные компоненты)
+  const allLucideIconNames = useMemo(() => {
+    return Object.entries(Icons)
+      .filter(([name, value]) =>
+        name !== 'createLucideIcon' &&
+        name !== 'default' &&
+        typeof value === 'function'
+      )
+      .map(([name]) => name);
+  }, []);
+
   const filteredIcons = useMemo(() => {
     // Фильтруем popularIcons, чтобы оставить только существующие
     const validPopularIcons = popularIcons.filter(name => {
       const IconComponent = Icons[name as keyof typeof Icons];
       return IconComponent && typeof IconComponent === 'function';
     });
-    
-    if (!search) return validPopularIcons;
-    
+
+    if (!search) {
+      // Если нет запроса — показываем подобранные, иначе общий список
+      return validPopularIcons.length
+        ? validPopularIcons
+        : allLucideIconNames.slice(0, 96);
+    }
+
     const searchLower = search.toLowerCase();
-    return Object.keys(Icons)
-      .filter(name => 
-        name !== 'createLucideIcon' && 
-        name !== 'default' &&
-        name.toLowerCase().includes(searchLower)
-      )
-      .slice(0, 50);
-  }, [search]);
+    return allLucideIconNames
+      .filter(name => name.toLowerCase().includes(searchLower))
+      .slice(0, 100);
+  }, [search, allLucideIconNames]);
 
   const renderIcon = (iconName: string) => {
     const IconComponent = Icons[iconName as keyof typeof Icons] as any;
