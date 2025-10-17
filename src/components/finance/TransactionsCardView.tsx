@@ -41,7 +41,7 @@ interface TransactionsCardViewProps {
 export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCardViewProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("current");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [selectedWallet, setSelectedWallet] = useState<string>("all");
   const [showTransfers, setShowTransfers] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -83,18 +83,19 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         .order('operation_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Filter by user only for non-admin viewing their own transactions
-      if (!isAdmin && userId) {
+      // Filter by specific user if provided
+      if (userId) {
         query = query.eq('created_by', userId);
       }
-      // Admins see all transactions when no specific userId is provided
 
       // Filter by period
       if (selectedPeriod === "current") {
         const now = new Date();
         const start = startOfMonth(now);
         const end = endOfMonth(now);
-        query = query.gte('operation_date', start.toISOString()).lte('operation_date', end.toISOString());
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+        query = query.gte('operation_date', startStr).lte('operation_date', endStr);
       }
 
       // Filter by wallet
@@ -219,9 +220,9 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все кошельки</SelectItem>
-            <SelectItem value="Настя">Наличка Настя</SelectItem>
-            <SelectItem value="Лера">Наличка Лера</SelectItem>
-            <SelectItem value="Ваня">Наличка Ваня</SelectItem>
+            <SelectItem value="Наличка Настя">Наличка Настя</SelectItem>
+            <SelectItem value="Наличка Лера">Наличка Лера</SelectItem>
+            <SelectItem value="Наличка Ваня">Наличка Ваня</SelectItem>
           </SelectContent>
         </Select>
 

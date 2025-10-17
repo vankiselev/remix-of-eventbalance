@@ -413,7 +413,7 @@ const FinancesImportDialog = ({
             project_owner: `Наличка ${getOwnerNameByCashType(cashType)}`,
             description: mappedRow.description || '',
             category: mappedRow.category || 'Разное',
-            cash_type: cashType, // Столбец 4 "Чей проект" → cash_type (nastya/lera/vanya)
+            cash_type: `Наличка ${getOwnerNameByCashType(cashType)}`,
             expense_amount: expenseAmount || null,
             income_amount: incomeAmount || null,
             notes: mappedRow.notes || null
