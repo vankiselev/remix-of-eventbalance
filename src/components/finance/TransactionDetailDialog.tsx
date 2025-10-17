@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
 
@@ -48,23 +47,19 @@ export function TransactionDetailDialog({
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
-  const getCashTypeBadge = (cashType: string | null) => {
+  const getCashTypeLabel = (cashType: string | null) => {
     if (!cashType) return null;
     
-    const cashTypes = {
-      nastya: { label: "Настя", className: "badge-nastya" },
-      lera: { label: "Лера", className: "badge-lera" },
-      vanya: { label: "Ваня", className: "badge-vanya" }
+    const cashTypes: Record<string, string> = {
+      nastya: "Настя",
+      lera: "Лера",
+      vanya: "Ваня",
+      "Наличка Настя": "Настя",
+      "Наличка Лера": "Лера",
+      "Наличка Ваня": "Ваня"
     };
 
-    const type = cashTypes[cashType as keyof typeof cashTypes];
-    if (!type) return null;
-
-    return (
-      <Badge variant="outline" className={`${type.className} text-xs`}>
-        {type.label}
-      </Badge>
-    );
+    return cashTypes[cashType] || cashType;
   };
 
   const isExpense = transaction.expense_amount && transaction.expense_amount > 0;
@@ -89,10 +84,8 @@ export function TransactionDetailDialog({
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Тип операции</label>
-              <p className="text-sm">
-                <Badge variant={isExpense ? "destructive" : "default"}>
-                  {isExpense ? "Расход" : "Доход"}
-                </Badge>
+              <p className={`text-sm font-medium ${isExpense ? 'text-red-600' : 'text-blue-600'}`}>
+                {isExpense ? "Расход" : "Доход"}
               </p>
             </div>
           </div>
@@ -129,17 +122,15 @@ export function TransactionDetailDialog({
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Касса</label>
-              <div className="mt-1">
-                {getCashTypeBadge(transaction.cash_type) || <span className="text-sm text-gray-500">—</span>}
-              </div>
+              <p className="text-sm">
+                {getCashTypeLabel(transaction.cash_type) || "—"}
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Категория</label>
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {transaction.category}
-                </Badge>
-              </div>
+              <p className="text-sm">
+                {transaction.category}
+              </p>
             </div>
           </div>
 
