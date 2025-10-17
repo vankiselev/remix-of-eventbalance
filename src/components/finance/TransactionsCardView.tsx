@@ -231,6 +231,15 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
             <SelectItem value="Наличка Настя">Наличка Настя</SelectItem>
             <SelectItem value="Наличка Лера">Наличка Лера</SelectItem>
             <SelectItem value="Наличка Ваня">Наличка Ваня</SelectItem>
+            <SelectItem value="Корп. карта Настя">Корп. карта Настя</SelectItem>
+            <SelectItem value="Корп. карта Лера">Корп. карта Лера</SelectItem>
+            <SelectItem value="ИП Настя">ИП Настя</SelectItem>
+            <SelectItem value="ИП Лера">ИП Лера</SelectItem>
+            <SelectItem value="Оплатил(а) клиент">Оплатил(а) клиент</SelectItem>
+            <SelectItem value="Оплатила Настя">Оплатила Настя</SelectItem>
+            <SelectItem value="Оплатила Лера">Оплатила Лера</SelectItem>
+            <SelectItem value="Получила Лера">Получила Лера</SelectItem>
+            <SelectItem value="Получила Настя">Получила Настя</SelectItem>
           </SelectContent>
         </Select>
 
