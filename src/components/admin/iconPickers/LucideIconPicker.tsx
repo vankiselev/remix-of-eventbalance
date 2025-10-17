@@ -40,7 +40,13 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPicke
   ];
 
   const filteredIcons = useMemo(() => {
-    if (!search) return popularIcons;
+    // Фильтруем popularIcons, чтобы оставить только существующие
+    const validPopularIcons = popularIcons.filter(name => {
+      const IconComponent = Icons[name as keyof typeof Icons];
+      return IconComponent && typeof IconComponent === 'function';
+    });
+    
+    if (!search) return validPopularIcons;
     
     const searchLower = search.toLowerCase();
     return Object.keys(Icons)
