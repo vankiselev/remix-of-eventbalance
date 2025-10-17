@@ -171,6 +171,17 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     [transactionsForCashTotals]
   );
 
+  // Get unique wallet types from transactions
+  const availableWallets = useMemo(() => {
+    const wallets = new Set<string>();
+    transactions.forEach(t => {
+      if (t.cash_type) {
+        wallets.add(t.cash_type);
+      }
+    });
+    return Array.from(wallets).sort();
+  }, [transactions]);
+
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
@@ -228,18 +239,11 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все кошельки</SelectItem>
-            <SelectItem value="Наличка Настя">Наличка Настя</SelectItem>
-            <SelectItem value="Наличка Лера">Наличка Лера</SelectItem>
-            <SelectItem value="Наличка Ваня">Наличка Ваня</SelectItem>
-            <SelectItem value="Корп. карта Настя">Корп. карта Настя</SelectItem>
-            <SelectItem value="Корп. карта Лера">Корп. карта Лера</SelectItem>
-            <SelectItem value="ИП Настя">ИП Настя</SelectItem>
-            <SelectItem value="ИП Лера">ИП Лера</SelectItem>
-            <SelectItem value="Оплатил(а) клиент">Оплатил(а) клиент</SelectItem>
-            <SelectItem value="Оплатила Настя">Оплатила Настя</SelectItem>
-            <SelectItem value="Оплатила Лера">Оплатила Лера</SelectItem>
-            <SelectItem value="Получила Лера">Получила Лера</SelectItem>
-            <SelectItem value="Получила Настя">Получила Настя</SelectItem>
+            {availableWallets.map(wallet => (
+              <SelectItem key={wallet} value={wallet}>
+                {wallet}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
