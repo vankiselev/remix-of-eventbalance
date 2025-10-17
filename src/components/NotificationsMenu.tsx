@@ -10,6 +10,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { MoneyTransferNotification } from '@/components/MoneyTransferNotification';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -23,6 +24,8 @@ const getNotificationIcon = (type: string) => {
       return '🏖️';
     case 'transaction':
       return '💵';
+    case 'money_transfer':
+      return '💸';
     case 'system':
       return '⚙️';
     default:
@@ -145,6 +148,24 @@ export const NotificationsMenu = () => {
                         <p className="text-xs text-muted-foreground mt-2">
                           {format(new Date(notification.created_at), 'PPp', { locale: ru })}
                         </p>
+                        
+                        {/* Special handling for money transfer notifications */}
+                        {notification.type === 'money_transfer' && notification.data && !notification.read && (
+                          <div className="mt-3">
+                            <MoneyTransferNotification
+                              notificationId={notification.id}
+                              transactionId={notification.data.transaction_id}
+                              fromUserName={notification.data.from_user_name}
+                              amount={notification.data.amount}
+                              cashType={notification.data.cash_type}
+                              description={notification.data.description}
+                              onAction={() => {
+                                // Refresh notifications after action
+                                window.location.reload();
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                       <Button
                         variant="ghost"

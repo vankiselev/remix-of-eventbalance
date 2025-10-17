@@ -97,6 +97,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [projectSearch, setProjectSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMoneyTransfer, setIsMoneyTransfer] = useState(false);
+  const [transferToUserId, setTransferToUserId] = useState<string>("");
+  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
 
   // Check user role
   useEffect(() => {
@@ -108,6 +111,32 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     };
     checkUserRole();
   }, []);
+
+  // Load employees for money transfer
+  useEffect(() => {
+    if (isOpen) {
+      loadEmployees();
+    }
+  }, [isOpen]);
+
+  const loadEmployees = async () => {
+    try {
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (!currentUser.user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('employment_status', 'active')
+        .neq('id', currentUser.user.id)
+        .order('full_name');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -204,6 +233,36 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const onSubmit = async (data: TransactionFormData) => {
     if (submitting) return;
 
+    // Validate money transfer
+    if (isMoneyTransfer) {
+      if (!transferToUserId) {
+        toast({
+          title: "Ошибка",
+          description: "Выберите получателя денег",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data.expense_amount || data.expense_amount <= 0) {
+        toast({
+          title: "Ошибка",
+          description: "Укажите сумму передачи (должна быть больше 0)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data.income_amount) {
+        toast({
+          title: "Ошибка",
+          description: "При передаче денег заполняйте только поле 'Трата'",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Validate no_receipt_reason for regular users
     if (!isAdmin && data.no_receipt && (!data.no_receipt_reason || data.no_receipt_reason.trim().length < 10)) {
       toast({
@@ -216,7 +275,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
     // Validate files and no_receipt logic
     // For regular users, require files OR no_receipt with reason
-    if (!isAdmin) {
+    // For money transfers, files are optional
+    if (!isAdmin && !isMoneyTransfer) {
       if (!data.no_receipt && files.length === 0) {
         toast({
           title: "Ошибка",
@@ -261,6 +321,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
+        // Money transfer fields
+        transfer_to_user_id: isMoneyTransfer ? transferToUserId : null,
+        transfer_status: isMoneyTransfer ? 'pending' : null,
       };
 
       let transactionResult;
@@ -310,9 +373,25 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             change_description: 'Transaction created'
           }]);
 
+        // If this is a money transfer, send notification to recipient
+        if (isMoneyTransfer && transferToUserId) {
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          await supabase.functions.invoke('handle-money-transfer', {
+            body: {
+              transaction_id: transaction.id,
+              action: 'notify',
+            },
+          });
+        }
+
         // Send notification to admins for large transactions (over 10000)
         const amount = data.expense_amount || data.income_amount || 0;
-        if (amount >= 10000) {
+        if (amount >= 10000 && !isMoneyTransfer) {
           const { sendNotificationToAdmins } = await import('@/utils/notifications');
           const type = data.expense_amount ? 'расход' : 'приход';
           const { data: profile } = await supabase
@@ -623,7 +702,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 return (
                   <FormItem>
                     <FormLabel>Статья прихода/расхода</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Reset money transfer when category changes
+                        if (value !== 'Передано или получено от сотрудника') {
+                          setIsMoneyTransfer(false);
+                          setTransferToUserId("");
+                        }
+                      }}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Выберите категорию" />
@@ -640,9 +729,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
-                        {filteredCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {filteredCategories.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -652,6 +741,48 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 );
               }}
             />
+
+            {/* Money Transfer Section */}
+            {form.watch("category") === "Передано или получено от сотрудника" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-accent/50">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="money-transfer"
+                    checked={isMoneyTransfer}
+                    onCheckedChange={setIsMoneyTransfer}
+                  />
+                  <label htmlFor="money-transfer" className="text-sm font-medium leading-none cursor-pointer">
+                    Передача денег сотруднику
+                  </label>
+                </div>
+
+                {isMoneyTransfer && (
+                  <FormItem>
+                    <FormLabel>Получатель</FormLabel>
+                    <Select 
+                      value={transferToUserId} 
+                      onValueChange={setTransferToUserId}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.full_name} ({employee.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Получатель будет уведомлен о передаче и должен будет подтвердить получение денег
+                    </FormDescription>
+                  </FormItem>
+                )}
+              </div>
+            )}
 
             <div className="space-y-4">
               <FormLabel>Чек / вложения</FormLabel>

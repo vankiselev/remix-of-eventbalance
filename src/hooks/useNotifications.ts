@@ -7,7 +7,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system';
+  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system' | 'money_transfer';
   read: boolean;
   data?: any;
   created_at: string;

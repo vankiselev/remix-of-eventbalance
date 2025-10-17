@@ -509,6 +509,7 @@ export type Database = {
           expense_amount: number | null
           id: string
           income_amount: number | null
+          linked_transaction_id: string | null
           no_receipt: boolean | null
           no_receipt_reason: string | null
           notes: string | null
@@ -517,6 +518,9 @@ export type Database = {
           project_owner: string
           receipt_url: string | null
           static_project_name: string | null
+          transfer_from_user_id: string | null
+          transfer_status: string | null
+          transfer_to_user_id: string | null
           updated_at: string
         }
         Insert: {
@@ -529,6 +533,7 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          linked_transaction_id?: string | null
           no_receipt?: boolean | null
           no_receipt_reason?: string | null
           notes?: string | null
@@ -537,6 +542,9 @@ export type Database = {
           project_owner: string
           receipt_url?: string | null
           static_project_name?: string | null
+          transfer_from_user_id?: string | null
+          transfer_status?: string | null
+          transfer_to_user_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -549,6 +557,7 @@ export type Database = {
           expense_amount?: number | null
           id?: string
           income_amount?: number | null
+          linked_transaction_id?: string | null
           no_receipt?: boolean | null
           no_receipt_reason?: string | null
           notes?: string | null
@@ -557,9 +566,19 @@ export type Database = {
           project_owner?: string
           receipt_url?: string | null
           static_project_name?: string | null
+          transfer_from_user_id?: string | null
+          transfer_status?: string | null
+          transfer_to_user_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "financial_transactions_linked_transaction_id_fkey"
+            columns: ["linked_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "financial_transactions_project_id_fkey"
             columns: ["project_id"]
