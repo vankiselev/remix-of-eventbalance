@@ -85,9 +85,9 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
       // Filter by user if not admin or if userId is provided
       if (!isAdmin && userId) {
-        query = query.eq('user_id', userId);
+        query = query.eq('created_by', userId);
       } else if (userId) {
-        query = query.eq('user_id', userId);
+        query = query.eq('created_by', userId);
       }
 
       // Filter by period
