@@ -41,6 +41,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Create schema without strict no_receipt_reason validation
+// We'll validate it separately based on user role
 const transactionSchema = z.object({
   operation_date: z.date({
     required_error: "Дата операции обязательна",
@@ -53,14 +55,6 @@ const transactionSchema = z.object({
   category: z.string().min(1, "Категория обязательна"),
   no_receipt: z.boolean().default(false),
   no_receipt_reason: z.string().optional(),
-}).refine((data) => {
-  if (data.no_receipt && (!data.no_receipt_reason || data.no_receipt_reason.length < 10)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
-  path: ["no_receipt_reason"],
 }).refine((data) => {
   const hasExpense = data.expense_amount !== undefined && data.expense_amount !== null && data.expense_amount !== 0;
   const hasIncome = data.income_amount !== undefined && data.income_amount !== null && data.income_amount !== 0;
@@ -102,6 +96,18 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [projectSearch, setProjectSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check user role
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: profile } = await supabase
+        .rpc("get_user_basic_profile")
+        .single();
+      setIsAdmin(profile?.role === "admin");
+    };
+    checkUserRole();
+  }, []);
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -198,16 +204,30 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const onSubmit = async (data: TransactionFormData) => {
     if (submitting) return;
 
-    // Validate files and no_receipt logic
-    if (!data.no_receipt && files.length === 0) {
+    // Validate no_receipt_reason for regular users
+    if (!isAdmin && data.no_receipt && (!data.no_receipt_reason || data.no_receipt_reason.trim().length < 10)) {
       toast({
         title: "Ошибка",
-        description: "Загрузите чек или отметьте 'Чека нет' с указанием причины",
+        description: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
         variant: "destructive",
       });
       return;
     }
 
+    // Validate files and no_receipt logic
+    // For regular users, require files OR no_receipt with reason
+    if (!isAdmin) {
+      if (!data.no_receipt && files.length === 0) {
+        toast({
+          title: "Ошибка",
+          description: "Загрузите чек или отметьте 'Чека нет' с указанием причины",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    // For admins, just check that files and no_receipt are not both set
     if (data.no_receipt && files.length > 0) {
       toast({
         title: "Ошибка",
