@@ -25,6 +25,7 @@ interface Transaction {
   project_owner: string;
   cash_type: string | null;
   project_id: string | null;
+  static_project_name?: string | null;
   no_receipt: boolean;
   no_receipt_reason: string | null;
   notes: string | null;

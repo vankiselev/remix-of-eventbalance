@@ -38,6 +38,7 @@ interface Transaction {
   no_receipt_reason: string | null;
   created_by: string;
   project_id: string | null;
+  static_project_name?: string | null;
   events?: { name: string } | null;
   attachments_count?: number;
   created_at: string;
@@ -154,7 +155,7 @@ export function TransactionDetailDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-600">Проект</label>
-              <p className="text-sm">{transaction.events?.name || "—"}</p>
+              <p className="text-sm">{transaction.static_project_name || transaction.events?.name || "—"}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600">Чей проект</label>
