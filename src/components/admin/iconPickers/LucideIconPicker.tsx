@@ -13,13 +13,30 @@ interface LucideIconPickerProps {
 export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPickerProps) => {
   const [search, setSearch] = useState("");
 
-  // Popular finance-related icons
+  // Иконки специально подобранные для ваших категорий
   const popularIcons = [
-    'Wallet', 'DollarSign', 'CreditCard', 'Banknote', 'TrendingUp', 'TrendingDown',
-    'ShoppingCart', 'ShoppingBag', 'Receipt', 'Calculator', 'PiggyBank', 'Coins',
-    'User', 'Users', 'Building', 'Home', 'Package', 'Box',
-    'Wrench', 'Tool', 'Settings', 'Zap', 'Star', 'Heart',
-    'FileText', 'Clipboard', 'Calendar', 'Clock', 'Tag', 'Percent',
+    // Финансы и выплаты
+    'Handshake', 'Banknote', 'DollarSign', 'Wallet', 'CreditCard', 'ArrowRightLeft', 'Calculator',
+    // События и развлечения
+    'PartyPopper', 'Mic2', 'Video', 'Camera', 'Music', 'Drama', 'Cake',
+    // Оборудование и аренда
+    'Box', 'Package', 'ShoppingBag', 'ShoppingCart', 'Building2', 'HardHat', 'Cog',
+    // Люди и команда
+    'UsersRound', 'User', 'UserCog', 'Users', 'UserPlus', 'UserCircle',
+    // Доставка и логистика
+    'Truck', 'Car', 'Ship', 'Plane', 'MapPin', 'Navigation',
+    // Документы и печать
+    'Printer', 'FileText', 'FileWarning', 'File', 'Folder', 'Paperclip',
+    // Дизайн и творчество
+    'Paintbrush', 'Palette', 'Brush', 'Wand2', 'Sparkles', 'ImagePlus',
+    // Безопасность и гарантии
+    'ShieldCheck', 'Shield', 'Lock', 'Key', 'ShieldAlert',
+    // Возврат и обмен
+    'RefreshCw', 'RotateCcw', 'Repeat', 'Undo2',
+    // Запрет и ограничения
+    'XCircle', 'X', 'Ban', 'AlertCircle', 'AlertTriangle',
+    // Разное
+    'Settings', 'Tool', 'Wrench', 'Zap', 'Star', 'Heart', 'ThumbsUp', 'Check',
   ];
 
   const filteredIcons = useMemo(() => {
