@@ -72,6 +72,7 @@ export const CategoryIconEditDialog = ({ icon, open, onOpenChange }: CategoryIco
             <LucideIconPicker 
               selectedIcon={iconType === 'lucide' ? iconValue : ''}
               onSelectIcon={setIconValue}
+              categoryName={icon.category_name}
             />
           </TabsContent>
 

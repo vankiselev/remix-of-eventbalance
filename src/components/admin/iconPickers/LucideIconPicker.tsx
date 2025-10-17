@@ -8,36 +8,80 @@ import * as Icons from "lucide-react";
 interface LucideIconPickerProps {
   selectedIcon: string;
   onSelectIcon: (iconName: string) => void;
+  categoryName?: string;
 }
 
-export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPickerProps) => {
+export const LucideIconPicker = ({ selectedIcon, onSelectIcon, categoryName }: LucideIconPickerProps) => {
   const [search, setSearch] = useState("");
 
-  // Иконки специально подобранные для ваших категорий
-  const popularIcons = [
-    // Финансы и выплаты
-    'Handshake', 'Banknote', 'DollarSign', 'Wallet', 'CreditCard', 'ArrowRightLeft', 'Calculator',
-    // События и развлечения
-    'PartyPopper', 'Mic2', 'Video', 'Camera', 'Music', 'Drama', 'Cake',
-    // Оборудование и аренда
-    'Box', 'Package', 'ShoppingBag', 'ShoppingCart', 'Building2', 'HardHat', 'Cog',
-    // Люди и команда
-    'UsersRound', 'User', 'UserCog', 'Users', 'UserPlus', 'UserCircle',
-    // Доставка и логистика
-    'Truck', 'Car', 'Ship', 'Plane', 'MapPin', 'Navigation',
-    // Документы и печать
-    'Printer', 'FileText', 'FileWarning', 'File', 'Folder', 'Paperclip',
-    // Дизайн и творчество
-    'Paintbrush', 'Palette', 'Brush', 'Wand2', 'Sparkles', 'ImagePlus',
-    // Безопасность и гарантии
-    'ShieldCheck', 'Shield', 'Lock', 'Key', 'ShieldAlert',
-    // Возврат и обмен
-    'RefreshCw', 'RotateCcw', 'Repeat', 'Undo2',
-    // Запрет и ограничения
-    'XCircle', 'X', 'Ban', 'AlertCircle', 'AlertTriangle',
-    // Разное
-    'Settings', 'Tool', 'Wrench', 'Zap', 'Star', 'Heart', 'ThumbsUp', 'Check',
-  ];
+  // Умная подборка иконок на основе названия категории
+  const getRelevantIcons = (categoryName?: string): string[] => {
+    if (!categoryName) return [];
+    
+    const name = categoryName.toLowerCase();
+    
+    // Карта ключевых слов -> иконки
+    const iconMap: Record<string, string[]> = {
+      // Финансовые категории
+      'комисс|процент|агент': ['Handshake', 'Percent', 'DollarSign', 'TrendingUp', 'Receipt', 'Wallet'],
+      'зарплат|оклад|выплат': ['Banknote', 'Wallet', 'CreditCard', 'CircleDollarSign', 'HandCoins'],
+      'аренд': ['Building2', 'Home', 'Warehouse', 'Store', 'KeyRound', 'DoorOpen'],
+      'налог|сбор|пошлин': ['Receipt', 'FileText', 'Calculator', 'Stamp', 'ScrollText'],
+      'транспорт|доставк|перевозк|логистик': ['Truck', 'Car', 'Bus', 'Bike', 'Ship', 'Plane'],
+      'бензин|топлив|газ': ['Fuel', 'Droplet', 'CircleDot', 'Gauge'],
+      
+      // События и развлечения
+      'аниматор|шоу|программ|артист': ['PartyPopper', 'Sparkles', 'Drama', 'Users', 'Mic2', 'Star'],
+      'фото|видео|съемк': ['Camera', 'Video', 'Film', 'Clapperboard', 'Image'],
+      'музык|звук|dj': ['Music', 'Mic', 'Radio', 'Volume2', 'Headphones'],
+      'декор|украшен|оформлен': ['Sparkles', 'Paintbrush', 'Palette', 'Brush', 'Wand2'],
+      'торт|сладост|еда|питан|кейтер': ['Cake', 'UtensilsCrossed', 'Cookie', 'IceCream', 'Pizza'],
+      'цвет|букет|растен': ['Flower2', 'Leaf', 'Trees', 'Sprout'],
+      
+      // Оборудование
+      'оборудован|техник|аппарат': ['Box', 'Package', 'HardHat', 'Cog', 'Settings', 'Wrench'],
+      'свет|освещ': ['Lightbulb', 'Lamp', 'Sun', 'Flashlight'],
+      'мебел|стул|стол': ['Armchair', 'Sofa', 'Table', 'LampDesk'],
+      'костюм|одежд|наряд': ['Shirt', 'Glasses', 'Crown', 'Watch'],
+      
+      // Маркетинг и реклама
+      'реклам|маркетинг|промо': ['Megaphone', 'TrendingUp', 'BarChart3', 'Target', 'Presentation'],
+      'печат|полиграф|баннер': ['Printer', 'FileImage', 'Image', 'Layout'],
+      'дизайн|график': ['Palette', 'Paintbrush', 'PenTool', 'Figma', 'Layers'],
+      
+      // Услуги
+      'уборк|чистк|клининг': ['Brush', 'Sparkles', 'Trash2', 'Broom'],
+      'охран|безопасн': ['Shield', 'ShieldCheck', 'Lock', 'Eye', 'AlertTriangle'],
+      'страхов|гарант': ['ShieldCheck', 'FileCheck', 'ScrollText', 'BadgeCheck'],
+      'консульт|услуг|сервис': ['MessageCircle', 'HelpCircle', 'Info', 'UserCog'],
+      
+      // Административные расходы
+      'офис|канцеляр': ['Briefcase', 'FileText', 'Pen', 'Paperclip', 'Folder'],
+      'связь|интернет|телефон': ['Phone', 'Wifi', 'Globe', 'Signal', 'Antenna'],
+      'програм|софт|лицензи': ['Code', 'Terminal', 'Laptop', 'MonitorCheck'],
+      
+      // Прочее
+      'возврат|компенсац|возмещ': ['RotateCcw', 'RefreshCw', 'Undo2', 'ArrowLeftCircle'],
+      'штраф|пеня|санкц': ['XCircle', 'AlertTriangle', 'Ban', 'ShieldAlert'],
+      'подарок|приз|бонус': ['Gift', 'Award', 'Trophy', 'Star', 'Sparkles'],
+    };
+    
+    // Ищем совпадения по ключевым словам
+    for (const [keywords, icons] of Object.entries(iconMap)) {
+      const patterns = keywords.split('|');
+      if (patterns.some(pattern => name.includes(pattern))) {
+        return icons;
+      }
+    }
+    
+    // Если не нашли специфичные - общие иконки
+    return ['Package', 'DollarSign', 'Settings', 'Star', 'CheckCircle', 'Info'];
+  };
+  
+  const relevantIcons = useMemo(() => 
+    getRelevantIcons(categoryName), 
+    [categoryName]
+  );
 
   // Все доступные иконки lucide-react (только валидные компоненты)
   const allLucideIconNames = useMemo(() => {
@@ -51,16 +95,16 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPicke
   }, []);
 
   const filteredIcons = useMemo(() => {
-    // Фильтруем popularIcons, чтобы оставить только существующие
-    const validPopularIcons = popularIcons.filter(name => {
+    // Фильтруем релевантные иконки, чтобы оставить только существующие
+    const validRelevantIcons = relevantIcons.filter(name => {
       const IconComponent = Icons[name as keyof typeof Icons];
       return IconComponent && typeof IconComponent === 'function';
     });
 
     if (!search) {
-      // Если нет запроса — показываем подобранные, иначе общий список
-      return validPopularIcons.length
-        ? validPopularIcons
+      // Если нет запроса — показываем подобранные для категории
+      return validRelevantIcons.length > 0
+        ? validRelevantIcons
         : allLucideIconNames.slice(0, 96);
     }
 
@@ -68,7 +112,7 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon }: LucideIconPicke
     return allLucideIconNames
       .filter(name => name.toLowerCase().includes(searchLower))
       .slice(0, 100);
-  }, [search, allLucideIconNames]);
+  }, [search, allLucideIconNames, relevantIcons]);
 
   const renderIcon = (iconName: string) => {
     const IconComponent = Icons[iconName as keyof typeof Icons] as any;
