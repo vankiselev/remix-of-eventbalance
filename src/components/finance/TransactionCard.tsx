@@ -41,13 +41,13 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
           {transaction.description}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-          <span>{transaction.category}</span>
           {projectName && (
             <>
-              <span>•</span>
               <span>{projectName}</span>
+              <span>•</span>
             </>
           )}
+          <span>{transaction.category}</span>
         </div>
       </div>
 
