@@ -53,6 +53,42 @@ export type Database = {
         }
         Relationships: []
       }
+      category_icons: {
+        Row: {
+          bg_color: string
+          category_name: string
+          created_at: string
+          created_by: string | null
+          icon_color: string
+          icon_type: string
+          icon_value: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          bg_color?: string
+          category_name: string
+          created_at?: string
+          created_by?: string | null
+          icon_color?: string
+          icon_type: string
+          icon_value: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          bg_color?: string
+          category_name?: string
+          created_at?: string
+          created_by?: string | null
+          icon_color?: string
+          icon_type?: string
+          icon_value?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           company: string | null

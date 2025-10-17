@@ -1,8 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RolesManagement } from "@/components/roles/RolesManagement";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
+import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus } from "lucide-react";
+import { Shield, UserPlus, Palette } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -16,7 +17,7 @@ const AdministrationPage = () => {
         </div>
 
         <Tabs defaultValue="roles" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="roles" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Выдача прав
@@ -24,6 +25,10 @@ const AdministrationPage = () => {
             <TabsTrigger value="invitations" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Приглашения
+            </TabsTrigger>
+            <TabsTrigger value="icons" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Иконки
             </TabsTrigger>
           </TabsList>
 
@@ -33,6 +38,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="invitations" className="mt-6">
             <InvitationsManagement />
+          </TabsContent>
+
+          <TabsContent value="icons" className="mt-6">
+            <CategoryIconsManagement />
           </TabsContent>
         </Tabs>
       </div>
