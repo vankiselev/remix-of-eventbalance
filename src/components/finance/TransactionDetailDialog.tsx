@@ -5,7 +5,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
 
@@ -33,15 +36,24 @@ interface TransactionDetailDialogProps {
   onClose: () => void;
   transaction: Transaction | null;
   canEdit: boolean;
+  onEdit?: (transaction: Transaction) => void;
 }
 
 export function TransactionDetailDialog({ 
   isOpen, 
   onClose, 
   transaction, 
-  canEdit 
+  canEdit,
+  onEdit
 }: TransactionDetailDialogProps) {
   if (!transaction) return null;
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(transaction);
+      onClose();
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ru-RU");
@@ -155,6 +167,15 @@ export function TransactionDetailDialog({
             </div>
           </div>
         </div>
+
+        {canEdit && onEdit && (
+          <DialogFooter>
+            <Button onClick={handleEdit} className="w-full sm:w-auto">
+              <Pencil className="mr-2 h-4 w-4" />
+              Редактировать
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { format, isToday, isYesterday, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { TransactionCard } from "./TransactionCard";
@@ -39,6 +40,7 @@ interface TransactionsCardViewProps {
 }
 
 export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCardViewProps) => {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
@@ -312,7 +314,8 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           transaction={selectedTransaction}
           isOpen={!!selectedTransaction}
           onClose={() => setSelectedTransaction(null)}
-          canEdit={isAdmin}
+          canEdit={isAdmin || selectedTransaction.created_by === user?.id}
+          onEdit={onEdit}
         />
       )}
     </div>
