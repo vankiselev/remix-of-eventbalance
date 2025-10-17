@@ -43,6 +43,7 @@ interface TransactionsCardViewProps {
 export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCardViewProps) => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // Все транзакции для определения доступных месяцев
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [selectedWallet, setSelectedWallet] = useState<string>("all");
@@ -80,6 +81,20 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     try {
       setLoading(true);
       
+      // Сначала получаем все транзакции для определения доступных месяцев
+      let allQuery: any = supabase
+        .from('financial_transactions')
+        .select('operation_date')
+        .order('operation_date', { ascending: false });
+      
+      if (userId) {
+        allQuery = allQuery.eq('created_by', userId);
+      }
+      
+      const { data: allDates } = await allQuery;
+      setAllTransactions(allDates || []);
+      
+      // Теперь получаем транзакции с учетом фильтров
       let query: any = supabase
         .from('financial_transactions')
         .select('*')
@@ -92,7 +107,15 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       }
 
       // Filter by period
-      if (selectedPeriod === "current") {
+      if (selectedPeriod !== "all" && selectedPeriod !== "current") {
+        // Формат: "2025-01" (год-месяц)
+        const [year, month] = selectedPeriod.split('-');
+        const start = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const end = endOfMonth(start);
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+        query = query.gte('operation_date', startStr).lte('operation_date', endStr);
+      } else if (selectedPeriod === "current") {
         const now = new Date();
         const start = startOfMonth(now);
         const end = endOfMonth(now);
@@ -121,6 +144,32 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
   // Only cash wallets counted in totals/breakdowns
   const cashWallets = useMemo(() => new Set(['Наличка Настя','Наличка Лера','Наличка Ваня']), []);
+  
+  // Получаем список доступных месяцев из транзакций
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    allTransactions.forEach(t => {
+      if (t.operation_date) {
+        const date = new Date(t.operation_date);
+        const monthKey = format(date, 'yyyy-MM');
+        months.add(monthKey);
+      }
+    });
+    
+    // Сортируем по убыванию (новые первые)
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      return {
+        value: monthKey,
+        label: `${monthNames[date.getMonth()]} ${year}`
+      };
+    });
+  }, [allTransactions]);
 
   const transactionsForCashTotals = useMemo(() => (
     transactions.filter(t => t.cash_type != null && cashWallets.has(String(t.cash_type)))
@@ -231,6 +280,11 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           <SelectContent>
             <SelectItem value="current">Текущий месяц</SelectItem>
             <SelectItem value="all">Весь период</SelectItem>
+            {availableMonths.map(month => (
+              <SelectItem key={month.value} value={month.value}>
+                {month.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
