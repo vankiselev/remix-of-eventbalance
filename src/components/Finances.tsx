@@ -84,7 +84,7 @@ const Finances = () => {
       // Prepare data for CSV export
       const csvData = transactions.map(transaction => ({
         'Дата операции': new Date(transaction.operation_date).toLocaleDateString("ru-RU"),
-        'Проект': transaction.events?.name || '',
+        'Проект': transaction.static_project_name || transaction.events?.name || '',
         'Чей проект': transaction.project_owner || '',
         'Описание': transaction.description || '',
         'Траты': transaction.expense_amount || '',
