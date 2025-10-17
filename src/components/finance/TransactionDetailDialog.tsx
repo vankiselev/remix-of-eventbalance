@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Transaction {
   id: string;
@@ -46,12 +58,49 @@ export function TransactionDetailDialog({
   canEdit,
   onEdit
 }: TransactionDetailDialogProps) {
+  const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (!transaction) return null;
 
   const handleEdit = () => {
     if (onEdit) {
       onEdit(transaction);
       onClose();
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      // Delete the transaction (attachments will be cascade deleted due to foreign key)
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успех",
+        description: "Транзакция успешно удалена",
+      });
+
+      setDeleteDialogOpen(false);
+      onClose();
+      
+      // Reload the page to refresh the list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить транзакцию",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -168,15 +217,46 @@ export function TransactionDetailDialog({
           </div>
         </div>
 
-        {canEdit && onEdit && (
-          <DialogFooter>
-            <Button onClick={handleEdit} className="w-full sm:w-auto">
-              <Pencil className="mr-2 h-4 w-4" />
-              Редактировать
+        {canEdit && (
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {onEdit && (
+              <Button onClick={handleEdit} className="w-full sm:w-auto" variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Редактировать
+              </Button>
+            )}
+            <Button 
+              onClick={() => setDeleteDialogOpen(true)} 
+              className="w-full sm:w-auto"
+              variant="destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Удалить
             </Button>
           </DialogFooter>
         )}
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить транзакцию?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Транзакция и все прикрепленные файлы будут удалены безвозвратно.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Удаление..." : "Удалить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
