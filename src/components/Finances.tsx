@@ -199,10 +199,16 @@ const Finances = () => {
           try {
             const calc = (row: any) => {
               if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
+              
+              const cashType = row.cash_type as string | undefined;
+              // Учитываем только наличные кошельки
+              if (cashType !== 'Наличка Настя' && cashType !== 'Наличка Лера' && cashType !== 'Наличка Ваня') {
+                return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: row.created_by };
+              }
+              
               const income = Number(row.income_amount || 0);
               const expense = Number(row.expense_amount || 0);
               const delta = income - expense; // дельта по транзакции
-              const cashType = row.cash_type as string | undefined;
               const nastya = cashType === 'Наличка Настя' ? delta : 0;
               const lera = cashType === 'Наличка Лера' ? delta : 0;
               const vanya = cashType === 'Наличка Ваня' ? delta : 0;
