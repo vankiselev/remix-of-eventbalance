@@ -31,7 +31,7 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon, categoryName }: L
       'бензин|топлив|газ': ['Fuel', 'Droplet', 'CircleDot', 'Gauge', 'Flame', 'Zap', 'Battery', 'BatteryCharging'],
       
       // События и развлечения
-      'аниматор|шоу|программ|артист': ['PartyPopper', 'Sparkles', 'Drama', 'Users', 'Mic2', 'Star', 'Mic', 'Theater', 'Music', 'Trophy', 'Award', 'Crown', 'Wand2', 'Stars', 'Smile', 'Heart', 'Laugh', 'PartyPopper'],
+      'аниматор|шоу|программ|артист': ['PartyPopper', 'Sparkles', 'Drama', 'Users', 'Mic2', 'Star', 'Mic', 'Theater', 'Music', 'Trophy', 'Award', 'Crown', 'Wand2', 'Stars', 'Smile', 'Heart', 'Laugh'],
       'фото|видео|съемк': ['Camera', 'Video', 'Film', 'Clapperboard', 'Image', 'Images', 'VideoOff', 'CameraOff', 'Aperture', 'Focus', 'ScanFace', 'GalleryHorizontal'],
       'музык|звук|dj': ['Music', 'Mic', 'Radio', 'Volume2', 'Headphones', 'Music2', 'Music3', 'Music4', 'Disc', 'Disc2', 'Disc3', 'AudioLines', 'AudioWaveform'],
       'декор|украшен|оформлен': ['Sparkles', 'Paintbrush', 'Palette', 'Brush', 'Wand2', 'Flower', 'Flower2', 'Stars', 'Heart', 'Gift', 'Ribbon', 'Sparkle'],
@@ -70,7 +70,8 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon, categoryName }: L
     for (const [keywords, icons] of Object.entries(iconMap)) {
       const patterns = keywords.split('|');
       if (patterns.some(pattern => name.includes(pattern))) {
-        return icons;
+        // Убираем дубликаты
+        return Array.from(new Set(icons));
       }
     }
     
