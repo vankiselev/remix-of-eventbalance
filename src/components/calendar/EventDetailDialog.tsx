@@ -197,14 +197,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">
+      <DialogContent className="w-[95vw] max-w-3xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0">
+          <DialogTitle className="text-base sm:text-lg">
             {event ? "Редактировать мероприятие" : "Создать мероприятие"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4">
+          <div className="space-y-4">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -421,42 +422,43 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               />
             </div>
           </div>
+          </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 border-t">
-            <div>
-              {event && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="w-full sm:w-auto"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Удалить
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
+        {/* Actions Footer */}
+        <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 bg-background">
+          <div>
+            {event && (
               <Button
                 type="button"
-                variant="outline"
+                variant="destructive"
                 size="sm"
-                onClick={() => onOpenChange(false)}
-                className="flex-1 sm:flex-none"
+                onClick={handleDelete}
+                className="w-full sm:w-auto"
               >
-                Отмена
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={loading || !formData.name || !formData.start_date}
-                size="sm"
-                className="flex-1 sm:flex-none"
-              >
-                {loading ? "Сохранение..." : "Сохранить"}
-              </Button>
-            </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="flex-1 sm:flex-none"
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={loading || !formData.name || !formData.start_date}
+              size="sm"
+              className="flex-1 sm:flex-none"
+            >
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
           </div>
         </div>
       </DialogContent>
