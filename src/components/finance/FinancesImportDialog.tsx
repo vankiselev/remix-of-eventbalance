@@ -393,7 +393,7 @@ const FinancesImportDialog = ({
     };
 
     try {
-      const BATCH_SIZE = 100; // Вставляем по 100 строк за раз
+      const BATCH_SIZE = 10; // Уменьшаем размер батча для предотвращения таймаутов
       
       for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
         // Проверяем, не приостановлен ли импорт
@@ -452,24 +452,42 @@ const FinancesImportDialog = ({
           }
         }
 
-        // Batch-вставка в БД
+        // Batch-вставка в БД с повторными попытками при таймаутах
         if (transactionsToInsert.length > 0) {
-          const { error } = await supabase
-            .from('financial_transactions')
-            .insert(transactionsToInsert);
+          let retries = 3;
+          let lastError = null;
+          
+          while (retries > 0) {
+            const { error } = await supabase
+              .from('financial_transactions')
+              .insert(transactionsToInsert);
 
-          if (error) {
-            console.error('Batch insert error:', error);
-            // Все строки из этого batch считаем ошибочными
+            if (!error) {
+              result.inserted += transactionsToInsert.length;
+              lastError = null;
+              break;
+            } else if (error.message.includes('timeout') || error.message.includes('canceling statement')) {
+              retries--;
+              lastError = error;
+              if (retries > 0) {
+                console.log(`Таймаут при вставке батча, повторная попытка (осталось ${retries})...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            } else {
+              lastError = error;
+              break;
+            }
+          }
+
+          if (lastError) {
+            console.error('Batch insert error:', lastError);
             result.failed += transactionsToInsert.length;
             for (let i = 0; i < transactionsToInsert.length; i++) {
               result.errors.push({
                 row: batchStart + i + 1,
-                reason: error.message || 'Ошибка вставки'
+                reason: lastError.message || 'Ошибка вставки'
               });
             }
-          } else {
-            result.inserted += transactionsToInsert.length;
           }
         }
 
@@ -477,6 +495,9 @@ const FinancesImportDialog = ({
         const currentProgress = batchEnd;
         setImportProgress(Math.round((currentProgress / parsedData.length) * 100));
         updateProgress(currentProgress, parsedData.length);
+        
+        // Добавляем задержку между батчами для предотвращения перегрузки БД
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
       setImportResult(result);
