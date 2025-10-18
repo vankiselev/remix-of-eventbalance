@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase, Cake, Plane } from "lucide-react";
+import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase, Cake, Plane, FileText, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -36,7 +36,8 @@ const MobileBottomNav = () => {
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: "Контакты", icon: Briefcase },
-    ...(userRole === 'admin' ? [{ path: "/invitations", label: "Приглашения", icon: UserPlus }] : []),
+    { path: "/reports", label: "Отчеты", icon: FileText },
+    ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
   const handleNavigation = (path: string) => {
