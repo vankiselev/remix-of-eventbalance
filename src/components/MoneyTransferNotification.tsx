@@ -28,19 +28,88 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
-      // Pass auth header explicitly to avoid missing JWT issues
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
+      // 1) Get current user
+      const { data: userRes } = await supabase.auth.getUser();
+      const currentUserId = userRes.user?.id;
+      if (!currentUserId) throw new Error('not_authenticated');
 
-      const { error } = await supabase.functions.invoke('handle-money-transfer', {
-        body: {
-          transaction_id: transactionId,
-          action,
-        },
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-      });
+      // 2) Load original transaction
+      const { data: tx, error: txError } = await supabase
+        .from('financial_transactions')
+        .select('id, created_by, transfer_to_user_id, expense_amount, cash_type, transfer_status, project_owner')
+        .eq('id', transactionId)
+        .single();
 
-      if (error) throw error;
+      if (txError || !tx) throw txError || new Error('tx_not_found');
+
+      if (tx.transfer_to_user_id !== currentUserId) {
+        throw new Error('not_recipient');
+      }
+
+      if (tx.transfer_status && tx.transfer_status !== 'pending') {
+        throw new Error('already_processed');
+      }
+
+      if (action === 'accept') {
+        // Create income transaction for recipient
+        const { data: incomeTx, error: incomeErr } = await supabase
+          .from('financial_transactions')
+          .insert([
+            {
+              created_by: currentUserId,
+              operation_date: new Date().toISOString().split('T')[0],
+              income_amount: tx.expense_amount,
+              expense_amount: 0,
+              category: 'Передано или получено от сотрудника',
+              cash_type: tx.cash_type,
+              description: `Получено от ${fromUserName || 'сотрудника'}`,
+              project_owner: tx.project_owner || 'Не указан',
+              transfer_from_user_id: tx.created_by,
+              linked_transaction_id: tx.id,
+              no_receipt: true,
+              no_receipt_reason: 'Внутренняя передача денег между сотрудниками',
+            },
+          ])
+          .select()
+          .single();
+
+        if (incomeErr) throw incomeErr;
+
+        // Update original transaction
+        const { error: updateErr } = await supabase
+          .from('financial_transactions')
+          .update({ transfer_status: 'accepted', linked_transaction_id: incomeTx.id })
+          .eq('id', tx.id);
+        if (updateErr) throw updateErr;
+
+        // Notify sender
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_id: tx.created_by,
+            title: 'Передача денег подтверждена',
+            message: `${fromUserName} подтвердил получение ${tx.expense_amount} ₽`,
+            type: 'money_transfer',
+            data: { transaction_id: tx.id, status: 'accepted' },
+          },
+        });
+      } else {
+        // Reject transfer
+        const { error: updateErr } = await supabase
+          .from('financial_transactions')
+          .update({ transfer_status: 'rejected' })
+          .eq('id', tx.id);
+        if (updateErr) throw updateErr;
+
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_id: tx.created_by,
+            title: 'Передача денег отклонена',
+            message: `${fromUserName} отклонил передачу ${tx.expense_amount} ₽`,
+            type: 'money_transfer',
+            data: { transaction_id: tx.id, status: 'rejected' },
+          },
+        });
+      }
 
       // Mark notification as read
       await supabase
