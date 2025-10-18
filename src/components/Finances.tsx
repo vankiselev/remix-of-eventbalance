@@ -16,6 +16,7 @@ import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransacti
 import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
 import { TransactionsCardView } from "@/components/finance/TransactionsCardView";
+import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
 
 interface CashSummary {
   total_cash: number;
@@ -428,11 +429,12 @@ const Finances = () => {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 bg-background pb-2">
+      <div className="sticky top-0 z-10 bg-background pb-2 space-y-4">
         <FinanceSummaryCards 
           summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
           isLoading={false} 
         />
+        <ImportProgressWindow />
       </div>
 
       <Card>
@@ -501,6 +503,8 @@ const Finances = () => {
           summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
           isLoading={false} 
         />
+        
+        <ImportProgressWindow />
       </div>
 
       <Card>

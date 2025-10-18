@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useImportProgress } from "@/contexts/ImportProgressContext";
 
 interface FinancesImportDialogProps {
   open: boolean;
@@ -54,6 +55,7 @@ const FinancesImportDialog = ({
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { startImport, updateProgress, finishImport } = useImportProgress();
 
   const fieldOptions = [
     { value: 'skip', label: 'Не импортировать' },
@@ -386,6 +388,7 @@ const FinancesImportDialog = ({
 
     setImporting(true);
     setImportProgress(0);
+    startImport(parsedData.length);
 
     const result: ImportResult = {
       total: parsedData.length,
@@ -405,7 +408,7 @@ const FinancesImportDialog = ({
           const expenseAmount = parseAmount(mappedRow.expense_amount);
           const incomeAmount = parseAmount(mappedRow.income_amount);
           const projectOwner = mappedRow.project_owner || null;
-          const cashType = mapCashType(projectOwner); // Извлекаем cash_type из project_owner, если это наличка
+          const cashType = mapCashType(projectOwner);
 
           if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
             throw new Error("Некорректные данные");
@@ -414,22 +417,15 @@ const FinancesImportDialog = ({
           const transactionData = {
             created_by: user?.id,
             operation_date: operationDate,
-            static_project_name: mappedRow.project_name || null, // Столбец 3 "Проект" → static_project_name
-            project_owner: projectOwner, // Столбец 4 "Чей проект" → project_owner (например, "ИП Настя" или "Наличка Настя")
+            static_project_name: mappedRow.project_name || null,
+            project_owner: projectOwner,
             description: mappedRow.description || '',
             category: mappedRow.category || 'Разное',
-            cash_type: cashType, // Если project_owner = "Наличка X", то cashType = 'nastya'/'lera'/'vanya', иначе null
+            cash_type: cashType,
             expense_amount: expenseAmount || null,
             income_amount: incomeAmount || null,
             notes: mappedRow.notes || null
           };
-
-          console.log('Importing transaction:', {
-            project_name_from_file: mappedRow.project_name,
-            project_owner_from_file: mappedRow.project_owner,
-            extracted_cash_type: cashType,
-            transaction_data: transactionData
-          });
 
           const { error } = await supabase
             .from('financial_transactions')
@@ -446,17 +442,16 @@ const FinancesImportDialog = ({
           });
         }
 
-        setImportProgress(Math.round(((i + 1) / parsedData.length) * 100));
+        const currentProgress = i + 1;
+        setImportProgress(Math.round((currentProgress / parsedData.length) * 100));
+        updateProgress(currentProgress, parsedData.length);
       }
 
       setImportResult(result);
+      finishImport(result);
       setStep(4);
 
       if (result.inserted > 0) {
-        toast({
-          title: "Импорт завершен",
-          description: `Успешно импортировано ${result.inserted} из ${result.total} записей`,
-        });
         onImportComplete();
       }
     } catch (error: any) {
