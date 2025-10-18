@@ -14,6 +14,15 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { toast } from "sonner";
 
+const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
+const walletDisplay = (s?: string | null) => {
+  const v = normalizeWallet(s || undefined);
+  if (v === 'наличка настя' || v === 'nastya') return 'Наличка Настя';
+  if (v === 'наличка лера' || v === 'lera') return 'Наличка Лера';
+  if (v === 'наличка ваня' || v === 'vanya') return 'Наличка Ваня';
+  return s || 'Не указан';
+};
+
 interface Transaction {
   id: string;
   operation_date: string;
@@ -144,8 +153,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     }
   };
 
-  // Only cash wallets counted in totals/breakdowns
-  const cashWallets = useMemo(() => new Set(['Наличка Настя','Наличка Лера','Наличка Ваня']), []);
+  const cashWallets = useMemo(() => new Set(['наличка настя','наличка лера','наличка ваня']), []);
   
   // Получаем список доступных месяцев из транзакций
   const availableMonths = useMemo(() => {
@@ -174,7 +182,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   }, [allTransactions]);
 
   const transactionsForCashTotals = useMemo(() => (
-    transactions.filter(t => t.cash_type != null && cashWallets.has(String(t.cash_type)))
+    transactions.filter(t => t.cash_type != null && cashWallets.has(normalizeWallet(String(t.cash_type))))
   ), [transactions, cashWallets]);
 
   const expensesBreakdown = useMemo(() => {
@@ -298,7 +306,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
             <SelectItem value="all">Все кошельки</SelectItem>
             {availableWallets.map(wallet => (
               <SelectItem key={wallet} value={wallet}>
-                {wallet}
+                {walletDisplay(wallet)}
               </SelectItem>
             ))}
           </SelectContent>

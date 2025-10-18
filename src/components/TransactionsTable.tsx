@@ -76,12 +76,11 @@ export function TransactionsTable({
   };
 
   const getCashTypeDisplay = (cashType?: string) => {
-    switch (cashType) {
-      case 'nastya': return 'Настя';
-      case 'lera': return 'Лера';
-      case 'vanya': return 'Ваня';
-      default: return 'Общая';
-    }
+    const v = (cashType || '').trim().toLowerCase();
+    if (v === 'nastya' || v === 'наличка настя' || cashType === 'Наличка Настя') return 'Наличка Настя';
+    if (v === 'lera' || v === 'наличка лера' || cashType === 'Наличка Лера') return 'Наличка Лера';
+    if (v === 'vanya' || v === 'наличка ваня' || cashType === 'Наличка Ваня') return 'Наличка Ваня';
+    return cashType || 'Не указан';
   };
 
   const getCategoryDisplay = (category: string) => {

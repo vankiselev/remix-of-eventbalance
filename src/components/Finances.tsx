@@ -303,6 +303,15 @@ const Finances = () => {
         }
         if (summary && summary.length > 0) {
           setCompanySummary(summary[0]);
+          const s = summary[0] as any;
+          const allZero = Number(s.total_cash || 0) === 0 && Number(s.cash_nastya || 0) === 0 && Number(s.cash_lera || 0) === 0 && Number(s.cash_vanya || 0) === 0;
+          if (allZero) {
+            const { data: rows } = await supabase
+              .from('financial_transactions')
+              .select('cash_type,income_amount,expense_amount')
+              .limit(5000);
+            if (rows) setCompanySummary(reduceTotals(rows));
+          }
         } else {
           // Fallback: compute on client
           const { data: rows } = await supabase
@@ -318,6 +327,16 @@ const Finances = () => {
         .rpc('calculate_user_cash_totals', { user_uuid: user?.id });
       if (userSummaryData && userSummaryData.length > 0) {
         setUserSummary(userSummaryData[0]);
+        const s = userSummaryData[0] as any;
+        const allZero = Number(s.total_cash || 0) === 0 && Number(s.cash_nastya || 0) === 0 && Number(s.cash_lera || 0) === 0 && Number(s.cash_vanya || 0) === 0;
+        if (allZero && user?.id) {
+          const { data: rows } = await supabase
+            .from('financial_transactions')
+            .select('cash_type,income_amount,expense_amount,created_by')
+            .eq('created_by', user.id)
+            .limit(5000);
+          if (rows) setUserSummary(reduceTotals(rows));
+        }
       } else if (user?.id) {
         const { data: rows } = await supabase
           .from('financial_transactions')

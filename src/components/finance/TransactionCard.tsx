@@ -2,6 +2,15 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
 
+const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
+const walletDisplay = (s?: string | null) => {
+  const v = normalizeWallet(s || undefined);
+  if (v === 'наличка настя' || v === 'nastya') return 'Наличка Настя';
+  if (v === 'наличка лера' || v === 'lera') return 'Наличка Лера';
+  if (v === 'наличка ваня' || v === 'vanya') return 'Наличка Ваня';
+  return s || 'Не указан';
+};
+
 interface TransactionCardProps {
   transaction: {
     id: string;
@@ -58,7 +67,7 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
         </div>
         {transaction.cash_type && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1">
-            {transaction.cash_type}
+            {walletDisplay(transaction.cash_type)}
           </Badge>
         )}
       </div>
