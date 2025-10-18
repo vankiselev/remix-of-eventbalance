@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
+import { declineFullNameToDative } from '@/utils/nameDeclenation';
 import {
   Dialog,
   DialogContent,
@@ -719,10 +720,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     value={transferToUserId} 
                     onValueChange={(value) => {
                       setTransferToUserId(value);
-                      // Auto-fill description when employee is selected
+                      // Auto-fill description with declined name when employee is selected
                       const selectedEmployee = employees.find(emp => emp.id === value);
                       if (selectedEmployee) {
-                        form.setValue("description", `Передал(а) ${selectedEmployee.full_name}`);
+                        const declinedName = declineFullNameToDative(selectedEmployee.full_name);
+                        form.setValue("description", `Передал(а) ${declinedName}`);
                       }
                     }}
                   >
