@@ -223,18 +223,18 @@ const Events = () => {
     });
   };
 
-  // Группировка событий по месяцам для отображения списком
-  const groupEventsByMonth = (eventsList: Event[]) => {
+  // Группировка событий по дням для отображения списком
+  const groupEventsByDay = (eventsList: Event[]) => {
     const grouped: { [key: string]: Event[] } = {};
     
     eventsList.forEach(event => {
       const date = new Date(event.start_date);
-      const monthYear = format(date, 'LLLL yyyy', { locale: ru });
+      const dayKey = format(date, 'd MMMM yyyy', { locale: ru }); // "1 сентября 2025"
       
-      if (!grouped[monthYear]) {
-        grouped[monthYear] = [];
+      if (!grouped[dayKey]) {
+        grouped[dayKey] = [];
       }
-      grouped[monthYear].push(event);
+      grouped[dayKey].push(event);
     });
     
     return grouped;
@@ -256,7 +256,7 @@ const Events = () => {
   };
 
   const filteredEvents = getFilteredAndSortedEvents();
-  const groupedEvents = viewMode === 'list' ? groupEventsByMonth(filteredEvents) : {};
+  const groupedEvents = viewMode === 'list' ? groupEventsByDay(filteredEvents) : {};
 
 
   if (loading) {
@@ -481,13 +481,13 @@ const Events = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
-            <div key={monthYear} className="space-y-3">
+          {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
+            <div key={dayKey} className="space-y-3">
               <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
-                {monthYear}
+                {dayKey}
               </h3>
               <div className="space-y-2">
-                {monthEvents.map((event) => (
+                {dayEvents.map((event) => (
                   <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
                     <CardContent className="p-4">
                       <div className="space-y-3">
