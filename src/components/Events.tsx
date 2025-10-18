@@ -56,6 +56,7 @@ const Events = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [showFutureOnly, setShowFutureOnly] = useState(true); // По умолчанию показываем только будущие события
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
@@ -193,6 +194,17 @@ const Events = () => {
   const filterEventsByDate = (eventsList: Event[]) => {
     let filtered = eventsList;
     
+    // Фильтр по будущим событиям (от сегодня и далее)
+    if (showFutureOnly) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      });
+    }
+    
     if (selectedMonth) {
       filtered = filtered.filter(event => {
         const eventMonth = new Date(event.start_date).getMonth() + 1;
@@ -268,6 +280,7 @@ const Events = () => {
     setSelectedYear(null);
     setSearchQuery("");
     setSortByName(false);
+    setShowFutureOnly(true);
   };
 
   const filteredEvents = getFilteredAndSortedEvents();
@@ -347,6 +360,16 @@ const Events = () => {
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
+              <div className="text-sm mb-2 block font-medium">Период</div>
+              <Button
+                variant={showFutureOnly ? "default" : "outline"}
+                onClick={() => setShowFutureOnly(!showFutureOnly)}
+                className="w-full"
+              >
+                {showFutureOnly ? "Будущие события" : "Все события"}
+              </Button>
+            </div>
+            <div className="flex-1">
               <div className="text-sm mb-2 block font-medium">Месяц</div>
               <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
                 <SelectTrigger id="month-filter">
@@ -383,7 +406,7 @@ const Events = () => {
                 </SelectContent>
               </Select>
             </div>
-            {(selectedMonth || selectedYear || searchQuery || sortByName) && (
+            {(selectedMonth || selectedYear || searchQuery || sortByName || !showFutureOnly) && (
               <div className="flex items-end">
                 <Button
                   variant="outline"
@@ -403,19 +426,19 @@ const Events = () => {
       <div className="bg-card text-card-foreground rounded-lg border p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">
-            {selectedMonth || selectedYear || searchQuery ? 'Отфильтровано' : 'Всего праздников'}
+            {selectedMonth || selectedYear || searchQuery || !showFutureOnly ? 'Отфильтровано' : 'Предстоящих праздников'}
           </h3>
         </div>
         <div className="text-2xl font-bold">
           {filteredEvents.length}
-          {(selectedMonth || selectedYear || searchQuery) && (
+          {(selectedMonth || selectedYear || searchQuery || !showFutureOnly) && (
             <span className="text-lg text-muted-foreground"> / {events.length}</span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {selectedMonth || selectedYear || searchQuery 
+          {selectedMonth || selectedYear || searchQuery || !showFutureOnly
             ? 'Найдено мероприятий' 
-            : 'Мероприятий в системе'}
+            : 'Мероприятий от сегодня'}
         </p>
       </div>
 

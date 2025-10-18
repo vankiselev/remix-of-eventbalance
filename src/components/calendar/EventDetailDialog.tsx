@@ -7,12 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { FileInput } from "@/components/ui/file-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2, MapPin, Plus } from "lucide-react";
+import { CalendarIcon, Clock, Trash2, MapPin, Plus, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Event {
@@ -658,35 +659,30 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="estimate_file">Смета</Label>
-              <div className="space-y-2">
-                <Input
-                  id="estimate_file"
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setEstimateFile(file);
-                  }}
-                />
-                {formData.estimate_file_url && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Текущий файл:</span>
+              <FileInput
+                id="estimate_file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                maxSize={10}
+                value={estimateFile}
+                onChange={(file) => setEstimateFile(file as File | null)}
+                placeholder="Выберите файл сметы"
+              />
+              {formData.estimate_file_url && !estimateFile && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border bg-card">
+                  <File className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Текущий файл</p>
                     <a
                       href={formData.estimate_file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary hover:underline"
+                      className="text-xs text-primary hover:underline"
                     >
                       Открыть смету
                     </a>
                   </div>
-                )}
-                {estimateFile && (
-                  <div className="text-sm text-muted-foreground">
-                    Новый файл: {estimateFile.name}
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
           </div>
