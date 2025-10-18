@@ -6,12 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List, Search } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List, Search, X } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface Event {
   id: string;
@@ -50,6 +53,8 @@ const Events = () => {
   const [sortByName, setSortByName] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -191,6 +196,38 @@ const Events = () => {
     return new Date(dateString).toLocaleDateString("ru-RU");
   };
 
+  // Получение уникальных годов из событий
+  const getAvailableYears = (): number[] => {
+    const years = events.map(event => new Date(event.start_date).getFullYear());
+    const uniqueYears = [...new Set(years)];
+    const currentYear = new Date().getFullYear();
+    if (!uniqueYears.includes(currentYear)) {
+      uniqueYears.push(currentYear);
+    }
+    return uniqueYears.sort((a, b) => b - a);
+  };
+
+  // Фильтрация событий по дате (месяц и год)
+  const filterEventsByDate = (eventsList: Event[]) => {
+    let filtered = eventsList;
+    
+    if (selectedMonth) {
+      filtered = filtered.filter(event => {
+        const eventMonth = new Date(event.start_date).getMonth() + 1;
+        return eventMonth === parseInt(selectedMonth);
+      });
+    }
+    
+    if (selectedYear) {
+      filtered = filtered.filter(event => {
+        const eventYear = new Date(event.start_date).getFullYear();
+        return eventYear === parseInt(selectedYear);
+      });
+    }
+    
+    return filtered;
+  };
+
   // Фильтрация событий по поисковому запросу
   const filterEvents = (eventsList: Event[]) => {
     if (!searchQuery.trim()) return eventsList;
@@ -218,6 +255,41 @@ const Events = () => {
       return dateA.getTime() - dateB.getTime();
     });
   };
+
+  // Группировка событий по месяцам для отображения списком
+  const groupEventsByMonth = (eventsList: Event[]) => {
+    const grouped: { [key: string]: Event[] } = {};
+    
+    eventsList.forEach(event => {
+      const date = new Date(event.start_date);
+      const monthYear = format(date, 'LLLL yyyy', { locale: ru });
+      
+      if (!grouped[monthYear]) {
+        grouped[monthYear] = [];
+      }
+      grouped[monthYear].push(event);
+    });
+    
+    return grouped;
+  };
+
+  // Применение всех фильтров
+  const getFilteredAndSortedEvents = () => {
+    let filtered = filterEventsByDate(events);
+    filtered = filterEvents(filtered);
+    return sortEvents(filtered);
+  };
+
+  // Сброс всех фильтров
+  const resetFilters = () => {
+    setSelectedMonth(null);
+    setSelectedYear(null);
+    setSearchQuery("");
+    setSortByName(false);
+  };
+
+  const filteredEvents = getFilteredAndSortedEvents();
+  const groupedEvents = viewMode === 'list' ? groupEventsByMonth(filteredEvents) : {};
 
   const handleEditEvent = (event: Event) => {
     // Check permissions
@@ -681,14 +753,80 @@ const Events = () => {
         </div>
       </div>
 
-      {/* Общее количество праздников */}
+      {/* Фильтры по месяцу и году */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Label htmlFor="month-filter" className="text-sm mb-2 block">Месяц</Label>
+              <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
+                <SelectTrigger id="month-filter">
+                  <SelectValue placeholder="Все месяцы" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все месяцы</SelectItem>
+                  <SelectItem value="1">Январь</SelectItem>
+                  <SelectItem value="2">Февраль</SelectItem>
+                  <SelectItem value="3">Март</SelectItem>
+                  <SelectItem value="4">Апрель</SelectItem>
+                  <SelectItem value="5">Май</SelectItem>
+                  <SelectItem value="6">Июнь</SelectItem>
+                  <SelectItem value="7">Июль</SelectItem>
+                  <SelectItem value="8">Август</SelectItem>
+                  <SelectItem value="9">Сентябрь</SelectItem>
+                  <SelectItem value="10">Октябрь</SelectItem>
+                  <SelectItem value="11">Ноябрь</SelectItem>
+                  <SelectItem value="12">Декабрь</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="year-filter" className="text-sm mb-2 block">Год</Label>
+              <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
+                <SelectTrigger id="year-filter">
+                  <SelectValue placeholder="Все годы" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все годы</SelectItem>
+                  {getAvailableYears().map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(selectedMonth || selectedYear || searchQuery || sortByName) && (
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Сбросить фильтры
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Счетчик отфильтрованных событий */}
       <div className="bg-card text-card-foreground rounded-lg border p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Всего праздников</h3>
+          <h3 className="text-sm font-medium">
+            {selectedMonth || selectedYear || searchQuery ? 'Отфильтровано' : 'Всего праздников'}
+          </h3>
         </div>
-        <div className="text-2xl font-bold">{events.length}</div>
+        <div className="text-2xl font-bold">
+          {filteredEvents.length}
+          {(selectedMonth || selectedYear || searchQuery) && (
+            <span className="text-lg text-muted-foreground"> / {events.length}</span>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
-          Мероприятий в системе
+          {selectedMonth || selectedYear || searchQuery 
+            ? 'Найдено мероприятий' 
+            : 'Мероприятий в системе'}
         </p>
       </div>
 
@@ -713,9 +851,22 @@ const Events = () => {
             </p>
           </CardContent>
         </Card>
+      ) : filteredEvents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Search className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Мероприятия не найдены</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Попробуйте изменить параметры фильтрации
+            </p>
+            <Button variant="outline" onClick={resetFilters}>
+              Сбросить фильтры
+            </Button>
+          </CardContent>
+        </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sortEvents(filterEvents(events)).map((event) => (
+          {filteredEvents.map((event) => (
             <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -747,40 +898,49 @@ const Events = () => {
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
-          {sortEvents(filterEvents(events)).map((event) => (
-            <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold truncate">{event.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <div className="flex items-center">
-                            <CalendarIcon className="mr-1 h-3 w-3" />
-                            {formatDate(event.start_date)}
-                            {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
+        <div className="space-y-6">
+          {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
+            <div key={monthYear} className="space-y-2">
+              <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
+                {monthYear}
+              </h3>
+              <div className="space-y-2">
+                {monthEvents.map((event) => (
+                  <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold truncate">{event.name}</h3>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
+                                <div className="flex items-center">
+                                  <CalendarIcon className="mr-1 h-3 w-3" />
+                                  {formatDate(event.start_date)}
+                                  {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
+                                </div>
+                                {event.project_owner && (
+                                  <div>Проект: {event.project_owner}</div>
+                                )}
+                                {event.location && (
+                                  <div>Место: {event.location}</div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {event.project_owner && (
-                            <div>Проект: {event.project_owner}</div>
-                          )}
-                          {event.location && (
-                            <div>Место: {event.location}</div>
-                          )}
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <Badge className={getStatusColor(event.status)}>
+                            {getStatusLabel(event.status)}
+                          </Badge>
+                          <Edit className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Badge className={getStatusColor(event.status)}>
-                      {getStatusLabel(event.status)}
-                    </Badge>
-                    <Edit className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
