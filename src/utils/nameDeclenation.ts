@@ -110,6 +110,31 @@ function declineLastName(lastName: string): string {
 }
 
 /**
+ * Определяет пол по имени
+ */
+export function detectGender(fullName: string): 'male' | 'female' {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 0) return 'male';
+  
+  const firstName = parts[0];
+  
+  // Женские имена обычно заканчиваются на -а, -я
+  // Исключения: мужские имена на -а/-я
+  const maleExceptions = ['Илья', 'Лука', 'Савва', 'Фома', 'Кузьма', 'Никита'];
+  
+  if (maleExceptions.includes(firstName)) {
+    return 'male';
+  }
+  
+  if (firstName.endsWith('а') || firstName.endsWith('я')) {
+    return 'female';
+  }
+  
+  // По умолчанию мужской род
+  return 'male';
+}
+
+/**
  * Склоняет полное имя (Имя Фамилия или Имя Отчество Фамилия) в дательный падеж
  */
 export function declineFullNameToDative(fullName: string): string {

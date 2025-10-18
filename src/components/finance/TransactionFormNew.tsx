@@ -16,7 +16,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
-import { declineFullNameToDative } from '@/utils/nameDeclenation';
+import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import {
   Dialog,
   DialogContent,
@@ -103,6 +103,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [projectSelectOpen, setProjectSelectOpen] = useState(false);
   const [categorySelectOpen, setCategorySelectOpen] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string } | null>(null);
 
   // Check user role
   useEffect(() => {
@@ -115,10 +116,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     checkUserRole();
   }, []);
 
-  // Load employees for money transfer
+  // Load employees for money transfer and current user profile
   useEffect(() => {
     if (isOpen) {
       loadEmployees();
+      loadCurrentUserProfile();
     }
   }, [isOpen]);
 
@@ -138,6 +140,24 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       setEmployees(data || []);
     } catch (error) {
       console.error('Error loading employees:', error);
+    }
+  };
+
+  const loadCurrentUserProfile = async () => {
+    try {
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (!currentUser.user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', currentUser.user.id)
+        .single();
+
+      if (error) throw error;
+      setCurrentUserProfile(data);
+    } catch (error) {
+      console.error('Error loading current user profile:', error);
     }
   };
 
@@ -722,9 +742,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       setTransferToUserId(value);
                       // Auto-fill description with declined name when employee is selected
                       const selectedEmployee = employees.find(emp => emp.id === value);
-                      if (selectedEmployee) {
+                      if (selectedEmployee && currentUserProfile) {
                         const declinedName = declineFullNameToDative(selectedEmployee.full_name);
-                        form.setValue("description", `Передал(а) ${declinedName}`);
+                        const gender = detectGender(currentUserProfile.full_name);
+                        const verb = gender === 'female' ? 'Передала' : 'Передал';
+                        form.setValue("description", `${verb} ${declinedName}`);
                       }
                     }}
                   >
