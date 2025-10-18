@@ -390,58 +390,89 @@ const FinancesImportDialog = ({
     };
 
     try {
-      // Подготовка всех строк для отправки на сервер
-      const preparedRows = parsedData.map((row) => {
-        const mappedRow = mapRow(row);
-        const operationDate = parseDate(mappedRow.operation_date);
-        const expenseAmount = parseAmount(mappedRow.expense_amount);
-        const incomeAmount = parseAmount(mappedRow.income_amount);
-
-        return {
-          operation_date: operationDate || '',
-          static_project_name: mappedRow.project_name || null,
-          project_owner: mappedRow.project_owner || null,
-          description: mappedRow.description || '',
-          category: mappedRow.category || 'Разное',
-          expense_amount: expenseAmount || null,
-          income_amount: incomeAmount || null,
-          notes: mappedRow.notes || null
-        };
-      });
-
-      // Вызов Edge Function для быстрой обработки на сервере
-      const { data: { session } } = await supabase.auth.getSession();
-      const SUPABASE_URL = "https://wpxhmajdeunabximyfln.supabase.co";
+      const BATCH_SIZE = 100; // Вставляем по 100 строк за раз
       
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/finances-import`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            rows: preparedRows,
-            user_id: user?.id
-          })
+      for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedData.length);
+        const batch = parsedData.slice(batchStart, batchEnd);
+        
+        // Подготовка batch для вставки
+        const transactionsToInsert = [];
+        
+        for (let i = 0; i < batch.length; i++) {
+          const row = batch[i];
+          const mappedRow = mapRow(row);
+          
+          try {
+            const operationDate = parseDate(mappedRow.operation_date);
+            const expenseAmount = parseAmount(mappedRow.expense_amount);
+            const incomeAmount = parseAmount(mappedRow.income_amount);
+            const projectOwner = mappedRow.project_owner || null;
+            const cashType = mapCashType(projectOwner);
+
+            if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
+              result.failed++;
+              result.errors.push({
+                row: batchStart + i + 1,
+                reason: 'Некорректные данные',
+                data: mappedRow
+              });
+              continue;
+            }
+
+            transactionsToInsert.push({
+              created_by: user?.id,
+              operation_date: operationDate,
+              static_project_name: mappedRow.project_name || null,
+              project_owner: projectOwner,
+              description: mappedRow.description || '',
+              category: mappedRow.category || 'Разное',
+              cash_type: cashType,
+              expense_amount: expenseAmount || null,
+              income_amount: incomeAmount || null,
+              notes: mappedRow.notes || null,
+              verification_status: 'pending',
+              requires_verification: true
+            });
+          } catch (error: any) {
+            result.failed++;
+            result.errors.push({
+              row: batchStart + i + 1,
+              reason: error.message || 'Ошибка обработки',
+              data: mappedRow
+            });
+          }
         }
-      );
 
-      if (!response.ok) {
-        throw new Error('Ошибка при импорте данных');
+        // Batch-вставка в БД
+        if (transactionsToInsert.length > 0) {
+          const { error } = await supabase
+            .from('financial_transactions')
+            .insert(transactionsToInsert);
+
+          if (error) {
+            console.error('Batch insert error:', error);
+            // Все строки из этого batch считаем ошибочными
+            result.failed += transactionsToInsert.length;
+            for (let i = 0; i < transactionsToInsert.length; i++) {
+              result.errors.push({
+                row: batchStart + i + 1,
+                reason: error.message || 'Ошибка вставки'
+              });
+            }
+          } else {
+            result.inserted += transactionsToInsert.length;
+          }
+        }
+
+        // Обновляем прогресс
+        const currentProgress = batchEnd;
+        setImportProgress(Math.round((currentProgress / parsedData.length) * 100));
+        updateProgress(currentProgress, parsedData.length);
       }
-
-      const importResult = await response.json();
-      
-      // Обновляем результаты
-      result.inserted = importResult.inserted;
-      result.failed = importResult.failed;
-      result.errors = importResult.errors || [];
 
       setImportResult(result);
       finishImport(result);
-      setImportProgress(100);
       setStep(4);
 
       if (result.inserted > 0) {
