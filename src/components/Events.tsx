@@ -122,20 +122,32 @@ const Events = () => {
     handleDialogClose();
   };
 
-  const getManagerNames = (managerIds: string[] | null) => {
-    if (!managerIds || managerIds.length === 0) return "—";
-    return managerIds
-      .map(id => employees.find(emp => emp.id === id)?.full_name)
-      .filter(Boolean)
-      .join(", ") || "—";
+  const getManagerNames = (event: Event) => {
+    // Если есть manager_ids (новое поле), используем его
+    if (event.manager_ids && event.manager_ids.length > 0) {
+      const names = event.manager_ids
+        .map(id => employees.find(emp => emp.id === id)?.full_name)
+        .filter(Boolean)
+        .join(", ");
+      if (names) return names;
+    }
+    // Иначе используем старое текстовое поле managers (из импорта)
+    if (event.managers) return event.managers;
+    return "—";
   };
 
-  const getAnimatorNames = (animatorIds: string[] | null) => {
-    if (!animatorIds || animatorIds.length === 0) return "—";
-    return animatorIds
-      .map(id => animators.find(anim => anim.id === id)?.name)
-      .filter(Boolean)
-      .join(", ") || "—";
+  const getAnimatorNames = (event: Event) => {
+    // Если есть animator_ids (новое поле), используем его
+    if (event.animator_ids && event.animator_ids.length > 0) {
+      const names = event.animator_ids
+        .map(id => animators.find(anim => anim.id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
+      if (names) return names;
+    }
+    // Иначе используем старое текстовое поле animators (из импорта)
+    if (event.animators) return event.animators;
+    return "—";
   };
 
   const getVenueName = (venueId: string | null) => {
@@ -455,7 +467,7 @@ const Events = () => {
                 
                 <div className="flex items-start gap-2">
                   <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                  <span className="text-foreground">{getManagerNames(event.manager_ids)}</span>
+                  <span className="text-foreground">{getManagerNames(event)}</span>
                 </div>
 
                 <div className="flex items-start gap-2">
@@ -473,7 +485,7 @@ const Events = () => {
 
                 <div className="flex items-start gap-2">
                   <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">{getAnimatorNames(event.animator_ids)}</span>
+                  <span className="text-foreground">{getAnimatorNames(event)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -503,7 +515,7 @@ const Events = () => {
                           
                           <div className="flex items-start gap-2">
                             <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                            <span className="text-foreground">{getManagerNames(event.manager_ids)}</span>
+                            <span className="text-foreground">{getManagerNames(event)}</span>
                           </div>
 
                           <div className="flex items-center gap-2">
@@ -521,7 +533,7 @@ const Events = () => {
 
                           <div className="flex items-center gap-2 sm:col-span-2">
                             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-foreground">{getAnimatorNames(event.animator_ids)}</span>
+                            <span className="text-foreground">{getAnimatorNames(event)}</span>
                           </div>
                         </div>
                       </div>
