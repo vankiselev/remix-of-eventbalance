@@ -85,20 +85,24 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon, categoryName }: L
 
   // Все доступные иконки lucide-react (только валидные компоненты)
   const allLucideIconNames = useMemo(() => {
-    return Object.entries(Icons)
-      .filter(([name, value]) =>
-        name !== 'createLucideIcon' &&
-        name !== 'default' &&
-        typeof value === 'function'
-      )
-      .map(([name]) => name);
+    // В lucide-react иконки экспортируются как компоненты через forwardRef (typeof === 'object')
+    // Отфильтруем только названия, похожие на иконки, исключая служебные экспорты
+    return Object.keys(Icons).filter((name) =>
+      /^[A-Z]/.test(name) &&
+      name !== 'Icon' &&
+      name !== 'icons' &&
+      name !== 'createLucideIcon' &&
+      name !== 'default' &&
+      name !== 'LucideProps' &&
+      name !== 'IconNode'
+    );
   }, []);
 
   const filteredIcons = useMemo(() => {
     // Фильтруем релевантные иконки, чтобы оставить только существующие
-    const validRelevantIcons = relevantIcons.filter(name => {
-      const IconComponent = Icons[name as keyof typeof Icons];
-      return IconComponent && typeof IconComponent === 'function';
+    const validRelevantIcons = relevantIcons.filter((name) => {
+      const IconComponent = Icons[name as keyof typeof Icons] as any;
+      return !!IconComponent;
     });
 
     if (!search) {
@@ -116,7 +120,7 @@ export const LucideIconPicker = ({ selectedIcon, onSelectIcon, categoryName }: L
 
   const renderIcon = (iconName: string) => {
     const IconComponent = Icons[iconName as keyof typeof Icons] as any;
-    if (!IconComponent || typeof IconComponent !== 'function') return null;
+    if (!IconComponent) return null;
 
     return (
       <Button
