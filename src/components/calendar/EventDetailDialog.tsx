@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2, MapPin } from "lucide-react";
+import { CalendarIcon, Clock, Trash2, MapPin, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Event {
@@ -306,7 +306,19 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="venue_id">Площадка</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="venue_id">Площадка</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=venues', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
               <Select
                 value={formData.venue_id}
                 onValueChange={(value) => setFormData({ ...formData, venue_id: value })}
@@ -360,54 +372,24 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label htmlFor="event_time">Время начала</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.event_time && "text-muted-foreground"
-                    )}
-                  >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {formData.event_time || "Выберите время"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="start">
-                  <Input
-                    type="time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    className="w-full"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                id="event_time"
+                type="time"
+                value={formData.event_time ? formData.event_time.substring(0, 5) : ""}
+                onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="end_time">Время окончания</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.end_time && "text-muted-foreground"
-                    )}
-                  >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {formData.end_time || "Выберите время"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="start">
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    className="w-full"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                id="end_time"
+                type="time"
+                value={formData.end_time ? formData.end_time.substring(0, 5) : ""}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                className="w-full"
+              />
             </div>
           </div>
 
@@ -437,12 +419,24 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Аниматоры</Label>
-              {animators.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Нет аниматоров. Добавьте их в разделе Контакты.</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {animators.map((animator) => (
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Аниматоры</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=animators', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {animators.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Нет аниматоров</p>
+                ) : (
+                  animators.map((animator) => (
                     <Button
                       key={animator.id}
                       type="button"
@@ -456,18 +450,30 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                     >
                       {animator.name}
                     </Button>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Подрядчики</Label>
-              {contractors.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Нет подрядчиков. Добавьте их в разделе Контакты.</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {contractors.map((contractor) => (
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Подрядчики</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=contractors', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {contractors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Нет подрядчиков</p>
+                ) : (
+                  contractors.map((contractor) => (
                     <Button
                       key={contractor.id}
                       type="button"
@@ -481,9 +487,9 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                     >
                       {contractor.name}
                     </Button>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -499,7 +505,19 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           {/* Additional Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
             <div className="space-y-2">
-              <Label htmlFor="photographer_contact_id">Фотограф</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="photographer_contact_id">Фотограф</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
               <Select
                 value={formData.photographer_contact_id}
                 onValueChange={(value) => setFormData({ ...formData, photographer_contact_id: value })}
@@ -518,7 +536,19 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="videographer_contact_id">Видеограф</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="videographer_contact_id">Видеограф</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
               <Select
                 value={formData.videographer_contact_id}
                 onValueChange={(value) => setFormData({ ...formData, videographer_contact_id: value })}
