@@ -717,7 +717,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   </FormLabel>
                   <Select 
                     value={transferToUserId} 
-                    onValueChange={setTransferToUserId}
+                    onValueChange={(value) => {
+                      setTransferToUserId(value);
+                      // Auto-fill description when employee is selected
+                      const selectedEmployee = employees.find(emp => emp.id === value);
+                      if (selectedEmployee) {
+                        form.setValue("description", `Передал(а) ${selectedEmployee.full_name}`);
+                      }
+                    }}
                   >
                     <FormControl>
                       <SelectTrigger className="border-primary/30">
