@@ -588,17 +588,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     <FormLabel>Проект</FormLabel>
                     <Select 
                       value={field.value} 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Auto-detect money transfer category
-                        if (value === 'Передача денег') {
-                          form.setValue('category', 'Передано или получено от сотрудника');
-                          setIsMoneyTransfer(true);
-                          form.setValue('no_receipt', true);
-                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-                          form.setValue('income_amount', undefined);
-                        }
-                      }}
+                      onValueChange={field.onChange}
                       open={projectSelectOpen}
                       onOpenChange={setProjectSelectOpen}
                     >
@@ -640,6 +630,57 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 );
               }}
             />
+
+            {/* Money Transfer Section - Show when category is employee transfer */}
+            {form.watch("category") === "Передано или получено от сотрудника" && (
+              <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">💸</span>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-sm font-semibold text-primary">Передача денег сотруднику</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Выберите сотрудника, который получит деньги. Он получит уведомление и должен будет подтвердить получение.
+                      <br />
+                      <strong>Важно:</strong> Заполняйте только поле "Сумма Траты".
+                    </p>
+                  </div>
+                </div>
+
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    Кому передаются деньги <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select 
+                    value={transferToUserId} 
+                    onValueChange={setTransferToUserId}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="border-primary/30">
+                        <SelectValue placeholder="Выберите получателя из списка..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {employees.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground text-center">
+                          Нет доступных сотрудников
+                        </div>
+                      ) : (
+                        employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.full_name} ({employee.email})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {transferToUserId && (
+                    <FormDescription className="text-xs text-primary">
+                      ✓ Получатель будет уведомлен сразу после сохранения
+                    </FormDescription>
+                  )}
+                </FormItem>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -817,57 +858,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 );
               }}
             />
-
-            {/* Money Transfer Section */}
-            {form.watch("category") === "Передано или получено от сотрудника" && (
-              <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
-                <div className="flex items-start space-x-3">
-                  <span className="text-2xl">💸</span>
-                  <div className="flex-1 space-y-2">
-                    <h3 className="text-sm font-semibold text-primary">Передача денег сотруднику</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Выберите сотрудника, который получит деньги. Он получит уведомление и должен будет подтвердить получение.
-                      <br />
-                      <strong>Важно:</strong> Заполняйте только поле "Сумма Траты".
-                    </p>
-                  </div>
-                </div>
-
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    Кому передаются деньги <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select 
-                    value={transferToUserId} 
-                    onValueChange={setTransferToUserId}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="border-primary/30">
-                        <SelectValue placeholder="Выберите получателя из списка..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {employees.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground text-center">
-                          Нет доступных сотрудников
-                        </div>
-                      ) : (
-                        employees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.full_name} ({employee.email})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {transferToUserId && (
-                    <FormDescription className="text-xs text-primary">
-                      ✓ Получатель будет уведомлен сразу после сохранения
-                    </FormDescription>
-                  )}
-                </FormItem>
-              </div>
-            )}
 
             <div className="space-y-4">
               <FormLabel>Чек / вложения</FormLabel>
