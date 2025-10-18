@@ -5,11 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { ru } from "date-fns/locale";
+import { CalendarIcon, Clock, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Event {
   id: string;
@@ -220,13 +224,37 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label htmlFor="start_date">Дата *</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.start_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.start_date ? (
+                      format(new Date(formData.start_date), "d MMMM yyyy г.", { locale: ru })
+                    ) : (
+                      <span>Выберите дату</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.start_date ? new Date(formData.start_date) : undefined}
+                    onSelect={(date) => setFormData({ 
+                      ...formData, 
+                      start_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                    })}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    locale={ru}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
@@ -276,22 +304,54 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label htmlFor="event_time">Время начала</Label>
-              <Input
-                id="event_time"
-                type="time"
-                value={formData.event_time}
-                onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.event_time && "text-muted-foreground"
+                    )}
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    {formData.event_time || "Выберите время"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <Input
+                    type="time"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                    className="w-full"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="end_time">Время окончания</Label>
-              <Input
-                id="end_time"
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.end_time && "text-muted-foreground"
+                    )}
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    {formData.end_time || "Выберите время"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="start">
+                  <Input
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    className="w-full"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
