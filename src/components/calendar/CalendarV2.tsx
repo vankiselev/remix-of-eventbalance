@@ -1,0 +1,288 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import CalendarDayView from "./CalendarDayView";
+import CalendarWeekView from "./CalendarWeekView";
+import CalendarMonthView from "./CalendarMonthView";
+import CalendarYearView from "./CalendarYearView";
+import EventDetailDialog from "./EventDetailDialog";
+
+const MONTHS = [
+  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+];
+
+type ViewMode = "day" | "week" | "month" | "year";
+
+interface Event {
+  id: string;
+  name: string;
+  start_date: string;
+  event_time: string | null;
+  end_time: string | null;
+  project_owner: string | null;
+  venue_id: string | null;
+  manager_ids: string[] | null;
+  animator_ids: string[] | null;
+  contractor_ids: string[] | null;
+  photographer_contact_id: string | null;
+  videographer_contact_id: string | null;
+  show_program: string | null;
+  notes: string | null;
+  location: string | null;
+}
+
+const CalendarV2 = () => {
+  const currentDate = new Date();
+  const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showEventDialog, setShowEventDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchEvents();
+  }, [selectedMonth, selectedYear, viewMode]);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      let startDate: string;
+      let endDate: string;
+
+      if (viewMode === "year") {
+        startDate = new Date(selectedYear, 0, 1).toISOString().split('T')[0];
+        endDate = new Date(selectedYear, 11, 31).toISOString().split('T')[0];
+      } else {
+        startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0];
+        endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+      }
+
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .gte("start_date", startDate)
+        .lte("start_date", endDate)
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось загрузить мероприятия",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (selectedMonth === 0) {
+        setSelectedMonth(11);
+        setSelectedYear(selectedYear - 1);
+      } else {
+        setSelectedMonth(selectedMonth - 1);
+      }
+    } else {
+      if (selectedMonth === 11) {
+        setSelectedMonth(0);
+        setSelectedYear(selectedYear + 1);
+      } else {
+        setSelectedMonth(selectedMonth + 1);
+      }
+    }
+  };
+
+  const navigateYear = (direction: 'prev' | 'next') => {
+    setSelectedYear(direction === 'prev' ? selectedYear - 1 : selectedYear + 1);
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    setSelectedMonth(today.getMonth());
+    setSelectedYear(today.getFullYear());
+  };
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEventDialog(true);
+  };
+
+  const handleCreateEvent = () => {
+    setSelectedEvent(null);
+    setShowCreateDialog(true);
+  };
+
+  const handleEventSaved = () => {
+    fetchEvents();
+    setShowEventDialog(false);
+    setShowCreateDialog(false);
+  };
+
+  return (
+    <div className="w-full overflow-x-hidden space-y-6">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Календарь мероприятий</h1>
+          <p className="text-muted-foreground truncate">
+            {viewMode === "year" ? selectedYear : `${MONTHS[selectedMonth]} ${selectedYear}`}
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-2 text-sm lg:text-base w-full sm:w-auto flex-shrink-0">
+          {/* View Mode */}
+          <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">День</SelectItem>
+              <SelectItem value="week">Неделя</SelectItem>
+              <SelectItem value="month">Месяц</SelectItem>
+              <SelectItem value="year">Год</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Month/Year selectors (only for non-year views) */}
+          {viewMode !== "year" && (
+            <>
+              <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((month, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Сегодня
+          </Button>
+
+          <Button size="sm" onClick={handleCreateEvent}>
+            <Plus className="mr-1 h-4 w-4" />
+            Добавить
+          </Button>
+        </div>
+      </div>
+
+      {/* Calendar Views */}
+      <Card className="w-full">
+        <CardContent className="p-4 sm:p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
+              {viewMode === "day" && (
+                <CalendarDayView
+                  date={selectedDate}
+                  events={events}
+                  onEventClick={handleEventClick}
+                />
+              )}
+              {viewMode === "week" && (
+                <CalendarWeekView
+                  date={selectedDate}
+                  events={events}
+                  onEventClick={handleEventClick}
+                />
+              )}
+              {viewMode === "month" && (
+                <CalendarMonthView
+                  month={selectedMonth}
+                  year={selectedYear}
+                  events={events}
+                  onEventClick={handleEventClick}
+                  onDateSelect={setSelectedDate}
+                />
+              )}
+              {viewMode === "year" && (
+                <CalendarYearView
+                  year={selectedYear}
+                  events={events}
+                  onMonthClick={(month) => {
+                    setSelectedMonth(month);
+                    setViewMode("month");
+                  }}
+                />
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Event Detail Dialog */}
+      {(showEventDialog || showCreateDialog) && (
+        <EventDetailDialog
+          event={selectedEvent}
+          open={showEventDialog || showCreateDialog}
+          onOpenChange={(open) => {
+            setShowEventDialog(open);
+            setShowCreateDialog(open);
+            if (!open) setSelectedEvent(null);
+          }}
+          onSave={handleEventSaved}
+          defaultDate={selectedDate}
+        />
+      )}
+    </div>
+  );
+};
+
+export default CalendarV2;

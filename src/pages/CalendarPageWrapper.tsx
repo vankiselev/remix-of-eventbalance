@@ -1,10 +1,10 @@
 import Layout from "@/components/Layout";
-import CalendarPage from "@/components/CalendarPage";
+import CalendarV2 from "@/components/calendar/CalendarV2";
 
 const CalendarPageWrapper = () => {
   return (
     <Layout>
-      <CalendarPage />
+      <CalendarV2 />
     </Layout>
   );
 };

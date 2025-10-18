@@ -302,6 +302,7 @@ export type Database = {
       }
       events: {
         Row: {
+          animator_ids: string[] | null
           animators: string | null
           contractor_ids: string[] | null
           contractors: string | null
@@ -321,6 +322,7 @@ export type Database = {
           notes: string | null
           photo: string | null
           photo_video: string | null
+          photographer_contact_id: string | null
           photos: string[] | null
           place: string | null
           project_owner: string | null
@@ -333,9 +335,11 @@ export type Database = {
           updated_at: string
           venue_id: string | null
           video: string | null
+          videographer_contact_id: string | null
           videos: string[] | null
         }
         Insert: {
+          animator_ids?: string[] | null
           animators?: string | null
           contractor_ids?: string[] | null
           contractors?: string | null
@@ -355,6 +359,7 @@ export type Database = {
           notes?: string | null
           photo?: string | null
           photo_video?: string | null
+          photographer_contact_id?: string | null
           photos?: string[] | null
           place?: string | null
           project_owner?: string | null
@@ -367,9 +372,11 @@ export type Database = {
           updated_at?: string
           venue_id?: string | null
           video?: string | null
+          videographer_contact_id?: string | null
           videos?: string[] | null
         }
         Update: {
+          animator_ids?: string[] | null
           animators?: string | null
           contractor_ids?: string[] | null
           contractors?: string | null
@@ -389,6 +396,7 @@ export type Database = {
           notes?: string | null
           photo?: string | null
           photo_video?: string | null
+          photographer_contact_id?: string | null
           photos?: string[] | null
           place?: string | null
           project_owner?: string | null
@@ -401,6 +409,7 @@ export type Database = {
           updated_at?: string
           venue_id?: string | null
           video?: string | null
+          videographer_contact_id?: string | null
           videos?: string[] | null
         }
         Relationships: [

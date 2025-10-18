@@ -1,0 +1,118 @@
+interface Event {
+  id: string;
+  start_date: string;
+}
+
+interface CalendarYearViewProps {
+  year: number;
+  events: Event[];
+  onMonthClick: (month: number) => void;
+}
+
+const MONTHS = [
+  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+];
+
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+const CalendarYearView = ({ year, events, onMonthClick }: CalendarYearViewProps) => {
+  const getEventsCountForMonth = (month: number) => {
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date);
+      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+    }).length;
+  };
+
+  const getEventsForDate = (month: number, day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events.filter(event => event.start_date === dateStr).length;
+  };
+
+  const renderMiniMonth = (month: number) => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    let startingDayOfWeek = firstDay.getDay();
+    if (startingDayOfWeek === 0) startingDayOfWeek = 7;
+    
+    const days = [];
+    
+    // Empty cells before the first day
+    for (let i = 1; i < startingDayOfWeek; i++) {
+      days.push(<div key={`empty-${i}`} className="text-center text-xs p-1" />);
+    }
+    
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const eventsCount = getEventsForDate(month, day);
+      const isToday = new Date().getDate() === day && 
+                      new Date().getMonth() === month && 
+                      new Date().getFullYear() === year;
+      
+      days.push(
+        <div
+          key={day}
+          className={`text-center text-xs p-1 rounded ${
+            isToday ? 'bg-primary text-primary-foreground font-bold' : ''
+          } ${eventsCount > 0 ? 'font-semibold text-primary' : 'text-muted-foreground'}`}
+        >
+          {day}
+          {eventsCount > 0 && (
+            <div className="text-[8px] leading-none">•</div>
+          )}
+        </div>
+      );
+    }
+    
+    return days;
+  };
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-[800px]">
+        <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+          {MONTHS.map((monthName, month) => {
+            const eventsCount = getEventsCountForMonth(month);
+            
+            return (
+              <div
+                key={month}
+                className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => onMonthClick(month)}
+              >
+                <div className="text-center mb-2">
+                  <h3 className="font-semibold text-sm">{monthName}</h3>
+                  {eventsCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {eventsCount} {eventsCount === 1 ? 'мероприятие' : 'мероприятий'}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-1">
+                  {/* Weekday headers */}
+                  <div className="grid grid-cols-7 gap-0">
+                    {WEEKDAYS.map((day) => (
+                      <div key={day} className="text-center text-[10px] font-medium text-muted-foreground">
+                        {day[0]}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Calendar grid */}
+                  <div className="grid grid-cols-7 gap-0">
+                    {renderMiniMonth(month)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CalendarYearView;
