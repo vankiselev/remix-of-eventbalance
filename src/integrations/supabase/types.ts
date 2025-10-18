@@ -553,11 +553,16 @@ export type Database = {
           project_id: string | null
           project_owner: string
           receipt_url: string | null
+          requires_verification: boolean | null
           static_project_name: string | null
           transfer_from_user_id: string | null
           transfer_status: string | null
           transfer_to_user_id: string | null
           updated_at: string
+          verification_comment: string | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           balance_after?: number | null
@@ -577,11 +582,16 @@ export type Database = {
           project_id?: string | null
           project_owner: string
           receipt_url?: string | null
+          requires_verification?: boolean | null
           static_project_name?: string | null
           transfer_from_user_id?: string | null
           transfer_status?: string | null
           transfer_to_user_id?: string | null
           updated_at?: string
+          verification_comment?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           balance_after?: number | null
@@ -601,11 +611,16 @@ export type Database = {
           project_id?: string | null
           project_owner?: string
           receipt_url?: string | null
+          requires_verification?: boolean | null
           static_project_name?: string | null
           transfer_from_user_id?: string | null
           transfer_status?: string | null
           transfer_to_user_id?: string | null
           updated_at?: string
+          verification_comment?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -1197,6 +1212,47 @@ export type Database = {
           updated_count?: number | null
         }
         Relationships: []
+      }
+      transaction_verifications: {
+        Row: {
+          action: string
+          comment: string | null
+          created_at: string
+          id: string
+          new_status: string | null
+          old_status: string | null
+          transaction_id: string
+          verified_by: string
+        }
+        Insert: {
+          action: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          transaction_id: string
+          verified_by: string
+        }
+        Update: {
+          action?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          transaction_id?: string
+          verified_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_verifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_role_assignments: {
         Row: {

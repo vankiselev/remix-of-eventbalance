@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAccountantPermissions } from "@/hooks/useAccountantPermissions";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const { isAccountant } = useAccountantPermissions();
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
@@ -61,6 +63,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
     { path: "/finances", label: t('finances'), icon: RussianRuble },
+    ...(isAccountant ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck }] : []),
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },

@@ -53,6 +53,10 @@ interface Transaction {
   created_at: string;
   user_name?: string;
   static_project_name?: string;
+  verification_status?: string;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  verification_comment?: string | null;
 }
 
 interface TransactionTableProps {
@@ -344,6 +348,25 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     return 'Без имени';
   };
 
+  const getVerificationStatusBadge = (status: string | undefined) => {
+    if (!status || status === 'not_required') return null;
+
+    const statusConfig = {
+      pending: { label: "На проверке", variant: "secondary" as const, className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+      approved: { label: "Утверждено", variant: "default" as const, className: "bg-green-100 text-green-800 border-green-300" },
+      rejected: { label: "Отклонено", variant: "destructive" as const, className: "bg-red-100 text-red-800 border-red-300" }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig];
+    if (!config) return null;
+
+    return (
+      <Badge variant={config.variant} className={`${config.className} text-xs`}>
+        {config.label}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -476,6 +499,12 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                     className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
                     style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
                   >
+                    Статус
+                  </th>
+                  <th 
+                    className="border border-border p-2 text-center text-sm font-medium bg-white resize-x overflow-hidden"
+                    style={{ resize: 'horizontal', minWidth: '100px', width: '120px' }}
+                  >
                     Действия
                   </th>
                 </tr>
@@ -484,7 +513,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td 
-                      colSpan={!userId ? 11 : 10} 
+                      colSpan={!userId ? 12 : 11} 
                       className="border border-border p-12 text-center text-slate-500"
                     >
                       {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -539,6 +568,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                           noReceipt={transaction.no_receipt}
                           noReceiptReason={transaction.no_receipt_reason}
                         />
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white">
+                        {getVerificationStatusBadge(transaction.verification_status)}
                       </td>
                       {canEditTransaction(transaction) && (
                         <td className="border border-border p-2 text-center align-middle bg-white text-right">
