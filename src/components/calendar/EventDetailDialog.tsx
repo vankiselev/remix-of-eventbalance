@@ -197,9 +197,9 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">
             {event ? "Редактировать мероприятие" : "Создать мероприятие"}
           </DialogTitle>
         </DialogHeader>
@@ -299,14 +299,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             <h3 className="font-semibold">Команда</h3>
             
             <div className="space-y-2">
-              <Label>Менеджеры</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-sm">Менеджеры</Label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {employees.map((emp) => (
                   <Button
                     key={emp.id}
                     type="button"
                     variant={formData.manager_ids.includes(emp.id) ? "default" : "outline"}
                     size="sm"
+                    className="text-xs h-7 px-2"
                     onClick={() => setFormData({
                       ...formData,
                       manager_ids: toggleArrayItem(formData.manager_ids, emp.id)
@@ -319,14 +320,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label>Аниматоры</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-sm">Аниматоры</Label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {animators.map((animator) => (
                   <Button
                     key={animator.id}
                     type="button"
                     variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
                     size="sm"
+                    className="text-xs h-7 px-2"
                     onClick={() => setFormData({
                       ...formData,
                       animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
@@ -339,14 +341,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label>Подрядчики</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-sm">Подрядчики</Label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {contractors.map((contractor) => (
                   <Button
                     key={contractor.id}
                     type="button"
                     variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
                     size="sm"
+                    className="text-xs h-7 px-2"
                     onClick={() => setFormData({
                       ...formData,
                       contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
@@ -420,13 +423,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           </div>
 
           {/* Actions */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
+          <div className="flex flex-col sm:flex-row justify-between gap-2 pt-4 border-t">
             <div>
               {event && (
                 <Button
                   type="button"
                   variant="destructive"
+                  size="sm"
                   onClick={handleDelete}
+                  className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Удалить
@@ -437,13 +442,17 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => onOpenChange(false)}
+                className="flex-1 sm:flex-none"
               >
                 Отмена
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={loading || !formData.name || !formData.start_date}
+                size="sm"
+                className="flex-1 sm:flex-none"
               >
                 {loading ? "Сохранение..." : "Сохранить"}
               </Button>

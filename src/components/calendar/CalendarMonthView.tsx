@@ -45,7 +45,7 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
     
     // Empty cells before the first day
     for (let i = 1; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="min-h-24 p-2 border border-border bg-muted/20" />);
+      days.push(<div key={`empty-${i}`} className="min-h-12 sm:min-h-20 md:min-h-24 p-1 sm:p-2 border border-border bg-muted/20" />);
     }
     
     // Days of the month
@@ -58,31 +58,36 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
       days.push(
         <div
           key={day}
-          className={`min-h-24 p-2 border border-border hover:bg-accent/50 cursor-pointer transition-colors ${
+          className={`min-h-12 sm:min-h-20 md:min-h-24 p-1 sm:p-2 border border-border hover:bg-accent/50 cursor-pointer transition-colors ${
             isToday ? 'bg-accent' : 'bg-background'
           }`}
           onClick={() => onDateSelect(new Date(year, month, day))}
         >
-          <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
+          <div className={`text-[10px] sm:text-xs md:text-sm font-medium mb-0.5 sm:mb-1 ${isToday ? 'text-primary' : ''}`}>
             {day}
           </div>
-          <div className="space-y-1 overflow-y-auto max-h-20">
-            {dayEvents.map((event) => (
+          <div className="space-y-0.5 sm:space-y-1 overflow-y-auto max-h-8 sm:max-h-16 md:max-h-20">
+            {dayEvents.slice(0, 3).map((event, idx) => (
               <div
                 key={event.id}
-                className="text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity truncate bg-primary/10 text-primary border-l-2 border-primary"
+                className="text-[8px] sm:text-[10px] md:text-xs p-0.5 sm:p-1 rounded cursor-pointer hover:opacity-80 transition-opacity truncate bg-primary/10 text-primary border-l-2 border-primary"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEventClick(event);
                 }}
                 title={event.name}
               >
-                <div className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${getOwnerColor(event.project_owner)}`} />
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  <div className={`w-1 h-1 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
                   <span className="truncate">{event.name}</span>
                 </div>
               </div>
             ))}
+            {dayEvents.length > 3 && (
+              <div className="text-[8px] sm:text-[10px] text-muted-foreground text-center">
+                +{dayEvents.length - 3}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -92,12 +97,12 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
   };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[600px]">
+    <div className="w-full overflow-x-auto -mx-2 sm:mx-0">
+      <div className="min-w-[280px] sm:min-w-[600px] px-2 sm:px-0">
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-0 mb-2">
+        <div className="grid grid-cols-7 gap-0 mb-1 sm:mb-2">
           {WEEKDAYS.map((day) => (
-            <div key={day} className="text-center font-semibold text-sm p-2 bg-muted">
+            <div key={day} className="text-center font-semibold text-[10px] sm:text-sm p-1 sm:p-2 bg-muted">
               {day}
             </div>
           ))}
@@ -109,18 +114,18 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-pink-500" />
-            <span className="text-sm">Настя</span>
+        <div className="flex flex-wrap gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-pink-500" />
+            <span className="text-xs sm:text-sm">Настя</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-purple-500" />
-            <span className="text-sm">Лера</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-purple-500" />
+            <span className="text-xs sm:text-sm">Лера</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-sm">Ваня</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500" />
+            <span className="text-xs sm:text-sm">Ваня</span>
           </div>
         </div>
       </div>

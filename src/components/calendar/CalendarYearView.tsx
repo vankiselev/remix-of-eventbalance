@@ -54,13 +54,13 @@ const CalendarYearView = ({ year, events, onMonthClick }: CalendarYearViewProps)
       days.push(
         <div
           key={day}
-          className={`text-center text-xs p-1 rounded ${
+          className={`text-center text-[9px] sm:text-xs p-0.5 sm:p-1 rounded ${
             isToday ? 'bg-primary text-primary-foreground font-bold' : ''
           } ${eventsCount > 0 ? 'font-semibold text-primary' : 'text-muted-foreground'}`}
         >
           {day}
           {eventsCount > 0 && (
-            <div className="text-[8px] leading-none">•</div>
+            <div className="text-[6px] sm:text-[8px] leading-none">•</div>
           )}
         </div>
       );
@@ -70,32 +70,32 @@ const CalendarYearView = ({ year, events, onMonthClick }: CalendarYearViewProps)
   };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[800px]">
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+    <div className="w-full overflow-x-auto -mx-2 sm:mx-0">
+      <div className="min-w-[280px] sm:min-w-[600px] md:min-w-[800px] px-2 sm:px-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
           {MONTHS.map((monthName, month) => {
             const eventsCount = getEventsCountForMonth(month);
             
             return (
               <div
                 key={month}
-                className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                className="border rounded-lg p-2 sm:p-3 hover:bg-accent/50 cursor-pointer transition-colors"
                 onClick={() => onMonthClick(month)}
               >
-                <div className="text-center mb-2">
-                  <h3 className="font-semibold text-sm">{monthName}</h3>
+                <div className="text-center mb-1 sm:mb-2">
+                  <h3 className="font-semibold text-xs sm:text-sm truncate">{monthName}</h3>
                   {eventsCount > 0 && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                       {eventsCount} {eventsCount === 1 ? 'мероприятие' : 'мероприятий'}
                     </p>
                   )}
                 </div>
                 
-                <div className="space-y-1">
+                <div className="space-y-0.5 sm:space-y-1">
                   {/* Weekday headers */}
                   <div className="grid grid-cols-7 gap-0">
                     {WEEKDAYS.map((day) => (
-                      <div key={day} className="text-center text-[10px] font-medium text-muted-foreground">
+                      <div key={day} className="text-center text-[8px] sm:text-[10px] font-medium text-muted-foreground">
                         {day[0]}
                       </div>
                     ))}

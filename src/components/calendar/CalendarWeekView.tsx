@@ -34,9 +34,9 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
   };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[700px]">
-        <div className="grid grid-cols-7 gap-2">
+    <div className="w-full overflow-x-auto -mx-2 sm:mx-0">
+      <div className="min-w-[320px] sm:min-w-[700px] px-2 sm:px-0">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {weekDays.map((day) => {
             const dayEvents = getEventsForDate(day);
             const isToday = isSameDay(day, new Date());
@@ -44,35 +44,40 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
             return (
               <div
                 key={day.toISOString()}
-                className={`border rounded-lg p-3 min-h-[200px] ${
+                className={`border rounded-lg p-1.5 sm:p-3 min-h-[120px] sm:min-h-[200px] ${
                   isToday ? 'bg-accent border-primary' : 'bg-background'
                 }`}
               >
-                <div className="text-center mb-3">
-                  <div className={`text-xs uppercase font-semibold ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                <div className="text-center mb-2 sm:mb-3">
+                  <div className={`text-[9px] sm:text-xs uppercase font-semibold ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
                     {format(day, 'EEE', { locale: ru })}
                   </div>
-                  <div className={`text-2xl font-bold ${isToday ? 'text-primary' : ''}`}>
+                  <div className={`text-lg sm:text-2xl font-bold ${isToday ? 'text-primary' : ''}`}>
                     {format(day, 'd')}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {dayEvents.map((event) => (
+                <div className="space-y-1 sm:space-y-2">
+                  {dayEvents.slice(0, 4).map((event) => (
                     <div
                       key={event.id}
-                      className="text-xs p-2 rounded cursor-pointer hover:opacity-80 transition-opacity bg-primary/10 text-primary border-l-2 border-primary"
+                      className="text-[8px] sm:text-xs p-1 sm:p-2 rounded cursor-pointer hover:opacity-80 transition-opacity bg-primary/10 text-primary border-l-2 border-primary"
                       onClick={() => onEventClick(event)}
                     >
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
-                        <span className="font-medium truncate">{event.name}</span>
+                      <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
+                        <span className="font-medium truncate text-[8px] sm:text-xs">{event.name}</span>
                       </div>
                       {event.event_time && (
-                        <div className="text-muted-foreground">{event.event_time}</div>
+                        <div className="text-muted-foreground text-[7px] sm:text-[10px] truncate hidden sm:block">{event.event_time}</div>
                       )}
                     </div>
                   ))}
+                  {dayEvents.length > 4 && (
+                    <div className="text-[8px] sm:text-[10px] text-muted-foreground text-center">
+                      +{dayEvents.length - 4}
+                    </div>
+                  )}
                 </div>
               </div>
             );
