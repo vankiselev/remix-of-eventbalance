@@ -108,22 +108,9 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         supabase.from("clients").select("*").order("name"),
       ]);
 
-      console.log("Animators data:", animatorsRes);
-      console.log("Contractors data:", contractorsRes);
-
       if (venuesRes.data) setVenues(venuesRes.data);
-      if (animatorsRes.data) {
-        console.log("Setting animators:", animatorsRes.data.length);
-        setAnimators(animatorsRes.data);
-      } else if (animatorsRes.error) {
-        console.error("Animators error:", animatorsRes.error);
-      }
-      if (contractorsRes.data) {
-        console.log("Setting contractors:", contractorsRes.data.length);
-        setContractors(contractorsRes.data);
-      } else if (contractorsRes.error) {
-        console.error("Contractors error:", contractorsRes.error);
-      }
+      if (animatorsRes.data) setAnimators(animatorsRes.data);
+      if (contractorsRes.data) setContractors(contractorsRes.data);
       if (employeesRes.data) setEmployees(employeesRes.data);
       if (clientsRes.data) setContacts(clientsRes.data);
     } catch (error) {
@@ -451,44 +438,61 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label className="text-sm">Аниматоры</Label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {animators.map((animator) => (
-                  <Button
-                    key={animator.id}
-                    type="button"
-                    variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
-                    size="sm"
-                    className="text-xs h-7 px-2"
-                    onClick={() => setFormData({
-                      ...formData,
-                      animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
-                    })}
-                  >
-                    {animator.name}
-                  </Button>
-                ))}
-              </div>
+              {animators.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет аниматоров. Добавьте их в разделе Контакты.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {animators.map((animator) => (
+                    <Button
+                      key={animator.id}
+                      type="button"
+                      variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setFormData({
+                        ...formData,
+                        animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
+                      })}
+                    >
+                      {animator.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm">Подрядчики</Label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {contractors.map((contractor) => (
-                  <Button
-                    key={contractor.id}
-                    type="button"
-                    variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
-                    size="sm"
-                    className="text-xs h-7 px-2"
-                    onClick={() => setFormData({
-                      ...formData,
-                      contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
-                    })}
-                  >
-                    {contractor.name}
-                  </Button>
-                ))}
-              </div>
+              {contractors.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет подрядчиков. Добавьте их в разделе Контакты.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {contractors.map((contractor) => (
+                    <Button
+                      key={contractor.id}
+                      type="button"
+                      variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setFormData({
+                        ...formData,
+                        contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
+                      })}
+                    >
+                      {contractor.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="show_program">Шоу программа</Label>
+              <Input
+                id="show_program"
+                value={formData.show_program}
+                onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
+              />
             </div>
           </div>
 
@@ -530,15 +534,6 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="show_program">Шоу программа</Label>
-              <Input
-                id="show_program"
-                value={formData.show_program}
-                onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
-              />
             </div>
 
             <div className="space-y-2 md:col-span-2">
