@@ -97,7 +97,10 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       // Теперь получаем транзакции с учетом фильтров
       let query: any = supabase
         .from('financial_transactions')
-        .select('*')
+        .select(`
+          *,
+          events:project_id(name)
+        `)
         .order('operation_date', { ascending: false })
         .order('created_at', { ascending: false });
 
