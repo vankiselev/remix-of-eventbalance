@@ -325,8 +325,8 @@
   /* Container System - ТЗ Compliant */
   .main-container {
     width: 100%;
-    max-width: 1600px; /* Более разумный max-width для читабельности */
-    margin: 0 auto;
+    max-width: none; /* Fluid layout: без ограничения ширины */
+    margin: 0; /* контент занимает всю доступную ширину */
     padding: 1rem;
   }
   
