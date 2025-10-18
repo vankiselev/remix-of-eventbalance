@@ -159,6 +159,7 @@ export const NotificationsMenu = () => {
                               amount={notification.data.amount}
                               cashType={notification.data.cash_type}
                               description={notification.data.description}
+                              status={notification.data.status}
                               onAction={() => {
                                 // Refresh notifications after action
                                 window.location.reload();

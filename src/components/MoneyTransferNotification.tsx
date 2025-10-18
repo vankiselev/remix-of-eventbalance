@@ -11,6 +11,7 @@ interface MoneyTransferNotificationProps {
   amount: number;
   cashType: string;
   description: string;
+  status?: string;
   onAction: () => void;
 }
 
@@ -21,6 +22,7 @@ export const MoneyTransferNotification = ({
   amount,
   cashType,
   description,
+  status,
   onAction,
 }: MoneyTransferNotificationProps) => {
   const [processing, setProcessing] = useState(false);
@@ -71,7 +73,12 @@ export const MoneyTransferNotification = ({
             title: 'Передача денег подтверждена',
             message: `${fromUserName} подтвердил получение ${tx.expense_amount} ₽`,
             type: 'money_transfer',
-            data: { transaction_id: tx.id, status: 'accepted' },
+            data: { 
+              transaction_id: tx.id, 
+              status: 'accepted',
+              amount: tx.expense_amount,
+              cash_type: tx.cash_type
+            },
           },
         });
       } else {
@@ -88,7 +95,12 @@ export const MoneyTransferNotification = ({
             title: 'Передача денег отклонена',
             message: `${fromUserName} отклонил передачу ${tx.expense_amount} ₽`,
             type: 'money_transfer',
-            data: { transaction_id: tx.id, status: 'rejected' },
+            data: { 
+              transaction_id: tx.id, 
+              status: 'rejected',
+              amount: tx.expense_amount,
+              cash_type: tx.cash_type
+            },
           },
         });
       }
@@ -119,6 +131,28 @@ export const MoneyTransferNotification = ({
     }
   };
 
+  // If status is accepted or rejected, show info-only message
+  if (status === 'accepted' || status === 'rejected') {
+    return (
+      <div className="space-y-2 p-3 bg-accent/50 rounded-lg">
+        <div className="flex items-center gap-2">
+          {status === 'accepted' ? (
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+          ) : (
+            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          )}
+          <div className="font-medium">
+            {status === 'accepted' ? 'Получение подтверждено' : 'Передача отклонена'}
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Сумма: {(amount || 0).toLocaleString('ru-RU')} ₽
+        </div>
+      </div>
+    );
+  }
+
+  // For pending status, show action buttons
   return (
     <div className="space-y-3 p-3 bg-accent/50 rounded-lg">
       <div className="space-y-1">
