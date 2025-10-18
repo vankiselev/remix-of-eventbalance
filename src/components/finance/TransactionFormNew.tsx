@@ -375,18 +375,28 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
         // If this is a money transfer, send notification to recipient
         if (isMoneyTransfer && transferToUserId) {
-          const { data: senderProfile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .single();
+          console.log('💸 Sending money transfer notification...', {
+            transactionId: transaction.id,
+            recipientId: transferToUserId,
+          });
 
-          await supabase.functions.invoke('handle-money-transfer', {
+          const { data: notifyResult, error: notifyError } = await supabase.functions.invoke('handle-money-transfer', {
             body: {
               transaction_id: transaction.id,
               action: 'notify',
             },
           });
+
+          if (notifyError) {
+            console.error('❌ Failed to send transfer notification:', notifyError);
+            toast({
+              title: "Предупреждение",
+              description: "Транзакция создана, но не удалось отправить уведомление получателю",
+              variant: "destructive",
+            });
+          } else {
+            console.log('✅ Money transfer notification sent successfully:', notifyResult);
+          }
         }
 
         // Send notification to admins for large transactions (over 10000)
