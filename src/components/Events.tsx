@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -72,7 +73,7 @@ const Events = () => {
   const loadRelatedData = async () => {
     try {
       const [employeesRes, animatorsRes, venuesRes] = await Promise.all([
-        supabase.from("profiles").select("id, full_name").eq("employment_status", "active").order("full_name"),
+        supabase.from("profiles").select("id, full_name, avatar_url").eq("employment_status", "active").order("full_name"),
         supabase.from("animators").select("*").order("name"),
         supabase.from("venues").select("*").order("name"),
       ]);
@@ -138,6 +139,13 @@ const Events = () => {
     // Иначе используем старое текстовое поле managers (из импорта)
     if (event.managers) return event.managers;
     return "—";
+  };
+
+  const getManagerAvatars = (event: Event) => {
+    if (!event.manager_ids || event.manager_ids.length === 0) return [];
+    return event.manager_ids
+      .map(id => employees.find(emp => emp.id === id))
+      .filter(Boolean);
   };
 
   const getAnimatorNames = (event: Event) => {
@@ -500,7 +508,25 @@ const Events = () => {
                         
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                          <span className="text-foreground">{getManagerNames(event)}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {getManagerAvatars(event).length > 0 ? (
+                              <>
+                                <div className="flex -space-x-2">
+                                  {getManagerAvatars(event).map((manager) => (
+                                    <Avatar key={manager.id} className="h-8 w-8 border-2 border-background">
+                                      <AvatarImage src={manager.avatar_url || undefined} />
+                                      <AvatarFallback className="text-xs">
+                                        {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ))}
+                                </div>
+                                <span className="text-foreground text-xs">{getManagerNames(event)}</span>
+                              </>
+                            ) : (
+                              <span className="text-foreground">{getManagerNames(event)}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -555,7 +581,25 @@ const Events = () => {
                           
                           <div className="flex items-start gap-2">
                             <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                            <span className="text-foreground">{getManagerNames(event)}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {getManagerAvatars(event).length > 0 ? (
+                                <>
+                                  <div className="flex -space-x-2">
+                                    {getManagerAvatars(event).map((manager) => (
+                                      <Avatar key={manager.id} className="h-8 w-8 border-2 border-background">
+                                        <AvatarImage src={manager.avatar_url || undefined} />
+                                        <AvatarFallback className="text-xs">
+                                          {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    ))}
+                                  </div>
+                                  <span className="text-foreground text-xs">{getManagerNames(event)}</span>
+                                </>
+                              ) : (
+                                <span className="text-foreground">{getManagerNames(event)}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
