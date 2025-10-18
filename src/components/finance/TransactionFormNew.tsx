@@ -633,7 +633,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   <FormLabel>Подробное описание</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Опишите операцию..."
+                      placeholder={
+                        form.watch("category") === "Передано или получено от сотрудника"
+                          ? "Например: Передал на наличные расходы по проекту"
+                          : "Опишите операцию..."
+                      }
                       className="resize-none"
                       {...field}
                     />
@@ -649,7 +653,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 name="expense_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Сумма Траты (₽)</FormLabel>
+                    <FormLabel>
+                      Сумма Траты (₽)
+                      {form.watch("category") === "Передано или получено от сотрудника" && (
+                        <span className="ml-2 text-xs text-primary font-normal">
+                          ← Заполните это поле
+                        </span>
+                      )}
+                    </FormLabel>
                     <FormControl>
                       <CurrencyInput
                         value={field.value}
@@ -659,7 +670,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             form.setValue("income_amount", undefined);
                           }
                         }}
-                        placeholder="Введите сумму (можно отрицательную)"
+                        placeholder={
+                          form.watch("category") === "Передано или получено от сотрудника"
+                            ? "Сумма передачи сотруднику"
+                            : "Введите сумму (можно отрицательную)"
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -683,8 +698,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder="Введите сумму (можно отрицательную)"
+                        disabled={form.watch("category") === "Передано или получено от сотрудника"}
                       />
                     </FormControl>
+                    {form.watch("category") === "Передано или получено от сотрудника" && (
+                      <FormDescription className="text-xs">
+                        При передаче денег не заполняется
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -706,10 +727,20 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={(value) => {
                         field.onChange(value);
-                        // Reset money transfer when category changes
-                        if (value !== 'Передано или получено от сотрудника') {
+                        // Automatically enable money transfer for employee transfer category
+                        if (value === 'Передано или получено от сотрудника') {
+                          setIsMoneyTransfer(true);
+                          // Auto-set no_receipt for money transfers
+                          form.setValue('no_receipt', true);
+                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                          // Clear income amount for money transfers
+                          form.setValue('income_amount', undefined);
+                        } else {
                           setIsMoneyTransfer(false);
                           setTransferToUserId("");
+                          // Reset no_receipt when switching away
+                          form.setValue('no_receipt', false);
+                          form.setValue('no_receipt_reason', '');
                         }
                       }}
                     >
@@ -744,43 +775,52 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
             {/* Money Transfer Section */}
             {form.watch("category") === "Передано или получено от сотрудника" && (
-              <div className="space-y-4 p-4 border rounded-lg bg-accent/50">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="money-transfer"
-                    checked={isMoneyTransfer}
-                    onCheckedChange={setIsMoneyTransfer}
-                  />
-                  <label htmlFor="money-transfer" className="text-sm font-medium leading-none cursor-pointer">
-                    Передача денег сотруднику
-                  </label>
+              <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">💸</span>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-sm font-semibold text-primary">Передача денег сотруднику</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Выберите сотрудника, который получит деньги. Он получит уведомление и должен будет подтвердить получение.
+                      <br />
+                      <strong>Важно:</strong> Заполняйте только поле "Сумма Траты".
+                    </p>
+                  </div>
                 </div>
 
-                {isMoneyTransfer && (
-                  <FormItem>
-                    <FormLabel>Получатель</FormLabel>
-                    <Select 
-                      value={transferToUserId} 
-                      onValueChange={setTransferToUserId}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите сотрудника" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {employees.map((employee) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    Кому передаются деньги <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select 
+                    value={transferToUserId} 
+                    onValueChange={setTransferToUserId}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="border-primary/30">
+                        <SelectValue placeholder="Выберите получателя из списка..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {employees.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground text-center">
+                          Нет доступных сотрудников
+                        </div>
+                      ) : (
+                        employees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
                             {employee.full_name} ({employee.email})
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Получатель будет уведомлен о передаче и должен будет подтвердить получение денег
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {transferToUserId && (
+                    <FormDescription className="text-xs text-primary">
+                      ✓ Получатель будет уведомлен сразу после сохранения
                     </FormDescription>
-                  </FormItem>
-                )}
+                  )}
+                </FormItem>
               </div>
             )}
 
