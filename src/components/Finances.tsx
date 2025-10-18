@@ -436,18 +436,18 @@ const Finances = () => {
       </div>
 
       <Card>
-        <CardHeader className="space-y-0 border-b">
-          <CardTitle className="text-lg py-4">Транзакции</CardTitle>
-          <div className="flex justify-center py-4 border-t">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
-              <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
-                <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
-                <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+        <CardHeader className="space-y-0 py-4 border-b">
+          <CardTitle className="text-lg">Транзакции</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <div className="flex justify-center py-4 border-b">
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
+            <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
+              <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
+              <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <CardContent className="pt-4">
           {viewMode === 'cards' ? (
             <TransactionsCardView
               userId={currentUserId}
@@ -527,8 +527,8 @@ const Finances = () => {
           </CardHeader>
           
           <CardContent className="pt-4">
-            <TabsContent value="my-transactions" className="mt-0 space-y-4">
-              <div className="flex justify-center py-4 border-b">
+            <TabsContent value="my-transactions" className="mt-0">
+              <div className="flex justify-center py-4 border-y">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
                   <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
                     <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
@@ -536,6 +536,7 @@ const Finances = () => {
                   </TabsList>
                 </Tabs>
               </div>
+              <div className="pt-4">
               {viewMode === 'cards' ? (
                 <TransactionsCardView
                   userId={user?.id}
@@ -549,14 +550,15 @@ const Finances = () => {
                   onEdit={handleEditTransaction}
                 />
               )}
+              </div>
             </TabsContent>
 
             <TabsContent value="employees" className="mt-0">
               <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
             </TabsContent>
             
-            <TabsContent value="all-transactions" className="mt-0 space-y-4">
-              <div className="flex justify-center py-4 border-b">
+            <TabsContent value="all-transactions" className="mt-0">
+              <div className="flex justify-center py-4 border-y">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
                   <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
                     <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
@@ -564,6 +566,7 @@ const Finances = () => {
                   </TabsList>
                 </Tabs>
               </div>
+              <div className="pt-4">
               {viewMode === 'cards' ? (
                 <TransactionsCardView
                   isAdmin={true}
@@ -575,6 +578,7 @@ const Finances = () => {
                   onEdit={handleEditTransaction}
                 />
               )}
+              </div>
             </TabsContent>
           </CardContent>
         </Tabs>
