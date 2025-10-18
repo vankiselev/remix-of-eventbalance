@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -457,31 +458,36 @@ const Events = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2.5 text-sm">
-                {event.project_owner && (
+              <CardContent className="space-y-3 text-sm">
+                <div className="space-y-2">
+                  {event.project_owner && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
+                      <span className="text-foreground">{event.project_owner}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
-                    <span className="text-foreground">{event.project_owner}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                  <span className="text-foreground">{getManagerNames(event)}</span>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">{getLocationDisplay(event)}</span>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-foreground">{formatDate(event.start_date)}</div>
-                    <div className="text-muted-foreground text-xs">{getTimeRange(event)}</div>
+                    <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
+                    <span className="text-foreground">{getManagerNames(event)}</span>
                   </div>
                 </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <span className="text-foreground">{getLocationDisplay(event)}</span>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <span className="text-foreground">{getTimeRange(event)}</span>
+                  </div>
+                </div>
+
+                <Separator />
 
                 <div className="flex items-start gap-2">
                   <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -505,7 +511,7 @@ const Events = () => {
                       <div className="space-y-3">
                         <h3 className="font-semibold text-base">{event.name}</h3>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                           {event.project_owner && (
                             <div className="flex items-start gap-2">
                               <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
@@ -517,7 +523,11 @@ const Events = () => {
                             <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
                             <span className="text-foreground">{getManagerNames(event)}</span>
                           </div>
+                        </div>
 
+                        <Separator />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-foreground">{getLocationDisplay(event)}</span>
@@ -525,16 +535,15 @@ const Events = () => {
 
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <div className="flex flex-col">
-                              <span className="text-foreground">{formatDate(event.start_date)}</span>
-                              <span className="text-muted-foreground text-xs">{getTimeRange(event)}</span>
-                            </div>
+                            <span className="text-foreground">{getTimeRange(event)}</span>
                           </div>
+                        </div>
 
-                          <div className="flex items-center gap-2 sm:col-span-2">
-                            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-foreground">{getAnimatorNames(event)}</span>
-                          </div>
+                        <Separator />
+
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-foreground">{getAnimatorNames(event)}</span>
                         </div>
                       </div>
                     </CardContent>
