@@ -631,6 +631,71 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               }}
             />
 
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => {
+                const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
+                  category.toLowerCase().includes(categorySearch.toLowerCase())
+                );
+
+                return (
+                  <FormItem>
+                    <FormLabel>Статья прихода/расхода</FormLabel>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Automatically enable money transfer for employee transfer category
+                        if (value === 'Передано или получено от сотрудника') {
+                          setIsMoneyTransfer(true);
+                          // Auto-set no_receipt for money transfers
+                          form.setValue('no_receipt', true);
+                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                          // Clear income amount for money transfers
+                          form.setValue('income_amount', undefined);
+                        } else {
+                          setIsMoneyTransfer(false);
+                          setTransferToUserId("");
+                          // Reset no_receipt when switching away
+                          form.setValue('no_receipt', false);
+                          form.setValue('no_receipt_reason', '');
+                        }
+                      }}
+                      open={categorySelectOpen}
+                      onOpenChange={setCategorySelectOpen}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите категорию" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredCategories.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
+                          <input
+                            data-category-search
+                            type="text"
+                            placeholder="Поиск категории..."
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
+
             {/* Money Transfer Section - Show when category is employee transfer */}
             {form.watch("category") === "Передано или получено от сотрудника" && (
               <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
@@ -793,71 +858,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => {
-                const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
-                  category.toLowerCase().includes(categorySearch.toLowerCase())
-                );
-
-                return (
-                  <FormItem>
-                    <FormLabel>Статья прихода/расхода</FormLabel>
-                    <Select 
-                      value={field.value} 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Automatically enable money transfer for employee transfer category
-                        if (value === 'Передано или получено от сотрудника') {
-                          setIsMoneyTransfer(true);
-                          // Auto-set no_receipt for money transfers
-                          form.setValue('no_receipt', true);
-                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-                          // Clear income amount for money transfers
-                          form.setValue('income_amount', undefined);
-                        } else {
-                          setIsMoneyTransfer(false);
-                          setTransferToUserId("");
-                          // Reset no_receipt when switching away
-                          form.setValue('no_receipt', false);
-                          form.setValue('no_receipt_reason', '');
-                        }
-                      }}
-                      open={categorySelectOpen}
-                      onOpenChange={setCategorySelectOpen}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите категорию" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCategories.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
-                          <input
-                            data-category-search
-                            type="text"
-                            placeholder="Поиск категории..."
-                            value={categorySearch}
-                            onChange={(e) => setCategorySearch(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
 
             <div className="space-y-4">
               <FormLabel>Чек / вложения</FormLabel>
