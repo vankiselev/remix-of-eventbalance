@@ -47,7 +47,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [selectedWallet, setSelectedWallet] = useState<string>("all");
-  const [showTransfers, setShowTransfers] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showExpensesBreakdown, setShowExpensesBreakdown] = useState(false);
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
@@ -75,7 +74,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, isAdmin, selectedPeriod, selectedWallet, showTransfers]);
+  }, [userId, isAdmin, selectedPeriod, selectedWallet]);
 
   const fetchTransactions = async () => {
     try {
@@ -275,9 +274,9 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3 pt-4">
+      <div className="flex gap-3 pt-4">
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-full md:w-[200px]">
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Период" />
           </SelectTrigger>
           <SelectContent>
@@ -292,7 +291,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         </Select>
 
         <Select value={selectedWallet} onValueChange={setSelectedWallet}>
-          <SelectTrigger className="w-full md:w-[200px]">
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Кошелек" />
           </SelectTrigger>
           <SelectContent>
@@ -304,14 +303,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
             ))}
           </SelectContent>
         </Select>
-
-        <Button
-          variant={showTransfers ? "default" : "outline"}
-          onClick={() => setShowTransfers(!showTransfers)}
-          className="w-full md:w-auto"
-        >
-          {showTransfers ? "Все операции" : "Без переводов"}
-        </Button>
       </div>
 
       <div className="border-b"></div>
