@@ -45,6 +45,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [venues, setVenues] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [contractors, setContractors] = useState<any[]>([]);
@@ -199,7 +200,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     }
   };
 
-  const openInYandexMaps = () => {
+  const toggleMap = () => {
     let address = formData.location;
     
     // Если адрес не указан напрямую, попробуем взять из выбранной площадки
@@ -217,9 +218,16 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
       return;
     }
 
-    // Открываем Яндекс.Карты с поиском по адресу
-    const encodedAddress = encodeURIComponent(address);
-    window.open(`https://yandex.ru/maps/?text=${encodedAddress}`, '_blank');
+    setShowMap(!showMap);
+  };
+
+  const getMapAddress = () => {
+    let address = formData.location;
+    if (!address && formData.venue_id) {
+      const selectedVenue = venues.find(v => v.id === formData.venue_id);
+      address = selectedVenue?.address || "";
+    }
+    return address;
   };
 
   return (
@@ -316,7 +324,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="location">Адрес (если не из базы)</Label>
               <div className="flex gap-2">
                 <Input
@@ -327,15 +335,27 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={showMap ? "default" : "outline"}
                   size="icon"
-                  onClick={openInYandexMaps}
+                  onClick={toggleMap}
                   title="Показать на карте"
                   disabled={!formData.location && !formData.venue_id}
                 >
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
+              {showMap && getMapAddress() && (
+                <div className="mt-2 rounded-lg overflow-hidden border">
+                  <iframe
+                    src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(getMapAddress())}&z=16`}
+                    width="100%"
+                    height="300"
+                    frameBorder="0"
+                    allowFullScreen
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
