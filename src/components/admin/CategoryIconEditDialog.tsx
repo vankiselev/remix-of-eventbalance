@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,9 @@ export const CategoryIconEditDialog = ({ icon, open, onOpenChange }: CategoryIco
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Редактировать иконку: {icon.category_name}</DialogTitle>
+          <DialogDescription>
+            Выберите тип иконки, настройте цвета и сохраните изменения
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue={iconType} onValueChange={(v) => setIconType(v as any)} className="w-full">

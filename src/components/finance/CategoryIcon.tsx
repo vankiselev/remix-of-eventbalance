@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import * as Icons from "lucide-react";
+import type { LucideProps } from "lucide-react";
 import { useCategoryIcons } from "@/hooks/useCategoryIcons";
 import { Package, Wallet } from "lucide-react";
 
@@ -43,8 +44,8 @@ export const CategoryIcon = ({ category, isIncome }: CategoryIconProps) => {
 
   const renderIcon = () => {
     if (iconConfig.type === 'lucide') {
-      const IconComponent = Icons[iconConfig.value as keyof typeof Icons] as any;
-      if (IconComponent && typeof IconComponent === 'function') {
+      const IconComponent = Icons[iconConfig.value as keyof typeof Icons] as React.ComponentType<LucideProps>;
+      if (IconComponent) {
         return <IconComponent className={`w-5 h-5 md:w-6 md:h-6 ${iconConfig.iconColor}`} />;
       }
       // Fallback if icon not found

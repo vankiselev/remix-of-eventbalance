@@ -39,6 +39,7 @@ export const useCategoryIcons = () => {
           icon_value: icon.icon_value,
           bg_color: icon.bg_color,
           icon_color: icon.icon_color,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', icon.id);
       
@@ -48,9 +49,9 @@ export const useCategoryIcons = () => {
       queryClient.invalidateQueries({ queryKey: ['category-icons'] });
       toast.success('Иконка обновлена');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error updating category icon:', error);
-      toast.error('Ошибка при обновлении иконки');
+      toast.error(`Ошибка при обновлении иконки: ${error.message || 'неизвестная ошибка'}`);
     },
   });
 
