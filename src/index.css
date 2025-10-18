@@ -126,6 +126,18 @@
     height: auto;
     max-width: 100%;
   }
+
+  /* Unified placeholder styles - consistent size and transparency */
+  input::placeholder,
+  textarea::placeholder,
+  [data-placeholder] {
+    @apply text-sm opacity-50 text-muted-foreground;
+  }
+
+  input,
+  textarea {
+    @apply text-sm;
+  }
 }
 
 @layer components {

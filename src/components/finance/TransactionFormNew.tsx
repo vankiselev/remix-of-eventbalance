@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -100,6 +100,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [isMoneyTransfer, setIsMoneyTransfer] = useState(false);
   const [transferToUserId, setTransferToUserId] = useState<string>("");
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
+  const [projectSelectOpen, setProjectSelectOpen] = useState(false);
+  const [categorySelectOpen, setCategorySelectOpen] = useState(false);
 
   // Check user role
   useEffect(() => {
@@ -584,23 +586,28 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 return (
                   <FormItem>
                     <FormLabel>Проект</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Auto-detect money transfer category
+                        if (value === 'Передача денег') {
+                          form.setValue('category', 'Передано или получено от сотрудника');
+                          setIsMoneyTransfer(true);
+                          form.setValue('no_receipt', true);
+                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                          form.setValue('income_amount', undefined);
+                        }
+                      }}
+                      open={projectSelectOpen}
+                      onOpenChange={setProjectSelectOpen}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Выберите проект" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            placeholder="Поиск проекта..."
-                            value={projectSearch}
-                            onChange={(e) => setProjectSearch(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
                         {filteredStaticProjects.map((project) => (
                           <SelectItem key={`static-${project}`} value={project}>
                             {project}
@@ -614,6 +621,18 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             {event.name}
                           </SelectItem>
                         ))}
+                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
+                          <input
+                            data-project-search
+                            type="text"
+                            placeholder="Поиск проекта..."
+                            value={projectSearch}
+                            onChange={(e) => setProjectSearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -765,6 +784,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           form.setValue('no_receipt_reason', '');
                         }
                       }}
+                      open={categorySelectOpen}
+                      onOpenChange={setCategorySelectOpen}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -772,21 +793,23 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <div className="p-2">
-                          <input
-                            type="text"
-                            placeholder="Поиск категории..."
-                            value={categorySearch}
-                            onChange={(e) => setCategorySearch(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
                         {filteredCategories.map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}
                           </SelectItem>
                         ))}
+                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
+                          <input
+                            data-category-search
+                            type="text"
+                            placeholder="Поиск категории..."
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />
