@@ -328,6 +328,7 @@ export type Database = {
           photos: string[] | null
           place: string | null
           project_owner: string | null
+          responsible_manager_id: string | null
           responsible_manager_ids: string[] | null
           show_program: string | null
           source_event_id: string | null
@@ -367,6 +368,7 @@ export type Database = {
           photos?: string[] | null
           place?: string | null
           project_owner?: string | null
+          responsible_manager_id?: string | null
           responsible_manager_ids?: string[] | null
           show_program?: string | null
           source_event_id?: string | null
@@ -406,6 +408,7 @@ export type Database = {
           photos?: string[] | null
           place?: string | null
           project_owner?: string | null
+          responsible_manager_id?: string | null
           responsible_manager_ids?: string[] | null
           show_program?: string | null
           source_event_id?: string | null
@@ -424,6 +427,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_responsible_manager_id_fkey"
+            columns: ["responsible_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

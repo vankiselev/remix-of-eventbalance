@@ -25,6 +25,7 @@ interface Event {
   location: string | null;
   project_owner: string | null;
   client_id: string | null;
+  responsible_manager_id: string | null;
   managers: string | null;
   animators: string | null;
   contractors: string | null;
@@ -125,6 +126,11 @@ const Events = () => {
   const handleEventSave = () => {
     fetchEvents();
     handleDialogClose();
+  };
+
+  const getResponsibleManager = (event: Event) => {
+    if (!event.responsible_manager_id) return null;
+    return employees.find(emp => emp.id === event.responsible_manager_id);
   };
 
   const getManagerNames = (event: Event) => {
@@ -506,23 +512,36 @@ const Events = () => {
                           </div>
                         )}
                         
+                        {getResponsibleManager(event) && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground font-medium min-w-[80px]">Ответственный:</span>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={getResponsibleManager(event)?.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {getResponsibleManager(event)?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-foreground text-sm">{getResponsibleManager(event)?.full_name}</span>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex flex-col gap-1.5">
                             {getManagerAvatars(event).length > 0 ? (
-                              <>
-                                <div className="flex -space-x-2">
-                                  {getManagerAvatars(event).map((manager) => (
-                                    <Avatar key={manager.id} className="h-8 w-8 border-2 border-background">
-                                      <AvatarImage src={manager.avatar_url || undefined} />
-                                      <AvatarFallback className="text-xs">
-                                        {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  ))}
+                              getManagerAvatars(event).map((manager) => (
+                                <div key={manager.id} className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={manager.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-foreground text-sm">{manager.full_name}</span>
                                 </div>
-                                <span className="text-foreground text-xs">{getManagerNames(event)}</span>
-                              </>
+                              ))
                             ) : (
                               <span className="text-foreground">{getManagerNames(event)}</span>
                             )}
@@ -579,23 +598,36 @@ const Events = () => {
                             </div>
                           )}
                           
+                          {getResponsibleManager(event) && (
+                            <div className="flex items-start gap-2">
+                              <span className="text-muted-foreground font-medium min-w-[80px]">Ответственный:</span>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={getResponsibleManager(event)?.avatar_url || undefined} />
+                                  <AvatarFallback className="text-xs">
+                                    {getResponsibleManager(event)?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-foreground text-sm">{getResponsibleManager(event)?.full_name}</span>
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className="flex items-start gap-2">
                             <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-col gap-1.5">
                               {getManagerAvatars(event).length > 0 ? (
-                                <>
-                                  <div className="flex -space-x-2">
-                                    {getManagerAvatars(event).map((manager) => (
-                                      <Avatar key={manager.id} className="h-8 w-8 border-2 border-background">
-                                        <AvatarImage src={manager.avatar_url || undefined} />
-                                        <AvatarFallback className="text-xs">
-                                          {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    ))}
+                                getManagerAvatars(event).map((manager) => (
+                                  <div key={manager.id} className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={manager.avatar_url || undefined} />
+                                      <AvatarFallback className="text-xs">
+                                        {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-foreground text-sm">{manager.full_name}</span>
                                   </div>
-                                  <span className="text-foreground text-xs">{getManagerNames(event)}</span>
-                                </>
+                                ))
                               ) : (
                                 <span className="text-foreground">{getManagerNames(event)}</span>
                               )}

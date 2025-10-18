@@ -25,6 +25,7 @@ interface Event {
   project_owner: string | null;
   venue_id: string | null;
   client_id: string | null;
+  responsible_manager_id: string | null;
   manager_ids: string[] | null;
   animator_ids: string[] | null;
   contractor_ids: string[] | null;
@@ -66,6 +67,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     project_owner: "",
     venue_id: "",
     client_id: "",
+    responsible_manager_id: "",
     location: "",
     manager_ids: [] as string[],
     animator_ids: [] as string[],
@@ -89,6 +91,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           project_owner: event.project_owner || "",
           venue_id: event.venue_id || "",
           client_id: event.client_id || "",
+          responsible_manager_id: event.responsible_manager_id || "",
           location: event.location || "",
           manager_ids: event.manager_ids || [],
           animator_ids: event.animator_ids || [],
@@ -164,6 +167,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         end_time: formData.end_time || null,
         venue_id: formData.venue_id || null,
         client_id: formData.client_id || null,
+        responsible_manager_id: formData.responsible_manager_id || null,
         photographer_contact_id: formData.photographer_contact_id || null,
         videographer_contact_id: formData.videographer_contact_id || null,
         show_program: formData.show_program || null,
@@ -465,6 +469,25 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           {/* Team Selection */}
           <div className="space-y-4 border-t pt-4">
             <h3 className="font-semibold">Команда</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="responsible_manager_id">Ответственный менеджер</Label>
+              <Select
+                value={formData.responsible_manager_id}
+                onValueChange={(value) => setFormData({ ...formData, responsible_manager_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите ответственного менеджера" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             <div className="space-y-2">
               <Label className="text-sm">Менеджеры</Label>
