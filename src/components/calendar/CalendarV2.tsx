@@ -48,6 +48,7 @@ const CalendarV2 = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDayView, setShowDayView] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -132,6 +133,13 @@ const CalendarV2 = () => {
     fetchEvents();
     setShowEventDialog(false);
     setShowCreateDialog(false);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    if (viewMode === "month") {
+      setShowDayView(true);
+    }
   };
 
   return (
@@ -254,13 +262,34 @@ const CalendarV2 = () => {
                 />
               )}
               {viewMode === "month" && (
-                <CalendarMonthView
-                  month={selectedMonth}
-                  year={selectedYear}
-                  events={events}
-                  onEventClick={handleEventClick}
-                  onDateSelect={setSelectedDate}
-                />
+                <>
+                  <CalendarMonthView
+                    month={selectedMonth}
+                    year={selectedYear}
+                    events={events}
+                    onEventClick={handleEventClick}
+                    onDateSelect={handleDateSelect}
+                  />
+                  {showDayView && (
+                    <div className="mt-6 pt-6 border-t">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">События дня</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowDayView(false)}
+                        >
+                          Закрыть
+                        </Button>
+                      </div>
+                      <CalendarDayView
+                        date={selectedDate}
+                        events={events}
+                        onEventClick={handleEventClick}
+                      />
+                    </div>
+                  )}
+                </>
               )}
               {viewMode === "year" && (
                 <CalendarYearView
