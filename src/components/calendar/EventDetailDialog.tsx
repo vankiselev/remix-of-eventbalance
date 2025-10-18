@@ -474,7 +474,15 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               <Label htmlFor="responsible_manager_id">Ответственный менеджер</Label>
               <Select
                 value={formData.responsible_manager_id}
-                onValueChange={(value) => setFormData({ ...formData, responsible_manager_id: value })}
+                onValueChange={(value) => {
+                  // Убираем выбранного ответственного менеджера из списка обычных менеджеров
+                  const updatedManagerIds = formData.manager_ids.filter(id => id !== value);
+                  setFormData({ 
+                    ...formData, 
+                    responsible_manager_id: value,
+                    manager_ids: updatedManagerIds
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите ответственного менеджера" />
@@ -492,7 +500,9 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             <div className="space-y-2">
               <Label className="text-sm">Менеджеры</Label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees.map((emp) => (
+                {employees
+                  .filter(emp => emp.id !== formData.responsible_manager_id) // Исключаем ответственного менеджера
+                  .map((emp) => (
                   <Button
                     key={emp.id}
                     type="button"
