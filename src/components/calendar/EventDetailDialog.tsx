@@ -108,9 +108,22 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         supabase.from("clients").select("*").order("name"),
       ]);
 
+      console.log("Animators data:", animatorsRes);
+      console.log("Contractors data:", contractorsRes);
+
       if (venuesRes.data) setVenues(venuesRes.data);
-      if (animatorsRes.data) setAnimators(animatorsRes.data);
-      if (contractorsRes.data) setContractors(contractorsRes.data);
+      if (animatorsRes.data) {
+        console.log("Setting animators:", animatorsRes.data.length);
+        setAnimators(animatorsRes.data);
+      } else if (animatorsRes.error) {
+        console.error("Animators error:", animatorsRes.error);
+      }
+      if (contractorsRes.data) {
+        console.log("Setting contractors:", contractorsRes.data.length);
+        setContractors(contractorsRes.data);
+      } else if (contractorsRes.error) {
+        console.error("Contractors error:", contractorsRes.error);
+      }
       if (employeesRes.data) setEmployees(employeesRes.data);
       if (clientsRes.data) setContacts(clientsRes.data);
     } catch (error) {
