@@ -493,7 +493,19 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="show_program">Шоу программа</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show_program">Шоу программа</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=animators', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
               <Input
                 id="show_program"
                 value={formData.show_program}
