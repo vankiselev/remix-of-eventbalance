@@ -28,9 +28,12 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
+      console.log('🔄 Processing money transfer action:', action, { transactionId });
+      
       // 1) Get current user
       const { data: userRes } = await supabase.auth.getUser();
       const currentUserId = userRes.user?.id;
+      console.log('👤 Current user ID:', currentUserId);
       if (!currentUserId) throw new Error('not_authenticated');
 
       // 2) Load original transaction
@@ -39,6 +42,9 @@ export const MoneyTransferNotification = ({
         .select('id, created_by, transfer_to_user_id, expense_amount, cash_type, transfer_status, project_owner')
         .eq('id', transactionId)
         .single();
+
+      console.log('📄 Transaction data:', tx);
+      console.log('❌ Transaction error:', txError);
 
       if (txError || !tx) throw txError || new Error('tx_not_found');
 
@@ -51,6 +57,8 @@ export const MoneyTransferNotification = ({
       }
 
       if (action === 'accept') {
+        console.log('✅ Accepting transfer - creating income transaction...');
+        
         // Create income transaction for recipient
         const { data: incomeTx, error: incomeErr } = await supabase
           .from('financial_transactions')
@@ -72,6 +80,9 @@ export const MoneyTransferNotification = ({
           ])
           .select()
           .single();
+
+        console.log('💰 Income transaction result:', incomeTx);
+        console.log('❌ Income transaction error:', incomeErr);
 
         if (incomeErr) throw incomeErr;
 
@@ -154,33 +165,31 @@ export const MoneyTransferNotification = ({
         )}
       </div>
       
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Button
           onClick={() => handleAction('accept')}
           disabled={processing}
-          className="flex-1"
           size="sm"
+          className="w-full"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <CheckCircle className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-4 w-4" />
           )}
-          Подтвердить получение
         </Button>
         <Button
           onClick={() => handleAction('reject')}
           disabled={processing}
           variant="outline"
-          className="flex-1"
           size="sm"
+          className="w-full"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <XCircle className="h-4 w-4 mr-2" />
+            <XCircle className="h-4 w-4" />
           )}
-          Отклонить
         </Button>
       </div>
     </div>
