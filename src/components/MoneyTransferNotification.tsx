@@ -124,7 +124,7 @@ export const MoneyTransferNotification = ({
       <div className="space-y-1">
         <div className="font-medium">От: {fromUserName}</div>
         <div className="text-lg font-semibold text-green-600 dark:text-green-400">
-          +{amount.toLocaleString('ru-RU')} ₽
+          +{(amount || 0).toLocaleString('ru-RU')} ₽
         </div>
         <div className="text-sm text-muted-foreground">
           Кошелек: {cashType}
