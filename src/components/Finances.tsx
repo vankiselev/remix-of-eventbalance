@@ -150,23 +150,22 @@ const Finances = () => {
     }
   }, [user, isAdmin, loading]);
 
-  // Set actions for the Layout dropdown menu
+  // Set actions for the Layout dropdown menu without causing render loops
   useEffect(() => {
+    const canExport = hasPermission('finances.export');
+    const canImport = hasPermission('finances.import');
+    const canDelete = hasPermission('finances.delete_all');
+
     const actions: any = {};
-    if (hasPermission('finances.export')) {
-      actions.onExport = handleExportClick;
-    }
-    if (hasPermission('finances.import')) {
-      actions.onImport = handleImportClick;
-    }
-    if (hasPermission('finances.delete_all')) {
-      actions.onDeleteAll = handleDeleteClick;
-    }
+    if (canExport) actions.onExport = handleExportClick;
+    if (canImport) actions.onImport = handleImportClick;
+    if (canDelete) actions.onDeleteAll = handleDeleteClick;
+
     setActions(actions);
     return () => {
       setActions({});
     };
-  }, [hasPermission, setActions, handleExportClick, handleImportClick, handleDeleteClick]);
+  }, [setActions, handleExportClick, handleImportClick, handleDeleteClick]);
 
   // Realtime subscription for automatic updates with instant optimistic totals
   useEffect(() => {
@@ -185,21 +184,22 @@ const Finances = () => {
           try {
             const calc = (row: any) => {
               if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
-              
-              const cashType = row.cash_type as string | undefined;
-              // Учитываем только наличные кошельки
-              if (cashType !== 'Наличка Настя' && cashType !== 'Наличка Лера' && cashType !== 'Наличка Ваня') {
+              const raw = (row.cash_type as string | undefined) || '';
+              const cashType = raw.trim().toLowerCase();
+              // Учитываем только наличные кошельки (регистр не важен)
+              const isNastya = cashType === 'наличка настя' || raw === 'Наличка Настя';
+              const isLera = cashType === 'наличка лера' || raw === 'Наличка Лера';
+              const isVanya = cashType === 'наличка ваня' || raw === 'Наличка Ваня';
+              if (!isNastya && !isLera && !isVanya) {
                 return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: row.created_by };
               }
-              
               const income = Number(row.income_amount || 0);
               const expense = Number(row.expense_amount || 0);
               const delta = income - expense; // дельта по транзакции
-              const nastya = cashType === 'Наличка Настя' ? delta : 0;
-              const lera = cashType === 'Наличка Лера' ? delta : 0;
-              const vanya = cashType === 'Наличка Ваня' ? delta : 0;
-              // ВАЖНО: total = сумма дельт по кошелькам, чтобы он всегда соответствовал их сумме
-              const total = nastya + lera + vanya;
+              const nastya = isNastya ? delta : 0;
+              const lera = isLera ? delta : 0;
+              const vanya = isVanya ? delta : 0;
+              const total = nastya + lera + vanya; // сумма дельт по кошелькам
               return { total, nastya, lera, vanya, created_by: row.created_by };
             };
 
@@ -276,31 +276,62 @@ const Finances = () => {
 
   const fetchData = async () => {
     try {
-      if (isAdmin) {
-        const { data: summary, error } = await supabase
-          .rpc("get_company_cash_summary");
+      // Helper to normalize cash type
+      const norm = (v?: string) => (v || '').trim().toLowerCase();
+      const reduceTotals = (rows: any[]) => {
+        let nastya = 0, lera = 0, vanya = 0;
+        for (const r of rows) {
+          const delta = Number(r.income_amount || 0) - Number(r.expense_amount || 0);
+          const ct = norm(r.cash_type as string);
+          if (ct === 'наличка настя') nastya += delta;
+          else if (ct === 'наличка лера') lera += delta;
+          else if (ct === 'наличка ваня') vanya += delta;
+        }
+        return {
+          total_cash: nastya + lera + vanya,
+          cash_nastya: nastya,
+          cash_lera: lera,
+          cash_vanya: vanya,
+        };
+      };
 
-        if (error) throw error;
-        
+      // Company summary
+      if (isAdmin) {
+        const { data: summary, error } = await supabase.rpc('get_company_cash_summary');
+        if (error) {
+          console.warn('get_company_cash_summary failed, using fallback:', error.message);
+        }
         if (summary && summary.length > 0) {
           setCompanySummary(summary[0]);
+        } else {
+          // Fallback: compute on client
+          const { data: rows } = await supabase
+            .from('financial_transactions')
+            .select('cash_type,income_amount,expense_amount')
+            .limit(5000);
+          if (rows) setCompanySummary(reduceTotals(rows));
         }
       }
 
-      const { data: userSummaryData, error: userError } = await supabase
-        .rpc("calculate_user_cash_totals", { user_uuid: user?.id });
-
-      if (userError) throw userError;
-
+      // Personal summary
+      const { data: userSummaryData } = await supabase
+        .rpc('calculate_user_cash_totals', { user_uuid: user?.id });
       if (userSummaryData && userSummaryData.length > 0) {
         setUserSummary(userSummaryData[0]);
+      } else if (user?.id) {
+        const { data: rows } = await supabase
+          .from('financial_transactions')
+          .select('cash_type,income_amount,expense_amount,created_by')
+          .eq('created_by', user.id)
+          .limit(5000);
+        if (rows) setUserSummary(reduceTotals(rows));
       }
     } catch (error: any) {
-      console.error("Error fetching financial data:", error);
+      console.error('Error fetching financial data:', error);
       toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Не удалось загрузить финансовые данные",
+        variant: 'destructive',
+        title: 'Ошибка',
+        description: 'Не удалось загрузить финансовые данные',
       });
     }
   };
