@@ -284,26 +284,17 @@ const FinancesImportDialog = ({
     return Math.abs(num); // Всегда положительное число
   };
 
-  const mapCashType = (projectOwner: string): 'nastya' | 'lera' | 'vanya' | null => {
+  const mapCashType = (projectOwner: string): string | null => {
     if (!projectOwner) return null;
     const s = String(projectOwner).toLowerCase().trim();
     
     // Точное совпадение для наличных касс
-    if (s === 'наличка настя' || s === 'настя') return 'nastya';
-    if (s === 'наличка лера' || s === 'лера') return 'lera';
-    if (s === 'наличка ваня' || s === 'ваня') return 'vanya';
+    if (s === 'наличка настя' || s === 'настя') return 'наличка настя';
+    if (s === 'наличка лера' || s === 'лера') return 'наличка лера';
+    if (s === 'наличка ваня' || s === 'ваня') return 'наличка ваня';
     
     // Если не совпало - это не касса, возвращаем null
     return null;
-  };
-
-  const getOwnerNameByCashType = (cashType: string): string => {
-    switch (cashType) {
-      case 'nastya': return 'Настя';
-      case 'lera': return 'Лера';
-      case 'vanya': return 'Ваня';
-      default: return 'Настя';
-    }
   };
 
   const mapRow = (row: ParsedRow) => {

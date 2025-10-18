@@ -105,13 +105,13 @@ serve(async (req) => {
     };
 
     // Функция маппинга cash_type
-    const mapCashType = (projectOwner: string): 'nastya' | 'lera' | 'vanya' | null => {
+    const mapCashType = (projectOwner: string): string | null => {
       if (!projectOwner) return null;
       const s = String(projectOwner).toLowerCase().trim();
       
-      if (s === 'наличка настя' || s === 'настя') return 'nastya';
-      if (s === 'наличка лера' || s === 'лера') return 'lera';
-      if (s === 'наличка ваня' || s === 'ваня') return 'vanya';
+      if (s === 'наличка настя' || s === 'настя') return 'наличка настя';
+      if (s === 'наличка лера' || s === 'лера') return 'наличка лера';
+      if (s === 'наличка ваня' || s === 'ваня') return 'наличка ваня';
       
       return null;
     };
