@@ -42,6 +42,7 @@ interface Event {
   created_by: string;
   created_at: string;
   updated_at: string;
+  estimate_file_url: string | null;
 }
 
 const Events = () => {
@@ -270,7 +271,7 @@ const Events = () => {
   };
 
   const filteredEvents = getFilteredAndSortedEvents();
-  const groupedEvents = viewMode === 'list' ? groupEventsByDay(filteredEvents) : {};
+  const groupedEvents = groupEventsByDay(filteredEvents);
 
 
   if (loading) {
@@ -453,49 +454,58 @@ const Events = () => {
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event) => (
-            <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="space-y-2">
-                  {event.project_owner && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
-                      <span className="text-foreground">{event.project_owner}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-start gap-2">
-                    <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                    <span className="text-foreground">{getManagerNames(event)}</span>
-                  </div>
-                </div>
+        <div className="space-y-6">
+          {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
+            <div key={dayKey} className="space-y-3">
+              <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
+                {dayKey}
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {dayEvents.map((event) => (
+                  <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="space-y-2">
+                        {event.project_owner && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
+                            <span className="text-foreground">{event.project_owner}</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-start gap-2">
+                          <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
+                          <span className="text-foreground">{getManagerNames(event)}</span>
+                        </div>
+                      </div>
 
-                <Separator />
+                      <Separator />
 
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <span className="text-foreground">{getLocationDisplay(event)}</span>
-                  </div>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{getLocationDisplay(event)}</span>
+                        </div>
 
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <span className="text-foreground">{getTimeRange(event)}</span>
-                  </div>
-                </div>
+                        <div className="flex items-start gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{getTimeRange(event)}</span>
+                        </div>
+                      </div>
 
-                <Separator />
+                      <Separator />
 
-                <div className="flex items-start gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">{getAnimatorNames(event)}</span>
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="flex items-start gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <span className="text-foreground">{getAnimatorNames(event)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (

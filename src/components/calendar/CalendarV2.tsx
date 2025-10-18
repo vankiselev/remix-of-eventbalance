@@ -36,6 +36,7 @@ interface Event {
   show_program: string | null;
   notes: string | null;
   location: string | null;
+  estimate_file_url: string | null;
 }
 
 const CalendarV2 = () => {

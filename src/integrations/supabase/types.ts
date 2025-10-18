@@ -311,6 +311,7 @@ export type Database = {
           created_by: string
           description: string | null
           end_time: string | null
+          estimate_file_url: string | null
           event_time: string | null
           google_sheets_row_id: string | null
           holiday: string | null
@@ -349,6 +350,7 @@ export type Database = {
           created_by: string
           description?: string | null
           end_time?: string | null
+          estimate_file_url?: string | null
           event_time?: string | null
           google_sheets_row_id?: string | null
           holiday?: string | null
@@ -387,6 +389,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           end_time?: string | null
+          estimate_file_url?: string | null
           event_time?: string | null
           google_sheets_row_id?: string | null
           holiday?: string | null

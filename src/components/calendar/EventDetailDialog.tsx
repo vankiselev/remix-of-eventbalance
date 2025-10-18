@@ -32,6 +32,7 @@ interface Event {
   show_program: string | null;
   notes: string | null;
   location: string | null;
+  estimate_file_url: string | null;
 }
 
 interface EventDetailDialogProps {
@@ -53,6 +54,8 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [employees, setEmployees] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [estimateFile, setEstimateFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -70,6 +73,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     videographer_contact_id: "",
     show_program: "",
     notes: "",
+    estimate_file_url: "",
   });
 
   useEffect(() => {
@@ -92,6 +96,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           videographer_contact_id: event.videographer_contact_id || "",
           show_program: event.show_program || "",
           notes: event.notes || "",
+          estimate_file_url: event.estimate_file_url || "",
         });
       } else if (defaultDate) {
         setFormData(prev => ({
@@ -127,6 +132,31 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
     setLoading(true);
     try {
+      let estimateFileUrl = formData.estimate_file_url;
+
+      // Upload file if new file selected
+      if (estimateFile) {
+        setUploadingFile(true);
+        const fileExt = estimateFile.name.split('.').pop();
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('estimate-files')
+          .upload(filePath, estimateFile, {
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('estimate-files')
+          .getPublicUrl(filePath);
+
+        estimateFileUrl = publicUrl;
+        setUploadingFile(false);
+      }
+
       const eventData = {
         ...formData,
         event_time: formData.event_time || null,
@@ -137,6 +167,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         videographer_contact_id: formData.videographer_contact_id || null,
         show_program: formData.show_program || null,
         notes: formData.notes || null,
+        estimate_file_url: estimateFileUrl || null,
         created_by: user.id,
       };
 
@@ -168,6 +199,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
       });
     } finally {
       setLoading(false);
+      setUploadingFile(false);
     }
   };
 
@@ -623,6 +655,39 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 rows={3}
               />
             </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="estimate_file">Смета</Label>
+              <div className="space-y-2">
+                <Input
+                  id="estimate_file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setEstimateFile(file);
+                  }}
+                />
+                {formData.estimate_file_url && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Текущий файл:</span>
+                    <a
+                      href={formData.estimate_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Открыть смету
+                    </a>
+                  </div>
+                )}
+                {estimateFile && (
+                  <div className="text-sm text-muted-foreground">
+                    Новый файл: {estimateFile.name}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           </div>
         </div>
@@ -655,11 +720,11 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </Button>
             <Button
               onClick={handleSave}
-              disabled={loading || !formData.name || !formData.start_date}
+              disabled={loading || uploadingFile || !formData.name || !formData.start_date}
               size="sm"
               className="flex-1 sm:flex-none"
             >
-              {loading ? "Сохранение..." : "Сохранить"}
+              {loading || uploadingFile ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
         </div>
