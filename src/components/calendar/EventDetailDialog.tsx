@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, Trash2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Event {
@@ -199,6 +199,29 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     }
   };
 
+  const openInYandexMaps = () => {
+    let address = formData.location;
+    
+    // Если адрес не указан напрямую, попробуем взять из выбранной площадки
+    if (!address && formData.venue_id) {
+      const selectedVenue = venues.find(v => v.id === formData.venue_id);
+      address = selectedVenue?.address || "";
+    }
+
+    if (!address) {
+      toast({
+        variant: "destructive",
+        title: "Адрес не указан",
+        description: "Укажите адрес или выберите площадку с адресом",
+      });
+      return;
+    }
+
+    // Открываем Яндекс.Карты с поиском по адресу
+    const encodedAddress = encodeURIComponent(address);
+    window.open(`https://yandex.ru/maps/?text=${encodedAddress}`, '_blank');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-3xl h-[90vh] flex flex-col p-0 gap-0">
@@ -295,11 +318,24 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label htmlFor="location">Адрес (если не из базы)</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={openInYandexMaps}
+                  title="Показать на карте"
+                  disabled={!formData.location && !formData.venue_id}
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
