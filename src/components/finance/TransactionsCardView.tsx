@@ -275,7 +275,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col md:flex-row gap-3 pt-4">
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
           <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Период" />
@@ -313,6 +313,8 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           {showTransfers ? "Все операции" : "Без переводов"}
         </Button>
       </div>
+
+      <div className="border-b"></div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-2 md:gap-4">
