@@ -175,17 +175,11 @@ export function TransactionDetailDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-600">Сумма</label>
               <p className={`text-lg font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
                 {isExpense ? '-' : '+'}{formatCurrency(amount)}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Касса</label>
-              <p className="text-sm">
-                {getCashTypeLabel(transaction.cash_type) || "—"}
               </p>
             </div>
             <div>
