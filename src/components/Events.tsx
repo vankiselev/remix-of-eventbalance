@@ -23,6 +23,7 @@ interface Event {
   status: string;
   location: string | null;
   project_owner: string | null;
+  client_id: string | null;
   managers: string | null;
   animators: string | null;
   contractors: string | null;

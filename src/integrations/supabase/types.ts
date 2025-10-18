@@ -304,6 +304,7 @@ export type Database = {
         Row: {
           animator_ids: string[] | null
           animators: string | null
+          client_id: string | null
           contractor_ids: string[] | null
           contractors: string | null
           created_at: string
@@ -341,6 +342,7 @@ export type Database = {
         Insert: {
           animator_ids?: string[] | null
           animators?: string | null
+          client_id?: string | null
           contractor_ids?: string[] | null
           contractors?: string | null
           created_at?: string
@@ -378,6 +380,7 @@ export type Database = {
         Update: {
           animator_ids?: string[] | null
           animators?: string | null
+          client_id?: string | null
           contractor_ids?: string[] | null
           contractors?: string | null
           created_at?: string
@@ -413,6 +416,13 @@ export type Database = {
           videos?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_venue_id_fkey"
             columns: ["venue_id"]

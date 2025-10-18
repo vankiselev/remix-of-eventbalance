@@ -23,6 +23,7 @@ interface Event {
   end_time: string | null;
   project_owner: string | null;
   venue_id: string | null;
+  client_id: string | null;
   manager_ids: string[] | null;
   animator_ids: string[] | null;
   contractor_ids: string[] | null;
@@ -51,6 +52,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [contractors, setContractors] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -59,6 +61,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     end_time: "",
     project_owner: "",
     venue_id: "",
+    client_id: "",
     location: "",
     manager_ids: [] as string[],
     animator_ids: [] as string[],
@@ -80,6 +83,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           end_time: event.end_time || "",
           project_owner: event.project_owner || "",
           venue_id: event.venue_id || "",
+          client_id: event.client_id || "",
           location: event.location || "",
           manager_ids: event.manager_ids || [],
           animator_ids: event.animator_ids || [],
@@ -112,7 +116,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
       if (animatorsRes.data) setAnimators(animatorsRes.data);
       if (contractorsRes.data) setContractors(contractorsRes.data);
       if (employeesRes.data) setEmployees(employeesRes.data);
-      if (clientsRes.data) setContacts(clientsRes.data);
+      if (clientsRes.data) setClients(clientsRes.data);
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -128,6 +132,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         event_time: formData.event_time || null,
         end_time: formData.end_time || null,
         venue_id: formData.venue_id || null,
+        client_id: formData.client_id || null,
         photographer_contact_id: formData.photographer_contact_id || null,
         videographer_contact_id: formData.videographer_contact_id || null,
         show_program: formData.show_program || null,
@@ -301,6 +306,37 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <SelectItem value="Настя">Настя</SelectItem>
                   <SelectItem value="Лера">Лера</SelectItem>
                   <SelectItem value="Ваня">Ваня</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="client_id">Клиент</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Создать
+                </Button>
+              </div>
+              <Select
+                value={formData.client_id}
+                onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите клиента" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
