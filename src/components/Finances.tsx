@@ -481,7 +481,7 @@ const Finances = () => {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Финансы</h1>
-            <p className="text-muted-foreground">Управление доходами и расходами компании</p>
+            <p className="text-muted-foreground hidden md:block">Управление доходами и расходами компании</p>
           </div>
           
           {hasPermission('finances.create') && (
@@ -503,23 +503,23 @@ const Finances = () => {
 
       <Card>
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
-          <CardHeader className="pb-0 border-b border-border">
-            <TabsList className="flex items-center justify-center gap-3 bg-transparent p-0 h-auto overflow-x-auto -webkit-overflow-scrolling-touch">
+          <CardHeader className="pb-0">
+            <TabsList className="grid w-full grid-cols-3 h-auto">
               <TabsTrigger 
                 value="my-transactions" 
-                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+                className="text-xs md:text-sm py-2"
               >
                 Мои транзакции
               </TabsTrigger>
               <TabsTrigger 
                 value="employees" 
-                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+                className="text-xs md:text-sm py-2"
               >
                 Сотрудники
               </TabsTrigger>
               <TabsTrigger 
                 value="all-transactions" 
-                className="px-4 py-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md border border-transparent data-[state=active]:border-border"
+                className="text-xs md:text-sm py-2"
               >
                 Все транзакции
               </TabsTrigger>

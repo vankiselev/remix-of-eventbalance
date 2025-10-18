@@ -1,5 +1,4 @@
 import { formatCurrency } from "@/utils/formatCurrency";
-import { format } from "date-fns";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
 
@@ -7,7 +6,6 @@ interface TransactionCardProps {
   transaction: {
     id: string;
     operation_date: string;
-    created_at: string;
     description: string;
     category: string;
     expense_amount: number;
@@ -23,7 +21,6 @@ interface TransactionCardProps {
 export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) => {
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
-  const time = format(new Date(transaction.created_at), 'HH:mm');
   
   // После категории всегда показываем проект
   const projectName = transaction.static_project_name || transaction.events?.name;
@@ -43,17 +40,15 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
           {projectName && (
-            <>
-              <span>{projectName}</span>
-              <span>•</span>
-            </>
+            <span>{projectName}</span>
           )}
-          <span>{transaction.category}</span>
+          {projectName && <span className="hidden md:inline">•</span>}
+          <span className="hidden md:inline">{transaction.category}</span>
         </div>
       </div>
 
-      {/* Amount & Time */}
-      <div className="flex flex-col items-end gap-1">
+      {/* Amount */}
+      <div className="flex flex-col items-end">
         <div
           className={`font-semibold text-sm md:text-base ${
             isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -61,14 +56,11 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
         >
           {isIncome ? '+' : '−'}{formatCurrency(amount)}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{time}</span>
-          {transaction.cash_type && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {transaction.cash_type}
-            </Badge>
-          )}
-        </div>
+        {transaction.cash_type && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1">
+            {transaction.cash_type}
+          </Badge>
+        )}
       </div>
     </div>
   );

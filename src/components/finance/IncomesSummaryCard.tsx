@@ -22,9 +22,9 @@ export const IncomesSummaryCard = ({ totalIncomes, breakdown, onClick }: Incomes
       onClick={onClick}
     >
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1">
           <h3 className="text-sm font-medium text-muted-foreground">Доходы</h3>
-          <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <span className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">
             +{formatCurrency(totalIncomes)}
           </span>
         </div>

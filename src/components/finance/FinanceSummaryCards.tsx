@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Wallet, User } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface CashSummary {
   total_cash: number;
@@ -71,15 +72,13 @@ export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsP
 
   return (
     <div className="space-y-1">
-      {cards.map((card, index) => {
-        const Icon = card.icon;
-        
-        return (
-          <Card key={index} className="border border-border/50 h-11 shadow-sm hover:shadow-md transition-all duration-200">
+      {cards.map((card, index) => (
+        <div key={index}>
+          <Card className="border border-border/50 h-11 shadow-sm hover:shadow-md transition-all duration-200">
             <CardContent className="p-3 flex items-center justify-between h-full">
               <div className="flex items-center gap-2">
                 <div className={`w-5 h-5 ${card.bgColor} rounded-md flex items-center justify-center`}>
-                  <Icon className={`h-3 w-3 ${card.iconColor}`} />
+                  <card.icon className={`h-3 w-3 ${card.iconColor}`} />
                 </div>
                 <span className="text-xs font-medium text-slate-600">
                   {card.title}
@@ -90,8 +89,9 @@ export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsP
               </div>
             </CardContent>
           </Card>
-        );
-      })}
+          {index === 0 && <Separator className="my-2" />}
+        </div>
+      ))}
     </div>
   );
 }

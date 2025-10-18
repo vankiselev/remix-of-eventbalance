@@ -315,7 +315,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2 md:gap-4">
         <ExpensesSummaryCard
           totalExpenses={totalExpenses}
           breakdown={expensesBreakdown}
