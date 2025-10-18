@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TransactionVerificationDialog } from "@/components/finance/TransactionVerificationDialog";
-import { useAccountantPermissions } from "@/hooks/useAccountantPermissions";
+import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { format } from "date-fns";
 import { Search, Filter, CheckCircle, XCircle, Clock } from "lucide-react";
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Navigate } from "react-router-dom";
 
 export default function TransactionsReviewPage() {
-  const { isAccountant, isLoading: permissionsLoading } = useAccountantPermissions();
+  const { isFinancier, isLoading: permissionsLoading } = useFinancierPermissions();
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -38,7 +38,7 @@ export default function TransactionsReviewPage() {
       if (error) throw error;
       return data;
     },
-    enabled: isAccountant,
+    enabled: isFinancier,
   });
 
   const { data: stats } = useQuery({
@@ -56,7 +56,7 @@ export default function TransactionsReviewPage() {
 
       return { pending, approved, rejected, total: data.length };
     },
-    enabled: isAccountant,
+    enabled: isFinancier,
   });
 
   if (permissionsLoading) {
@@ -70,7 +70,7 @@ export default function TransactionsReviewPage() {
     );
   }
 
-  if (!isAccountant) {
+  if (!isFinancier) {
     return <Navigate to="/dashboard" replace />;
   }
 

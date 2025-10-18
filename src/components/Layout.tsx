@@ -12,7 +12,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAccountantPermissions } from "@/hooks/useAccountantPermissions";
+import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,7 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  const { isAccountant } = useAccountantPermissions();
+  const { isFinancier } = useFinancierPermissions();
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
@@ -63,7 +63,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
     { path: "/finances", label: t('finances'), icon: RussianRuble },
-    ...(isAccountant ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck }] : []),
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },

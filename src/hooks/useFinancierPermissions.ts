@@ -1,6 +1,6 @@
 import { useUserPermissions } from "./useUserPermissions";
 
-export const useAccountantPermissions = () => {
+export const useFinancierPermissions = () => {
   const { permissions, hasPermission, isLoading } = useUserPermissions();
 
   const canReview = hasPermission('transactions.review');
@@ -8,10 +8,10 @@ export const useAccountantPermissions = () => {
   const canReject = hasPermission('transactions.reject');
   const canViewAll = hasPermission('transactions.view_all');
   
-  const isAccountant = canReview || canApprove || canReject || canViewAll;
+  const isFinancier = canReview || canApprove || canReject || canViewAll;
 
   return {
-    isAccountant,
+    isFinancier,
     canReview,
     canApprove,
     canReject,

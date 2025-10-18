@@ -159,7 +159,7 @@ export const TransactionVerificationDialog = ({
             </Badge>
           </div>
 
-          {/* Комментарий бухгалтера */}
+          {/* Комментарий финансиста */}
           <div>
             <p className="text-sm text-muted-foreground mb-2">Комментарий</p>
             <Textarea
