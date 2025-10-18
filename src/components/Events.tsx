@@ -2,19 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Edit, Trash2, Grid3X3, List, Search, X } from "lucide-react";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import EventDetailDialog from "@/components/calendar/EventDetailDialog";
 
 interface Event {
   id: string;
@@ -22,7 +18,7 @@ interface Event {
   description: string | null;
   start_date: string;
   event_time: string | null;
-  end_time?: string | null;
+  end_time: string | null;
   status: string;
   location: string | null;
   project_owner: string | null;
@@ -36,6 +32,9 @@ interface Event {
   contractor_ids: string[] | null;
   responsible_manager_ids: string[] | null;
   manager_ids: string[] | null;
+  animator_ids: string[] | null;
+  photographer_contact_id: string | null;
+  videographer_contact_id: string | null;
   photos: string[] | null;
   videos: string[] | null;
   created_by: string;
@@ -47,45 +46,47 @@ const Events = () => {
   const { hasPermission } = useUserPermissions();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [animators, setAnimators] = useState<any[]>([]);
+  const [venues, setVenues] = useState<any[]>([]);
   
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    start_date: new Date().toISOString().split('T')[0],
-    event_time: "",
-    end_time: "",
-    status: "planning" as const,
-    venue_id: "",
-    project_owner: "",
-    managers: "",
-    animators: "",
-    contractors: "",
-    show_program: "",
-    photo_video: "",
-    notes: "",
-    location: "",
-  });
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchEvents();
+    loadRelatedData();
   }, []);
+
+  const loadRelatedData = async () => {
+    try {
+      const [employeesRes, animatorsRes, venuesRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name").eq("employment_status", "active").order("full_name"),
+        supabase.from("animators").select("*").order("name"),
+        supabase.from("venues").select("*").order("name"),
+      ]);
+
+      if (employeesRes.data) setEmployees(employeesRes.data);
+      if (animatorsRes.data) setAnimators(animatorsRes.data);
+      if (venuesRes.data) setVenues(venuesRes.data);
+    } catch (error) {
+      console.error("Error loading related data:", error);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("start_date", { ascending: false });
 
       if (error) throw error;
       setEvents(data || []);
@@ -101,95 +102,61 @@ const Events = () => {
     }
   };
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const eventData = {
-        name: formData.name,
-        description: formData.description,
-        start_date: formData.start_date,
-        event_time: formData.event_time || null,
-        end_time: formData.end_time || null,
-        location: formData.location || null,
-        project_owner: formData.project_owner || null,
-        managers: formData.managers || null,
-        animators: formData.animators || null,
-        contractors: formData.contractors || null,
-        show_program: formData.show_program || null,
-        photo_video: formData.photo_video || null,
-        notes: formData.notes || null,
-        created_by: user.id,
-      };
-
-      const { error } = await supabase.from("events").insert(eventData);
-
-      if (error) throw error;
-
-      // Send notification to all users about new event
-      const { sendNotificationToAdmins } = await import('@/utils/notifications');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-
-      await sendNotificationToAdmins(
-        'Новое мероприятие',
-        `${profile?.full_name || 'Сотрудник'} создал мероприятие "${formData.name}" на ${new Date(formData.start_date).toLocaleDateString('ru-RU')}`,
-        'event',
-        { 
-          event_name: formData.name,
-          start_date: formData.start_date,
-          location: formData.location
-        }
-      );
-
-      toast({
-        title: "Успешно!",
-        description: "Мероприятие создано",
-      });
-
-      resetForm();
-      fetchEvents();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось создать мероприятие",
-      });
-    }
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowDetailDialog(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "planning":
-        return "bg-blue-100 text-blue-800";
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "completed":
-        return "bg-gray-100 text-gray-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  const handleCreateNew = () => {
+    setSelectedEvent(null);
+    setShowDetailDialog(true);
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "planning":
-        return "Планирование";
-      case "active":
-        return "Активное";
-      case "completed":
-        return "Завершено";
-      case "cancelled":
-        return "Отменено";
-      default:
-        return status;
+  const handleDialogClose = () => {
+    setShowDetailDialog(false);
+    setSelectedEvent(null);
+  };
+
+  const handleEventSave = () => {
+    fetchEvents();
+    handleDialogClose();
+  };
+
+  const getManagerNames = (managerIds: string[] | null) => {
+    if (!managerIds || managerIds.length === 0) return "—";
+    return managerIds
+      .map(id => employees.find(emp => emp.id === id)?.full_name)
+      .filter(Boolean)
+      .join(", ") || "—";
+  };
+
+  const getAnimatorNames = (animatorIds: string[] | null) => {
+    if (!animatorIds || animatorIds.length === 0) return "—";
+    return animatorIds
+      .map(id => animators.find(anim => anim.id === id)?.name)
+      .filter(Boolean)
+      .join(", ") || "—";
+  };
+
+  const getVenueName = (venueId: string | null) => {
+    if (!venueId) return null;
+    return venues.find(v => v.id === venueId)?.name || null;
+  };
+
+  const getLocationDisplay = (event: Event) => {
+    const venueName = getVenueName(event.venue_id);
+    if (venueName) return venueName;
+    if (event.location) return event.location;
+    return "—";
+  };
+
+  const getTimeRange = (event: Event) => {
+    if (!event.event_time && !event.end_time) return "—";
+    if (event.event_time && event.end_time) {
+      return `${event.event_time.slice(0, 5)} - ${event.end_time.slice(0, 5)}`;
     }
+    if (event.event_time) return `с ${event.event_time.slice(0, 5)}`;
+    return "—";
   };
 
   const formatDate = (dateString: string) => {
@@ -291,166 +258,6 @@ const Events = () => {
   const filteredEvents = getFilteredAndSortedEvents();
   const groupedEvents = viewMode === 'list' ? groupEventsByMonth(filteredEvents) : {};
 
-  const handleEditEvent = (event: Event) => {
-    // Check permissions
-    if (event.created_by === user?.id) {
-      if (!hasPermission('events.edit_own')) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "У вас нет прав для редактирования своих событий"
-        });
-        return;
-      }
-    } else {
-      if (!hasPermission('events.edit_all')) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "У вас нет прав для редактирования чужих событий"
-        });
-        return;
-      }
-    }
-    
-    setEditingEvent(event);
-    setFormData({
-      name: event.name || "",
-      description: event.description || "",
-      start_date: event.start_date || "",
-      event_time: event.event_time || "",
-      end_time: event.end_time || "",
-      status: event.status as any,
-      venue_id: event.venue_id || "",
-      project_owner: event.project_owner || "",
-      managers: event.managers || "",
-      animators: event.animators || "",
-      contractors: event.contractors || "",
-      show_program: event.show_program || "",
-      photo_video: event.photo_video || "",
-      notes: event.notes || "",
-      location: event.location || "",
-    });
-    setShowEditDialog(true);
-  };
-
-  const handleUpdateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !editingEvent) return;
-
-    try {
-      const eventData = {
-        name: formData.name,
-        description: formData.description,
-        start_date: formData.start_date,
-        event_time: formData.event_time || null,
-        end_time: formData.end_time || null,
-        location: formData.location || null,
-        project_owner: formData.project_owner || null,
-        managers: formData.managers || null,
-        animators: formData.animators || null,
-        contractors: formData.contractors || null,
-        show_program: formData.show_program || null,
-        photo_video: formData.photo_video || null,
-        notes: formData.notes || null,
-      };
-
-      const { error } = await supabase
-        .from("events")
-        .update(eventData)
-        .eq("id", editingEvent.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Успешно!",
-        description: "Мероприятие обновлено",
-      });
-
-      resetForm();
-      fetchEvents();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось обновить мероприятие",
-      });
-    }
-  };
-
-  const handleDeleteEvent = async () => {
-    if (!editingEvent) return;
-    
-    // Check permissions
-    if (editingEvent.created_by === user?.id) {
-      if (!hasPermission('events.delete_own')) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "У вас нет прав для удаления своих событий"
-        });
-        return;
-      }
-    } else {
-      if (!hasPermission('events.delete_all')) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "У вас нет прав для удаления чужих событий"
-        });
-        return;
-      }
-    }
-    
-    if (!confirm("Вы уверены, что хотите удалить это событие?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", editingEvent.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Успешно!",
-        description: "Событие удалено",
-      });
-
-      resetForm();
-      fetchEvents();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: error.message || "Не удалось удалить событие",
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      start_date: new Date().toISOString().split('T')[0],
-      event_time: "",
-      end_time: "",
-      status: "planning" as const,
-      venue_id: "",
-      project_owner: "",
-      managers: "",
-      animators: "",
-      contractors: "",
-      show_program: "",
-      photo_video: "",
-      notes: "",
-      location: "",
-    });
-    setEditingEvent(null);
-    setShowEditDialog(false);
-    setShowCreateDialog(false);
-  };
-
 
   if (loading) {
     return (
@@ -481,6 +288,14 @@ const Events = () => {
 
   return (
     <div className="space-y-6 w-full overflow-x-hidden">
+      {/* Event Detail Dialog */}
+      <EventDetailDialog
+        event={selectedEvent}
+        open={showDetailDialog}
+        onOpenChange={setShowDetailDialog}
+        onSave={handleEventSave}
+      />
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
         <div className="min-w-0 flex-1">
           <h1 className="text-3xl font-bold truncate">Мероприятия</h1>
@@ -504,252 +319,11 @@ const Events = () => {
             {viewMode === 'grid' ? 'Список' : 'Карточки'}
           </Button>
           {hasPermission('events.create') && (
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Создать мероприятие
-                </Button>
-              </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Создать новое мероприятие</DialogTitle>
-              <DialogDescription>
-                Заполните информацию о мероприятии
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Праздник *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Дата *</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project_owner">Чей проект?</Label>
-                  <Input
-                    id="project_owner"
-                    value={formData.project_owner}
-                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="managers">Менеджеры</Label>
-                  <Input
-                    id="managers"
-                    value={formData.managers}
-                    onChange={(e) => setFormData({ ...formData, managers: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Место</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_time">Время</Label>
-                  <Input
-                    id="event_time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    placeholder="15:00-18:00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="animators">Аниматоры</Label>
-                  <Input
-                    id="animators"
-                    value={formData.animators}
-                    onChange={(e) => setFormData({ ...formData, animators: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="show_program">Шоу/Программа</Label>
-                  <Input
-                    id="show_program"
-                    value={formData.show_program}
-                    onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contractors">Подрядчики</Label>
-                  <Input
-                    id="contractors"
-                    value={formData.contractors}
-                    onChange={(e) => setFormData({ ...formData, contractors: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="photo_video">Фото/Видео</Label>
-                  <Input
-                    id="photo_video"
-                    value={formData.photo_video}
-                    onChange={(e) => setFormData({ ...formData, photo_video: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Примечания</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Создать мероприятие
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-        )}
-        
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingEvent ? "Редактировать событие" : "Добавить событие"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleUpdateEvent} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Праздник *</Label>
-                  <Input
-                    id="edit-name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-start_date">Дата *</Label>
-                  <Input
-                    id="edit-start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-project_owner">Чей проект?</Label>
-                  <Input
-                    id="edit-project_owner"
-                    value={formData.project_owner}
-                    onChange={(e) => setFormData({ ...formData, project_owner: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-managers">Менеджеры</Label>
-                  <Input
-                    id="edit-managers"
-                    value={formData.managers}
-                    onChange={(e) => setFormData({ ...formData, managers: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-location">Место</Label>
-                  <Input
-                    id="edit-location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-event_time">Время</Label>
-                  <Input
-                    id="edit-event_time"
-                    value={formData.event_time}
-                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                    placeholder="15:00-18:00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-animators">Аниматоры</Label>
-                  <Input
-                    id="edit-animators"
-                    value={formData.animators}
-                    onChange={(e) => setFormData({ ...formData, animators: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-show_program">Шоу/Программа</Label>
-                  <Input
-                    id="edit-show_program"
-                    value={formData.show_program}
-                    onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-contractors">Подрядчики</Label>
-                  <Input
-                    id="edit-contractors"
-                    value={formData.contractors}
-                    onChange={(e) => setFormData({ ...formData, contractors: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-photo_video">Фото/Видео</Label>
-                  <Input
-                    id="edit-photo_video"
-                    value={formData.photo_video}
-                    onChange={(e) => setFormData({ ...formData, photo_video: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Примечания</Label>
-                <Textarea
-                  id="edit-notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  Сохранить
-                </Button>
-                {editingEvent && ((editingEvent.created_by === user?.id && hasPermission('events.delete_own')) || hasPermission('events.delete_all')) && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDeleteEvent}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Удалить
-                  </Button>
-                )}
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={resetForm}
-                >
-                  Отмена
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <Button onClick={handleCreateNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Создать мероприятие
+            </Button>
+          )}
         </div>
       </div>
 
@@ -758,7 +332,7 @@ const Events = () => {
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <Label htmlFor="month-filter" className="text-sm mb-2 block">Месяц</Label>
+              <div className="text-sm mb-2 block font-medium">Месяц</div>
               <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
                 <SelectTrigger id="month-filter">
                   <SelectValue placeholder="Все месяцы" />
@@ -781,7 +355,7 @@ const Events = () => {
               </Select>
             </div>
             <div className="flex-1">
-              <Label htmlFor="year-filter" className="text-sm mb-2 block">Год</Label>
+              <div className="text-sm mb-2 block font-medium">Год</div>
               <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
                 <SelectTrigger id="year-filter">
                   <SelectValue placeholder="Все годы" />
@@ -867,32 +441,40 @@ const Events = () => {
       ) : viewMode === 'grid' ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredEvents.map((event) => (
-            <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="line-clamp-2">{event.name}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(event.status)}>
-                      {getStatusLabel(event.status)}
-                    </Badge>
-                    <Edit className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {event.description}
-                </CardDescription>
+            <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatDate(event.start_date)}
-                  {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
-                </div>
+              <CardContent className="space-y-2.5 text-sm">
                 {event.project_owner && (
-                  <div className="text-sm text-muted-foreground">
-                    Проект: {event.project_owner}
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
+                    <span className="text-foreground">{event.project_owner}</span>
                   </div>
                 )}
+                
+                <div className="flex items-start gap-2">
+                  <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
+                  <span className="text-foreground">{getManagerNames(event.manager_ids)}</span>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">{getLocationDisplay(event)}</span>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="text-foreground">{formatDate(event.start_date)}</div>
+                    <div className="text-muted-foreground text-xs">{getTimeRange(event)}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">{getAnimatorNames(event.animator_ids)}</span>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -900,40 +482,47 @@ const Events = () => {
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
-            <div key={monthYear} className="space-y-2">
+            <div key={monthYear} className="space-y-3">
               <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
                 {monthYear}
               </h3>
               <div className="space-y-2">
                 {monthEvents.map((event) => (
-                  <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditEvent(event)}>
+                  <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1">
-                              <h3 className="font-semibold truncate">{event.name}</h3>
-                              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
-                                <div className="flex items-center">
-                                  <CalendarIcon className="mr-1 h-3 w-3" />
-                                  {formatDate(event.start_date)}
-                                  {event.event_time && ` в ${event.event_time.slice(0, 5)}`}
-                                </div>
-                                {event.project_owner && (
-                                  <div>Проект: {event.project_owner}</div>
-                                )}
-                                {event.location && (
-                                  <div>Место: {event.location}</div>
-                                )}
-                              </div>
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-base">{event.name}</h3>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
+                          {event.project_owner && (
+                            <div className="flex items-start gap-2">
+                              <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
+                              <span className="text-foreground">{event.project_owner}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
+                            <span className="text-foreground">{getManagerNames(event.manager_ids)}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground">{getLocationDisplay(event)}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="flex flex-col">
+                              <span className="text-foreground">{formatDate(event.start_date)}</span>
+                              <span className="text-muted-foreground text-xs">{getTimeRange(event)}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          <Badge className={getStatusColor(event.status)}>
-                            {getStatusLabel(event.status)}
-                          </Badge>
-                          <Edit className="h-4 w-4 text-muted-foreground" />
+
+                          <div className="flex items-center gap-2 sm:col-span-2">
+                            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground">{getAnimatorNames(event.animator_ids)}</span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
