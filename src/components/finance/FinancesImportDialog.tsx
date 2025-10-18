@@ -399,61 +399,69 @@ const FinancesImportDialog = ({
     };
 
     try {
-      for (let i = 0; i < parsedData.length; i++) {
-        const row = parsedData[i];
+      // Подготовка всех строк для отправки на сервер
+      const preparedRows = parsedData.map((row) => {
         const mappedRow = mapRow(row);
+        const operationDate = parseDate(mappedRow.operation_date);
+        const expenseAmount = parseAmount(mappedRow.expense_amount);
+        const incomeAmount = parseAmount(mappedRow.income_amount);
 
-        try {
-          const operationDate = parseDate(mappedRow.operation_date);
-          const expenseAmount = parseAmount(mappedRow.expense_amount);
-          const incomeAmount = parseAmount(mappedRow.income_amount);
-          const projectOwner = mappedRow.project_owner || null;
-          const cashType = mapCashType(projectOwner);
+        return {
+          operation_date: operationDate || '',
+          static_project_name: mappedRow.project_name || null,
+          project_owner: mappedRow.project_owner || null,
+          description: mappedRow.description || '',
+          category: mappedRow.category || 'Разное',
+          expense_amount: expenseAmount || null,
+          income_amount: incomeAmount || null,
+          notes: mappedRow.notes || null
+        };
+      });
 
-          if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
-            throw new Error("Некорректные данные");
-          }
-
-          const transactionData = {
-            created_by: user?.id,
-            operation_date: operationDate,
-            static_project_name: mappedRow.project_name || null,
-            project_owner: projectOwner,
-            description: mappedRow.description || '',
-            category: mappedRow.category || 'Разное',
-            cash_type: cashType,
-            expense_amount: expenseAmount || null,
-            income_amount: incomeAmount || null,
-            notes: mappedRow.notes || null
-          };
-
-          const { error } = await supabase
-            .from('financial_transactions')
-            .insert(transactionData);
-
-          if (error) throw error;
-          result.inserted++;
-        } catch (error: any) {
-          result.failed++;
-          result.errors.push({
-            row: i + 1,
-            reason: error.message || 'Неизвестная ошибка',
-            data: mappedRow
-          });
+      // Вызов Edge Function для быстрой обработки на сервере
+      const { data: { session } } = await supabase.auth.getSession();
+      const SUPABASE_URL = "https://wpxhmajdeunabximyfln.supabase.co";
+      
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/finances-import`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            rows: preparedRows,
+            user_id: user?.id
+          })
         }
+      );
 
-        const currentProgress = i + 1;
-        setImportProgress(Math.round((currentProgress / parsedData.length) * 100));
-        updateProgress(currentProgress, parsedData.length);
+      if (!response.ok) {
+        throw new Error('Ошибка при импорте данных');
       }
+
+      const importResult = await response.json();
+      
+      // Обновляем результаты
+      result.inserted = importResult.inserted;
+      result.failed = importResult.failed;
+      result.errors = importResult.errors || [];
 
       setImportResult(result);
       finishImport(result);
+      setImportProgress(100);
       setStep(4);
 
       if (result.inserted > 0) {
         onImportComplete();
       }
+
+      toast({
+        title: "Импорт завершен",
+        description: `Успешно импортировано: ${result.inserted} из ${result.total} записей`,
+      });
+
     } catch (error: any) {
       console.error("Import error:", error);
       toast({
@@ -461,6 +469,8 @@ const FinancesImportDialog = ({
         title: "Ошибка импорта",
         description: error.message || "Произошла ошибка при импорте данных",
       });
+      
+      finishImport(result);
     } finally {
       setImporting(false);
     }
