@@ -15,6 +15,7 @@ interface TransactionCardProps {
     project_owner?: string;
     cash_type?: string;
     static_project_name?: string;
+    events?: { name: string } | null;
   };
   onClick: () => void;
 }
@@ -25,7 +26,7 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
   const time = format(new Date(transaction.created_at), 'HH:mm');
   
   // После категории всегда показываем проект
-  const projectName = transaction.static_project_name;
+  const projectName = transaction.static_project_name || transaction.events?.name;
 
   return (
     <div
