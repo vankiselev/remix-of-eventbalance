@@ -80,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full">
+    <div className="min-h-screen bg-background flex flex-col w-full overflow-x-hidden">
       {!isMobile ? (
         <>
           {/* Desktop Header */}
@@ -183,7 +183,7 @@ const Layout = ({ children }: LayoutProps) => {
           </header>
 
           {/* Main Layout with Sidebar */}
-          <div className="flex flex-1 w-full min-h-0">
+          <div className="flex flex-1 w-full min-h-0 overflow-x-hidden">
             {/* Collapsible Sidebar - Fixed */}
             <aside
               className={`fixed top-16 left-0 bottom-0 border-r bg-card transition-all duration-300 overflow-y-auto z-40 ${
@@ -230,11 +230,11 @@ const Layout = ({ children }: LayoutProps) => {
 
             {/* Main Content with margin to account for fixed sidebar */}
             <main 
-              className={`flex-1 flex flex-col transition-all duration-300 ${
+              className={`flex-1 flex flex-col transition-all duration-300 overflow-x-hidden ${
                 sidebarCollapsed ? "ml-16" : "ml-64"
               }`}
             >
-              <div className="flex-1 main-container">
+              <div className="flex-1 main-container w-full">
                 {children}
               </div>
               
@@ -256,8 +256,8 @@ const Layout = ({ children }: LayoutProps) => {
         </>
       ) : (
         /* Mobile Layout */
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto px-4 py-6 pb-28">
+        <div className="flex-1 flex flex-col overflow-x-hidden">
+          <main className="flex-1 overflow-auto px-4 py-6 pb-28 w-full overflow-x-hidden">
             {children}
           </main>
           <MobileBottomNav />

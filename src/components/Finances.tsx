@@ -434,23 +434,23 @@ const Finances = () => {
     const currentUserId = selectedEmployee?.id || user?.id;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {selectedEmployee && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
             <Button
               variant="outline"
               onClick={handleBackToMain}
-              className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center flex-shrink-0"
             >
               <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Назад</span>
+              <span className="hidden sm:inline">Назад</span>
             </Button>
-            <div>
-              <h2 className="text-xl font-semibold">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-semibold truncate">
                 {selectedEmployee.name}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground truncate">
                 Персональные финансы сотрудника
               </p>
             </div>
@@ -479,7 +479,7 @@ const Finances = () => {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 bg-background pb-2 space-y-4">
+      <div className="sticky top-0 z-10 bg-background pb-2 space-y-4 w-full">
         <FinanceSummaryCards 
           summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
           isLoading={false} 
@@ -487,14 +487,14 @@ const Finances = () => {
         <ImportProgressWindow />
       </div>
 
-      <Card>
+      <Card className="w-full">
         <CardHeader className="space-y-0 py-4 border-b">
           <CardTitle className="text-lg">Транзакции</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex justify-center py-4 border-b">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
-              <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
+        <CardContent className="pt-0 w-full overflow-x-auto">
+          <div className="flex justify-center py-4 border-b w-full">
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
+              <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
                 <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
                 <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
               </TabsList>
@@ -530,17 +530,17 @@ const Finances = () => {
 
   // Admin dashboard view
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Финансы</h1>
-            <p className="text-muted-foreground hidden md:block">Управление доходами и расходами компании</p>
+    <div className="space-y-6 w-full">
+      <div className="space-y-4 w-full">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 w-full">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-3xl font-bold truncate">Финансы</h1>
+            <p className="text-muted-foreground hidden md:block truncate">Управление доходами и расходами компании</p>
           </div>
           
           {hasPermission('finances.create') && (
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowTransactionForm(true)}>
+            <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+              <Button onClick={() => setShowTransactionForm(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить транзакцию
               </Button>
@@ -557,7 +557,7 @@ const Finances = () => {
         <ImportProgressWindow />
       </div>
 
-      <Card>
+      <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
             <TabsList className="grid w-full grid-cols-3 h-10">
@@ -582,17 +582,17 @@ const Finances = () => {
             </TabsList>
           </CardHeader>
           
-          <CardContent className="pt-0">
-            <TabsContent value="my-transactions" className="mt-0">
-              <div className="flex justify-center py-4 border-b">
-                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
-                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
+          <CardContent className="pt-0 w-full overflow-x-auto">
+            <TabsContent value="my-transactions" className="mt-0 w-full">
+              <div className="flex justify-center py-4 border-b w-full">
+                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
+                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
                     <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
                     <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
-              <div className="pt-4">
+              <div className="pt-4 w-full">
               {viewMode === 'cards' ? (
                 <TransactionsCardView
                   userId={user?.id}
@@ -609,20 +609,20 @@ const Finances = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="employees" className="mt-0">
+            <TabsContent value="employees" className="mt-0 w-full">
               <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
             </TabsContent>
             
-            <TabsContent value="all-transactions" className="mt-0">
-              <div className="flex justify-center py-4 border-b">
-                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')}>
-                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10">
+            <TabsContent value="all-transactions" className="mt-0 w-full">
+              <div className="flex justify-center py-4 border-b w-full">
+                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
+                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
                     <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
                     <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
-              <div className="pt-4">
+              <div className="pt-4 w-full">
               {viewMode === 'cards' ? (
                 <TransactionsCardView
                   isAdmin={true}

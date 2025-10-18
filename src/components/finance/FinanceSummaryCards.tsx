@@ -71,20 +71,20 @@ export function FinanceSummaryCards({ summary, isLoading }: FinanceSummaryCardsP
   ];
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 w-full">
       {cards.map((card, index) => (
-        <div key={index}>
-          <Card className="border border-border/50 h-11 shadow-sm hover:shadow-md transition-all duration-200">
-            <CardContent className="p-3 flex items-center justify-between h-full">
-              <div className="flex items-center gap-2">
-                <div className={`w-5 h-5 ${card.bgColor} rounded-md flex items-center justify-center`}>
+        <div key={index} className="w-full">
+          <Card className="border border-border/50 h-11 shadow-sm hover:shadow-md transition-all duration-200 w-full">
+            <CardContent className="p-3 flex items-center justify-between h-full min-w-0 w-full">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className={`w-5 h-5 ${card.bgColor} rounded-md flex items-center justify-center flex-shrink-0`}>
                   <card.icon className={`h-3 w-3 ${card.iconColor}`} />
                 </div>
-                <span className="text-xs font-medium text-slate-600">
+                <span className="text-xs font-medium text-slate-600 truncate">
                   {card.title}
                 </span>
               </div>
-              <div className={`text-sm font-bold ${card.textColor}`}>
+              <div className={`text-sm font-bold ${card.textColor} flex-shrink-0 ml-2`}>
                 {formatCurrency(card.value)}
               </div>
             </CardContent>
