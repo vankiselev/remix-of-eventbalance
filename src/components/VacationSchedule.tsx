@@ -339,15 +339,15 @@ const VacationSchedule = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">График отпусков</h1>
-          <p className="text-muted-foreground">Планирование и управление отпусками сотрудников</p>
+    <div className="space-y-6 w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">График отпусков</h1>
+          <p className="text-muted-foreground truncate">Планирование и управление отпусками сотрудников</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto flex-shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Подать заявку на отпуск
             </Button>

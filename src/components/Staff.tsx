@@ -365,11 +365,11 @@ const Staff = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">{t('staff')}</h1>
-          <p className="text-muted-foreground">
+    <div className="space-y-6 w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">{t('staff')}</h1>
+          <p className="text-muted-foreground truncate">
             {hasPermission('staff.manage')
               ? "Управляйте командой и зарплатами" 
               : "Просмотр информации о пользователях"}
@@ -378,7 +378,7 @@ const Staff = () => {
         {hasPermission('staff.manage') && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto flex-shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить сотрудника
               </Button>

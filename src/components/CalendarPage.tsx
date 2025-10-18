@@ -312,16 +312,16 @@ const CalendarPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Календарь</h1>
-          <p className="text-muted-foreground">Расписание праздников {MONTHS[selectedMonth]} {selectedYear}</p>
+      <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Календарь</h1>
+          <p className="text-muted-foreground truncate">Расписание праздников {MONTHS[selectedMonth]} {selectedYear}</p>
         </div>
         
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-2 text-sm lg:text-base">
+        <div className="flex flex-wrap items-center gap-2 text-sm lg:text-base w-full sm:w-auto flex-shrink-0">
           {/* Month navigation */}
           <div className="flex items-center gap-1">
             <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>

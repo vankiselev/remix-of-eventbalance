@@ -8,10 +8,10 @@ import { Shield, UserPlus, Palette } from "lucide-react";
 const AdministrationPage = () => {
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Администрирование</h1>
-          <p className="text-muted-foreground">
+      <div className="space-y-6 w-full overflow-x-hidden">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold truncate">Администрирование</h1>
+          <p className="text-muted-foreground truncate">
             Управление системой, ролями и приглашениями
           </p>
         </div>

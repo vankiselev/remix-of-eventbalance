@@ -224,15 +224,15 @@ const ProfilePage = () => {
 
   return (
     <Layout>
-      <div className="container max-w-2xl py-6">
-        <Card>
+      <div className="container max-w-2xl py-6 w-full overflow-x-hidden">
+        <Card className="w-full">
           <CardHeader>
-            <CardTitle>Настройки профиля</CardTitle>
-            <CardDescription>
+            <CardTitle className="truncate">Настройки профиля</CardTitle>
+            <CardDescription className="truncate">
               Управляйте информацией вашего профиля
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 w-full">
             {/* Avatar Upload */}
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">

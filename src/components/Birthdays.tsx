@@ -150,14 +150,14 @@ const Birthdays = () => {
   const upcomingBirthdays = getUpcomingMonthsBirthdays();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+    <div className="space-y-6 w-full overflow-x-hidden">
+      <div className="flex items-center gap-3 w-full">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Cake className="w-5 h-5 text-primary" />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold">Дни рождения сотрудников</h1>
-          <p className="text-muted-foreground">Не забудьте поздравить коллег!</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Дни рождения сотрудников</h1>
+          <p className="text-muted-foreground truncate">Не забудьте поздравить коллег!</p>
         </div>
       </div>
 

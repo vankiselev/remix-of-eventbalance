@@ -32,7 +32,7 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
   className 
 }) => {
   return (
-    <div className="table-container">
+    <div className="table-container w-full overflow-x-auto">
       <table className={cn("min-w-full border-collapse", className)}>
         {children}
       </table>

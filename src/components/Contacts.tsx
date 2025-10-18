@@ -12,11 +12,11 @@ const Contacts = () => {
   const [activeTab, setActiveTab] = useState("contractors");
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Контакты</h1>
-          <p className="text-muted-foreground">
+    <div className="p-6 space-y-6 w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Контакты</h1>
+          <p className="text-muted-foreground truncate">
             Управление контактами подрядчиков, аниматоров, клиентов и площадок
           </p>
         </div>

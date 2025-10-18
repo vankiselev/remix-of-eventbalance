@@ -408,13 +408,13 @@ const Events = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Мероприятия</h1>
-          <p className="text-muted-foreground">Управляйте вашими мероприятиями</p>
+    <div className="space-y-6 w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Мероприятия</h1>
+          <p className="text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto flex-shrink-0">
           <Button 
             variant="outline" 
             onClick={() => setSortByName(!sortByName)}

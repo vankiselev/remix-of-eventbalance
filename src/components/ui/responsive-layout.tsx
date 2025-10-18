@@ -21,7 +21,7 @@ export const ResponsiveCard: React.FC<ResponsiveCardProps> = ({
   return (
     <div 
       className={cn(
-        "bg-card border border-border rounded-xl p-4 sm:p-6",
+        "bg-card border border-border rounded-xl p-4 sm:p-6 w-full overflow-x-hidden",
         "shadow-sm transition-all duration-200",
         hover && "hover:shadow-md hover:shadow-primary/5",
         className
@@ -44,7 +44,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   };
 
   return (
-    <div className={cn(gridClasses[type], className)}>
+    <div className={cn(gridClasses[type], 'w-full', className)}>
       {children}
     </div>
   );
@@ -67,7 +67,7 @@ export const TextTruncate: React.FC<TextTruncateProps> = ({
   
   return (
     <div 
-      className={cn(truncateClass, className)}
+      className={cn(truncateClass, 'min-w-0', className)}
       title={tooltip ? children?.toString() : undefined}
     >
       {children}

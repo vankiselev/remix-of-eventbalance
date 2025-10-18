@@ -335,12 +335,12 @@ const Reports = () => {
   }
 
   return (
-    <div className="p-6 space-y-8 w-full max-w-none">
-      <div className="flex items-center gap-3">
-        <FileText className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Отчеты по мероприятиям</h1>
-          <p className="text-muted-foreground">
+    <div className="p-6 space-y-8 w-full max-w-none overflow-x-hidden">
+      <div className="flex items-center gap-3 w-full">
+        <FileText className="h-8 w-8 text-primary flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-bold truncate">Отчеты по мероприятиям</h1>
+          <p className="text-muted-foreground truncate">
             {userRole === 'admin' ? 'Управление отчетами и зарплатами' : 'Ваши отчеты о проведенных мероприятиях'}
           </p>
         </div>

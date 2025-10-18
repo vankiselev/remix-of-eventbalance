@@ -88,11 +88,11 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full overflow-x-hidden">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Главная</h1>
-        <p className="text-muted-foreground">
+      <div className="min-w-0">
+        <h1 className="text-3xl font-bold truncate">Главная</h1>
+        <p className="text-muted-foreground truncate">
           Добро пожаловать в EventBalance! Система управления ивентами
         </p>
       </div>
@@ -103,7 +103,7 @@ const Dashboard = () => {
       </div>
 
       {/* Today's information */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr w-full">
         <TodayEventsCard />
         <TodayBirthdaysCard />
         <TodayVacationsCard />
