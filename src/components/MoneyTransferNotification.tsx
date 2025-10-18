@@ -28,11 +28,16 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
+      // Pass auth header explicitly to avoid missing JWT issues
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
       const { error } = await supabase.functions.invoke('handle-money-transfer', {
         body: {
           transaction_id: transactionId,
           action,
         },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
       });
 
       if (error) throw error;

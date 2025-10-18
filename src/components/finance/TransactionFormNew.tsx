@@ -380,18 +380,44 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             recipientId: transferToUserId,
           });
 
+          // Ensure auth header is passed explicitly (some environments drop it)
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+
           const { data: notifyResult, error: notifyError } = await supabase.functions.invoke('handle-money-transfer', {
             body: {
               transaction_id: transaction.id,
               action: 'notify',
             },
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
           });
 
           if (notifyError) {
             console.error('❌ Failed to send transfer notification:', notifyError);
+
+            // Fallback: create in-app notification directly so recipient still sees it
+            try {
+              await supabase.from('notifications').insert([
+                {
+                  user_id: transferToUserId,
+                  title: 'Вам переведены деньги',
+                  message: `Вам передали ${data.expense_amount} ₽ (${data.whose_project})`,
+                  type: 'money_transfer',
+                  data: {
+                    transaction_id: transaction.id,
+                    amount: data.expense_amount,
+                    cash_type: data.whose_project,
+                    description: data.description,
+                  } as any,
+                },
+              ] as any);
+            } catch (fallbackErr) {
+              console.error('❌ Fallback notifications insert failed:', fallbackErr);
+            }
+
             toast({
               title: "Предупреждение",
-              description: "Транзакция создана, но не удалось отправить уведомление получателю",
+              description: `Транзакция создана, но не удалось отправить уведомление: ${notifyError.message || notifyError.error || 'неизвестная ошибка'}`,
               variant: "destructive",
             });
           } else {
