@@ -1350,6 +1350,10 @@ export type Database = {
         Args: { invitation_token: string }
         Returns: boolean
       }
+      accept_money_transfer: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       assign_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1578,6 +1582,10 @@ export type Database = {
       recalculate_balances_for_cash_type: {
         Args: { p_cash_type: string }
         Returns: undefined
+      }
+      reject_money_transfer: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
       }
       request_password_reset: {
         Args: { user_email: string }

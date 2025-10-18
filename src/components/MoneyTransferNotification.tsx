@@ -57,41 +57,12 @@ export const MoneyTransferNotification = ({
       }
 
       if (action === 'accept') {
-        console.log('✅ Accepting transfer - creating income transaction...');
-        
-        // Create income transaction for recipient
-        const { data: incomeTx, error: incomeErr } = await supabase
-          .from('financial_transactions')
-          .insert([
-            {
-              created_by: currentUserId,
-              operation_date: new Date().toISOString().split('T')[0],
-              income_amount: tx.expense_amount,
-              expense_amount: 0,
-              category: 'Передано или получено от сотрудника',
-              cash_type: tx.cash_type,
-              description: `Получено от ${fromUserName || 'сотрудника'}`,
-              project_owner: tx.project_owner || 'Не указан',
-              transfer_from_user_id: tx.created_by,
-              linked_transaction_id: tx.id,
-              no_receipt: true,
-              no_receipt_reason: 'Внутренняя передача денег между сотрудниками',
-            },
-          ])
-          .select()
-          .single();
-
-        console.log('💰 Income transaction result:', incomeTx);
-        console.log('❌ Income transaction error:', incomeErr);
-
-        if (incomeErr) throw incomeErr;
-
-        // Update original transaction
-        const { error: updateErr } = await supabase
-          .from('financial_transactions')
-          .update({ transfer_status: 'accepted', linked_transaction_id: incomeTx.id })
-          .eq('id', tx.id);
-        if (updateErr) throw updateErr;
+        console.log('✅ Accepting transfer via RPC...');
+        const { error: rpcErr } = await supabase.rpc('accept_money_transfer', {
+          p_transaction_id: transactionId,
+        });
+        console.log('🔁 RPC accept error:', rpcErr);
+        if (rpcErr) throw rpcErr;
 
         // Notify sender
         await supabase.functions.invoke('send-push-notification', {
@@ -104,12 +75,12 @@ export const MoneyTransferNotification = ({
           },
         });
       } else {
-        // Reject transfer
-        const { error: updateErr } = await supabase
-          .from('financial_transactions')
-          .update({ transfer_status: 'rejected' })
-          .eq('id', tx.id);
-        if (updateErr) throw updateErr;
+        // Reject transfer via RPC
+        const { error: rpcErr } = await supabase.rpc('reject_money_transfer', {
+          p_transaction_id: transactionId,
+        });
+        console.log('🔁 RPC reject error:', rpcErr);
+        if (rpcErr) throw rpcErr;
 
         await supabase.functions.invoke('send-push-notification', {
           body: {
@@ -173,10 +144,11 @@ export const MoneyTransferNotification = ({
           className="w-full"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4 mr-2" />
           )}
+          Подтвердить получение
         </Button>
         <Button
           onClick={() => handleAction('reject')}
@@ -186,10 +158,11 @@ export const MoneyTransferNotification = ({
           className="w-full"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
-            <XCircle className="h-4 w-4" />
+            <XCircle className="h-4 w-4 mr-2" />
           )}
+          Отклонить
         </Button>
       </div>
     </div>
