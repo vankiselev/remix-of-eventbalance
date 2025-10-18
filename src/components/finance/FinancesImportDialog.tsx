@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Pause, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from 'xlsx';
@@ -53,6 +54,7 @@ const FinancesImportDialog = ({
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { startImport, updateProgress, finishImport } = useImportProgress();
@@ -379,6 +381,7 @@ const FinancesImportDialog = ({
 
     setImporting(true);
     setImportProgress(0);
+    setIsPaused(false);
     startImport(parsedData.length);
 
     const result: ImportResult = {
@@ -393,6 +396,11 @@ const FinancesImportDialog = ({
       const BATCH_SIZE = 100; // Вставляем по 100 строк за раз
       
       for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
+        // Проверяем, не приостановлен ли импорт
+        while (isPaused) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
         const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedData.length);
         const batch = parsedData.slice(batchStart, batchEnd);
         
@@ -495,6 +503,7 @@ const FinancesImportDialog = ({
       finishImport(result);
     } finally {
       setImporting(false);
+      setIsPaused(false);
     }
   };
 
@@ -701,6 +710,30 @@ const FinancesImportDialog = ({
               <p className="text-sm text-muted-foreground mt-2">
                 Прогресс: {importProgress}%
               </p>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant={isPaused ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsPaused(!isPaused)}
+                >
+                  {isPaused ? (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Продолжить
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="w-4 h-4 mr-2" />
+                      Приостановить
+                    </>
+                  )}
+                </Button>
+              </div>
+              {isPaused && (
+                <p className="text-sm text-warning mt-2">
+                  Импорт приостановлен. Нажмите "Продолжить" для возобновления.
+                </p>
+              )}
             </div>
           </div>
         )}
