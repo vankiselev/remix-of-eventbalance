@@ -42,7 +42,7 @@ const EventsImportDialog = ({
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
-  const [selectedSheet, setSelectedSheet] = useState<string>('');
+  const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
@@ -120,10 +120,10 @@ const EventsImportDialog = ({
           setAvailableSheets(workbookData.SheetNames);
           if (workbookData.SheetNames.length === 1) {
             // Если только один лист, выбираем его автоматически
-            setSelectedSheet(workbookData.SheetNames[0]);
+            setSelectedSheets([workbookData.SheetNames[0]]);
             processExcelSheet(workbookData, workbookData.SheetNames[0]);
           } else {
-            // Показываем выбор листа
+            // Показываем выбор листов
             setStep(2);
           }
         }
@@ -262,16 +262,73 @@ const EventsImportDialog = ({
     });
   };
 
-  const handleSheetSelect = () => {
-    if (!workbook || !selectedSheet) {
+  const handleSheetSelect = async () => {
+    if (!workbook || selectedSheets.length === 0) {
       toast({
         variant: "destructive",
         title: "Ошибка",
-        description: "Выберите лист для импорта",
+        description: "Выберите хотя бы один лист для импорта",
       });
       return;
     }
-    processExcelSheet(workbook, selectedSheet);
+    
+    // Если выбран только один лист, обрабатываем его как раньше
+    if (selectedSheets.length === 1) {
+      processExcelSheet(workbook, selectedSheets[0]);
+      return;
+    }
+    
+    // Если выбрано несколько листов, объединяем данные
+    let allParsedData: ParsedRow[] = [];
+    let commonHeaders: string[] = [];
+    
+    for (let i = 0; i < selectedSheets.length; i++) {
+      const sheetName = selectedSheets[i];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      if (rows.length > 0) {
+        const { index, headers: hdr } = findHeaderRow(rows);
+        const fileHeaders = hdr.map(h => String(h || '').trim());
+        
+        // Используем заголовки из первого листа
+        if (i === 0) {
+          commonHeaders = fileHeaders;
+        }
+        
+        const processedRows = handleMergedCells(rows, index, fileHeaders);
+        const data = buildObjectsFromRows(processedRows, index, fileHeaders);
+        allParsedData = [...allParsedData, ...data];
+      }
+    }
+    
+    toast({ 
+      title: 'Объединены данные', 
+      description: `Загружено ${allParsedData.length} записей из ${selectedSheets.length} листов` 
+    });
+    
+    setHeaders(commonHeaders);
+    setParsedData(allParsedData);
+    setupColumnMapping(commonHeaders);
+    setStep(3);
+  };
+
+  const toggleSheetSelection = (sheetName: string) => {
+    setSelectedSheets(prev => {
+      if (prev.includes(sheetName)) {
+        return prev.filter(s => s !== sheetName);
+      } else {
+        return [...prev, sheetName];
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSheets.length === availableSheets.length) {
+      setSelectedSheets([]);
+    } else {
+      setSelectedSheets([...availableSheets]);
+    }
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
@@ -569,7 +626,7 @@ const EventsImportDialog = ({
     setFile(null);
     setWorkbook(null);
     setAvailableSheets([]);
-    setSelectedSheet('');
+    setSelectedSheets([]);
     setParsedData([]);
     setHeaders([]);
     setColumnMapping({});
@@ -638,28 +695,53 @@ const EventsImportDialog = ({
         {step === 2 && availableSheets.length > 0 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium mb-4">Выберите лист для импорта</h3>
-              <Label htmlFor="sheet-select">Доступные листы в файле:</Label>
-              <Select value={selectedSheet} onValueChange={setSelectedSheet}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Выберите лист" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSheets.map((sheetName) => (
-                    <SelectItem key={sheetName} value={sheetName}>
+              <h3 className="text-lg font-medium mb-4">Выберите листы для импорта</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Вы можете выбрать один или несколько листов. Данные из всех выбранных листов будут объединены.
+              </p>
+              
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="select-all"
+                  checked={selectedSheets.length === availableSheets.length && availableSheets.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-input"
+                />
+                <Label htmlFor="select-all" className="cursor-pointer font-semibold">
+                  Выбрать все листы ({availableSheets.length})
+                </Label>
+              </div>
+              
+              <div className="space-y-2 border rounded-md p-3 max-h-60 overflow-y-auto">
+                {availableSheets.map((sheetName) => (
+                  <div key={sheetName} className="flex items-center gap-2 p-2 hover:bg-accent rounded-md">
+                    <input
+                      type="checkbox"
+                      id={`sheet-${sheetName}`}
+                      checked={selectedSheets.includes(sheetName)}
+                      onChange={() => toggleSheetSelection(sheetName)}
+                      className="w-4 h-4 rounded border-input"
+                    />
+                    <Label htmlFor={`sheet-${sheetName}`} className="cursor-pointer flex-1">
                       {sheetName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              
+              {selectedSheets.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  Выбрано листов: <span className="font-semibold">{selectedSheets.length}</span>
+                </p>
+              )}
             </div>
-            
             <div className="flex gap-2">
-              <Button onClick={handleSheetSelect} disabled={!selectedSheet}>
-                Продолжить
-              </Button>
-              <Button variant="outline" onClick={handleClose}>
+              <Button onClick={handleClose} variant="outline">
                 Отмена
+              </Button>
+              <Button onClick={handleSheetSelect} disabled={selectedSheets.length === 0}>
+                Продолжить ({selectedSheets.length} {selectedSheets.length === 1 ? 'лист' : 'листа/листов'})
               </Button>
             </div>
           </div>
