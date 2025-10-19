@@ -475,11 +475,20 @@ const EventsImportDialog = ({
   const validateData = () => {
     const errors: string[] = [];
     let validRows = 0;
+    let skippedEmptyRows = 0;
 
     console.log('Validating data:', parsedData.length, 'rows');
 
     parsedData.forEach((row, index) => {
       const mappedRow = mapRow(row);
+      
+      // Пропускаем полностью пустые строки (они могут быть из разных листов)
+      const hasAnyData = Object.values(mappedRow).some(val => val && String(val).trim());
+      if (!hasAnyData) {
+        skippedEmptyRows++;
+        return;
+      }
+      
       const dateFromTitle = parseDateFromTitle(mappedRow.title);
       const dateFromCell = parseDate(mappedRow.event_date);
       const finalDate = dateFromTitle || dateFromCell;
@@ -491,7 +500,7 @@ const EventsImportDialog = ({
         title: mappedRow.title 
       });
       
-      if (!mappedRow.title) {
+      if (!mappedRow.title || !String(mappedRow.title).trim()) {
         errors.push(`Строка ${index + 2}: отсутствует название праздника`);
         return;
       }
@@ -513,9 +522,13 @@ const EventsImportDialog = ({
       return false;
     }
 
+    const message = skippedEmptyRows > 0 
+      ? `Готово к импорту: ${validRows} записей (пропущено ${skippedEmptyRows} пустых строк)`
+      : `Готово к импорту: ${validRows} записей`;
+
     toast({
       title: "Валидация прошла успешно",
-      description: `Готово к импорту: ${validRows} записей`,
+      description: message,
     });
     return true;
   };
@@ -537,11 +550,16 @@ const EventsImportDialog = ({
     setImportProgress(0);
 
     try {
-      // Process data in chunks
+      // Process data in chunks - пропускаем пустые строки
       const validRows = parsedData.filter(row => {
         const mappedRow = mapRow(row);
+        
+        // Пропускаем полностью пустые строки
+        const hasAnyData = Object.values(mappedRow).some(val => val && String(val).trim());
+        if (!hasAnyData) return false;
+        
         const finalDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
-        return mappedRow.title && finalDate;
+        return mappedRow.title && String(mappedRow.title).trim() && finalDate;
       });
 
       // Normalize data
