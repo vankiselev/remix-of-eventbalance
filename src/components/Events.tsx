@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { format } from "date-fns";
@@ -375,13 +376,27 @@ const Events = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="text-sm mb-2 block font-medium">Период</div>
-              <Button
-                variant={showFutureOnly ? "outline" : "default"}
-                onClick={() => setShowFutureOnly(!showFutureOnly)}
-                className="w-full"
+              <ToggleGroup 
+                type="single" 
+                value={showFutureOnly ? "future" : "all"}
+                onValueChange={(value) => {
+                  if (value) setShowFutureOnly(value === "future");
+                }}
+                className="grid grid-cols-2 w-full"
               >
-                {showFutureOnly ? "Все мероприятия" : "Предстоящие мероприятия"}
-              </Button>
+                <ToggleGroupItem 
+                  value="future" 
+                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                >
+                  Предстоящие
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="all"
+                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                >
+                  Все мероприятия
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             <div className="flex-1">
               <div className="text-sm mb-2 block font-medium">Месяц</div>
