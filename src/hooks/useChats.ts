@@ -64,20 +64,20 @@ export const useChats = () => {
             .select('user_id')
             .eq('chat_room_id', room.id);
 
-          const participantsWithProfiles = await Promise.all(
-            (participants || []).map(async (p) => {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name, avatar_url')
-                .eq('id', p.user_id)
-                .single();
+          // Use SECURITY DEFINER function to bypass profiles RLS for non-admins
+          const { data: allProfiles } = await supabase.rpc('get_all_basic_profiles');
+          const profileMap = new Map((allProfiles || []).map((p: any) => [p.id, p]));
 
-              return {
-                user_id: p.user_id,
-                profiles: profile || { full_name: '', avatar_url: null },
-              };
-            })
-          );
+          const participantsWithProfiles = (participants || []).map((p) => {
+            const profile = profileMap.get(p.user_id);
+            return {
+              user_id: p.user_id,
+              profiles: {
+                full_name: profile?.full_name || '',
+                avatar_url: profile?.avatar_url || null,
+              },
+            };
+          });
 
           return {
             ...room,

@@ -21,19 +21,16 @@ export const NewChatDialog = ({ open, onOpenChange, onCreateChat }: NewChatDialo
   const [isGroup, setIsGroup] = useState(false);
 
   const { data: users = [] } = useQuery({
-    queryKey: ['users-for-chat'],
+    queryKey: ['users-for-chat', open],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, email')
-        .neq('id', user.id)
-        .eq('employment_status', 'active');
-
+      // Use security definer function to avoid RLS issues for non-admins
+      const { data, error } = await supabase.rpc('get_all_basic_profiles');
       if (error) throw error;
-      return data;
+
+      return (data || []).filter((u: any) => u.id !== user.id);
     },
     enabled: open,
   });
