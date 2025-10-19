@@ -1,0 +1,40 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+export const useChatUnread = () => {
+  const { data: totalUnread = 0 } = useQuery({
+    queryKey: ['chat-unread'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 0;
+
+      // Get user's chat rooms
+      const { data: chatParticipants, error: participantsError } = await supabase
+        .from('chat_participants')
+        .select('chat_room_id, last_read_at')
+        .eq('user_id', user.id);
+
+      if (participantsError || !chatParticipants || chatParticipants.length === 0) {
+        return 0;
+      }
+
+      // Count unread messages across all chats
+      let totalCount = 0;
+      
+      for (const participant of chatParticipants) {
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('chat_room_id', participant.chat_room_id)
+          .gt('created_at', participant.last_read_at || new Date(0).toISOString())
+          .neq('sender_id', user.id);
+
+        totalCount += count || 0;
+      }
+
+      return totalCount;
+    },
+  });
+
+  return { totalUnread };
+};

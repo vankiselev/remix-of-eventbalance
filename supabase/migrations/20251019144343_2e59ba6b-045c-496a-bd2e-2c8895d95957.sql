@@ -1,0 +1,266 @@
+-- Create chat_rooms table for individual and group chats
+CREATE TABLE public.chat_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT,
+  is_group BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  avatar_url TEXT,
+  description TEXT
+);
+
+-- Create chat_participants table
+CREATE TABLE public.chat_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  last_read_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  is_admin BOOLEAN DEFAULT false,
+  UNIQUE(chat_room_id, user_id)
+);
+
+-- Create messages table
+CREATE TABLE public.messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  is_edited BOOLEAN DEFAULT false,
+  reply_to_id UUID REFERENCES public.messages(id) ON DELETE SET NULL
+);
+
+-- Create message_attachments table
+CREATE TABLE public.message_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  file_type TEXT NOT NULL,
+  file_size BIGINT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Create message_read_status table
+CREATE TABLE public.message_read_status (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  read_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  UNIQUE(message_id, user_id)
+);
+
+-- Enable RLS
+ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.message_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.message_read_status ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for chat_rooms
+CREATE POLICY "Users can view chats they participate in"
+  ON public.chat_rooms FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_participants
+      WHERE chat_participants.chat_room_id = chat_rooms.id
+        AND chat_participants.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Active users can create chat rooms"
+  ON public.chat_rooms FOR INSERT
+  WITH CHECK (
+    auth.uid() = created_by AND
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+        AND profiles.employment_status = 'active'
+    )
+  );
+
+CREATE POLICY "Chat admins can update chat rooms"
+  ON public.chat_rooms FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_participants
+      WHERE chat_participants.chat_room_id = chat_rooms.id
+        AND chat_participants.user_id = auth.uid()
+        AND (chat_participants.is_admin = true OR chat_rooms.created_by = auth.uid())
+    )
+  );
+
+-- RLS Policies for chat_participants
+CREATE POLICY "Users can view participants in their chats"
+  ON public.chat_participants FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_participants cp
+      WHERE cp.chat_room_id = chat_participants.chat_room_id
+        AND cp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Chat creators and admins can add participants"
+  ON public.chat_participants FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.chat_rooms
+      WHERE chat_rooms.id = chat_participants.chat_room_id
+        AND (
+          chat_rooms.created_by = auth.uid() OR
+          EXISTS (
+            SELECT 1 FROM public.chat_participants cp
+            WHERE cp.chat_room_id = chat_participants.chat_room_id
+              AND cp.user_id = auth.uid()
+              AND cp.is_admin = true
+          )
+        )
+    )
+  );
+
+CREATE POLICY "Users can leave chats"
+  ON public.chat_participants FOR DELETE
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own last_read_at"
+  ON public.chat_participants FOR UPDATE
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- RLS Policies for messages
+CREATE POLICY "Users can view messages in their chats"
+  ON public.messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_participants
+      WHERE chat_participants.chat_room_id = messages.chat_room_id
+        AND chat_participants.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can send messages to their chats"
+  ON public.messages FOR INSERT
+  WITH CHECK (
+    auth.uid() = sender_id AND
+    EXISTS (
+      SELECT 1 FROM public.chat_participants
+      WHERE chat_participants.chat_room_id = messages.chat_room_id
+        AND chat_participants.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update their own messages"
+  ON public.messages FOR UPDATE
+  USING (sender_id = auth.uid())
+  WITH CHECK (sender_id = auth.uid());
+
+CREATE POLICY "Users can delete their own messages"
+  ON public.messages FOR DELETE
+  USING (sender_id = auth.uid());
+
+-- RLS Policies for message_attachments
+CREATE POLICY "Users can view attachments in their chats"
+  ON public.message_attachments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.messages
+      JOIN public.chat_participants ON chat_participants.chat_room_id = messages.chat_room_id
+      WHERE messages.id = message_attachments.message_id
+        AND chat_participants.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can add attachments to their messages"
+  ON public.message_attachments FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.messages
+      WHERE messages.id = message_attachments.message_id
+        AND messages.sender_id = auth.uid()
+    )
+  );
+
+-- RLS Policies for message_read_status
+CREATE POLICY "Users can view read status in their chats"
+  ON public.message_read_status FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.messages
+      JOIN public.chat_participants ON chat_participants.chat_room_id = messages.chat_room_id
+      WHERE messages.id = message_read_status.message_id
+        AND chat_participants.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can mark messages as read"
+  ON public.message_read_status FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Create indexes for better performance
+CREATE INDEX idx_chat_participants_user_id ON public.chat_participants(user_id);
+CREATE INDEX idx_chat_participants_chat_room_id ON public.chat_participants(chat_room_id);
+CREATE INDEX idx_messages_chat_room_id ON public.messages(chat_room_id);
+CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
+CREATE INDEX idx_message_attachments_message_id ON public.message_attachments(message_id);
+CREATE INDEX idx_message_read_status_message_id ON public.message_read_status(message_id);
+CREATE INDEX idx_message_read_status_user_id ON public.message_read_status(user_id);
+
+-- Create storage bucket for chat attachments
+INSERT INTO storage.buckets (id, name, public) VALUES ('chat-attachments', 'chat-attachments', false);
+
+-- Storage policies for chat-attachments
+CREATE POLICY "Users can upload attachments"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'chat-attachments' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can view attachments in their chats"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'chat-attachments' AND
+    EXISTS (
+      SELECT 1 FROM public.message_attachments
+      WHERE message_attachments.file_url LIKE '%' || storage.objects.name
+        AND EXISTS (
+          SELECT 1 FROM public.messages
+          JOIN public.chat_participants ON chat_participants.chat_room_id = messages.chat_room_id
+          WHERE messages.id = message_attachments.message_id
+            AND chat_participants.user_id = auth.uid()
+        )
+    )
+  );
+
+CREATE POLICY "Users can delete their own attachments"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'chat-attachments' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Enable realtime for messages
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_participants;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.message_read_status;
+
+-- Create trigger for updating chat_rooms.updated_at
+CREATE OR REPLACE FUNCTION update_chat_room_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.chat_rooms
+  SET updated_at = now()
+  WHERE id = NEW.chat_room_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_chat_room_on_new_message
+  AFTER INSERT ON public.messages
+  FOR EACH ROW
+  EXECUTE FUNCTION update_chat_room_updated_at();

@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, MessageSquare } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventsImportDialog from "@/components/EventsImportDialog";
+import { useChatUnread } from "@/hooks/useChatUnread";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,6 +34,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { isFinancier } = useFinancierPermissions();
+  const { totalUnread } = useChatUnread();
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
@@ -146,6 +149,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
+    { path: "/messages", label: "Сообщения", icon: MessageSquare, badge: totalUnread },
     { path: "/reports", label: "Отчеты", icon: FileText },
     ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
@@ -342,7 +346,12 @@ const Layout = ({ children }: LayoutProps) => {
                           >
                             <Icon className="h-4 w-4 flex-shrink-0" />
                             {!sidebarCollapsed && (
-                              <span className="ml-3 truncate">{item.label}</span>
+                              <span className="ml-3 truncate flex-1">{item.label}</span>
+                            )}
+                            {!sidebarCollapsed && item.badge && item.badge > 0 && (
+                              <Badge variant="destructive" className="ml-auto">
+                                {item.badge}
+                              </Badge>
                             )}
                           </Button>
                         </li>
