@@ -1833,6 +1833,14 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      is_chat_admin: {
+        Args: { _chat_room_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_chat_participant: {
+        Args: { _chat_room_id: string; _user_id: string }
+        Returns: boolean
+      }
       log_profile_edit: {
         Args: {
           p_field_name: string
