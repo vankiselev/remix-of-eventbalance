@@ -382,7 +382,7 @@ const Events = () => {
                 onValueChange={(value) => {
                   if (value) setShowFutureOnly(value === "future");
                 }}
-                className="grid grid-cols-2 w-full"
+                className="grid grid-cols-2 w-full border rounded-md"
               >
                 <ToggleGroupItem 
                   value="future" 
