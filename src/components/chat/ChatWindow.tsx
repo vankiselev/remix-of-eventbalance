@@ -3,11 +3,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Paperclip, X } from "lucide-react";
+import { Send, Paperclip, X, Info } from "lucide-react";
 import { useMessages, type Message } from "@/hooks/useMessages";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { ChatMediaPanel } from "./ChatMediaPanel";
 
 interface ChatWindowProps {
   chatRoomId: string;
@@ -17,6 +18,7 @@ interface ChatWindowProps {
 export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
   const [messageText, setMessageText] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -56,6 +58,17 @@ export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
 
   return (
     <div className="flex flex-col h-full">
+      <div className="border-b p-3 flex items-center justify-between">
+        <h3 className="font-semibold">Чат</h3>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => setMediaPanelOpen(true)}
+        >
+          <Info className="w-4 h-4" />
+        </Button>
+      </div>
+
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message: Message) => {
@@ -177,6 +190,12 @@ export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
           </Button>
         </div>
       </div>
+
+      <ChatMediaPanel 
+        chatRoomId={chatRoomId}
+        open={mediaPanelOpen}
+        onOpenChange={setMediaPanelOpen}
+      />
     </div>
   );
 };

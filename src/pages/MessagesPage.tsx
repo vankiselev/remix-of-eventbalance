@@ -14,6 +14,11 @@ const MessagesPage = () => {
   const { chats, isLoading, createChat } = useChats();
   const { user } = useAuth();
 
+  const handleCreateChat = (data: any) => {
+    createChat(data);
+    setNewChatDialogOpen(false);
+  };
+
   if (!user) return null;
 
   return (
@@ -70,7 +75,7 @@ const MessagesPage = () => {
       <NewChatDialog
         open={newChatDialogOpen}
         onOpenChange={setNewChatDialogOpen}
-        onCreateChat={createChat}
+        onCreateChat={handleCreateChat}
       />
     </Layout>
   );

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export interface ChatRoom {
   id: string;
@@ -174,6 +175,39 @@ export const useChats = () => {
       });
     },
   });
+
+  // Subscribe to realtime changes for chat rooms and participants
+  useEffect(() => {
+    const channel = supabase
+      .channel('chats-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_rooms',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chats'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_participants',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const totalUnread = chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
 

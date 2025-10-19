@@ -175,7 +175,7 @@ export const useMessages = (chatRoomId: string | null) => {
       return message;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', chatRoomId] });
+      // Don't invalidate messages - realtime will handle it
       queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
     onError: (error) => {
