@@ -376,11 +376,11 @@ const Events = () => {
             <div className="flex-1">
               <div className="text-sm mb-2 block font-medium">Период</div>
               <Button
-                variant={showFutureOnly ? "default" : "outline"}
+                variant={showFutureOnly ? "outline" : "default"}
                 onClick={() => setShowFutureOnly(!showFutureOnly)}
                 className="w-full"
               >
-                {showFutureOnly ? "Будущие события" : "Все события"}
+                {showFutureOnly ? "Все мероприятия" : "Предстоящие мероприятия"}
               </Button>
             </div>
             <div className="flex-1">
