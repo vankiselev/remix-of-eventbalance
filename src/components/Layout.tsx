@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
+import EventsImportDialog from "@/components/EventsImportDialog";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,6 +28,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const { isFinancier } = useFinancierPermissions();
   
   const sidebarCollapsed = !sidebarHovered;
@@ -138,6 +140,18 @@ const Layout = ({ children }: LayoutProps) => {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                )}
+                
+                {(location.pathname === '/calendar' || location.pathname === '/events') && userRole === 'admin' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0 flex items-center gap-2"
+                    onClick={() => setShowEventsImportDialog(true)}
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Импорт мероприятий
+                  </Button>
                 )}
               </div>
 
@@ -263,6 +277,21 @@ const Layout = ({ children }: LayoutProps) => {
           <MobileBottomNav />
         </div>
       )}
+      
+      {/* Events Import Dialog */}
+      <EventsImportDialog 
+        open={showEventsImportDialog}
+        onOpenChange={setShowEventsImportDialog}
+        onImportComplete={() => {
+          setShowEventsImportDialog(false);
+          toast({
+            title: "Импорт завершен",
+            description: "Мероприятия успешно импортированы",
+          });
+          // Перезагрузка страницы для обновления данных
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };
