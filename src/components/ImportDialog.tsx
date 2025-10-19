@@ -406,16 +406,41 @@ const ImportDialog = ({
 
         {step === 1 && (
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="file">Выберите файл (.xlsx или .csv)</Label>
-              <Input
+          <div>
+            <Label htmlFor="file" className="text-base font-semibold">Выберите файл (.xlsx или .csv)</Label>
+            <div className="mt-4 flex flex-col items-center gap-4 p-8 border-2 border-dashed border-primary/40 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors">
+              <input
                 id="file"
                 type="file"
                 accept=".xlsx,.csv"
                 onChange={handleFileUpload}
-                className="mt-2"
+                className="hidden"
               />
+              <label 
+                htmlFor="file" 
+                className="cursor-pointer w-full"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-primary">Нажмите для выбора файла</p>
+                    <p className="text-sm text-muted-foreground mt-1">или перетащите файл сюда</p>
+                  </div>
+                </div>
+              </label>
+              {file && (
+                <div className="text-sm text-muted-foreground">
+                  Выбран файл: <span className="font-medium text-foreground">{file.name}</span>
+                </div>
+              )}
             </div>
+          </div>
             <div className="text-sm text-muted-foreground">
               <p>Поддерживаемые форматы:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
