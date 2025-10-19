@@ -280,8 +280,9 @@ const EventsImportDialog = ({
     
     // Если выбрано несколько листов, объединяем данные
     let allParsedData: ParsedRow[] = [];
-    let commonHeaders: string[] = [];
+    const allHeadersSet = new Set<string>();
     
+    // Собираем все уникальные заголовки из всех листов
     for (let i = 0; i < selectedSheets.length; i++) {
       const sheetName = selectedSheets[i];
       const worksheet = workbook.Sheets[sheetName];
@@ -289,12 +290,10 @@ const EventsImportDialog = ({
       
       if (rows.length > 0) {
         const { index, headers: hdr } = findHeaderRow(rows);
-        const fileHeaders = hdr.map(h => String(h || '').trim());
+        const fileHeaders = hdr.map(h => String(h || '').trim()).filter(h => h);
         
-        // Используем заголовки из первого листа
-        if (i === 0) {
-          commonHeaders = fileHeaders;
-        }
+        // Добавляем все заголовки в общий набор
+        fileHeaders.forEach(h => allHeadersSet.add(h));
         
         const processedRows = handleMergedCells(rows, index, fileHeaders);
         const data = buildObjectsFromRows(processedRows, index, fileHeaders);
@@ -302,9 +301,12 @@ const EventsImportDialog = ({
       }
     }
     
+    // Создаем объединенный массив заголовков
+    const commonHeaders = Array.from(allHeadersSet);
+    
     toast({ 
       title: 'Объединены данные', 
-      description: `Загружено ${allParsedData.length} записей из ${selectedSheets.length} листов` 
+      description: `Загружено ${allParsedData.length} записей из ${selectedSheets.length} листов (${commonHeaders.length} колонок)` 
     });
     
     setHeaders(commonHeaders);
