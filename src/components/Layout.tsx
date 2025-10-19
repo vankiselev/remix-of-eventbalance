@@ -143,15 +143,39 @@ const Layout = ({ children }: LayoutProps) => {
                 )}
                 
                 {(location.pathname === '/calendar' || location.pathname === '/events') && userRole === 'admin' && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0 flex items-center gap-2"
-                    onClick={() => setShowEventsImportDialog(true)}
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Импорт мероприятий
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div
+                        onMouseEnter={(e) => {
+                          const button = e.currentTarget.querySelector('button');
+                          button?.click();
+                        }}
+                      >
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
+                        >
+                          Редактирование
+                        </Button>
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align="start" 
+                      className="w-56 bg-background z-50"
+                      onMouseLeave={(e) => {
+                        const trigger = e.currentTarget.previousElementSibling;
+                        if (trigger && !trigger.contains(e.relatedTarget as Node)) {
+                          // Close dropdown
+                        }
+                      }}
+                    >
+                      <DropdownMenuItem onClick={() => setShowEventsImportDialog(true)}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Импорт мероприятий
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
 
