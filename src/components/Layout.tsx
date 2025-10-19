@@ -13,6 +13,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventsImportDialog from "@/components/EventsImportDialog";
 
 interface LayoutProps {
@@ -29,6 +30,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { isFinancier } = useFinancierPermissions();
   
   const sidebarCollapsed = !sidebarHovered;
@@ -55,6 +57,80 @@ const Layout = ({ children }: LayoutProps) => {
         variant: "destructive",
         title: t('error'),
         description: "Не удалось выйти из системы",
+      });
+    }
+  };
+
+  const handleEventsExport = async () => {
+    try {
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('start_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Подготовка данных для экспорта
+      const exportData = events?.map(event => ({
+        'Дата': event.start_date,
+        'Название': event.name,
+        'Описание': event.description || '',
+        'Время': event.event_time ? `${event.event_time}${event.end_time ? ' - ' + event.end_time : ''}` : '',
+        'Место': event.location || '',
+        'Статус': event.status,
+        'Проект-оуна': event.project_owner || '',
+      })) || [];
+
+      // Конвертируем в CSV
+      const headers = Object.keys(exportData[0] || {});
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+      ].join('\n');
+
+      // Скачиваем файл
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `events_export_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+
+      toast({
+        title: "Экспорт завершен",
+        description: `Экспортировано ${events?.length || 0} мероприятий`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка экспорта",
+        description: "Не удалось экспортировать мероприятия",
+      });
+    }
+  };
+
+  const handleDeleteAllEvents = async () => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (error) throw error;
+
+      toast({
+        title: "Мероприятия удалены",
+        description: "Все мероприятия успешно удалены",
+      });
+      
+      setShowDeleteConfirm(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка удаления",
+        description: "Не удалось удалить мероприятия",
       });
     }
   };
@@ -170,9 +246,20 @@ const Layout = ({ children }: LayoutProps) => {
                         }
                       }}
                     >
+                      <DropdownMenuItem onClick={handleEventsExport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Экспорт CSV
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowEventsImportDialog(true)}>
                         <FileSpreadsheet className="mr-2 h-4 w-4" />
                         Импорт мероприятий
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Удалить все мероприятия
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -316,6 +403,27 @@ const Layout = ({ children }: LayoutProps) => {
           window.location.reload();
         }}
       />
+
+      {/* Delete All Events Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить все мероприятия?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Все мероприятия будут безвозвратно удалены из базы данных.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAllEvents}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Удалить все
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
