@@ -59,7 +59,7 @@ const Events = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
-  const [showFutureOnly, setShowFutureOnly] = useState(true); // По умолчанию показываем только будущие события
+  const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all'>('future'); // По умолчанию показываем только будущие события
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
@@ -209,16 +209,24 @@ const Events = () => {
   const filterEventsByDate = (eventsList: Event[]) => {
     let filtered = eventsList;
     
-    // Фильтр по будущим событиям (от сегодня и далее)
-    if (showFutureOnly) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Фильтр по периоду
+    if (periodFilter === 'future') {
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.start_date);
         eventDate.setHours(0, 0, 0, 0);
         return eventDate >= today;
       });
+    } else if (periodFilter === 'past') {
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate < today;
+      });
     }
+    // Если 'all', то не фильтруем по дате
     
     if (selectedMonth) {
       filtered = filtered.filter(event => {
@@ -295,7 +303,7 @@ const Events = () => {
     setSelectedYear(null);
     setSearchQuery("");
     setSortByName(false);
-    setShowFutureOnly(true);
+    setPeriodFilter('future');
   };
 
   const filteredEvents = getFilteredAndSortedEvents();
@@ -378,23 +386,29 @@ const Events = () => {
               <div className="text-sm mb-2 block font-medium">Период</div>
               <ToggleGroup 
                 type="single" 
-                value={showFutureOnly ? "future" : "all"}
+                value={periodFilter}
                 onValueChange={(value) => {
-                  if (value) setShowFutureOnly(value === "future");
+                  if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
                 }}
-                className="grid grid-cols-2 w-full border rounded-md"
+                className="grid grid-cols-3 w-full border rounded-md"
               >
                 <ToggleGroupItem 
                   value="future" 
-                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
                 >
                   Предстоящие
                 </ToggleGroupItem>
                 <ToggleGroupItem 
-                  value="all"
-                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  value="past"
+                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
                 >
-                  Все мероприятия
+                  Прошедшие
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="all"
+                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                >
+                  Все
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
@@ -435,7 +449,7 @@ const Events = () => {
                 </SelectContent>
               </Select>
             </div>
-            {(selectedMonth || selectedYear || searchQuery || sortByName || !showFutureOnly) && (
+            {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
               <div className="flex items-end">
                 <Button
                   variant="outline"
@@ -455,17 +469,17 @@ const Events = () => {
       <div className="bg-card text-card-foreground rounded-lg border p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">
-            {selectedMonth || selectedYear || searchQuery || !showFutureOnly ? 'Отфильтровано' : 'Предстоящих праздников'}
+            {selectedMonth || selectedYear || searchQuery || periodFilter !== 'future' ? 'Отфильтровано' : 'Предстоящих мероприятий'}
           </h3>
         </div>
         <div className="text-2xl font-bold">
           {filteredEvents.length}
-          {(selectedMonth || selectedYear || searchQuery || !showFutureOnly) && (
+          {(selectedMonth || selectedYear || searchQuery || periodFilter !== 'future') && (
             <span className="text-lg text-muted-foreground"> / {events.length}</span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {selectedMonth || selectedYear || searchQuery || !showFutureOnly
+          {selectedMonth || selectedYear || searchQuery || periodFilter !== 'future'
             ? 'Найдено мероприятий' 
             : 'Мероприятий от сегодня'}
         </p>
