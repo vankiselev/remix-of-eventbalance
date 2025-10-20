@@ -68,7 +68,7 @@ export const MoneyTransferRequests = () => {
       if (error) throw error;
 
       // Fetch sender profiles
-      const senderIds = data?.map(t => t.created_by).filter(Boolean) || [];
+      const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
       
       if (senderIds.length > 0) {
         const { data: profiles } = await supabase
@@ -79,13 +79,25 @@ export const MoneyTransferRequests = () => {
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
         const enrichedData = (data || []).map(t => ({
-          ...t,
-          transfer_from_user: profileMap.get(t.created_by) || null,
+          id: t.id,
+          operation_date: t.operation_date,
+          description: t.description,
+          expense_amount: t.expense_amount,
+          cash_type: t.cash_type,
+          created_by: t.created_by,
+          transfer_from_user: profileMap.get(t.created_by) || undefined,
         }));
 
         setPendingTransfers(enrichedData);
       } else {
-        setPendingTransfers(data || []);
+        setPendingTransfers((data || []).map(t => ({
+          id: t.id,
+          operation_date: t.operation_date,
+          description: t.description,
+          expense_amount: t.expense_amount,
+          cash_type: t.cash_type,
+          created_by: t.created_by,
+        })));
       }
     } catch (error) {
       console.error('Error fetching pending transfers:', error);
