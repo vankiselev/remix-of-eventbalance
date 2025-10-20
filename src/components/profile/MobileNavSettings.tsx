@@ -115,7 +115,24 @@ export const MobileNavSettings = () => {
 
   const updateItem = (index: number, field: keyof NavItem, value: string) => {
     const updated = [...navItems];
-    updated[index] = { ...updated[index], [field]: value };
+    
+    if (field === 'path') {
+      // Автоматически подставляем иконку и label из доступных маршрутов
+      const route = availableRoutes.find(r => r.path === value);
+      if (route) {
+        updated[index] = { 
+          ...updated[index], 
+          path: value,
+          icon: route.icon,
+          label: route.label
+        };
+      } else {
+        updated[index] = { ...updated[index], [field]: value };
+      }
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+    
     setNavItems(updated);
   };
 
