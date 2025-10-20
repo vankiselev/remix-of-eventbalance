@@ -1165,6 +1165,7 @@ export type Database = {
           google_sheet_id: string | null
           google_sheet_url: string | null
           id: string
+          mobile_nav_settings: Json | null
           phone: string | null
           phone_e164: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1188,6 +1189,7 @@ export type Database = {
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id: string
+          mobile_nav_settings?: Json | null
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -1211,6 +1213,7 @@ export type Database = {
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id?: string
+          mobile_nav_settings?: Json | null
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]

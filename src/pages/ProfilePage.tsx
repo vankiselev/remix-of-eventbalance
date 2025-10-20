@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2 } from "lucide-react";
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { MobileNavSettings } from '@/components/profile/MobileNavSettings';
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Имя обязательно"),
@@ -359,6 +360,10 @@ const ProfilePage = () => {
             </Form>
           </CardContent>
         </Card>
+
+        <div className="md:hidden">
+          <MobileNavSettings />
+        </div>
 
         <NotificationSettings />
       </div>
