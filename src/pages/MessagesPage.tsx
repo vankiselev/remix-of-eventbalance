@@ -27,7 +27,7 @@ const MessagesPage = () => {
   return (
     <Layout>
       <div className={cn(
-        "flex flex-1 min-h-0 h-full overflow-hidden"
+        "flex flex-1 min-h-0 h-full overflow-hidden -m-[clamp(1rem,2vw,2rem)]"
       )}>
         {/* Mobile: Show either chat list or chat window */}
         {isMobile ? (
@@ -111,7 +111,7 @@ const MessagesPage = () => {
               )}
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-hidden">
               {selectedChatId ? (
                 <ChatWindow chatRoomId={selectedChatId} currentUserId={user.id} />
               ) : (
