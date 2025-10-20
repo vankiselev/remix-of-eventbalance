@@ -439,8 +439,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         }
 
         // Send notification to admins for large transactions (over 10000)
+        // But only if user is not admin themselves
         const amount = data.expense_amount || data.income_amount || 0;
-        if (amount >= 10000 && !isMoneyTransfer) {
+        if (amount >= 10000 && !isMoneyTransfer && !isAdmin) {
           const { sendNotificationToAdmins } = await import('@/utils/notifications');
           const type = data.expense_amount ? 'расход' : 'приход';
           const { data: profile } = await supabase

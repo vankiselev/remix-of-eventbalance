@@ -18,6 +18,7 @@ import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
 import { TransactionsCardView } from "@/components/finance/TransactionsCardView";
 import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
 import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
+import { FinancialAuditLog } from "@/components/finance/FinancialAuditLog";
 
 interface CashSummary {
   total_cash: number;
@@ -565,7 +566,7 @@ const Finances = () => {
       <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
-            <TabsList className="grid w-full grid-cols-3 h-10">
+            <TabsList className="grid w-full grid-cols-4 h-10">
               <TabsTrigger 
                 value="my-transactions" 
                 className="text-xs md:text-sm"
@@ -583,6 +584,12 @@ const Finances = () => {
                 className="text-xs md:text-sm"
               >
                 Все транзакции
+              </TabsTrigger>
+              <TabsTrigger 
+                value="audit-log" 
+                className="text-xs md:text-sm"
+              >
+                Журнал
               </TabsTrigger>
             </TabsList>
           </CardHeader>
@@ -639,6 +646,12 @@ const Finances = () => {
                   onEdit={handleEditTransaction}
                 />
               )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="audit-log" className="mt-0 w-full">
+              <div className="pt-4 w-full">
+                <FinancialAuditLog />
               </div>
             </TabsContent>
           </CardContent>
