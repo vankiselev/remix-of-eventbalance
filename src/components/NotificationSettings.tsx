@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle, Volume2 } from 'lucide-react';
+import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle, Volume2, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   subscribeToPushNotifications, 
@@ -14,6 +14,7 @@ import {
 } from '@/utils/pushNotifications';
 import { notificationSound } from '@/utils/notificationSound';
 import { NotificationsFAQ } from './NotificationsFAQ';
+import { supabase } from '@/integrations/supabase/client';
 
 export const NotificationSettings = () => {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
@@ -33,6 +34,31 @@ export const NotificationSettings = () => {
 
   const handleTestSound = () => {
     notificationSound.testSound();
+  };
+
+  const handleTestPush = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Не авторизован', description: 'Войдите в аккаунт', variant: 'destructive' });
+        return;
+      }
+      const { error, data } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: user.id,
+          title: 'Тестовое уведомление',
+          message: 'Если вы видите это — Web Push работает',
+          type: 'system',
+          data: { source: 'test' },
+        }
+      });
+      if (error) throw error;
+      toast({ title: 'Отправлено', description: 'Проверьте уведомления (может прийти с задержкой 1-2 сек.)' });
+      console.log('Test push response:', data);
+    } catch (e: any) {
+      console.error('Test push failed:', e);
+      toast({ title: 'Ошибка отправки теста', description: e?.message || 'Не удалось отправить уведомление', variant: 'destructive' });
+    }
   };
 
   useEffect(() => {
@@ -215,12 +241,18 @@ export const NotificationSettings = () => {
                   )}
                 </div>
               </div>
-              <Switch
-                id="push-web"
-                checked={isPushEnabled}
-                onCheckedChange={handleTogglePush}
-                disabled={isChecking || notificationPermission === 'denied'}
-              />
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="push-web"
+                  checked={isPushEnabled}
+                  onCheckedChange={handleTogglePush}
+                  disabled={isChecking || notificationPermission === 'denied'}
+                />
+                <Button variant="outline" size="sm" onClick={handleTestPush} disabled={!isPushEnabled}>
+                  <Send className="h-4 w-4 mr-1" />
+                  Тест
+                </Button>
+              </div>
             </div>
 
             {notificationPermission === 'denied' && (
