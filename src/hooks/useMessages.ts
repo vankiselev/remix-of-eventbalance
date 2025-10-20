@@ -35,37 +35,24 @@ export const useMessages = (chatRoomId: string | null) => {
     queryFn: async () => {
       if (!chatRoomId) return [];
 
+      // Optimized: Single query with joins instead of N+1 queries
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          profiles!messages_sender_id_fkey(full_name, avatar_url),
+          message_attachments(*)
+        `)
         .eq('chat_room_id', chatRoomId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      // Get sender profiles and attachments for each message
-      const messagesWithDetails = await Promise.all(
-        (data || []).map(async (msg) => {
-          const { data: sender } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', msg.sender_id)
-            .single();
-
-          const { data: attachments } = await supabase
-            .from('message_attachments')
-            .select('*')
-            .eq('message_id', msg.id);
-
-          return {
-            ...msg,
-            sender: sender || { full_name: '', avatar_url: null },
-            attachments: attachments || [],
-          };
-        })
-      );
-
-      return messagesWithDetails as Message[];
+      return (data || []).map(msg => ({
+        ...msg,
+        sender: msg.profiles || { full_name: '', avatar_url: null },
+        attachments: msg.message_attachments || [],
+      })) as Message[];
     },
     enabled: !!chatRoomId,
   });
@@ -92,28 +79,22 @@ export const useMessages = (chatRoomId: string | null) => {
         async (payload) => {
           const currentUserId = await getCurrentUserId();
           
+          // Optimized: Single query with joins
           const { data: message } = await supabase
             .from('messages')
-            .select('*')
+            .select(`
+              *,
+              profiles!messages_sender_id_fkey(full_name, avatar_url),
+              message_attachments(*)
+            `)
             .eq('id', payload.new.id)
             .single();
 
           if (message) {
-            const { data: sender } = await supabase
-              .from('profiles')
-              .select('full_name, avatar_url')
-              .eq('id', message.sender_id)
-              .single();
-
-            const { data: attachments } = await supabase
-              .from('message_attachments')
-              .select('*')
-              .eq('message_id', message.id);
-
             const newMessage = {
               ...message,
-              sender: sender || { full_name: '', avatar_url: null },
-              attachments: attachments || [],
+              sender: message.profiles || { full_name: '', avatar_url: null },
+              attachments: message.message_attachments || [],
             };
 
             queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => 
@@ -127,12 +108,13 @@ export const useMessages = (chatRoomId: string | null) => {
 
               // Show browser notification
               if ('Notification' in window && Notification.permission === 'granted') {
-                const senderName = sender?.full_name || 'Кто-то';
+                const sender = newMessage.sender;
+                const senderName = sender && 'full_name' in sender ? sender.full_name : 'Кто-то';
                 const messageText = message.content || 'Новое сообщение';
                 
                 const notification = new Notification(senderName, {
                   body: messageText,
-                  icon: sender?.avatar_url || '/favicon.ico',
+                  icon: sender && 'avatar_url' in sender ? sender.avatar_url || '/favicon.ico' : '/favicon.ico',
                   badge: '/favicon.ico',
                   tag: `message-${message.id}`,
                 });
