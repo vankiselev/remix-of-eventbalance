@@ -376,7 +376,7 @@ const Layout = ({ children }: LayoutProps) => {
                 sidebarCollapsed ? "ml-16" : "ml-64"
               }`}
             >
-              <div className="flex-1 main-container w-full">
+              <div className="flex-1 main-container w-full flex flex-col min-h-0">
                 {children}
               </div>
               
