@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   subscribeToPushNotifications, 
@@ -12,12 +12,28 @@ import {
   checkPushSubscription,
   requestNotificationPermission 
 } from '@/utils/pushNotifications';
+import { notificationSound } from '@/utils/notificationSound';
+import { NotificationsFAQ } from './NotificationsFAQ';
 
 export const NotificationSettings = () => {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [isSoundEnabled, setIsSoundEnabled] = useState(notificationSound.isEnabled());
   const { toast } = useToast();
+
+  const handleToggleSound = (enabled: boolean) => {
+    notificationSound.setEnabled(enabled);
+    setIsSoundEnabled(enabled);
+    toast({
+      title: enabled ? 'Звук включен' : 'Звук отключен',
+      description: enabled ? 'Вы будете слышать звуковые уведомления' : 'Звуковые уведомления отключены',
+    });
+  };
+
+  const handleTestSound = () => {
+    notificationSound.testSound();
+  };
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -102,6 +118,7 @@ export const NotificationSettings = () => {
   const isSupported = 'Notification' in window && 'serviceWorker' in navigator;
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -113,6 +130,35 @@ export const NotificationSettings = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Sound notifications */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-3 flex-1">
+            <Volume2 className="h-5 w-5 text-primary" />
+            <div>
+              <Label htmlFor="sound-notifications" className="text-base font-medium">
+                Звуковые уведомления
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Воспроизводить звук при получении новых уведомлений
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="sound-notifications"
+              checked={isSoundEnabled}
+              onCheckedChange={handleToggleSound}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestSound}
+            >
+              Тест
+            </Button>
+          </div>
+        </div>
+
         {!isSupported ? (
           <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
             <BellOff className="h-5 w-5 text-muted-foreground" />
@@ -198,5 +244,8 @@ export const NotificationSettings = () => {
         )}
       </CardContent>
     </Card>
+
+    <NotificationsFAQ />
+    </div>
   );
 };
