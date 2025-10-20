@@ -69,39 +69,27 @@ export const MoneyTransferRequests = () => {
 
       if (error) throw error;
 
-      console.log('Pending transfers raw data:', data);
-
       // Fetch sender profiles
       const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
-      console.log('Sender IDs to fetch:', senderIds);
       
       if (senderIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
+        const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, email, avatar_url')
           .in('id', senderIds);
 
-        console.log('Fetched profiles:', profiles);
-        console.log('Profiles error:', profilesError);
-
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-        console.log('Profile map:', profileMap);
 
-        const enrichedData = (data || []).map(t => {
-          const profile = profileMap.get(t.created_by);
-          console.log(`Transaction ${t.id} - created_by: ${t.created_by}, found profile:`, profile);
-          return {
-            id: t.id,
-            operation_date: t.operation_date,
-            description: t.description,
-            expense_amount: t.expense_amount,
-            cash_type: t.cash_type,
-            created_by: t.created_by,
-            transfer_from_user: profile || undefined,
-          };
-        });
+        const enrichedData = (data || []).map(t => ({
+          id: t.id,
+          operation_date: t.operation_date,
+          description: t.description,
+          expense_amount: t.expense_amount,
+          cash_type: t.cash_type,
+          created_by: t.created_by,
+          transfer_from_user: profileMap.get(t.created_by) || undefined,
+        }));
 
-        console.log('Enriched data:', enrichedData);
         setPendingTransfers(enrichedData);
       } else {
         setPendingTransfers((data || []).map(t => ({

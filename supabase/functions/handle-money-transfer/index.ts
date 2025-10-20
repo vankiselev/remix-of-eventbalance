@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation utilities
+function isValidUUID(uuid: string): boolean {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return regex.test(uuid);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -42,6 +48,22 @@ serve(async (req) => {
     if (!transaction_id || !action) {
       return new Response(
         JSON.stringify({ error: 'Missing transaction_id or action' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate inputs
+    if (!isValidUUID(transaction_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid transaction ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validActions = ['notify', 'accept', 'reject'];
+    if (!validActions.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid action. Must be notify, accept, or reject' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -226,10 +248,18 @@ serve(async (req) => {
       JSON.stringify({ error: 'Invalid action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('Error in handle-money-transfer function:', error);
+  } catch (error: any) {
+    // Log detailed errors SERVER-SIDE ONLY
+    console.error('Error in handle-money-transfer function:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Return GENERIC error to client
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to process money transfer. Please try again later.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

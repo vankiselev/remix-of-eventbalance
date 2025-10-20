@@ -10,6 +10,12 @@ interface RequestBody {
   email: string;
 }
 
+// Input validation utilities
+function isValidEmail(email: string): boolean {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email) && email.length <= 255;
+}
+
 serve(async (req) => {
   console.log('send-password-reset function called');
   
@@ -39,11 +45,12 @@ serve(async (req) => {
 
     const { email }: RequestBody = await req.json()
 
-    if (!email) {
+    if (!email || !isValidEmail(email)) {
+      // Return success to avoid email enumeration
       return new Response(
-        JSON.stringify({ error: 'Email is required' }),
+        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
         { 
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
