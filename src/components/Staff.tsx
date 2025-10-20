@@ -48,6 +48,7 @@ interface CombinedUser {
   email: string;
   full_name: string;
   role: 'admin' | 'employee';
+  roleName?: string; // New role name from role_definitions
   phone?: string;
   birth_date?: string;
   avatar_url?: string;
@@ -174,15 +175,38 @@ const Staff = () => {
         });
       }
 
+      // Fetch role assignments from new role system
+      const { data: roleAssignments } = await supabase
+        .from('user_role_assignments')
+        .select(`
+          user_id,
+          role:role_definitions(name, code, is_admin_role)
+        `);
+
+      // Create a map of roles by user_id
+      const roleMap = new Map();
+      (roleAssignments || []).forEach((assignment: any) => {
+        if (assignment.role) {
+          roleMap.set(assignment.user_id, {
+            roleName: assignment.role.name,
+            roleCode: assignment.role.code,
+            isAdmin: assignment.role.is_admin_role
+          });
+        }
+      });
+
       // Combine profiles with employee data and cash data
       const combinedUsers: CombinedUser[] = (profilesData || []).map((profile: Profile) => {
         const employeeData = employeeMap.get(profile.id);
         const cashData = cashDataMap.get(profile.id);
+        const roleData = roleMap.get(profile.id);
+        
         return {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
-          role: profile.role,
+          role: profile.role, // Keep old role for backwards compatibility
+          roleName: roleData?.roleName, // New role name from role_definitions
           phone: profile.phone,
           birth_date: profile.birth_date,
           avatar_url: profile.avatar_url,
@@ -284,8 +308,13 @@ const Staff = () => {
     return role === "admin" ? Shield : User;
   };
 
-  const getRoleLabel = (role: string) => {
-    return role === "admin" ? "Администратор" : "Сотрудник";
+  const getRoleLabel = (user: CombinedUser) => {
+    // Prefer new role name if available
+    if (user.roleName) {
+      return user.roleName;
+    }
+    // Fallback to old role system
+    return user.role === "admin" ? "Администратор" : "Сотрудник";
   };
 
   const getRoleColor = (role: string) => {
@@ -533,7 +562,7 @@ const Staff = () => {
                       <div className="flex flex-col gap-1 items-end">
                         <Badge className={`${getRoleColor(user.role)} badge-responsive`}>
                           <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="text-truncate">{getRoleLabel(user.role)}</span>
+                          <span className="text-truncate">{getRoleLabel(user)}</span>
                         </Badge>
                         {user.employment_status === 'terminated' && (
                           <Badge variant="destructive" className="badge-responsive">
