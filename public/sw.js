@@ -67,6 +67,14 @@ self.addEventListener('notificationclick', function(event) {
   if (notificationData) {
     // Route to specific pages based on notification type
     switch (notificationData.type) {
+      case 'message':
+        // Navigate to messages page with chat room ID if available
+        if (notificationData.chat_room_id) {
+          targetUrl = `/messages?chat=${notificationData.chat_room_id}`;
+        } else {
+          targetUrl = '/messages';
+        }
+        break;
       case 'transaction':
         targetUrl = '/finances';
         break;

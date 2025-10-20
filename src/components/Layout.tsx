@@ -332,7 +332,7 @@ const Layout = ({ children }: LayoutProps) => {
                         <li key={item.path}>
                           <Button
                             variant={active ? "secondary" : "ghost"}
-                            className={`w-full transition-all duration-200 ${
+                            className={`w-full transition-all duration-200 relative ${
                               sidebarCollapsed
                                 ? "justify-center px-2"
                                 : "justify-start px-3"
@@ -350,7 +350,15 @@ const Layout = ({ children }: LayoutProps) => {
                             )}
                             {!sidebarCollapsed && item.badge && item.badge > 0 && (
                               <Badge variant="destructive" className="ml-auto">
-                                {item.badge}
+                                {item.badge > 9 ? '9+' : item.badge}
+                              </Badge>
+                            )}
+                            {sidebarCollapsed && item.badge && item.badge > 0 && (
+                              <Badge 
+                                variant="destructive" 
+                                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full"
+                              >
+                                {item.badge > 9 ? '9+' : item.badge}
                               </Badge>
                             )}
                           </Button>

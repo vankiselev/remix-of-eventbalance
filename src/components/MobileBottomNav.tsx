@@ -4,6 +4,8 @@ import * as LucideIcons from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { useChatUnread } from "@/hooks/useChatUnread";
 
 interface NavItem {
   path: string;
@@ -18,6 +20,7 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const { totalUnread } = useChatUnread();
   const [mainNavItems, setMainNavItems] = useState<NavItem[]>([
     { path: "/dashboard", label: "Главная", icon: "BarChart3", enabled: true },
     { path: "/finances", label: "Финансы", icon: "DollarSign", enabled: true },
@@ -82,18 +85,29 @@ const MobileBottomNav = () => {
           {/* Dynamic main nav items */}
           {mainNavItems.slice(0, 4).map((item) => {
             const IconComponent = getIconComponent(item.icon);
+            const showBadge = item.path === '/messages' && totalUnread > 0;
             return (
               <div key={item.path} className="flex flex-col items-center gap-1.5">
-                <button
-                  onClick={() => handleNavigation(item.path)}
-                  className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
-                    isActive(item.path) 
-                      ? "border-2 border-primary text-primary bg-primary/5" 
-                      : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
-                  }`}
-                >
-                  <IconComponent className="h-5 w-5" strokeWidth={2} />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigation(item.path)}
+                    className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                      isActive(item.path) 
+                        ? "border-2 border-primary text-primary bg-primary/5" 
+                        : "border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    <IconComponent className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                  {showBadge && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] rounded-full"
+                    >
+                      {totalUnread > 9 ? '9+' : totalUnread}
+                    </Badge>
+                  )}
+                </div>
                 <span className={`text-xs font-medium ${
                   isActive(item.path) ? "text-primary" : "text-foreground"
                 }`}>{item.label}</span>
@@ -122,11 +136,12 @@ const MobileBottomNav = () => {
                 <div className="grid gap-2 pb-6">
                   {moreMenuItems.map((item) => {
                     const IconComponent = getIconComponent(item.icon);
+                    const showBadge = item.path === '/messages' && totalUnread > 0;
                     return (
                       <button
                         key={item.path}
                         onClick={() => handleNavigation(item.path)}
-                        className={`w-full flex items-center justify-start gap-3 h-12 px-4 rounded-lg transition-all duration-200 active:scale-98 ${
+                        className={`w-full flex items-center justify-start gap-3 h-12 px-4 rounded-lg transition-all duration-200 active:scale-98 relative ${
                           isActive(item.path) 
                             ? "bg-primary/10 text-primary font-medium" 
                             : "hover:bg-accent/50 text-foreground"
@@ -134,6 +149,14 @@ const MobileBottomNav = () => {
                       >
                          <IconComponent className="h-5 w-5" strokeWidth={2} />
                          <span className="font-medium">{item.label}</span>
+                         {showBadge && (
+                           <Badge 
+                             variant="destructive" 
+                             className="ml-auto h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
+                           >
+                             {totalUnread > 9 ? '9+' : totalUnread}
+                           </Badge>
+                         )}
                       </button>
                     );
                   })}

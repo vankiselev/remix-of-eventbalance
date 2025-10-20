@@ -1,7 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export const useChatUnread = () => {
+  const queryClient = useQueryClient();
+  
   const { data: totalUnread = 0 } = useQuery({
     queryKey: ['chat-unread'],
     queryFn: async () => {
@@ -35,6 +38,39 @@ export const useChatUnread = () => {
       return totalCount;
     },
   });
+
+  // Subscribe to realtime updates for messages and chat_participants
+  useEffect(() => {
+    const channel = supabase
+      .channel('chat-unread-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chat-unread'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_participants',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['chat-unread'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return { totalUnread };
 };

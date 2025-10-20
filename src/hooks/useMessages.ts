@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { notificationSound } from "@/utils/notificationSound";
 
 export interface Message {
   id: string;
@@ -73,6 +74,11 @@ export const useMessages = (chatRoomId: string | null) => {
   useEffect(() => {
     if (!chatRoomId) return;
 
+    const getCurrentUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id;
+    };
+
     const channel = supabase
       .channel(`messages:${chatRoomId}`)
       .on(
@@ -84,6 +90,8 @@ export const useMessages = (chatRoomId: string | null) => {
           filter: `chat_room_id=eq.${chatRoomId}`,
         },
         async (payload) => {
+          const currentUserId = await getCurrentUserId();
+          
           const { data: message } = await supabase
             .from('messages')
             .select('*')
@@ -111,6 +119,30 @@ export const useMessages = (chatRoomId: string | null) => {
             queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => 
               [...old, newMessage as Message]
             );
+
+            // Play sound and show notification if message is from another user
+            if (message.sender_id !== currentUserId) {
+              // Play sound notification
+              notificationSound.play();
+
+              // Show browser notification
+              if ('Notification' in window && Notification.permission === 'granted') {
+                const senderName = sender?.full_name || 'Кто-то';
+                const messageText = message.content || 'Новое сообщение';
+                
+                const notification = new Notification(senderName, {
+                  body: messageText,
+                  icon: sender?.avatar_url || '/favicon.ico',
+                  badge: '/favicon.ico',
+                  tag: `message-${message.id}`,
+                });
+
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+              }
+            }
           }
         }
       )
