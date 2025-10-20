@@ -16,6 +16,7 @@ interface InvitationEmailRequest {
   firstName?: string;
   lastName?: string;
   role: string;
+  roleName?: string;
 }
 
 // Input validation utilities
@@ -89,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    const { email, token, firstName, lastName, role }: InvitationEmailRequest = await req.json();
+    const { email, token, firstName, lastName, role, roleName }: InvitationEmailRequest = await req.json();
     
     // Validate inputs
     if (!isValidEmail(email)) {
@@ -106,7 +107,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (role !== 'admin' && role !== 'employee') {
+    // Validate role is not empty
+    if (!role || role.trim() === '') {
       return new Response(
         JSON.stringify({ error: 'Invalid role' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -125,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Generated invite URL:", inviteUrl);
     
     const displayName = safeFirstName && safeLastName ? `${safeFirstName} ${safeLastName}` : email;
-    const roleDisplay = role === 'admin' ? 'Администратор' : 'Сотрудник';
+    const roleDisplay = roleName || (role === 'admin' ? 'Администратор' : 'Сотрудник');
 
     console.log("Sending email via Resend...");
     

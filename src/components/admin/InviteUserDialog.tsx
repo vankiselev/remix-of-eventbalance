@@ -109,13 +109,15 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       });
 
       // Send invitation email
+      const selectedRole = roles.find(r => r.id === data.role_id);
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           email: data.email,
           token: invitation.token,
           firstName: data.firstName,
           lastName: data.lastName,
-          role: roles.find(r => r.id === data.role_id)?.name || 'employee',
+          role: selectedRole?.code || 'employee',
+          roleName: selectedRole?.name || 'Сотрудник',
         },
       });
 
