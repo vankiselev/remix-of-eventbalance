@@ -7,8 +7,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { Plus, ArrowLeft, Upload, Trash2, CheckCircle, XCircle, Clock, Search, Filter } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
@@ -19,6 +26,8 @@ import { TransactionsCardView } from "@/components/finance/TransactionsCardView"
 import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
 import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
 import { FinancialAuditLog } from "@/components/finance/FinancialAuditLog";
+import { TransactionVerificationDialog } from "@/components/finance/TransactionVerificationDialog";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface CashSummary {
   total_cash: number;
@@ -29,6 +38,7 @@ interface CashSummary {
 
 const Finances = () => {
   const { hasPermission } = useUserPermissions();
+  const { isFinancier } = useFinancierPermissions();
   const [companySummary, setCompanySummary] = useState<CashSummary>({
     total_cash: 0,
     cash_nastya: 0,
@@ -57,9 +67,54 @@ const Finances = () => {
   const [activeTab, setActiveTab] = useState("my-transactions");
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   
+  // Review tab state
+  const [selectedReviewTransaction, setSelectedReviewTransaction] = useState<any>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const { setActions } = useFinancesActions();
+
+  // Fetch transactions for review
+  const { data: reviewTransactions, isLoading: reviewLoading, refetch: refetchReview } = useQuery({
+    queryKey: ['transactions-review', statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('financial_transactions')
+        .select('*')
+        .order('operation_date', { ascending: false });
+
+      if (statusFilter !== 'all') {
+        query = query.eq('verification_status', statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: isFinancier && activeTab === 'review',
+  });
+
+  // Fetch verification stats
+  const { data: reviewStats } = useQuery({
+    queryKey: ['verification-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('verification_status');
+      
+      if (error) throw error;
+
+      const pending = data.filter(t => t.verification_status === 'pending').length;
+      const approved = data.filter(t => t.verification_status === 'approved').length;
+      const rejected = data.filter(t => t.verification_status === 'rejected').length;
+
+      return { pending, approved, rejected, total: data.length };
+    },
+    enabled: isFinancier && activeTab === 'review',
+  });
 
   // Create stable functions with useCallback
   const handleExportClick = useCallback(async () => {
@@ -566,7 +621,7 @@ const Finances = () => {
       <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
-            <TabsList className="grid w-full grid-cols-4 h-10">
+            <TabsList className={`grid w-full ${isFinancier ? 'grid-cols-5' : 'grid-cols-4'} h-10`}>
               <TabsTrigger 
                 value="my-transactions" 
                 className="text-xs md:text-sm"
@@ -585,6 +640,14 @@ const Finances = () => {
               >
                 Все транзакции
               </TabsTrigger>
+              {isFinancier && (
+                <TabsTrigger 
+                  value="review" 
+                  className="text-xs md:text-sm"
+                >
+                  Проверка
+                </TabsTrigger>
+              )}
               <TabsTrigger 
                 value="audit-log" 
                 className="text-xs md:text-sm"
@@ -649,6 +712,175 @@ const Finances = () => {
               </div>
             </TabsContent>
 
+            {isFinancier && (
+              <TabsContent value="review" className="mt-0 w-full">
+                <div className="space-y-4 pt-4">
+                  {/* Статистика */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          На проверке
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-yellow-600" />
+                          <span className="text-2xl font-bold">{reviewStats?.pending || 0}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Утверждено
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-2xl font-bold">{reviewStats?.approved || 0}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Отклонено
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-4 h-4 text-red-600" />
+                          <span className="text-2xl font-bold">{reviewStats?.rejected || 0}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Всего
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-4 h-4 text-blue-600" />
+                          <span className="text-2xl font-bold">{reviewStats?.total || 0}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Фильтры */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1 relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Поиск по описанию, категории, проекту..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-full sm:w-48">
+                            <SelectValue placeholder="Статус" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все статусы</SelectItem>
+                            <SelectItem value="pending">На проверке</SelectItem>
+                            <SelectItem value="approved">Утверждено</SelectItem>
+                            <SelectItem value="rejected">Отклонено</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Список транзакций */}
+                  {reviewLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-20 w-full" />
+                      ))}
+                    </div>
+                  ) : !reviewTransactions?.filter(t => {
+                    if (!searchQuery) return true;
+                    const search = searchQuery.toLowerCase();
+                    return (
+                      t.description?.toLowerCase().includes(search) ||
+                      t.category?.toLowerCase().includes(search) ||
+                      t.static_project_name?.toLowerCase().includes(search)
+                    );
+                  }).length ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Транзакции не найдены
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {reviewTransactions?.filter(t => {
+                        if (!searchQuery) return true;
+                        const search = searchQuery.toLowerCase();
+                        return (
+                          t.description?.toLowerCase().includes(search) ||
+                          t.category?.toLowerCase().includes(search) ||
+                          t.static_project_name?.toLowerCase().includes(search)
+                        );
+                      }).map((transaction) => {
+                        const amount = transaction.income_amount || transaction.expense_amount || 0;
+                        const isIncome = !!transaction.income_amount;
+
+                        return (
+                          <div
+                            key={transaction.id}
+                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => {
+                              setSelectedReviewTransaction(transaction);
+                              setReviewDialogOpen(true);
+                            }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium truncate">{transaction.description}</p>
+                                <Badge variant={
+                                  transaction.verification_status === 'approved' ? 'default' :
+                                  transaction.verification_status === 'rejected' ? 'destructive' : 'secondary'
+                                } className="shrink-0">
+                                  {transaction.verification_status === 'pending' && 'На проверке'}
+                                  {transaction.verification_status === 'approved' && 'Утверждено'}
+                                  {transaction.verification_status === 'rejected' && 'Отклонено'}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>{format(new Date(transaction.operation_date), 'dd.MM.yyyy')}</span>
+                                <span>{transaction.category}</span>
+                                {transaction.static_project_name && (
+                                  <span>• {transaction.static_project_name}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 ml-4">
+                              <p className={`font-bold text-lg ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                                {isIncome ? '+' : '-'} {formatCurrency(amount)}
+                              </p>
+                              {transaction.cash_type && (
+                                <p className="text-xs text-muted-foreground">{transaction.cash_type}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
+
             <TabsContent value="audit-log" className="mt-0 w-full">
               <div className="pt-4 w-full">
                 <FinancialAuditLog />
@@ -657,6 +889,13 @@ const Finances = () => {
           </CardContent>
         </Tabs>
       </Card>
+
+      <TransactionVerificationDialog
+        transaction={selectedReviewTransaction}
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        onSuccess={refetchReview}
+      />
 
       <TransactionForm
         isOpen={showTransactionForm}

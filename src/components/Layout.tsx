@@ -34,7 +34,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { isFinancier, isLoading: financierLoading } = useFinancierPermissions();
+  
   const { totalUnread } = useChatUnread();
   
   const sidebarCollapsed = !sidebarHovered;
@@ -146,7 +146,6 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
     { path: "/finances", label: t('finances'), icon: RussianRuble },
-    ...(!financierLoading && isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck }] : []),
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
