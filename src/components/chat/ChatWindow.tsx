@@ -3,24 +3,27 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Paperclip, X, Info } from "lucide-react";
+import { Send, Paperclip, X, Info, ArrowLeft } from "lucide-react";
 import { useMessages, type Message } from "@/hooks/useMessages";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ChatMediaPanel } from "./ChatMediaPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatWindowProps {
   chatRoomId: string;
   currentUserId: string;
+  onBack?: () => void;
 }
 
-export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
+export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProps) => {
   const [messageText, setMessageText] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   
   const { messages, isLoading, sendMessage, isSending, markAsRead } = useMessages(chatRoomId);
 
@@ -59,7 +62,18 @@ export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b p-3 flex items-center justify-between">
-        <h3 className="font-semibold">Чат</h3>
+        <div className="flex items-center gap-2">
+          {isMobile && onBack && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={onBack}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
+          <h3 className="font-semibold">Чат</h3>
+        </div>
         <Button 
           variant="ghost" 
           size="icon"
@@ -93,7 +107,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId }: ChatWindowProps) => {
 
                 <div
                   className={cn(
-                    "max-w-[70%] rounded-lg p-3",
+                    "max-w-[85%] sm:max-w-[70%] rounded-lg p-3",
                     isOwn 
                       ? "bg-primary text-primary-foreground" 
                       : "bg-muted"
