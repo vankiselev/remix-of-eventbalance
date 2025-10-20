@@ -48,17 +48,24 @@ class NotificationSound {
       const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(880, ctx.currentTime);
-      o.connect(g);
-      g.connect(ctx.destination);
-      g.gain.setValueAtTime(0.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-      o.start();
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
-      o.stop(ctx.currentTime + 0.35);
+      const startBeep = () => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, ctx.currentTime);
+        o.connect(g);
+        g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+        o.stop(ctx.currentTime + 0.35);
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(startBeep).catch(() => startBeep());
+      } else {
+        startBeep();
+      }
     } catch (e) {
       console.error('Fallback beep failed', e);
     }
