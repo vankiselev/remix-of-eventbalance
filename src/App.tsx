@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,10 +28,23 @@ import ProfilePage from "./pages/ProfilePage";
 import AdministrationPage from "./pages/AdministrationPage";
 import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import MessagesPage from "./pages/MessagesPage";
+import { notificationSound } from "@/utils/notificationSound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    // Listen for messages from Service Worker to play notification sound
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'PLAY_NOTIFICATION_SOUND') {
+          notificationSound.play();
+        }
+      });
+    }
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <FinancesActionsProvider>
@@ -75,6 +89,7 @@ const App = () => (
       </FinancesActionsProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

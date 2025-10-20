@@ -40,17 +40,35 @@ self.addEventListener('push', function(event) {
     }
   }
 
+  const notificationOptions = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    data: notificationData.data,
+    actions: notificationData.actions || [],
+    vibrate: [200, 100, 200],
+    tag: notificationData.data?.notificationId || 'notification-' + Date.now(),
+    requireInteraction: false,
+    silent: false,
+  };
+
+  // Try to add sound if supported (Safari/iOS)
+  try {
+    notificationOptions.sound = '/sounds/notification.mp3';
+  } catch (e) {
+    console.log('Sound not supported in notifications');
+  }
+
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      data: notificationData.data,
-      actions: notificationData.actions || [],
-      vibrate: [200, 100, 200],
-      tag: notificationData.data?.notificationId || 'notification-' + Date.now(),
-      requireInteraction: false,
-      silent: false,
+    self.registration.showNotification(notificationData.title, notificationOptions).then(() => {
+      // Notify all clients to play sound
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'PLAY_NOTIFICATION_SOUND'
+          });
+        });
+      });
     })
   );
 });
