@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PhoneInputRU } from "@/components/ui/phone-input-ru";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
 import { useRoles } from "@/hooks/useRoles";
@@ -140,14 +140,12 @@ export const EmployeeProfileDialog = ({
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const { user, userRole } = useAuth();
   const { roles } = useRoles();
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
-  const isCurrentUserSuperAdmin = user?.email === 'ikiselev@me.com';
-  const canEditRole = isCurrentUserSuperAdmin;
+  const canEditRole = userRole === 'admin';
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -275,17 +273,14 @@ export const EmployeeProfileDialog = ({
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "Успешно!",
+      toast.success("Успешно!", {
         description: "Фото профиля обновлено",
       });
       
       // Обновляем данные и закрываем диалог
       onSuccess();
     } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
+        toast.error("Ошибка", {
           description: error.message || "Не удалось загрузить фото",
         });
     } finally {
@@ -329,8 +324,15 @@ export const EmployeeProfileDialog = ({
         profileUpdates.email = data.email;
       }
 
-      // Only super admin can change role
+      // Only admin can change role
       if (canEditRole && data.role_id && data.role_id !== userRoleAssignments[0]?.role_id) {
+        // Prevent changing own role
+        if (currentUser.id === user?.id) {
+          toast.error('Невозможно изменить собственную роль');
+          setLoading(false);
+          return;
+        }
+
         console.log('Attempting to change role:', {
           currentUserId: currentUser.id,
           oldRoleId: userRoleAssignments[0]?.role_id,
@@ -370,6 +372,10 @@ export const EmployeeProfileDialog = ({
         const oldRole = roles.find(r => r.id === userRoleAssignments[0]?.role_id)?.name || 'неизвестно';
         const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
         await logFieldChange("role", oldRole, newRole);
+
+        toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
+          description: currentUser.full_name || currentUser.email,
+        });
       }
 
       // Log changes for profile
@@ -440,8 +446,7 @@ export const EmployeeProfileDialog = ({
         }
       }
 
-      toast({
-        title: "Успешно!",
+      toast.success("Успешно!", {
         description: "Изменения сохранены",
       });
 
@@ -452,9 +457,7 @@ export const EmployeeProfileDialog = ({
       // Вызываем onSuccess для обновления списка и закрываем диалог
       onSuccess();
     } catch (error: any) {
-      toast({
-        variant: "destructive", 
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Не удалось обновить профиль",
       });
     } finally {
@@ -513,8 +516,7 @@ export const EmployeeProfileDialog = ({
 
       if (error) throw error;
 
-      toast({
-        title: "Сотрудник уволен",
+      toast.success("Сотрудник уволен", {
         description: "Доступ к системе заблокирован. Все записи сохранены.",
       });
 
@@ -523,9 +525,7 @@ export const EmployeeProfileDialog = ({
       onSuccess(true); // Передаем флаг что был уволен
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Не удалось уволить сотрудника",
       });
     } finally {
@@ -544,8 +544,7 @@ export const EmployeeProfileDialog = ({
 
       if (error) throw error;
 
-      toast({
-        title: "Сотрудник восстановлен",
+      toast.success("Сотрудник восстановлен", {
         description: "Доступ к системе возобновлен.",
       });
 
@@ -553,9 +552,7 @@ export const EmployeeProfileDialog = ({
       onSuccess(false); // Передаем флаг что не уволен
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Не удалось восстановить сотрудника",
       });
     } finally {
@@ -574,8 +571,7 @@ export const EmployeeProfileDialog = ({
 
       if (error) throw error;
 
-      toast({
-        title: "Сотрудник удален",
+      toast.success("Сотрудник удален", {
         description: "Все данные сотрудника безвозвратно удалены из системы.",
       });
 
@@ -583,9 +579,7 @@ export const EmployeeProfileDialog = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
+      toast.error("Ошибка", {
         description: error.message || "Не удалось удалить сотрудника",
       });
     } finally {

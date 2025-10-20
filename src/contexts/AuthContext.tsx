@@ -79,6 +79,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  // Real-time subscription for role changes
+  useEffect(() => {
+    if (!user) return;
+
+    const roleChannel = supabase
+      .channel(`user-role-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_role_assignments',
+          filter: `user_id=eq.${user.id}`
+        },
+        async (payload) => {
+          console.log('Role changed for current user:', payload);
+          
+          // Reload user profile
+          const { data } = await supabase
+            .rpc("get_user_basic_profile")
+            .single();
+          
+          if (data) {
+            setUserRole(data.role || 'employee');
+            
+            toast.success('Ваша роль была изменена администратором', {
+              description: `Новая роль: ${data.role === 'admin' ? 'Администратор' : 'Сотрудник'}`,
+              duration: 5000
+            });
+            
+            // Force page reload after 2 seconds
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(roleChannel);
+    };
+  }, [user]);
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
