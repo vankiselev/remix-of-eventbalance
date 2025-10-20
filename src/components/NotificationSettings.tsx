@@ -115,7 +115,12 @@ export const NotificationSettings = () => {
     }
   };
 
-  const isSupported = 'Notification' in window && 'serviceWorker' in navigator;
+  // iOS Safari supports Web Push only for installed Web Apps (Add to Home Screen)
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+  const hasBasics = 'Notification' in window && 'serviceWorker' in navigator;
+  const hasPushManager = 'PushManager' in window;
+  const isSupported = hasBasics && (hasPushManager || (isIOS && isStandalone));
 
   return (
     <div className="space-y-6">
@@ -160,13 +165,19 @@ export const NotificationSettings = () => {
         </div>
 
         {!isSupported ? (
-          <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-            <BellOff className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
+            <BellOff className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="text-sm font-medium">Push-уведомления недоступны</p>
-              <p className="text-xs text-muted-foreground">
-                Ваш браузер не поддерживает push-уведомления
-              </p>
+              {isIOS && !isStandalone ? (
+                <p className="text-xs text-muted-foreground">
+                  На iPhone push-уведомления работают только для установленных веб‑приложений. Добавьте приложение на экран Домой: Поделиться → На экран Домой, затем откройте его оттуда и включите уведомления.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Ваш браузер/среда не поддерживает Web Push. Попробуйте Chrome/Firefox/Edge на Android или установите как веб‑приложение.
+                </p>
+              )}
             </div>
           </div>
         ) : (
