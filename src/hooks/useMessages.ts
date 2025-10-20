@@ -35,24 +35,30 @@ export const useMessages = (chatRoomId: string | null) => {
     queryFn: async () => {
       if (!chatRoomId) return [];
 
-      // Optimized: Single query with joins instead of N+1 queries
-      const { data, error } = await supabase
+      // Get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          *,
-          profiles!messages_sender_id_fkey(full_name, avatar_url),
-          message_attachments(*)
-        `)
+        .select('*, message_attachments(*)')
         .eq('chat_room_id', chatRoomId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (messagesError) throw messagesError;
 
-      return (data || []).map(msg => ({
-        ...msg,
-        sender: msg.profiles || { full_name: '', avatar_url: null },
-        attachments: msg.message_attachments || [],
-      })) as Message[];
+      // Get all profiles
+      const { data: allProfiles } = await supabase.rpc('get_all_basic_profiles');
+      const profileMap = new Map((allProfiles || []).map((p: any) => [p.id, p]));
+
+      return (messagesData || []).map(msg => {
+        const profile = profileMap.get(msg.sender_id);
+        return {
+          ...msg,
+          sender: {
+            full_name: profile?.full_name || '',
+            avatar_url: profile?.avatar_url || null,
+          },
+          attachments: msg.message_attachments || [],
+        };
+      }) as Message[];
     },
     enabled: !!chatRoomId,
   });
@@ -79,21 +85,24 @@ export const useMessages = (chatRoomId: string | null) => {
         async (payload) => {
           const currentUserId = await getCurrentUserId();
           
-          // Optimized: Single query with joins
+          // Get message with attachments
           const { data: message } = await supabase
             .from('messages')
-            .select(`
-              *,
-              profiles!messages_sender_id_fkey(full_name, avatar_url),
-              message_attachments(*)
-            `)
+            .select('*, message_attachments(*)')
             .eq('id', payload.new.id)
             .single();
 
           if (message) {
+            // Get sender profile
+            const { data: allProfiles } = await supabase.rpc('get_all_basic_profiles');
+            const profile = (allProfiles || []).find((p: any) => p.id === message.sender_id);
+
             const newMessage = {
               ...message,
-              sender: message.profiles || { full_name: '', avatar_url: null },
+              sender: {
+                full_name: profile?.full_name || '',
+                avatar_url: profile?.avatar_url || null,
+              },
               attachments: message.message_attachments || [],
             };
 
