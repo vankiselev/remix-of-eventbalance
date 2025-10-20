@@ -60,9 +60,9 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[hsl(var(--whatsapp-bg))]">
+    <div className="flex flex-col h-full max-h-full bg-[hsl(var(--whatsapp-bg))]">
       {/* WhatsApp-style header */}
-      <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between shrink-0">
+      <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           {isMobile && onBack && (
             <Button 
@@ -96,7 +96,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
 
       {/* Messages area with WhatsApp pattern background */}
       <div 
-        className="flex-1 overflow-y-auto px-4 py-6" 
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 min-h-0" 
         ref={scrollRef}
         style={{
           backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px)`
@@ -175,7 +175,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
 
       {/* WhatsApp-style input footer */}
       <div className={cn(
-        "bg-[hsl(var(--whatsapp-hover))] border-t border-border/50 px-4 py-3 space-y-2 shrink-0",
+        "bg-[hsl(var(--whatsapp-hover))] border-t border-border/50 px-4 py-3 space-y-2 flex-shrink-0",
         isMobile && "pb-safe"
       )}>
         {selectedFiles.length > 0 && (
