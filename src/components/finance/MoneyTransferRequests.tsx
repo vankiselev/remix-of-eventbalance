@@ -116,6 +116,18 @@ export const MoneyTransferRequests = () => {
 
       if (error) throw error;
 
+      // Update notification status to read
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user?.id)
+        .eq('type', 'money_transfer')
+        .contains('data', { transaction_id: transactionId });
+
+      if (notifError) {
+        console.error('Error updating notification:', notifError);
+      }
+
       toast.success('Перевод принят');
       fetchPendingTransfers();
     } catch (error: any) {
@@ -131,6 +143,18 @@ export const MoneyTransferRequests = () => {
       });
 
       if (error) throw error;
+
+      // Update notification status to read
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user?.id)
+        .eq('type', 'money_transfer')
+        .contains('data', { transaction_id: transactionId });
+
+      if (notifError) {
+        console.error('Error updating notification:', notifError);
+      }
 
       toast.success('Перевод отклонен');
       fetchPendingTransfers();

@@ -347,7 +347,7 @@ const Layout = ({ children }: LayoutProps) => {
                           >
                             <Icon className="h-4 w-4 flex-shrink-0" />
                             {!sidebarCollapsed && (
-                              <span className="ml-3 truncate flex-1">{item.label}</span>
+                              <span className="ml-3 truncate flex-1 text-left">{item.label}</span>
                             )}
                              {!sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
                               <Badge variant="destructive" className="ml-auto">
