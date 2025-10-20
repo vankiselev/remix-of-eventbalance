@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
-import { Plus, RotateCcw, X, Edit } from "lucide-react";
+import { Plus, RotateCcw, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { InviteUserDialog } from "./InviteUserDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +41,7 @@ export function InvitationsManagement() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [deleteInvitation, setDeleteInvitation] = useState<Invitation | null>(null);
   const { toast } = useToast();
 
   const fetchInvitations = async () => {
@@ -154,6 +165,42 @@ export function InvitationsManagement() {
     }
   };
 
+  const handleDeleteInvitation = async () => {
+    if (!deleteInvitation) return;
+
+    try {
+      const { error } = await supabase
+        .from("invitations")
+        .delete()
+        .eq("id", deleteInvitation.id);
+
+      if (error) throw error;
+
+      // Log audit event
+      await supabase.from("invitation_audit_log").insert({
+        invitation_id: deleteInvitation.id,
+        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        action: "deleted",
+        details: { email: deleteInvitation.email },
+      });
+
+      toast({
+        title: "Приглашение удалено",
+        description: `Приглашение для ${deleteInvitation.email} удалено`,
+      });
+
+      setDeleteInvitation(null);
+      fetchInvitations();
+    } catch (error: any) {
+      console.error("Error deleting invitation:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить приглашение",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       sent: { label: "Отправлено", variant: "default" as const },
@@ -249,13 +296,15 @@ export function InvitationsManagement() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleResendInvitation(invitation)}
+                              title="Повторно отправить"
                             >
                               <RotateCcw className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="destructive"
+                              variant="outline"
                               onClick={() => handleRevokeInvitation(invitation)}
+                              title="Отозвать"
                             >
                               <X className="w-4 h-4" />
                             </Button>
@@ -271,6 +320,15 @@ export function InvitationsManagement() {
                             Повторить
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDeleteInvitation(invitation)}
+                          title="Удалить"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -286,6 +344,24 @@ export function InvitationsManagement() {
         onOpenChange={setShowInviteDialog}
         onInviteSent={fetchInvitations}
       />
+
+      <AlertDialog open={!!deleteInvitation} onOpenChange={(open) => !open && setDeleteInvitation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить приглашение?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить приглашение для {deleteInvitation?.email}? 
+              Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInvitation} className="bg-destructive hover:bg-destructive/90">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
