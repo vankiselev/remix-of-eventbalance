@@ -317,8 +317,29 @@ const Staff = () => {
     return user.role === "admin" ? "Администратор" : "Сотрудник";
   };
 
-  const getRoleColor = (role: string) => {
-    return role === "admin" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800";
+  const getRoleColor = (user: CombinedUser) => {
+    // Check new role system first
+    if (user.roleName) {
+      const roleName = user.roleName.toLowerCase();
+      if (roleName.includes('финанс')) {
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+      }
+      if (roleName.includes('бухгалтер')) {
+        return "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400";
+      }
+      if (roleName.includes('менеджер')) {
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+      }
+      if (roleName.includes('администратор') || roleName.includes('admin')) {
+        return "bg-primary/10 text-primary";
+      }
+      // Default color for custom roles
+      return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+    }
+    // Fallback to old role system
+    return user.role === "admin" 
+      ? "bg-primary/10 text-primary" 
+      : "bg-secondary";
   };
 
   const handleEditUser = (user: CombinedUser) => {
@@ -560,7 +581,7 @@ const Staff = () => {
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <div className="flex flex-col gap-1 items-end">
-                        <Badge className={`${getRoleColor(user.role)} badge-responsive`}>
+                        <Badge className={`${getRoleColor(user)} badge-responsive`}>
                           <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                           <span className="text-truncate">{getRoleLabel(user)}</span>
                         </Badge>
