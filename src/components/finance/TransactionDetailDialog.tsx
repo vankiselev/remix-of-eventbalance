@@ -86,29 +86,16 @@ export function TransactionDetailDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Create new transfer transaction with same data
-      const { data: newTransaction, error } = await supabase
+      // Update existing transaction status back to pending
+      const { error: updateError } = await supabase
         .from('financial_transactions')
-        .insert([{
-          operation_date: new Date().toISOString().split('T')[0],
-          project_id: transaction.project_id,
-          static_project_name: transaction.static_project_name,
-          project_owner: transaction.project_owner,
-          description: transaction.description,
-          expense_amount: transaction.expense_amount,
-          income_amount: 0,
-          cash_type: transaction.cash_type,
-          category: transaction.category,
-          no_receipt: true,
-          no_receipt_reason: 'Внутренняя передача денег между сотрудниками',
-          created_by: user.id,
-          transfer_to_user_id: transaction.transfer_to_user_id,
+        .update({
           transfer_status: 'pending',
-        }])
-        .select()
-        .single();
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', transaction.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       // Send notification to recipient
       const { data: profile } = await supabase
@@ -124,7 +111,7 @@ export function TransactionDetailDialog({
           message: `${profile?.full_name || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
           type: 'money_transfer',
           data: {
-            transaction_id: newTransaction.id,
+            transaction_id: transaction.id,
             from_user_name: profile?.full_name || 'Сотрудник',
             amount: transaction.expense_amount,
             cash_type: transaction.cash_type,
