@@ -45,23 +45,28 @@ export function CurrencyInput({
   ...props 
 }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update display value when value prop changes
+  // Update display value when value prop changes (only if not focused)
   useEffect(() => {
-    if (value !== undefined && value !== 0) {
-      const formatted = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      setDisplayValue(formatted + (value < 0 ? ' (-)' : ''));
-    } else {
-      setDisplayValue("");
+    if (!isFocused) {
+      if (value !== undefined && value !== 0) {
+        const formatted = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        setDisplayValue(formatted + (value < 0 ? ' (-)' : ''));
+      } else {
+        setDisplayValue("");
+      }
     }
-  }, [value]);
+  }, [value, isFocused]);
 
   const handleFocus = () => {
+    setIsFocused(true);
     onFocus?.();
   };
 
   const handleBlur = () => {
+    setIsFocused(false);
     // Format the final value on blur
     if (value !== undefined && value !== 0) {
       const formatted = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
