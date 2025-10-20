@@ -17,7 +17,7 @@ import {
 import { InviteUserDialog } from "./InviteUserDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 interface Invitation {
@@ -273,8 +273,7 @@ export function InvitationsManagement() {
                     <TableCell>{getRoleBadge(invitation.role)}</TableCell>
                     <TableCell>{getStatusBadge(invitation.status)}</TableCell>
                     <TableCell>
-                      {formatDistanceToNow(new Date(invitation.invited_at), {
-                        addSuffix: true,
+                      {format(new Date(invitation.invited_at), 'd MMMM yyyy, HH:mm', {
                         locale: ru,
                       })}
                     </TableCell>
@@ -282,44 +281,36 @@ export function InvitationsManagement() {
                       {isExpired(invitation.expires_at) ? (
                         <span className="text-destructive">Истекло</span>
                       ) : (
-                        formatDistanceToNow(new Date(invitation.expires_at), {
-                          addSuffix: true,
+                        format(new Date(invitation.expires_at), 'd MMMM yyyy, HH:mm', {
                           locale: ru,
                         })
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        {/* Кнопка повторить для всех статусов */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendInvitation(invitation)}
+                          title="Повторно отправить"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Кнопка отозвать только для активных приглашений */}
                         {invitation.status === "sent" && !isExpired(invitation.expires_at) && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleResendInvitation(invitation)}
-                              title="Повторно отправить"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRevokeInvitation(invitation)}
-                              title="Отозвать"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        {invitation.status === "sent" && isExpired(invitation.expires_at) && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleResendInvitation(invitation)}
+                            onClick={() => handleRevokeInvitation(invitation)}
+                            title="Отозвать"
                           >
-                            <RotateCcw className="w-4 h-4 mr-1" />
-                            Повторить
+                            <X className="w-4 h-4" />
                           </Button>
                         )}
+                        
+                        {/* Кнопка удалить для всех */}
                         <Button
                           size="sm"
                           variant="ghost"
