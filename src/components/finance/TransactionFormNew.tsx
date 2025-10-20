@@ -180,14 +180,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchNoReceipt = form.watch("no_receipt");
 
   useEffect(() => {
-    if (watchNoReceipt && files.length === 0) {
+    if (watchNoReceipt && files.length === 0 && !isMoneyTransfer) {
       // Auto-focus on reason field when "no receipt" is checked and no files
       const reasonField = document.querySelector('textarea[name="no_receipt_reason"]') as HTMLTextAreaElement;
       if (reasonField) {
         reasonField.focus();
       }
     }
-  }, [watchNoReceipt, files.length]);
+  }, [watchNoReceipt, files.length, isMoneyTransfer]);
 
   useEffect(() => {
     if (isOpen) {
