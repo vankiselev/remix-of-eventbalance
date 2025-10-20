@@ -22,6 +22,7 @@ export const NotificationSettings = () => {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isSoundEnabled, setIsSoundEnabled] = useState(notificationSound.isEnabled());
   const { toast } = useToast();
+  const isInIframe = typeof window !== 'undefined' && window.top !== window.self;
 
   const handleToggleSound = (enabled: boolean) => {
     notificationSound.setEnabled(enabled);
@@ -82,6 +83,22 @@ export const NotificationSettings = () => {
     };
 
     checkStatus();
+  }, []);
+
+  useEffect(() => {
+    // React to permission changes in browser settings (Chrome/Edge/Firefox)
+    try {
+      const anyNav: any = navigator as any;
+      if (anyNav.permissions?.query) {
+        anyNav.permissions
+          .query({ name: 'notifications' as any })
+          .then((status: any) => {
+            const update = () => setNotificationPermission(Notification.permission);
+            status.addEventListener?.('change', update);
+          })
+          .catch(() => {});
+      }
+    } catch {}
   }, []);
 
   const handleTogglePush = async (enabled: boolean) => {
@@ -165,6 +182,14 @@ export const NotificationSettings = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {isInIframe && (
+          <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
+            <AlertDescription className="flex items-center justify-between gap-3">
+              Web Push нельзя активировать внутри предпросмотра. Откройте приложение в новой вкладке и включите уведомления там.
+              <Button variant="outline" size="sm" onClick={() => window.open(window.location.href, '_blank')}>Открыть</Button>
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Sound notifications */}
         <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-3 flex-1">
