@@ -17,6 +17,7 @@ import { TransactionForm } from "@/components/finance/TransactionFormNew";
 import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
 import { TransactionsCardView } from "@/components/finance/TransactionsCardView";
 import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
+import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
 
 interface CashSummary {
   total_cash: number;
@@ -487,6 +488,8 @@ const Finances = () => {
         <ImportProgressWindow />
       </div>
 
+      <MoneyTransferRequests />
+
       <Card className="w-full">
         <CardHeader className="space-y-0 py-4 border-b">
           <CardTitle className="text-lg">Транзакции</CardTitle>
@@ -556,6 +559,8 @@ const Finances = () => {
         
         <ImportProgressWindow />
       </div>
+
+      <MoneyTransferRequests />
 
       <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
