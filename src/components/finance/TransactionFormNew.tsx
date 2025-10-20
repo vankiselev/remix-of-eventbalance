@@ -105,6 +105,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [projectSelectOpen, setProjectSelectOpen] = useState(false);
   const [categorySelectOpen, setCategorySelectOpen] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string } | null>(null);
+  const submitLockRef = useRef(false);
 
   // Check user role
   useEffect(() => {
@@ -255,7 +256,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   };
 
   const onSubmit = async (data: TransactionFormData) => {
-    if (submitting) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    if (submitting) { submitLockRef.current = false; return; }
 
     // Validate money transfer
     if (isMoneyTransfer) {
@@ -483,6 +486,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       });
     } finally {
       setSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 

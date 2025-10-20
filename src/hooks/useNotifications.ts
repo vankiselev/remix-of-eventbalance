@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { notificationSound } from '@/utils/notificationSound';
@@ -20,6 +20,7 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
   const fetchNotifications = async () => {
     try {
@@ -34,8 +35,10 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications((data as any) || []);
-      setUnreadCount(data?.filter(n => !n.read).length || 0);
+      const list = (data as any) || [];
+      setNotifications(list);
+      seenIdsRef.current = new Set(list.map((n: Notification) => n.id));
+      setUnreadCount(list.filter((n: Notification) => !n.read).length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -180,6 +183,10 @@ export const useNotifications = () => {
             
             if (payload.eventType === 'INSERT') {
               const newNotif = payload.new as Notification;
+              if (seenIdsRef.current.has(newNotif.id)) {
+                return; // prevent duplicates
+              }
+              seenIdsRef.current.add(newNotif.id);
               setNotifications(prev => [newNotif, ...prev]);
               setUnreadCount(prev => prev + 1);
               
@@ -192,11 +199,19 @@ export const useNotifications = () => {
                 description: newNotif.message,
               });
             } else if (payload.eventType === 'UPDATE') {
+              const updated = payload.new as Notification;
+              if (!seenIdsRef.current.has(updated.id)) {
+                seenIdsRef.current.add(updated.id);
+              }
               setNotifications(prev =>
-                prev.map(n => n.id === payload.new.id ? payload.new as Notification : n)
+                prev.map(n => n.id === updated.id ? updated : n)
               );
             } else if (payload.eventType === 'DELETE') {
-              setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+              const oldId = (payload.old as any)?.id;
+              if (oldId) {
+                seenIdsRef.current.delete(oldId);
+              }
+              setNotifications(prev => prev.filter(n => n.id !== oldId));
             }
           }
         )
