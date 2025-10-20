@@ -277,6 +277,24 @@ export const NotificationSettings = () => {
                   onCheckedChange={handleTogglePush}
                   disabled={isChecking || notificationPermission === 'denied'}
                 />
+                {notificationPermission !== 'granted' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await requestNotificationPermission();
+                      const status = Notification.permission;
+                      setNotificationPermission(status);
+                      toast({
+                        title: ok ? 'Разрешение получено' : 'Разрешение не предоставлено',
+                        description: ok ? 'Теперь включите переключатель' : 'Измените настройку сайта в адресной строке',
+                        variant: ok ? 'default' : 'destructive',
+                      });
+                    }}
+                  >
+                    Разрешить
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={handleTestPush} disabled={!isPushEnabled}>
                   <Send className="h-4 w-4 mr-1" />
                   Тест

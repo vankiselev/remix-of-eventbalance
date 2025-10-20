@@ -114,9 +114,14 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
         return false;
       }
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      console.log('Service worker registered:', registration);
+      // Register or reuse service worker
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        console.log('Service worker registered:', registration);
+      } else {
+        console.log('Service worker already registered:', registration);
+      }
 
       // Wait for the service worker to be ready (activated)
       const swReg = await navigator.serviceWorker.ready;
