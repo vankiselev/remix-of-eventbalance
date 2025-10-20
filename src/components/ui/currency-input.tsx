@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "./input";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
+import { forwardRef } from "react";
 
 interface CurrencyInputProps {
   value?: number;
@@ -13,7 +14,7 @@ interface CurrencyInputProps {
   onFocus?: () => void;
 }
 
-// Format number as currency with live mask (whole rubles only)
+// Format number with spaces for thousands (no currency symbol)
 const formatLiveCurrency = (value: string): string => {
   // Remove all non-digits
   const cleanValue = value.replace(/\D/g, '');
@@ -23,7 +24,7 @@ const formatLiveCurrency = (value: string): string => {
   // Format with spaces for thousands
   const formatted = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   
-  return formatted + ' ₽';
+  return formatted;
 };
 
 // Extract numeric value from formatted string (supports negative values)
@@ -49,7 +50,8 @@ export function CurrencyInput({
   // Update display value when value prop changes
   useEffect(() => {
     if (value !== undefined && value !== 0) {
-      setDisplayValue(formatCurrency(Math.abs(value)) + (value < 0 ? ' (-)' : ''));
+      const formatted = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      setDisplayValue(formatted + (value < 0 ? ' (-)' : ''));
     } else {
       setDisplayValue("");
     }
@@ -62,7 +64,8 @@ export function CurrencyInput({
   const handleBlur = () => {
     // Format the final value on blur
     if (value !== undefined && value !== 0) {
-      setDisplayValue(formatCurrency(Math.abs(value)) + (value < 0 ? ' (-)' : ''));
+      const formatted = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      setDisplayValue(formatted + (value < 0 ? ' (-)' : ''));
     } else {
       setDisplayValue("");
     }
@@ -127,20 +130,25 @@ export function CurrencyInput({
   };
 
   return (
-    <Input
-      ref={inputRef}
-      type="text"
-      inputMode="numeric"
-      value={displayValue}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder}
-      disabled={disabled}
-      className={cn("text-base font-medium", className)} // Ensure font-size >= 16px for iOS
-      style={{ fontSize: '16px' }} // Explicitly set font-size to prevent zoom on iOS
-      {...props}
-    />
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={cn("text-base font-medium pr-8", className)} // Add padding for suffix
+        style={{ fontSize: '16px' }} // Explicitly set font-size to prevent zoom on iOS
+        {...props}
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+        ₽
+      </span>
+    </div>
   );
 }
