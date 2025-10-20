@@ -187,7 +187,7 @@ export const NotificationSettings = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleTestSound}
+              onClick={() => { notificationSound.beep(); notificationSound.testSound(); }}
             >
               Тест
             </Button>

@@ -21,11 +21,13 @@ class NotificationSound {
     if (!this.enabled) return;
     try {
       if (!this.audio) throw new Error('audio-not-initialized');
-      await this.ensureLoaded();
       this.audio.currentTime = 0;
-      await this.audio.play();
+      const result = this.audio.play();
+      if (result && typeof (result as any).then === 'function') {
+        await result;
+      }
     } catch (err) {
-      console.error('Could not play notification sound, using fallback beep:', err);
+      console.error('Audio element play failed, using fallback beep:', err);
       this.beepFallback();
     }
   }
@@ -78,6 +80,10 @@ class NotificationSound {
 
   isEnabled() {
     return this.enabled;
+  }
+
+  beep() {
+    this.beepFallback();
   }
 
   testSound() {
