@@ -69,27 +69,39 @@ export const MoneyTransferRequests = () => {
 
       if (error) throw error;
 
+      console.log('Pending transfers raw data:', data);
+
       // Fetch sender profiles
       const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
+      console.log('Sender IDs to fetch:', senderIds);
       
       if (senderIds.length > 0) {
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, full_name, email, avatar_url')
           .in('id', senderIds);
 
+        console.log('Fetched profiles:', profiles);
+        console.log('Profiles error:', profilesError);
+
         const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+        console.log('Profile map:', profileMap);
 
-        const enrichedData = (data || []).map(t => ({
-          id: t.id,
-          operation_date: t.operation_date,
-          description: t.description,
-          expense_amount: t.expense_amount,
-          cash_type: t.cash_type,
-          created_by: t.created_by,
-          transfer_from_user: profileMap.get(t.created_by) || undefined,
-        }));
+        const enrichedData = (data || []).map(t => {
+          const profile = profileMap.get(t.created_by);
+          console.log(`Transaction ${t.id} - created_by: ${t.created_by}, found profile:`, profile);
+          return {
+            id: t.id,
+            operation_date: t.operation_date,
+            description: t.description,
+            expense_amount: t.expense_amount,
+            cash_type: t.cash_type,
+            created_by: t.created_by,
+            transfer_from_user: profile || undefined,
+          };
+        });
 
+        console.log('Enriched data:', enrichedData);
         setPendingTransfers(enrichedData);
       } else {
         setPendingTransfers((data || []).map(t => ({
@@ -174,7 +186,7 @@ export const MoneyTransferRequests = () => {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-          <h3 className="font-semibold">Запросы на перевод денег</h3>
+          <h3 className="font-semibold">Подтвердите перевод наличных вам</h3>
         </div>
 
         <div className="space-y-2">
