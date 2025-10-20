@@ -17,6 +17,7 @@ import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventsImportDialog from "@/components/EventsImportDialog";
 import { useChatUnread } from "@/hooks/useChatUnread";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -380,26 +381,33 @@ const Layout = ({ children }: LayoutProps) => {
                 {children}
               </div>
               
-              {/* Footer */}
-              <footer className="border-t bg-card mt-auto">
-                <div className="px-6 py-4">
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <p>© 2025 EventBalance. Все права защищены.</p>
-                    <div className="flex items-center gap-4">
-                      <a href="#" className="hover:text-foreground transition-colors">О компании</a>
-                      <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
-                      <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
+              {/* Footer - hidden on messages page */}
+              {location.pathname !== '/messages' && (
+                <footer className="border-t bg-card mt-auto">
+                  <div className="px-6 py-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <p>© 2025 EventBalance. Все права защищены.</p>
+                      <div className="flex items-center gap-4">
+                        <a href="#" className="hover:text-foreground transition-colors">О компании</a>
+                        <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
+                        <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </footer>
+                </footer>
+              )}
             </main>
           </div>
         </>
       ) : (
         /* Mobile Layout */
         <div className="flex-1 flex flex-col overflow-x-hidden">
-          <main className="flex-1 overflow-auto px-4 py-6 pb-28 w-full overflow-x-hidden">
+          <main className={cn(
+            "flex-1 w-full overflow-x-hidden",
+            location.pathname === '/messages' 
+              ? "overflow-hidden flex flex-col min-h-0" 
+              : "overflow-auto px-4 py-6 pb-28"
+          )}>
             {children}
           </main>
           <MobileBottomNav />

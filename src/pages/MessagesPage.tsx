@@ -27,7 +27,7 @@ const MessagesPage = () => {
   return (
     <Layout>
       <div className={cn(
-        "flex flex-1 min-h-0 h-full overflow-hidden -m-[clamp(1rem,2vw,2rem)]"
+        "flex flex-1 min-h-0 overflow-hidden"
       )}>
         {/* Mobile: Show either chat list or chat window */}
         {isMobile ? (
