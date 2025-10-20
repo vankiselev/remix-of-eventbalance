@@ -157,6 +157,8 @@ export const useNotifications = () => {
   useEffect(() => {
     fetchNotifications();
 
+    let cleanup: (() => void) | undefined;
+
     // Subscribe to realtime updates
     const setupRealtimeSubscription = async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -205,7 +207,13 @@ export const useNotifications = () => {
       };
     };
 
-    setupRealtimeSubscription();
+    setupRealtimeSubscription().then(cleanupFn => {
+      cleanup = cleanupFn;
+    });
+
+    return () => {
+      cleanup?.();
+    };
   }, []);
 
   return {
