@@ -331,20 +331,41 @@ export const EmployeeProfileDialog = ({
 
       // Only super admin can change role
       if (canEditRole && data.role_id && data.role_id !== userRoleAssignments[0]?.role_id) {
+        console.log('Attempting to change role:', {
+          currentUserId: currentUser.id,
+          oldRoleId: userRoleAssignments[0]?.role_id,
+          newRoleId: data.role_id,
+          assignedBy: user?.id
+        });
+
         // Remove old role assignment
-        await supabase
+        const { error: deleteError } = await supabase
           .from('user_role_assignments')
           .delete()
           .eq('user_id', currentUser.id);
+
+        if (deleteError) {
+          console.error('Error deleting old role:', deleteError);
+          throw new Error(`Не удалось удалить старую роль: ${deleteError.message}`);
+        }
         
         // Add new role assignment
-        await supabase
+        const { data: insertedRole, error: insertError } = await supabase
           .from('user_role_assignments')
           .insert({
             user_id: currentUser.id,
             role_id: data.role_id,
             assigned_by: user?.id
-          });
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error inserting new role:', insertError);
+          throw new Error(`Не удалось назначить новую роль: ${insertError.message}`);
+        }
+
+        console.log('Role successfully changed:', insertedRole);
         
         const oldRole = roles.find(r => r.id === userRoleAssignments[0]?.role_id)?.name || 'неизвестно';
         const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
