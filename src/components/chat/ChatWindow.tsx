@@ -60,31 +60,49 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b p-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full bg-[hsl(var(--whatsapp-bg))]">
+      {/* WhatsApp-style header */}
+      <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
           {isMobile && onBack && (
             <Button 
               variant="ghost" 
               size="icon"
               onClick={onBack}
+              className="shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          <h3 className="font-semibold">Чат</h3>
+          <Avatar className="w-10 h-10">
+            <AvatarFallback className="text-sm font-medium bg-muted">
+              ЧТ
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="font-semibold text-[15px]">Чат</h3>
+            <p className="text-xs text-muted-foreground">онлайн</p>
+          </div>
         </div>
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => setMediaPanelOpen(true)}
+          className="shrink-0"
         >
-          <Info className="w-4 h-4" />
+          <Info className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
-        <div className="space-y-4">
+      {/* Messages area with WhatsApp pattern background */}
+      <div 
+        className="flex-1 overflow-y-auto px-4 py-6" 
+        ref={scrollRef}
+        style={{
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px)`
+        }}
+      >
+        <div className="space-y-2 max-w-5xl mx-auto">
           {messages.map((message: Message) => {
             const isOwn = message.sender_id === currentUserId;
             
@@ -92,35 +110,38 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
               <div
                 key={message.id}
                 className={cn(
-                  "flex gap-2",
+                  "flex gap-2 items-end",
                   isOwn ? "flex-row-reverse" : "flex-row"
                 )}
               >
                 {!isOwn && (
-                  <Avatar className="w-8 h-8">
+                  <Avatar className="w-8 h-8 mb-1">
                     <AvatarImage src={message.sender?.avatar_url || undefined} />
-                    <AvatarFallback>
+                    <AvatarFallback className="text-xs">
                       {message.sender?.full_name?.substring(0, 2).toUpperCase() || "??"}
                     </AvatarFallback>
                   </Avatar>
                 )}
 
+                {/* WhatsApp-style message bubble */}
                 <div
                   className={cn(
-                    "max-w-[85%] sm:max-w-[70%] rounded-lg p-3",
+                    "max-w-[75%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
                     isOwn 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted"
+                      ? "bg-[hsl(var(--whatsapp-own-message))] rounded-br-none" 
+                      : "bg-white rounded-bl-none"
                   )}
                 >
                   {!isOwn && (
-                    <p className="text-xs font-medium mb-1">
+                    <p className="text-[13px] font-semibold mb-1 text-[hsl(var(--whatsapp-primary))]">
                       {message.sender?.full_name}
                     </p>
                   )}
                   
                   {message.content && (
-                    <p className="break-words">{message.content}</p>
+                    <p className="text-[14.2px] text-foreground break-words leading-[19px]">
+                      {message.content}
+                    </p>
                   )}
 
                   {message.attachments && message.attachments.length > 0 && (
@@ -131,21 +152,20 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
                           href={att.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm underline"
+                          className="flex items-center gap-2 text-[13px] text-blue-600 hover:underline"
                         >
-                          <Paperclip className="w-4 h-4" />
+                          <Paperclip className="w-3.5 h-3.5" />
                           {att.file_name}
                         </a>
                       ))}
                     </div>
                   )}
 
-                  <p className={cn(
-                    "text-xs mt-1",
-                    isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {format(new Date(message.created_at), "HH:mm", { locale: ru })}
-                  </p>
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      {format(new Date(message.created_at), "HH:mm", { locale: ru })}
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -153,8 +173,9 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
         </div>
       </div>
 
+      {/* WhatsApp-style input footer */}
       <div className={cn(
-        "border-t p-4 space-y-2 shrink-0 bg-background",
+        "bg-[hsl(var(--whatsapp-hover))] border-t border-border/50 px-4 py-3 space-y-2 shrink-0",
         isMobile && "pb-safe"
       )}>
         {selectedFiles.length > 0 && (
@@ -162,9 +183,9 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 bg-muted rounded px-3 py-1 text-sm"
+                className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 text-sm shadow-sm"
               >
-                <Paperclip className="w-4 h-4" />
+                <Paperclip className="w-4 h-4 text-muted-foreground" />
                 <span className="max-w-[150px] truncate">{file.name}</span>
                 <button
                   onClick={() => removeFile(index)}
@@ -177,7 +198,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -187,22 +208,29 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
           />
           
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 hover:bg-white/50"
           >
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className="w-5 h-5" />
           </Button>
 
           <Input
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder="Введите сообщение..."
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             disabled={isSending}
+            className="bg-white border-none shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 rounded-lg"
           />
 
-          <Button onClick={handleSend} disabled={isSending}>
+          <Button 
+            onClick={handleSend} 
+            disabled={isSending}
+            size="icon"
+            className="shrink-0 bg-[hsl(var(--whatsapp-primary))] hover:bg-[hsl(var(--whatsapp-primary-dark))] text-white rounded-full"
+          >
             <Send className="w-4 h-4" />
           </Button>
         </div>

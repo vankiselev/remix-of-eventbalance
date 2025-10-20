@@ -75,11 +75,17 @@ const MessagesPage = () => {
         ) : (
           /* Desktop: Show both chat list and chat window */
           <>
-            <div className="w-80 border-r flex flex-col min-h-0">
-              <div className="p-4 border-b flex items-center justify-between">
+            <div className="w-[400px] border-r border-border/50 flex flex-col min-h-0 bg-background">
+              {/* WhatsApp-style header */}
+              <div className="px-4 py-4 bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Чаты</h2>
-                <Button size="icon" onClick={() => setNewChatDialogOpen(true)}>
-                  <Plus className="w-4 h-4" />
+                <Button 
+                  size="icon" 
+                  onClick={() => setNewChatDialogOpen(true)}
+                  className="bg-transparent hover:bg-white/50 text-foreground"
+                  variant="ghost"
+                >
+                  <Plus className="w-5 h-5" />
                 </Button>
               </div>
 

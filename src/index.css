@@ -63,6 +63,14 @@
     --sidebar-accent-foreground: 0 0% 0%; /* Pure black - #000000 */
     --sidebar-border: 220 13% 82%; /* Gray border - #D1D5DB */
     --sidebar-ring: 220 91% 60%; /* Blue ring - #2563EB */
+
+    /* WhatsApp Colors */
+    --whatsapp-primary: 142 70% 49%; /* WhatsApp Green - #25D366 */
+    --whatsapp-primary-dark: 142 70% 40%; /* Darker green */
+    --whatsapp-own-message: 120 73% 92%; /* Light green for own messages - #DCF8C6 */
+    --whatsapp-other-message: 0 0% 100%; /* White for other messages */
+    --whatsapp-bg: 120 7% 93%; /* Light gray background - #ECE5DD */
+    --whatsapp-hover: 0 0% 96%; /* Hover state - #F5F5F5 */
   }
 
   .dark {
