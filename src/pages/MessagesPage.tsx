@@ -26,9 +26,7 @@ const MessagesPage = () => {
 
   return (
     <Layout>
-      <div className={cn(
-        "flex flex-1 min-h-0 overflow-hidden"
-      )}>
+      <div className="flex h-full w-full overflow-hidden">
         {/* Mobile: Show either chat list or chat window */}
         {isMobile ? (
           <>
@@ -75,9 +73,9 @@ const MessagesPage = () => {
         ) : (
           /* Desktop: Show both chat list and chat window */
           <>
-            <div className="w-[400px] border-r border-border/50 flex flex-col min-h-0 bg-background">
+            <div className="w-[400px] border-r border-border/50 flex flex-col h-full bg-background">
               {/* WhatsApp-style header */}
-              <div className="px-4 py-4 bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 flex items-center justify-between">
+              <div className="px-4 py-4 bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-xl font-semibold">Чаты</h2>
                 <Button 
                   size="icon" 
@@ -111,7 +109,7 @@ const MessagesPage = () => {
               )}
             </div>
 
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
               {selectedChatId ? (
                 <ChatWindow chatRoomId={selectedChatId} currentUserId={user.id} />
               ) : (
