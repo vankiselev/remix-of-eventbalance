@@ -140,6 +140,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
+    { path: "/messages", label: "Сообщения", icon: MessageSquare, badge: totalUnread },
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
@@ -149,7 +150,6 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
-    { path: "/messages", label: "Сообщения", icon: MessageSquare, badge: totalUnread },
     { path: "/reports", label: "Отчеты", icon: FileText },
     ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
