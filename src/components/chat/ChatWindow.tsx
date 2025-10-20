@@ -60,7 +60,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
   }
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(var(--whatsapp-bg))]">
+    <div className="flex flex-col h-full min-h-0 bg-[hsl(var(--whatsapp-bg))]">
       {/* WhatsApp-style header */}
       <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">

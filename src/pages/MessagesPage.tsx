@@ -27,13 +27,13 @@ const MessagesPage = () => {
   return (
     <Layout>
       <div className={cn(
-        "flex flex-1 min-h-0 h-full"
+        "flex flex-1 min-h-0 h-full overflow-hidden"
       )}>
         {/* Mobile: Show either chat list or chat window */}
         {isMobile ? (
           <>
             {selectedChatId ? (
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <ChatWindow 
                   chatRoomId={selectedChatId} 
                   currentUserId={user.id}
@@ -41,7 +41,7 @@ const MessagesPage = () => {
                 />
               </div>
             ) : (
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div className="p-4 border-b flex items-center justify-between">
                   <h2 className="text-xl font-semibold">Чаты</h2>
                   <Button size="icon" onClick={() => setNewChatDialogOpen(true)}>
@@ -111,7 +111,7 @@ const MessagesPage = () => {
               )}
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {selectedChatId ? (
                 <ChatWindow chatRoomId={selectedChatId} currentUserId={user.id} />
               ) : (
