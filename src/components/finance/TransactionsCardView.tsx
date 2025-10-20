@@ -41,6 +41,11 @@ interface Transaction {
   created_by: string;
   events?: { name: string } | null;
   attachments_count?: number;
+  transfer_status?: string | null;
+  transfer_to_user_id?: string | null;
+  transfer_from_user_id?: string | null;
+  transfer_to_user?: { full_name: string; email: string } | null;
+  transfer_from_user?: { full_name: string; email: string } | null;
 }
 
 interface TransactionsCardViewProps {
@@ -144,7 +149,34 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
       if (error) throw error;
 
-      setTransactions(data || []);
+      // Get transfer user IDs and fetch their profiles
+      const transferUserIds = [
+        ...(data || []).filter(t => t.transfer_to_user_id).map(t => t.transfer_to_user_id),
+        ...(data || []).filter(t => t.transfer_from_user_id).map(t => t.transfer_from_user_id),
+      ].filter(Boolean) as string[];
+
+      if (transferUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", Array.from(new Set(transferUserIds)));
+
+        const userMap = new Map((profilesData || []).map(p => [p.id, p]));
+
+        const enrichedData = (data || []).map(transaction => ({
+          ...transaction,
+          transfer_to_user: transaction.transfer_to_user_id 
+            ? userMap.get(transaction.transfer_to_user_id) || null
+            : null,
+          transfer_from_user: transaction.transfer_from_user_id
+            ? userMap.get(transaction.transfer_from_user_id) || null
+            : null,
+        }));
+
+        setTransactions(enrichedData);
+      } else {
+        setTransactions(data || []);
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Ошибка загрузки транзакций');

@@ -57,6 +57,11 @@ interface Transaction {
   verified_by?: string | null;
   verified_at?: string | null;
   verification_comment?: string | null;
+  transfer_status?: string | null;
+  transfer_to_user_id?: string | null;
+  transfer_from_user_id?: string | null;
+  transfer_to_user?: { full_name: string; email: string } | null;
+  transfer_from_user?: { full_name: string; email: string } | null;
 }
 
 interface TransactionTableProps {
@@ -172,11 +177,21 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       // Get unique user IDs to fetch their profiles
       const userIds = Array.from(new Set((data || []).map(t => t.created_by)));
       
+      // Also collect transfer user IDs
+      const transferToUserIds = (data || [])
+        .filter(t => t.transfer_to_user_id)
+        .map(t => t.transfer_to_user_id as string);
+      const transferFromUserIds = (data || [])
+        .filter(t => t.transfer_from_user_id)
+        .map(t => t.transfer_from_user_id as string);
+      
+      const allUserIds = Array.from(new Set([...userIds, ...transferToUserIds, ...transferFromUserIds]));
+      
       // Fetch user profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email")
-        .in("id", userIds);
+        .in("id", allUserIds);
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
@@ -185,11 +200,17 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       // Create user map for quick lookup
       const userMap = new Map((profilesData || []).map(profile => [profile.id, profile]));
 
-      // Transform the data to flatten attachments_count and add user name
+      // Transform the data to flatten attachments_count and add user names
       const transformedData = (data || []).map(transaction => ({
         ...transaction,
         attachments_count: transaction.attachments_count?.[0]?.count || 0,
-        user_name: getUserDisplayName(userMap.get(transaction.created_by) || null, transaction.created_by)
+        user_name: getUserDisplayName(userMap.get(transaction.created_by) || null, transaction.created_by),
+        transfer_to_user: transaction.transfer_to_user_id 
+          ? userMap.get(transaction.transfer_to_user_id) || null
+          : null,
+        transfer_from_user: transaction.transfer_from_user_id
+          ? userMap.get(transaction.transfer_from_user_id) || null
+          : null,
       }));
 
       setTransactions(transformedData);

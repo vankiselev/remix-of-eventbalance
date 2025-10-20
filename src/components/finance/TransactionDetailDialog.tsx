@@ -42,6 +42,11 @@ interface Transaction {
   events?: { name: string } | null;
   attachments_count?: number;
   created_at: string;
+  transfer_status?: string | null;
+  transfer_to_user_id?: string | null;
+  transfer_from_user_id?: string | null;
+  transfer_to_user?: { full_name: string; email: string } | null;
+  transfer_from_user?: { full_name: string; email: string } | null;
 }
 
 interface TransactionDetailDialogProps {
@@ -62,6 +67,7 @@ export function TransactionDetailDialog({
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   
   if (!transaction) return null;
 
@@ -69,6 +75,80 @@ export function TransactionDetailDialog({
     if (onEdit) {
       onEdit(transaction);
       onClose();
+    }
+  };
+
+  const handleResendTransfer = async () => {
+    if (!transaction.transfer_to_user_id) return;
+    
+    setIsResending(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create new transfer transaction with same data
+      const { data: newTransaction, error } = await supabase
+        .from('financial_transactions')
+        .insert([{
+          operation_date: new Date().toISOString().split('T')[0],
+          project_id: transaction.project_id,
+          static_project_name: transaction.static_project_name,
+          project_owner: transaction.project_owner,
+          description: transaction.description,
+          expense_amount: transaction.expense_amount,
+          income_amount: 0,
+          cash_type: transaction.cash_type,
+          category: transaction.category,
+          no_receipt: true,
+          no_receipt_reason: 'Внутренняя передача денег между сотрудниками',
+          created_by: user.id,
+          transfer_to_user_id: transaction.transfer_to_user_id,
+          transfer_status: 'pending',
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send notification to recipient
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: transaction.transfer_to_user_id,
+          title: 'Вам переведены деньги',
+          message: `${profile?.full_name || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
+          type: 'money_transfer',
+          data: {
+            transaction_id: newTransaction.id,
+            from_user_name: profile?.full_name || 'Сотрудник',
+            amount: transaction.expense_amount,
+            cash_type: transaction.cash_type,
+            description: transaction.description,
+          },
+        },
+      });
+
+      toast({
+        title: "Успешно",
+        description: "Запрос на передачу денег отправлен повторно",
+      });
+
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error('Error resending transfer:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить запрос повторно",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -126,6 +206,8 @@ export function TransactionDetailDialog({
 
   const isExpense = transaction.expense_amount && transaction.expense_amount > 0;
   const amount = transaction.expense_amount || transaction.income_amount || 0;
+  const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
+  const isRejectedTransfer = isMoneyTransfer && transaction.transfer_status === 'rejected';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -138,6 +220,38 @@ export function TransactionDetailDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Money Transfer Status - Show if it's a transfer */}
+          {isMoneyTransfer && (
+            <div className={`p-4 rounded-lg border-2 ${
+              transaction.transfer_status === 'pending' 
+                ? 'bg-yellow-50 border-yellow-300' 
+                : transaction.transfer_status === 'accepted'
+                ? 'bg-green-50 border-green-300'
+                : 'bg-red-50 border-red-300'
+            }`}>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">💸</span>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold mb-2">
+                    {transaction.transfer_status === 'pending' && '⏳ Ожидает подтверждения'}
+                    {transaction.transfer_status === 'accepted' && '✅ Передача подтверждена'}
+                    {transaction.transfer_status === 'rejected' && '❌ Передача отклонена'}
+                  </h3>
+                  {transaction.transfer_to_user && (
+                    <p className="text-sm text-muted-foreground">
+                      Получатель: {transaction.transfer_to_user.full_name}
+                    </p>
+                  )}
+                  {transaction.transfer_from_user && (
+                    <p className="text-sm text-muted-foreground">
+                      Отправитель: {transaction.transfer_from_user.full_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -212,22 +326,37 @@ export function TransactionDetailDialog({
           </div>
         </div>
 
-        {canEdit && (
+        {/* Action Buttons */}
+        {(canEdit || isRejectedTransfer) && (
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            {onEdit && (
-              <Button onClick={handleEdit} className="w-full sm:w-auto" variant="outline">
-                <Pencil className="mr-2 h-4 w-4" />
-                Редактировать
+            {isRejectedTransfer && (
+              <Button 
+                onClick={handleResendTransfer} 
+                disabled={isResending}
+                className="w-full sm:w-auto"
+                variant="default"
+              >
+                {isResending ? "Отправка..." : "Отправить снова"}
               </Button>
             )}
-            <Button 
-              onClick={() => setDeleteDialogOpen(true)} 
-              className="w-full sm:w-auto"
-              variant="destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Удалить
-            </Button>
+            {canEdit && (
+              <>
+                {onEdit && (
+                  <Button onClick={handleEdit} className="w-full sm:w-auto" variant="outline">
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Редактировать
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => setDeleteDialogOpen(true)} 
+                  className="w-full sm:w-auto"
+                  variant="destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Удалить
+                </Button>
+              </>
+            )}
           </DialogFooter>
         )}
       </DialogContent>
