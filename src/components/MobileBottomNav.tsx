@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase, Cake, Plane, FileText, Settings } from "lucide-react";
+import { BarChart3, Calendar, CalendarDays, Plus, DollarSign, MoreHorizontal, Users, UserPlus, Briefcase, Cake, Plane, FileText, Settings, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -31,6 +31,7 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
+    { path: "/profile", label: "Профиль", icon: User },
     { path: "/calendar", label: "Календарь", icon: Calendar },
     { path: "/staff", label: "Сотрудники", icon: Users },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
