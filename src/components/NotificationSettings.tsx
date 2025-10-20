@@ -34,6 +34,10 @@ export const NotificationSettings = () => {
 
   const handleTestSound = () => {
     notificationSound.testSound();
+    toast({
+      title: 'Тест звука',
+      description: 'Проверьте, слышен ли звук. Если нет — проверьте громкость устройства.',
+    });
   };
 
   const handleTestPush = async () => {
@@ -267,6 +271,15 @@ export const NotificationSettings = () => {
                   <li>Обновите страницу</li>
                 </ol>
               </div>
+            )}
+
+            {notificationPermission === 'default' && (
+              <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
+                <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription className="text-blue-900 dark:text-blue-100">
+                  При включении переключателя браузер запросит разрешение на уведомления. Нажмите "Разрешить".
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">

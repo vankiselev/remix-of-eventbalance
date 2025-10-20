@@ -34,9 +34,16 @@ class NotificationSound {
   testSound() {
     if (this.audio) {
       this.audio.currentTime = 0;
-      this.audio.play().catch(err => {
-        console.log('Could not play test sound:', err);
-      });
+      this.audio.play()
+        .then(() => {
+          console.log('Test sound played successfully');
+        })
+        .catch(err => {
+          console.error('Could not play test sound:', err);
+          alert('Не удалось воспроизвести звук. Проверьте, что звук не заблокирован браузером и файл /sounds/notification.mp3 существует.');
+        });
+    } else {
+      alert('Аудио не инициализировано');
     }
   }
 }
