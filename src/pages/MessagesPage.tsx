@@ -33,8 +33,8 @@ const MessagesPage = () => {
         {isMobile ? (
           <>
             {selectedChatId ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <ChatWindow 
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ChatWindow
                   chatRoomId={selectedChatId} 
                   currentUserId={user.id}
                   onBack={() => setSelectedChatId(null)}
@@ -111,7 +111,7 @@ const MessagesPage = () => {
               )}
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               {selectedChatId ? (
                 <ChatWindow chatRoomId={selectedChatId} currentUserId={user.id} />
               ) : (
