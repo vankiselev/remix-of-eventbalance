@@ -86,9 +86,10 @@ interface TransactionFormProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   editTransaction?: any;
+  inline?: boolean; // Если true, форма отображается без Dialog
 }
 
-export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransaction }: TransactionFormProps) {
+export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransaction, inline = false }: TransactionFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [events, setEvents] = useState<Event[]>([]);
@@ -521,6 +522,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
 
   if (loading) {
+    if (inline) {
+      return (
+        <div className="flex items-center justify-center p-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -532,22 +541,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     );
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editTransaction ? "Редактировать транзакцию" : "Внести трату/приход"}
-          </DialogTitle>
-          <DialogDescription>
-            {editTransaction 
-              ? "Внесите изменения в транзакцию" 
-              : "Заполните форму для добавления новой финансовой транзакции"
-            }
-          </DialogDescription>
-        </DialogHeader>
-
-        <Form {...form}>
+  const formContent = (
+    <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
               <FormField
@@ -963,6 +958,27 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             </div>
           </form>
         </Form>
+  );
+
+  if (inline) {
+    return formContent;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editTransaction ? "Редактировать транзакцию" : "Внести трату/приход"}
+          </DialogTitle>
+          <DialogDescription>
+            {editTransaction 
+              ? "Внесите изменения в транзакцию" 
+              : "Заполните форму для добавления новой финансовой транзакции"
+            }
+          </DialogDescription>
+        </DialogHeader>
+        {formContent}
       </DialogContent>
     </Dialog>
   );
