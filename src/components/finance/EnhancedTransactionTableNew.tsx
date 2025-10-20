@@ -29,7 +29,10 @@ import {
   Eye,
   ZoomIn,
   ImageIcon,
-  FileIcon
+  FileIcon,
+  Clock,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { TransactionDetailDialog } from './TransactionDetailDialog';
 import { ReceiptPreview } from './ReceiptPreview';
@@ -534,7 +537,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td 
-                      colSpan={!userId ? 12 : 11} 
+                      colSpan={!userId ? 13 : 12} 
                       className="border border-border p-12 text-center text-slate-500"
                     >
                       {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
@@ -592,6 +595,30 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white">
                         {getVerificationStatusBadge(transaction.verification_status)}
+                      </td>
+                      <td className="border border-border p-2 text-center align-middle bg-white">
+                        {transaction.category === 'Передано или получено от сотрудника' && transaction.transfer_status && (
+                          <div className="flex items-center justify-center gap-1">
+                            {transaction.transfer_status === 'pending' && (
+                              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Ожидает
+                              </Badge>
+                            )}
+                            {transaction.transfer_status === 'accepted' && (
+                              <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Принято
+                              </Badge>
+                            )}
+                            {transaction.transfer_status === 'rejected' && (
+                              <Badge variant="destructive" className="text-xs bg-red-100 text-red-800 border-red-300">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Отклонено
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </td>
                       {canEditTransaction(transaction) && (
                         <td className="border border-border p-2 text-center align-middle bg-white text-right">

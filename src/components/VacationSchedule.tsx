@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ const VacationSchedule = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingVacation, setEditingVacation] = useState<Vacation | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
   
   const [formData, setFormData] = useState({
     start_date: undefined as Date | undefined,
@@ -53,7 +55,7 @@ const VacationSchedule = () => {
       fetchVacations();
       fetchUserProfile();
     }
-  }, [user]);
+  }, [user, activeTab]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -74,10 +76,19 @@ const VacationSchedule = () => {
 
   const fetchVacations = async () => {
     try {
-      const { data, error } = await supabase
+      const today = new Date().toISOString().split('T')[0];
+      
+      let query = supabase
         .from("vacations")
-        .select("*")
-        .order("start_date", { ascending: true });
+        .select("*");
+      
+      if (activeTab === 'active') {
+        query = query.gte('end_date', today).order("start_date", { ascending: true });
+      } else {
+        query = query.lt('end_date', today).order("start_date", { ascending: false });
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setVacations(data || []);
@@ -460,30 +471,37 @@ const VacationSchedule = () => {
         </Dialog>
       </div>
 
-      {/* Общее количество заявок на отпуск */}
-      <div className="bg-card text-card-foreground rounded-lg border p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Всего заявок на отпуск</h3>
-        </div>
-        <div className="text-2xl font-bold">{vacations.length}</div>
-        <p className="text-xs text-muted-foreground">
-          Заявок в системе
-        </p>
-      </div>
-
-      {vacations.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Plane className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Нет заявок на отпуск</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Подайте первую заявку на отпуск, чтобы начать планирование
+      {/* Tabs for Active and Archive */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archive')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="active">Актуальные отпуска</TabsTrigger>
+          <TabsTrigger value="archive">Архив</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="active" className="space-y-4 mt-4">
+          <div className="bg-card text-card-foreground rounded-lg border p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Актуальных отпусков</h3>
+            </div>
+            <div className="text-2xl font-bold">{vacations.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Текущие и будущие отпуска
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {vacations.map((vacation) => (
+          </div>
+
+          {vacations.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Plane className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Нет актуальных отпусков</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Все отпуска завершены или еще не запланированы
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {vacations.map((vacation) => (
             <Card key={vacation.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditVacation(vacation)}>
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -514,9 +532,69 @@ const VacationSchedule = () => {
                 )}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="archive" className="space-y-4 mt-4">
+          <div className="bg-card text-card-foreground rounded-lg border p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">В архиве</h3>
+            </div>
+            <div className="text-2xl font-bold">{vacations.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Завершенные отпуска
+            </p>
+          </div>
+
+          {vacations.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Plane className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Архив пуст</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Нет завершенных отпусков
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {vacations.map((vacation) => (
+                <Card key={vacation.id} className="cursor-pointer hover:shadow-md transition-shadow opacity-75" onClick={() => handleEditVacation(vacation)}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{vacation.employee_name}</CardTitle>
+                      <Badge className={getStatusColor(vacation.status)}>
+                        {getStatusLabel(vacation.status)}
+                      </Badge>
+                    </div>
+                    <CardDescription>{getVacationTypeLabel(vacation.vacation_type)}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Период: </span>
+                      <span className="font-medium">
+                        {formatDate(vacation.start_date)} - {formatDate(vacation.end_date)}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Дней: </span>
+                      <span className="font-medium">{calculateDays(vacation.start_date, vacation.end_date)}</span>
+                    </div>
+                    {vacation.description && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Примечание: </span>
+                        <span className="text-xs">{vacation.description}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Диалог редактирования */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

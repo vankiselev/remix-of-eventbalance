@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/utils/formatCurrency";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
+import { AlertCircle } from "lucide-react";
 
 const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
 const walletDisplay = (s?: string | null) => {
@@ -23,6 +24,7 @@ interface TransactionCardProps {
     cash_type?: string;
     static_project_name?: string;
     events?: { name: string } | null;
+    transfer_status?: string | null;
   };
   onClick: () => void;
 }
@@ -30,6 +32,8 @@ interface TransactionCardProps {
 export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) => {
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
+  const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
+  const isRejectedTransfer = isMoneyTransfer && transaction.transfer_status === 'rejected';
   
   // После категории всегда показываем проект
   const projectName = transaction.static_project_name || transaction.events?.name;
@@ -54,6 +58,12 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
           {projectName && <span className="hidden md:inline">•</span>}
           <span className="hidden md:inline">{transaction.category}</span>
         </div>
+        {isRejectedTransfer && (
+          <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 mt-1">
+            <AlertCircle className="h-3 w-3" />
+            <span className="font-medium">Получатель отклонил передачу</span>
+          </div>
+        )}
       </div>
 
       {/* Amount */}
