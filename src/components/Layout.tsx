@@ -140,7 +140,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
-    { path: "/messages", label: "Сообщения", icon: MessageSquare, badge: totalUnread },
+    { path: "/messages", label: "Сообщения", icon: MessageSquare, ...(totalUnread > 0 && { badge: totalUnread }) },
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
@@ -348,12 +348,12 @@ const Layout = ({ children }: LayoutProps) => {
                             {!sidebarCollapsed && (
                               <span className="ml-3 truncate flex-1">{item.label}</span>
                             )}
-                            {!sidebarCollapsed && item.badge && item.badge > 0 && (
+                             {!sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
                               <Badge variant="destructive" className="ml-auto">
                                 {item.badge > 9 ? '9+' : item.badge}
                               </Badge>
                             )}
-                            {sidebarCollapsed && item.badge && item.badge > 0 && (
+                            {sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
                               <Badge 
                                 variant="destructive" 
                                 className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full"
