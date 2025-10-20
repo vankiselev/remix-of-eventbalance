@@ -259,9 +259,14 @@ export const checkPushSubscription = async (): Promise<boolean> => {
         return false;
       }
 
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      // Avoid waiting on navigator.serviceWorker.ready here — it may never resolve
+      // when no Service Worker is registered yet. Check existing registration only.
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        return false;
+      }
 
+      const subscription = await registration.pushManager.getSubscription();
       return !!subscription;
     }
   } catch (error) {
