@@ -61,7 +61,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b p-3 flex items-center justify-between">
+      <div className="border-b p-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           {isMobile && onBack && (
             <Button 
@@ -83,7 +83,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message: Message) => {
             const isOwn = message.sender_id === currentUserId;
@@ -151,9 +151,12 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
 
-      <div className="border-t p-4 space-y-2">
+      <div className={cn(
+        "border-t p-4 space-y-2 shrink-0 bg-background",
+        isMobile && "pb-safe"
+      )}>
         {selectedFiles.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedFiles.map((file, index) => (

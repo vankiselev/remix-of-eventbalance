@@ -8,6 +8,7 @@ import { NewChatDialog } from "@/components/chat/NewChatDialog";
 import { useChats } from "@/hooks/useChats";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 const MessagesPage = () => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -25,7 +26,10 @@ const MessagesPage = () => {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] flex">
+      <div className={cn(
+        "flex",
+        isMobile ? "h-[calc(100vh-4rem-4rem)]" : "h-[calc(100vh-4rem)]"
+      )}>
         {/* Mobile: Show either chat list or chat window */}
         {isMobile ? (
           <>
