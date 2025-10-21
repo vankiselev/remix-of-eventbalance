@@ -26,9 +26,9 @@ const MobileBottomNav = () => {
   const { totalUnread } = useChatUnread();
   const [mainNavItems, setMainNavItems] = useState<NavItem[]>([
     { path: "/dashboard", label: "Главная", icon: "BarChart3", enabled: true },
+    { path: "/messages", label: "Сообщения", icon: "MessageSquare", enabled: true },
+    { path: "/transaction", label: "Создать", icon: "Plus", enabled: true },
     { path: "/finances", label: "Финансы", icon: "DollarSign", enabled: true },
-    { path: "/transaction", label: "Трата/Приход", icon: "Plus", enabled: true },
-    { path: "/events", label: "Мероприятия", icon: "CalendarDays", enabled: true },
   ]);
 
   useEffect(() => {
@@ -52,9 +52,9 @@ const MobileBottomNav = () => {
 
   const moreMenuItems = [
     { path: "/profile", label: "Профиль", icon: "User" },
+    { path: "/events", label: "Мероприятия", icon: "CalendarDays" },
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/staff", label: "Сотрудники", icon: "Users" },
-    { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
     { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
     { path: "/vacations", label: "График отпусков", icon: "Plane" },
     { path: "/contacts", label: "Контакты", icon: "Briefcase" },
@@ -113,20 +113,19 @@ const MobileBottomNav = () => {
             );
           })}
 
-          {/* More Menu */}
-          {mainNavItems.length < 5 && (
-            <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
-              <SheetTrigger asChild>
-                <div className="flex flex-col items-center gap-1.5">
-                  <button className="flex items-center justify-center h-12 w-12 rounded-full border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95">
-                    {(() => {
-                      const MoreIcon = getIconComponent("MoreHorizontal");
-                      return <MoreIcon className="h-5 w-5" strokeWidth={2} />;
-                    })()}
-                  </button>
-                  <span className="text-xs font-medium text-foreground">Ещё</span>
-                </div>
-              </SheetTrigger>
+          {/* More Menu - Always show */}
+          <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
+            <SheetTrigger asChild>
+              <div className="flex flex-col items-center gap-1.5">
+                <button className="flex items-center justify-center h-12 w-12 rounded-full border-2 border-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95">
+                  {(() => {
+                    const MoreIcon = getIconComponent("MoreHorizontal");
+                    return <MoreIcon className="h-5 w-5" strokeWidth={2} />;
+                  })()}
+                </button>
+                <span className="text-xs font-medium text-foreground">Ещё</span>
+              </div>
+            </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl border-t border-border/20">
                 <SheetHeader className="pb-4">
                   <SheetTitle>Меню</SheetTitle>
@@ -161,7 +160,6 @@ const MobileBottomNav = () => {
                 </div>
               </SheetContent>
             </Sheet>
-          )}
         </div>
       </div>
 
