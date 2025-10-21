@@ -1722,6 +1722,7 @@ export type Database = {
           birth_date: string
           created_at: string
           email: string
+          employment_status: string
           full_name: string
           id: string
           phone: string
