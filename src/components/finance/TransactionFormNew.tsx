@@ -389,14 +389,26 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       let transactionResult;
       
       if (editTransaction) {
+        // For rejected transfers, use the original recipient ID if not changed
+        const recipientId = transferToUserId || editTransaction.transfer_to_user_id;
+        
         // Check if this is a rejected money transfer being re-sent
         const wasRejectedTransfer = editTransaction.transfer_status === 'rejected' && 
                                    isMoneyTransfer && 
-                                   transferToUserId;
+                                   recipientId;
+
+        console.log('🔍 Edit transaction check:', {
+          isEdit: true,
+          originalStatus: editTransaction.transfer_status,
+          isMoneyTransfer,
+          recipientId,
+          wasRejectedTransfer,
+        });
 
         // Update existing transaction
         const updateData = wasRejectedTransfer ? {
           ...transactionData,
+          transfer_to_user_id: recipientId, // Ensure recipient ID is set
           transfer_rejection_reason: null, // Clear rejection reason when re-sending
         } : transactionData;
 
@@ -426,7 +438,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         if (wasRejectedTransfer) {
           console.log('💸 Re-sending money transfer notification after edit...', {
             transactionId: transaction.id,
-            recipientId: transferToUserId,
+            recipientId,
           });
 
           // Get sender's info
@@ -439,9 +451,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
           // Send notification
           try {
-            await supabase.functions.invoke('send-push-notification', {
+            const notificationResult = await supabase.functions.invoke('send-push-notification', {
               body: {
-                user_id: transferToUserId,
+                user_id: recipientId,
                 title: 'Вам переведены деньги',
                 message: `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`,
                 type: 'money_transfer',
@@ -455,7 +467,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 },
               },
             });
-            console.log('✅ Money transfer notification re-sent successfully after edit');
+            console.log('✅ Money transfer notification re-sent successfully after edit', notificationResult);
           } catch (notifyErr) {
             console.error('❌ Failed to re-send transfer notification:', notifyErr);
           }
