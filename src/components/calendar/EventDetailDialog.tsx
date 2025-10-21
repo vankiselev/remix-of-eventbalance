@@ -58,6 +58,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [clients, setClients] = useState<any[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -297,7 +298,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
             <div className="space-y-2">
               <Label htmlFor="start_date">Дата *</Label>
-              <Popover>
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -318,10 +319,13 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <Calendar
                     mode="single"
                     selected={formData.start_date ? new Date(formData.start_date) : undefined}
-                    onSelect={(date) => setFormData({ 
-                      ...formData, 
-                      start_date: date ? format(date, 'yyyy-MM-dd') : '' 
-                    })}
+                    onSelect={(date) => {
+                      setFormData({ 
+                        ...formData, 
+                        start_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                      });
+                      setDatePickerOpen(false);
+                    }}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                     locale={ru}

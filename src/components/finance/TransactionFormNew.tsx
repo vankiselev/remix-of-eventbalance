@@ -108,6 +108,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const submitLockRef = useRef(false);
   const categorySearchInputRef = useRef<HTMLInputElement>(null);
   const projectSearchInputRef = useRef<HTMLInputElement>(null);
+  const [whoseProjectSearch, setWhoseProjectSearch] = useState("");
+  const [whoseProjectSelectOpen, setWhoseProjectSelectOpen] = useState(false);
+  const whoseProjectSearchInputRef = useRef<HTMLInputElement>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Check user role
   useEffect(() => {
@@ -209,6 +213,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       }, 100);
     }
   }, [projectSelectOpen]);
+
+  // Auto-focus whose project search when select opens
+  useEffect(() => {
+    if (whoseProjectSelectOpen && whoseProjectSearchInputRef.current) {
+      setTimeout(() => {
+        whoseProjectSearchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [whoseProjectSelectOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -576,7 +589,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Дата операции</FormLabel>
-                    <Popover>
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -599,11 +612,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setDatePickerOpen(false);
+                          }}
                           disabled={(date) =>
                             date > new Date() || date < new Date("1900-01-01")
                           }
                           initialFocus
+                          className="p-3 pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
@@ -803,26 +820,50 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             <FormField
               control={form.control}
               name="whose_project"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Чей проект</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PROJECT_OWNERS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const filteredOwners = PROJECT_OWNERS.filter(owner =>
+                  owner.toLowerCase().includes(whoseProjectSearch.toLowerCase())
+                );
+
+                return (
+                  <FormItem>
+                    <FormLabel>Чей проект</FormLabel>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                      open={whoseProjectSelectOpen}
+                      onOpenChange={setWhoseProjectSelectOpen}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <div className="sticky top-0 p-2 bg-background border-b border-border mb-2 z-10">
+                          <input
+                            ref={whoseProjectSearchInputRef}
+                            data-whose-project-search
+                            type="text"
+                            placeholder="Поиск..."
+                            value={whoseProjectSearch}
+                            onChange={(e) => setWhoseProjectSearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        {filteredOwners.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField

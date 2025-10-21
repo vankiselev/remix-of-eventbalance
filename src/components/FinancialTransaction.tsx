@@ -56,6 +56,7 @@ const FinancialTransaction = () => {
   const [projectSearch, setProjectSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -193,7 +194,7 @@ const FinancialTransaction = () => {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Дата операции</FormLabel>
-                    <Popover>
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -216,7 +217,10 @@ const FinancialTransaction = () => {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setDatePickerOpen(false);
+                          }}
                           disabled={(date) =>
                             date > new Date() || date < new Date("1900-01-01")
                           }

@@ -39,6 +39,8 @@ const VacationSchedule = () => {
   const [editingVacation, setEditingVacation] = useState<Vacation | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     start_date: undefined as Date | undefined,
@@ -373,7 +375,7 @@ const VacationSchedule = () => {
             <form onSubmit={handleCreateVacation} className="space-y-4">
               <div className="space-y-2">
                 <Label>Дата начала *</Label>
-                <Popover>
+                <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -390,7 +392,10 @@ const VacationSchedule = () => {
                     <Calendar
                       mode="single"
                       selected={formData.start_date}
-                      onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                      onSelect={(date) => {
+                        setFormData({ ...formData, start_date: date });
+                        setStartDatePickerOpen(false);
+                      }}
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
@@ -405,7 +410,7 @@ const VacationSchedule = () => {
 
               <div className="space-y-2">
                 <Label>Дата окончания *</Label>
-                <Popover>
+                <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -422,7 +427,10 @@ const VacationSchedule = () => {
                     <Calendar
                       mode="single"
                       selected={formData.end_date}
-                      onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                      onSelect={(date) => {
+                        setFormData({ ...formData, end_date: date });
+                        setEndDatePickerOpen(false);
+                      }}
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
@@ -608,7 +616,7 @@ const VacationSchedule = () => {
           <form onSubmit={handleUpdateVacation} className="space-y-4">
             <div className="space-y-2">
               <Label>Дата начала *</Label>
-              <Popover>
+              <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -625,7 +633,10 @@ const VacationSchedule = () => {
                   <Calendar
                     mode="single"
                     selected={formData.start_date}
-                    onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                    onSelect={(date) => {
+                      setFormData({ ...formData, start_date: date });
+                      setStartDatePickerOpen(false);
+                    }}
                     disabled={(date) => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
@@ -640,7 +651,7 @@ const VacationSchedule = () => {
 
             <div className="space-y-2">
               <Label>Дата окончания *</Label>
-              <Popover>
+              <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -657,7 +668,10 @@ const VacationSchedule = () => {
                   <Calendar
                     mode="single"
                     selected={formData.end_date}
-                    onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                    onSelect={(date) => {
+                      setFormData({ ...formData, end_date: date });
+                      setEndDatePickerOpen(false);
+                    }}
                     disabled={(date) => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
