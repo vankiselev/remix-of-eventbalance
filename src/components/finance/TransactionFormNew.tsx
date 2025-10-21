@@ -666,7 +666,19 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             onChange={(e) => setProjectSearch(e.target.value)}
                             className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                             onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Select first filtered result
+                                const firstResult = filteredStaticProjects[0] || (filteredEvents[0]?.id);
+                                if (firstResult) {
+                                  field.onChange(firstResult);
+                                  setProjectSelectOpen(false);
+                                  setProjectSearch('');
+                                }
+                              }
+                            }}
                           />
                         </div>
                         {filteredStaticProjects.map((project) => (
@@ -740,7 +752,31 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             onChange={(e) => setCategorySearch(e.target.value)}
                             className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                             onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Select first filtered result
+                                const firstResult = filteredCategories[0];
+                                if (firstResult) {
+                                  field.onChange(firstResult);
+                                  // Handle category selection logic
+                                  if (firstResult === 'Передано или получено от сотрудника') {
+                                    setIsMoneyTransfer(true);
+                                    form.setValue('no_receipt', true);
+                                    form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                                    form.setValue('income_amount', undefined);
+                                  } else {
+                                    setIsMoneyTransfer(false);
+                                    setTransferToUserId("");
+                                    form.setValue('no_receipt', false);
+                                    form.setValue('no_receipt_reason', '');
+                                  }
+                                  setCategorySelectOpen(false);
+                                  setCategorySearch('');
+                                }
+                              }
+                            }}
                           />
                         </div>
                         {filteredCategories.map((option) => (
@@ -850,7 +886,19 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             onChange={(e) => setWhoseProjectSearch(e.target.value)}
                             className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                             onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Select first filtered result
+                                const firstResult = filteredOwners[0];
+                                if (firstResult) {
+                                  field.onChange(firstResult);
+                                  setWhoseProjectSelectOpen(false);
+                                  setWhoseProjectSearch('');
+                                }
+                              }
+                            }}
                           />
                         </div>
                         {filteredOwners.map((option) => (
