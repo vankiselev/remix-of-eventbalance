@@ -57,13 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_role_assignments')
           .select('role_definitions(name, is_admin_role)')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (rbacRole?.role_definitions) {
           setUserRoleName(rbacRole.role_definitions.name);
         } else {
-          // Fallback на базовую роль
-          setUserRoleName(data.role === 'admin' ? 'Администратор' : 'Сотрудник');
+          // Fallback: показываем "Сотрудник" для всех, у кого нет RBAC роли
+          // Для админов будет показываться их RBAC роль (например "Администратор")
+          setUserRoleName('Сотрудник');
         }
 
         // Check employment status
@@ -127,9 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .from('user_role_assignments')
               .select('role_definitions(name, is_admin_role)')
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
 
-            const newRoleName = rbacRole?.role_definitions?.name || (data.role === 'admin' ? 'Администратор' : 'Сотрудник');
+            const newRoleName = rbacRole?.role_definitions?.name || 'Сотрудник';
             setUserRoleName(newRoleName);
             
             toast.success('Ваша роль была изменена администратором', {

@@ -293,7 +293,7 @@ const Layout = ({ children }: LayoutProps) => {
                         {displayName}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {userRoleName || (userRole === 'admin' ? 'Администратор' : 'Сотрудник')}
+                        {userRoleName || 'Сотрудник'}
                       </span>
                     </div>
                   </Button>
