@@ -669,6 +669,7 @@ const Finances = () => {
         onSuccess={handleTransactionSuccess}
         editTransaction={editTransaction}
       />
+      </div>
     </div>
   );
   }
