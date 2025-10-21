@@ -237,6 +237,16 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         // If we have a static_project_name, use that, otherwise use project_id
         const projectValue = editTransaction.static_project_name || editTransaction.project_id;
         
+        // Initialize money transfer state for edit mode
+        const isTransferCategory = editTransaction.category === 'Передано или получено от сотрудника';
+        if (isTransferCategory) {
+          setIsMoneyTransfer(true);
+          setTransferToUserId(editTransaction.transfer_to_user_id || "");
+        } else {
+          setIsMoneyTransfer(false);
+          setTransferToUserId("");
+        }
+        
         form.reset({
           operation_date: new Date(editTransaction.operation_date),
           project_id: projectValue || undefined,
@@ -250,6 +260,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         });
         setFiles([]);
       } else {
+        setIsMoneyTransfer(false);
+        setTransferToUserId("");
         form.reset({
           operation_date: new Date(),
           project_id: undefined,

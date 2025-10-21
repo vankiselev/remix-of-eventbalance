@@ -87,6 +87,11 @@ export function TransactionDetailDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      console.log('🔄 Resending transfer via button...', {
+        transactionId: transaction.id,
+        recipientId: transaction.transfer_to_user_id,
+      });
+
       // Update existing transaction status back to pending and clear rejection reason
       const { error: updateError } = await supabase
         .from('financial_transactions')
@@ -99,12 +104,22 @@ export function TransactionDetailDialog({
 
       if (updateError) throw updateError;
 
+      // Log audit entry
+      await supabase
+        .from('financial_audit_log')
+        .insert([{
+          transaction_id: transaction.id,
+          action: 'RESEND',
+          changed_by: user.id,
+          change_description: 'Rejected transfer manually re-sent via button'
+        }]);
+
       // Send notification to recipient
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       await supabase.functions.invoke('send-push-notification', {
         body: {
@@ -118,9 +133,12 @@ export function TransactionDetailDialog({
             amount: transaction.expense_amount,
             cash_type: transaction.cash_type,
             description: transaction.description,
+            status: 'pending',
           },
         },
       });
+
+      console.log('✅ Transfer resent successfully via button');
 
       toast({
         title: "Успешно",
@@ -130,7 +148,7 @@ export function TransactionDetailDialog({
       onClose();
       window.location.reload();
     } catch (error) {
-      console.error('Error resending transfer:', error);
+      console.error('❌ Error resending transfer:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось отправить запрос повторно",
