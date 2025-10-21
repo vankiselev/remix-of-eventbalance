@@ -74,6 +74,7 @@ const Staff = () => {
   const [filteredUsers, setFilteredUsers] = useState<CombinedUser[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
@@ -100,16 +101,22 @@ const Staff = () => {
     if (!user) return;
 
     try {
-      // Get current user profile to check role
+      // Get current user profile and role
       const { data: currentProfile } = await supabase
         .rpc("get_user_basic_profile")
         .single();
 
       setCurrentUserProfile(currentProfile);
 
+      const { data: currentRole } = await supabase
+        .rpc('get_current_user_role')
+        .single();
+      const isAdminLocal = currentRole === 'admin';
+      setIsAdmin(isAdminLocal);
+
       // Fetch all profiles - admins see full data, employees see basic data only
       let profilesData;
-      if (currentProfile?.role === "admin") {
+      if (isAdminLocal) {
         const { data, error: adminError } = await supabase.rpc("get_admin_profiles");
         if (adminError) {
           console.error("Error fetching admin profiles:", adminError);
@@ -117,7 +124,7 @@ const Staff = () => {
         }
         profilesData = data;
       } else {
-        // Non-admin users can see all basic profiles (without financial data)
+        // Non-admin users can see all basic profiles (active only)
         const { data, error: basicError } = await supabase.rpc("get_all_basic_profiles");
         if (basicError) {
           console.error("Error fetching basic profiles:", basicError);
@@ -138,7 +145,7 @@ const Staff = () => {
           hire_date,
           created_at,
           updated_at
-          ${currentProfile?.role === 'admin' ? ', salary' : ''}
+          ${isAdminLocal ? ', salary' : ''}
         `)
         .order("hire_date", { ascending: false });
 
@@ -153,14 +160,14 @@ const Staff = () => {
         employeeMap.set(emp.user_id, {
           employee_id: emp.id,
           position: emp.position,
-          salary: currentProfile?.role === 'admin' ? emp.salary : null,
+          salary: isAdminLocal ? emp.salary : null,
           hire_date: emp.hire_date
         });
       });
 
       // Fetch cash data for all users if admin
       const cashDataMap = new Map();
-      if (currentProfile?.role === 'admin') {
+      if (isAdminLocal) {
         const cashPromises = (profilesData || []).map(async (profile: Profile) => {
           const { data } = await supabase
             .rpc('calculate_user_cash_totals', { user_uuid: profile.id })
@@ -344,7 +351,7 @@ const Staff = () => {
 
   const handleEditUser = (user: CombinedUser) => {
     // Check permissions - only admins can edit other admins
-    if (user.role === 'admin' && currentUserProfile?.role !== 'admin') {
+    if (user.role === 'admin' && !isAdmin) {
       toast({
         variant: "destructive",
         title: "Ошибка",
@@ -353,8 +360,8 @@ const Staff = () => {
       return;
     }
     
-    // Users can edit their own profile
-    const canEditThisUser = user.id === currentUserProfile?.id || currentUserProfile?.role === 'admin';
+    // Users can edit their own profile or admins can edit anyone
+    const canEditThisUser = user.id === currentUserProfile?.id || isAdmin;
     
     if (!canEditThisUser) {
       toast({
