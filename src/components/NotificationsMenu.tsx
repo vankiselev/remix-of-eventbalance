@@ -46,8 +46,9 @@ export const NotificationsMenu = () => {
     deleteAllNotifications,
   } = useNotifications();
 
-  const handleNotificationClick = async (notificationId: string, read: boolean) => {
-    if (!read) {
+  const handleNotificationClick = async (notificationId: string, read: boolean, type: string, data: any) => {
+    // Don't auto-mark money transfer notifications as read if they're pending
+    if (!read && !(type === 'money_transfer' && data?.status === 'pending')) {
       await markAsRead(notificationId);
     }
   };
@@ -124,7 +125,7 @@ export const NotificationsMenu = () => {
                       'p-4 hover:bg-muted/50 transition-colors cursor-pointer relative group',
                       !notification.read && 'bg-primary/5'
                     )}
-                    onClick={() => handleNotificationClick(notification.id, notification.read)}
+                    onClick={() => handleNotificationClick(notification.id, notification.read, notification.type, notification.data)}
                   >
                     <div className="flex items-start gap-3">
                       <div className="text-2xl flex-shrink-0">
@@ -150,7 +151,11 @@ export const NotificationsMenu = () => {
                         </p>
                         
                         {/* Special handling for money transfer notifications */}
-                        {notification.type === 'money_transfer' && notification.data && !notification.read && (
+                        {notification.type === 'money_transfer' && notification.data && (
+                          notification.data.status === 'pending' || 
+                          notification.data.status === 'accepted' || 
+                          notification.data.status === 'rejected'
+                        ) && (
                           <div className="mt-3">
                             <MoneyTransferNotification
                               notificationId={notification.id}
