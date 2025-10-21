@@ -106,6 +106,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [categorySelectOpen, setCategorySelectOpen] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string } | null>(null);
   const submitLockRef = useRef(false);
+  const categorySearchInputRef = useRef<HTMLInputElement>(null);
 
   // Check user role
   useEffect(() => {
@@ -189,6 +190,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       }
     }
   }, [watchNoReceipt, files.length, isMoneyTransfer]);
+
+  // Auto-focus category search when select opens
+  useEffect(() => {
+    if (categorySelectOpen && categorySearchInputRef.current) {
+      setTimeout(() => {
+        categorySearchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [categorySelectOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -692,13 +702,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {filteredCategories.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
+                        <div className="sticky top-0 p-2 bg-background border-b border-border mb-2 z-10">
                           <input
+                            ref={categorySearchInputRef}
                             data-category-search
                             type="text"
                             placeholder="Поиск категории..."
@@ -709,6 +715,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             onKeyDown={(e) => e.stopPropagation()}
                           />
                         </div>
+                        {filteredCategories.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
