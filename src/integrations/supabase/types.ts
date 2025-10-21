@@ -656,6 +656,7 @@ export type Database = {
           requires_verification: boolean | null
           static_project_name: string | null
           transfer_from_user_id: string | null
+          transfer_rejection_reason: string | null
           transfer_status: string | null
           transfer_to_user_id: string | null
           updated_at: string
@@ -685,6 +686,7 @@ export type Database = {
           requires_verification?: boolean | null
           static_project_name?: string | null
           transfer_from_user_id?: string | null
+          transfer_rejection_reason?: string | null
           transfer_status?: string | null
           transfer_to_user_id?: string | null
           updated_at?: string
@@ -714,6 +716,7 @@ export type Database = {
           requires_verification?: boolean | null
           static_project_name?: string | null
           transfer_from_user_id?: string | null
+          transfer_rejection_reason?: string | null
           transfer_status?: string | null
           transfer_to_user_id?: string | null
           updated_at?: string
@@ -1866,7 +1869,9 @@ export type Database = {
         Returns: undefined
       }
       reject_money_transfer: {
-        Args: { p_transaction_id: string }
+        Args:
+          | { p_rejection_reason: string; p_transaction_id: string }
+          | { p_transaction_id: string }
         Returns: boolean
       }
       request_password_reset: {

@@ -47,6 +47,7 @@ interface Transaction {
   transfer_from_user_id?: string | null;
   transfer_to_user?: { full_name: string; email: string } | null;
   transfer_from_user?: { full_name: string; email: string } | null;
+  transfer_rejection_reason?: string | null;
 }
 
 interface TransactionDetailDialogProps {
@@ -86,11 +87,12 @@ export function TransactionDetailDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Update existing transaction status back to pending
+      // Update existing transaction status back to pending and clear rejection reason
       const { error: updateError } = await supabase
         .from('financial_transactions')
         .update({
           transfer_status: 'pending',
+          transfer_rejection_reason: null,
           updated_at: new Date().toISOString()
         })
         .eq('id', transaction.id);
@@ -233,6 +235,16 @@ export function TransactionDetailDialog({
                     <p className="text-sm text-muted-foreground">
                       Отправитель: {transaction.transfer_from_user.full_name}
                     </p>
+                  )}
+                  {transaction.transfer_status === 'rejected' && transaction.transfer_rejection_reason && (
+                    <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-800">
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Причина отклонения:
+                      </p>
+                      <p className="text-sm text-gray-800 dark:text-gray-200">
+                        {transaction.transfer_rejection_reason}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

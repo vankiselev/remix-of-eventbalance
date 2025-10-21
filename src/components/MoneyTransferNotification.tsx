@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface MoneyTransferNotificationProps {
   notificationId: string;
@@ -26,6 +38,8 @@ export const MoneyTransferNotification = ({
   onAction,
 }: MoneyTransferNotificationProps) => {
   const [processing, setProcessing] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
@@ -82,9 +96,10 @@ export const MoneyTransferNotification = ({
           },
         });
       } else {
-        // Reject transfer via RPC
+        // Reject transfer via RPC with rejection reason
         const { error: rpcErr } = await supabase.rpc('reject_money_transfer', {
           p_transaction_id: transactionId,
+          p_rejection_reason: rejectionReason.trim(),
         });
         console.log('🔁 RPC reject error:', rpcErr);
         if (rpcErr) throw rpcErr;
@@ -185,7 +200,7 @@ export const MoneyTransferNotification = ({
           Подтвердить получение
         </Button>
         <Button
-          onClick={() => handleAction('reject')}
+          onClick={() => setRejectDialogOpen(true)}
           disabled={processing}
           variant="outline"
           size="sm"
@@ -199,6 +214,59 @@ export const MoneyTransferNotification = ({
           Отклонить
         </Button>
       </div>
+
+      {/* Rejection Reason Dialog */}
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Причина отклонения</AlertDialogTitle>
+            <AlertDialogDescription>
+              Пожалуйста, укажите причину, по которой вы отклоняете передачу денег.
+              Отправитель увидит это сообщение.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-2">
+            <Label htmlFor="rejection-reason">Причина отклонения *</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Например: Неверная сумма, не получал деньги..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Минимум 10 символов ({rejectionReason.trim().length}/10)
+            </p>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processing}>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setRejectDialogOpen(false);
+                handleAction('reject');
+              }}
+              disabled={processing || rejectionReason.trim().length < 10}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Отклонение...
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Отклонить
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

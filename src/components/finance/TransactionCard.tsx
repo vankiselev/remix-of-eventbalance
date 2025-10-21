@@ -25,6 +25,7 @@ interface TransactionCardProps {
     static_project_name?: string;
     events?: { name: string } | null;
     transfer_status?: string | null;
+    transfer_rejection_reason?: string | null;
   };
   onClick: () => void;
 }
@@ -59,9 +60,16 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
           <span className="hidden md:inline">{transaction.category}</span>
         </div>
         {isRejectedTransfer && (
-          <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 mt-1">
-            <AlertCircle className="h-3 w-3" />
-            <span className="font-medium">Получатель отклонил передачу</span>
+          <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+              <AlertCircle className="h-3 w-3" />
+              <span className="font-medium">Получатель отклонил передачу</span>
+            </div>
+            {transaction.transfer_rejection_reason && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 italic line-clamp-2">
+                Причина: {transaction.transfer_rejection_reason}
+              </p>
+            )}
           </div>
         )}
       </div>
