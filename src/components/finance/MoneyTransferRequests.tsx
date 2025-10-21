@@ -9,6 +9,17 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PendingTransfer {
   id: string;
@@ -28,6 +39,9 @@ export const MoneyTransferRequests = () => {
   const { user } = useAuth();
   const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedTransferId, setSelectedTransferId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     if (user?.id) {
@@ -136,10 +150,22 @@ export const MoneyTransferRequests = () => {
     }
   };
 
-  const handleReject = async (transactionId: string) => {
+  const handleRejectClick = (transactionId: string) => {
+    setSelectedTransferId(transactionId);
+    setRejectionReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!selectedTransferId || rejectionReason.trim().length < 10) {
+      toast.error('Причина отклонения должна содержать минимум 10 символов');
+      return;
+    }
+
     try {
       const { error } = await supabase.rpc('reject_money_transfer', {
-        p_transaction_id: transactionId
+        p_transaction_id: selectedTransferId,
+        p_rejection_reason: rejectionReason.trim()
       });
 
       if (error) throw error;
@@ -150,17 +176,20 @@ export const MoneyTransferRequests = () => {
         .update({ read: true })
         .eq('user_id', user?.id)
         .eq('type', 'money_transfer')
-        .contains('data', { transaction_id: transactionId });
+        .contains('data', { transaction_id: selectedTransferId });
 
       if (notifError) {
         console.error('Error updating notification:', notifError);
       }
 
       toast.success('Перевод отклонен');
+      setRejectDialogOpen(false);
+      setSelectedTransferId(null);
+      setRejectionReason("");
       fetchPendingTransfers();
     } catch (error: any) {
       console.error('Error rejecting transfer:', error);
-      toast.error('Ошибка при отклонении перевода');
+      toast.error(error.message || 'Ошибка при отклонении перевода');
     }
   };
 
@@ -231,7 +260,7 @@ export const MoneyTransferRequests = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleReject(transfer.id)}
+                    onClick={() => handleRejectClick(transfer.id)}
                     className="flex-1"
                   >
                     <X className="h-4 w-4 mr-1" />
@@ -243,6 +272,46 @@ export const MoneyTransferRequests = () => {
           ))}
         </div>
       </CardContent>
+
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Причина отклонения</AlertDialogTitle>
+            <AlertDialogDescription>
+              Пожалуйста, укажите причину отклонения перевода (минимум 10 символов).
+              Эта информация будет отправлена отправителю.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Например: Неверная сумма, не получал деньги, ошибка в кошельке..."
+              className="min-h-[100px]"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {rejectionReason.trim().length}/10 символов
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setRejectDialogOpen(false);
+              setRejectionReason("");
+              setSelectedTransferId(null);
+            }}>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRejectConfirm}
+              disabled={rejectionReason.trim().length < 10}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Отклонить перевод
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
