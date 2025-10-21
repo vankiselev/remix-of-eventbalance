@@ -28,7 +28,6 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const { signOut, user, userRole, userProfile } = useAuth();
   const { roles: userRoles, isAdmin: isAdminRbac } = useUserRbacRoles();
-  const { isFinancier } = useFinancierPermissions();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -150,7 +149,6 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
     { path: "/finances", label: t('finances'), icon: RussianRuble },
-    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck }] : []),
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
