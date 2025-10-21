@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 export const useUserPermissions = () => {
+  const { isAdmin: isAdminRbac } = useUserRbacRoles();
+  
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ['user-permissions'],
     queryFn: async () => {
@@ -37,6 +40,8 @@ export const useUserPermissions = () => {
   });
 
   const hasPermission = (code: string) => {
+    // Admin override: admins have all permissions
+    if (isAdminRbac) return true;
     return permissions.includes(code);
   };
 
@@ -44,5 +49,6 @@ export const useUserPermissions = () => {
     permissions,
     hasPermission,
     isLoading,
+    isAdmin: isAdminRbac,
   };
 };
