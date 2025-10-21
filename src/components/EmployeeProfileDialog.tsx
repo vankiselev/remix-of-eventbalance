@@ -142,11 +142,11 @@ export const EmployeeProfileDialog = ({
   const [terminationReason, setTerminationReason] = useState("");
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
   const { user, userRole } = useAuth();
-  const { roles: rbacRoles } = useUserRbacRoles(currentUser?.id);
   const { roles } = useRoles();
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
+  const { roles: rbacRoles } = useUserRbacRoles(currentUser?.id);
   const canEditRole = userRole === 'admin';
 
   const form = useForm<ProfileFormData>({
@@ -637,9 +637,9 @@ export const EmployeeProfileDialog = ({
             <div>
               <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
               <p className="text-sm text-muted-foreground">{currentUser.email}</p>
-              <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'}>
-                {currentUser.role === 'admin' ? 'Администратор' : 'Сотрудник'}
-              </Badge>
+              <div className="mt-2">
+                <RoleBadges roles={rbacRoles} />
+              </div>
             </div>
           </div>
 

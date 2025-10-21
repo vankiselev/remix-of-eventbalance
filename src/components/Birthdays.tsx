@@ -125,21 +125,19 @@ const Birthdays = () => {
           <div className="mt-1">
             <RoleBadges roles={roles} />
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-          {employee.role === 'admin' ? 'Администратор' : 'Сотрудник'}
-        </p>
+        </div>
+        <div className="text-right">
+          <Badge variant={getBirthdayBadgeVariant(upcomingBirthday)} className="mb-1">
+            {formatBirthdayDate(upcomingBirthday)}
+          </Badge>
+          <p className="text-sm text-muted-foreground">
+            {age} {age % 10 === 1 && age !== 11 ? 'год' : 
+             age % 10 >= 2 && age % 10 <= 4 && (age < 10 || age > 20) ? 'года' : 'лет'}
+          </p>
+        </div>
       </div>
-      <div className="text-right">
-        <Badge variant={getBirthdayBadgeVariant(upcomingBirthday)} className="mb-1">
-          {formatBirthdayDate(upcomingBirthday)}
-        </Badge>
-        <p className="text-sm text-muted-foreground">
-          {age} {age % 10 === 1 && age !== 11 ? 'год' : 
-           age % 10 >= 2 && age % 10 <= 4 && (age < 10 || age > 20) ? 'года' : 'лет'}
-        </p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
