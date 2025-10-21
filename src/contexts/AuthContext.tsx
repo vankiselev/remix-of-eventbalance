@@ -52,19 +52,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar_url: data.avatar_url || null
         });
 
-        // Загружаем RBAC роль
-        const { data: rbacRole } = await supabase
+        // Загружаем RBAC роли пользователя и определяем, является ли он админом
+        const { data: rbacRoles } = await supabase
           .from('user_role_assignments')
-          .select('role_definitions(name, is_admin_role)')
-          .eq('user_id', user.id)
-          .maybeSingle();
+          .select('role_definitions(is_admin_role, name)')
+          .eq('user_id', user.id);
 
-        if (rbacRole?.role_definitions) {
-          setUserRoleName(rbacRole.role_definitions.name);
+        const hasAdminRole = Array.isArray(rbacRoles)
+          ? rbacRoles.some((r: any) => r.role_definitions?.is_admin_role === true)
+          : false;
+
+        // Синхронизируем совместимый userRole для всего приложения
+        setUserRole(hasAdminRole ? 'admin' : (data.role || 'employee'));
+
+        // Человекочитаемое имя роли для бейджа
+        if (rbacRoles && rbacRoles.length > 0) {
+          const firstRoleName = rbacRoles[0]?.role_definitions?.name;
+          setUserRoleName(firstRoleName || (hasAdminRole ? 'Администратор' : 'Сотрудник'));
         } else {
-          // Fallback: показываем "Сотрудник" для всех, у кого нет RBAC роли
-          // Для админов будет показываться их RBAC роль (например "Администратор")
-          setUserRoleName('Сотрудник');
+          setUserRoleName(hasAdminRole ? 'Администратор' : 'Сотрудник');
         }
 
         // Check employment status
@@ -121,16 +127,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
           
           if (data) {
-            setUserRole(data.role || 'employee');
-            
-            // Загружаем новую RBAC роль
-            const { data: rbacRole } = await supabase
+            // Перечитываем RBAC роли и определяем админский статус
+            const { data: rbacRoles } = await supabase
               .from('user_role_assignments')
-              .select('role_definitions(name, is_admin_role)')
-              .eq('user_id', user.id)
-              .maybeSingle();
+              .select('role_definitions(is_admin_role, name)')
+              .eq('user_id', user.id);
 
-            const newRoleName = rbacRole?.role_definitions?.name || 'Сотрудник';
+            const hasAdminRole = Array.isArray(rbacRoles)
+              ? rbacRoles.some((r: any) => r.role_definitions?.is_admin_role === true)
+              : false;
+
+            setUserRole(hasAdminRole ? 'admin' : (data.role || 'employee'));
+
+            const newRoleName = (rbacRoles && rbacRoles[0]?.role_definitions?.name) || (hasAdminRole ? 'Администратор' : 'Сотрудник');
             setUserRoleName(newRoleName);
             
             toast.success('Ваша роль была изменена администратором', {

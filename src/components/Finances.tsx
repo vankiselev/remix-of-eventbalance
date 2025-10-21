@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
@@ -74,6 +75,7 @@ const Finances = () => {
   const [searchQuery, setSearchQuery] = useState("");
   
   const { user } = useAuth();
+  const { isAdmin: isAdminRbac } = useUserRbacRoles();
   const { toast } = useToast();
   const { setActions } = useFinancesActions();
 
@@ -197,9 +199,10 @@ const Finances = () => {
 
   useEffect(() => {
     if (user) {
-      checkUserRole();
+      setIsAdmin(isAdminRbac);
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isAdminRbac]);
 
   useEffect(() => {
     if (user && !loading) {
