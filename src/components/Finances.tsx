@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import pullToRefreshIcon from "@/assets/pull-to-refresh-icon.png";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
@@ -72,6 +73,13 @@ const Finances = () => {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Pull-to-refresh state
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const startY = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -474,6 +482,52 @@ const Finances = () => {
     setShowTransactionForm(true);
   };
 
+  // Pull-to-refresh handlers
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchData();
+      await refetchReview();
+      toast({
+        title: "Обновлено",
+        description: "Данные успешно обновлены"
+      });
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+      setPullDistance(0);
+      setIsPulling(false);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (containerRef.current && containerRef.current.scrollTop === 0) {
+      startY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!containerRef.current || containerRef.current.scrollTop !== 0 || isRefreshing) return;
+
+    const currentY = e.touches[0].clientY;
+    const distance = currentY - startY.current;
+
+    if (distance > 0) {
+      setIsPulling(true);
+      setPullDistance(Math.min(distance, 120));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (pullDistance > 80 && !isRefreshing) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+      setIsPulling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -491,7 +545,39 @@ const Finances = () => {
     const currentUserId = selectedEmployee?.id || user?.id;
 
   return (
-    <div className="space-y-4 w-full">
+    <div 
+      ref={containerRef}
+      className="space-y-4 w-full relative overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center transition-all duration-200 bg-background/80 backdrop-blur-sm"
+        style={{
+          height: `${pullDistance}px`,
+          opacity: isPulling ? 1 : 0,
+          pointerEvents: 'none'
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <img 
+            src={pullToRefreshIcon} 
+            alt="Refresh" 
+            className={`w-8 h-8 ${isRefreshing ? 'animate-spin' : ''}`}
+          />
+          <span className="text-sm font-medium">
+            {isRefreshing 
+              ? 'Обновление...' 
+              : pullDistance > 80 
+              ? 'Отпустите для обновления' 
+              : 'Потяните для обновления'}
+          </span>
+        </div>
+      </div>
+      
+      <div className="space-y-4 w-full">
       {selectedEmployee && (
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -589,7 +675,39 @@ const Finances = () => {
 
   // Admin dashboard view
   return (
-    <div className="space-y-6 w-full">
+    <div 
+      ref={containerRef}
+      className="space-y-6 w-full relative overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center transition-all duration-200 bg-background/80 backdrop-blur-sm"
+        style={{
+          height: `${pullDistance}px`,
+          opacity: isPulling ? 1 : 0,
+          pointerEvents: 'none'
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <img 
+            src={pullToRefreshIcon} 
+            alt="Refresh" 
+            className={`w-8 h-8 ${isRefreshing ? 'animate-spin' : ''}`}
+          />
+          <span className="text-sm font-medium">
+            {isRefreshing 
+              ? 'Обновление...' 
+              : pullDistance > 80 
+              ? 'Отпустите для обновления' 
+              : 'Потяните для обновления'}
+          </span>
+        </div>
+      </div>
+      
+      <div className="space-y-6 w-full">
       <div className="space-y-4 w-full">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4 w-full">
           <div className="min-w-0 flex-1">
@@ -932,6 +1050,7 @@ const Finances = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };

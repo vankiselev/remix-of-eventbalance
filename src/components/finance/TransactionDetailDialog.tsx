@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +17,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Pencil, Trash2, History, Plus, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { format, parseISO } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface Transaction {
   id: string;
@@ -58,6 +67,15 @@ interface TransactionDetailDialogProps {
   onEdit?: (transaction: Transaction) => void;
 }
 
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  changed_by: string;
+  changed_at: string;
+  change_description: string | null;
+  user_name: string | null;
+}
+
 export function TransactionDetailDialog({ 
   isOpen, 
   onClose, 
@@ -66,11 +84,64 @@ export function TransactionDetailDialog({
   onEdit
 }: TransactionDetailDialogProps) {
   const { toast } = useToast();
+  const { hasPermission } = useUserPermissions();
+  const isAdmin = hasPermission('transactions.view_all');
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [auditHistory, setAuditHistory] = useState<AuditLogEntry[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   if (!transaction) return null;
+
+  // Load audit history for admins
+  useEffect(() => {
+    if (!isOpen || !isAdmin || !transaction.id) return;
+    
+    const loadAuditHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const { data: auditLogs, error } = await supabase
+          .from('financial_audit_log')
+          .select(`
+            id,
+            action,
+            changed_by,
+            changed_at,
+            change_description
+          `)
+          .eq('transaction_id', transaction.id)
+          .order('changed_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (auditLogs && auditLogs.length > 0) {
+          // Get user names
+          const userIds = [...new Set(auditLogs.map(log => log.changed_by))];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds);
+
+          const userMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+
+          const enrichedLogs: AuditLogEntry[] = auditLogs.map(log => ({
+            ...log,
+            user_name: userMap.get(log.changed_by) || 'Неизвестный пользователь'
+          }));
+
+          setAuditHistory(enrichedLogs);
+        }
+      } catch (error) {
+        console.error('Error loading audit history:', error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadAuditHistory();
+  }, [isOpen, isAdmin, transaction.id]);
 
   const handleEdit = () => {
     if (onEdit) {
@@ -80,8 +151,6 @@ export function TransactionDetailDialog({
   };
 
   const handleResendTransfer = async () => {
-    if (!transaction.transfer_to_user_id) return;
-    
     setIsResending(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -339,6 +408,54 @@ export function TransactionDetailDialog({
               }}
             />
           </div>
+
+          {/* Audit History - Only for Admins */}
+          {isAdmin && auditHistory.length > 0 && (
+            <div className="border-t pt-4">
+              <Collapsible defaultOpen={false}>
+                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline w-full">
+                  <History className="h-4 w-4" />
+                  История изменений
+                  <Badge variant="secondary" className="ml-auto">{auditHistory.length}</Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3 space-y-2">
+                  {auditHistory.map(log => {
+                    const actionIcon = {
+                      'CREATE': <Plus className="h-3 w-3 text-green-600" />,
+                      'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
+                      'DELETE': <Trash2 className="h-3 w-3 text-red-600" />,
+                      'RESEND': <RefreshCw className="h-3 w-3 text-orange-600" />
+                    }[log.action] || <History className="h-3 w-3" />;
+
+                    const actionText = {
+                      'CREATE': 'создал транзакцию',
+                      'UPDATE': 'обновил транзакцию',
+                      'DELETE': 'удалил транзакцию',
+                      'RESEND': 'отправил повторно'
+                    }[log.action] || log.action;
+
+                    return (
+                      <div key={log.id} className="flex items-start gap-2 text-xs bg-muted/30 p-2 rounded">
+                        {actionIcon}
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium">{log.user_name}</span>
+                          {' '}{actionText}
+                          {log.change_description && (
+                            <span className="text-muted-foreground block mt-1 text-[11px]">
+                              {log.change_description}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-muted-foreground whitespace-nowrap text-[11px]">
+                          {format(parseISO(log.changed_at), 'd MMM в HH:mm', { locale: ru })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          )}
 
           {/* Meta Info */}
           <div className="border-t pt-4">
