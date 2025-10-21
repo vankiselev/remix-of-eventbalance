@@ -7,13 +7,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import EventDetailDialog from "@/components/calendar/EventDetailDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Event {
   id: string;
@@ -63,6 +74,9 @@ const Events = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -306,6 +320,57 @@ const Events = () => {
     setPeriodFilter('future');
   };
 
+  // Обработка выбора мероприятий
+  const toggleEventSelection = (eventId: string) => {
+    const newSelected = new Set(selectedEventIds);
+    if (newSelected.has(eventId)) {
+      newSelected.delete(eventId);
+    } else {
+      newSelected.add(eventId);
+    }
+    setSelectedEventIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0) {
+      setSelectedEventIds(new Set());
+    } else {
+      setSelectedEventIds(new Set(filteredEvents.map(e => e.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedEventIds.size === 0) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .in('id', Array.from(selectedEventIds));
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: `Удалено мероприятий: ${selectedEventIds.size}`,
+      });
+
+      setSelectedEventIds(new Set());
+      await fetchEvents();
+    } catch (error) {
+      console.error('Error deleting events:', error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось удалить мероприятия",
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   const filteredEvents = getFilteredAndSortedEvents();
   const groupedEvents = groupEventsByDay(filteredEvents);
 
@@ -353,6 +418,29 @@ const Events = () => {
           <p className="text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto flex-shrink-0">
+          {selectedEventIds.size > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2"
+              >
+                <Checkbox
+                  checked={selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                {selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? 'Снять всё' : 'Выбрать всё'}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Удалить ({selectedEventIds.size})
+              </Button>
+            </>
+          )}
           <Button 
             variant="outline" 
             onClick={() => setSortByName(!sortByName)}
@@ -527,12 +615,30 @@ const Events = () => {
                 {dayKey}
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {dayEvents.map((event) => (
-                  <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
+                {dayEvents.map((event) => {
+                  const isSelected = selectedEventIds.has(event.id);
+                  return (
+                    <Card 
+                      key={event.id} 
+                      className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    >
+                      <div 
+                        className="absolute top-3 right-3 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleEventSelection(event.id);
+                        }}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleEventSelection(event.id)}
+                        />
+                      </div>
+                      <div onClick={() => handleEventClick(event)}>
+                        <CardHeader className="pb-3 pr-12">
+                          <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
                       <div className="space-y-2">
                         {event.project_owner && (
                           <div className="flex items-start gap-2">
@@ -599,8 +705,10 @@ const Events = () => {
                         <span className="text-foreground">{getAnimatorNames(event)}</span>
                       </div>
                     </CardContent>
+                      </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -613,10 +721,28 @@ const Events = () => {
                 {dayKey}
               </h3>
               <div className="space-y-2">
-                {dayEvents.map((event) => (
-                  <Card key={event.id} className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50" onClick={() => handleEventClick(event)}>
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
+                {dayEvents.map((event) => {
+                  const isSelected = selectedEventIds.has(event.id);
+                  return (
+                    <Card 
+                      key={event.id} 
+                      className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    >
+                      <div 
+                        className="absolute top-4 right-4 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleEventSelection(event.id);
+                        }}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleEventSelection(event.id)}
+                        />
+                      </div>
+                      <div onClick={() => handleEventClick(event)}>
+                        <CardContent className="p-4 pr-12">
+                          <div className="space-y-3">
                         <h3 className="font-semibold text-base">{event.name}</h3>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -686,13 +812,37 @@ const Events = () => {
                         </div>
                       </div>
                     </CardContent>
+                      </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Alert Dialog для подтверждения удаления */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить {selectedEventIds.size} {selectedEventIds.size === 1 ? 'мероприятие' : 'мероприятий'}? Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Удаление..." : "Удалить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
