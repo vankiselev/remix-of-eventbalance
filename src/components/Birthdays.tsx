@@ -5,6 +5,8 @@ import { Calendar, Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, isTomorrow, isThisMonth, parseISO, formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { RoleBadges } from "@/components/roles/RoleBadge";
 
 interface EmployeeBirthday {
   id: string;
@@ -100,24 +102,30 @@ const Birthdays = () => {
     return format(upcomingBirthday, "dd MMMM", { locale: ru });
   };
 
-  const EmployeeCard = ({ employee, upcomingBirthday, age }: any) => (
-    <div className="flex items-center space-x-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-      <div className="flex-shrink-0">
-        {employee.avatar_url ? (
-          <img 
-            src={employee.avatar_url} 
-            alt={employee.full_name}
-            className="w-12 h-12 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Users className="w-6 h-6 text-primary" />
+  const EmployeeCard = ({ employee, upcomingBirthday, age }: any) => {
+    const { roles } = useUserRbacRoles(employee.id);
+    
+    return (
+      <div className="flex items-center space-x-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+        <div className="flex-shrink-0">
+          {employee.avatar_url ? (
+            <img 
+              src={employee.avatar_url} 
+              alt={employee.full_name}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-primary" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-medium text-foreground">{employee.full_name}</h3>
+          <div className="mt-1">
+            <RoleBadges roles={roles} />
           </div>
-        )}
-      </div>
-      <div className="flex-1">
-        <h3 className="font-medium text-foreground">{employee.full_name}</h3>
-        <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-1">
           {employee.role === 'admin' ? 'Администратор' : 'Сотрудник'}
         </p>
       </div>

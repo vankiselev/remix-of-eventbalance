@@ -10,7 +10,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PhoneInputRU } from "@/components/ui/phone-input-ru";
@@ -21,6 +20,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
 import { useRoles } from "@/hooks/useRoles";
 import { Upload, ChevronDown, History, Wallet, UserX, Trash2, UserCheck } from "lucide-react";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { RoleBadges } from "@/components/roles/RoleBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,6 +142,7 @@ export const EmployeeProfileDialog = ({
   const [terminationReason, setTerminationReason] = useState("");
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
   const { user, userRole } = useAuth();
+  const { roles: rbacRoles } = useUserRbacRoles(currentUser?.id);
   const { roles } = useRoles();
 
   // Get the current user data (either from employee or profile)

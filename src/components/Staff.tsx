@@ -13,12 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
-import { Plus, Users, Shield, User, Edit, UserPlus, Search, Filter } from "lucide-react";
+import { Plus, Users, User, Edit, UserPlus, Search, Filter, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { RoleBadges } from "@/components/roles/RoleBadge";
 
 interface Profile {
   id: string;

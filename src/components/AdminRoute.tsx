@@ -14,18 +14,25 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const checkAdminStatus = async () => {
       if (user) {
-        const { data } = await supabase
-          .rpc("get_user_basic_profile")
-          .single();
-        setUserRole(data?.role || 'employee');
+        // Check if user has any admin role via RBAC
+        const { data: adminRoles } = await supabase
+          .from('user_role_assignments')
+          .select('role_definitions!inner(is_admin_role)')
+          .eq('user_id', user.id);
+
+        const hasAdminRole = adminRoles?.some(
+          (item: any) => item.role_definitions?.is_admin_role === true
+        );
+
+        setUserRole(hasAdminRole ? 'admin' : 'employee');
       }
       setLoading(false);
     };
     
     if (!authLoading) {
-      fetchUserRole();
+      checkAdminStatus();
     }
   }, [user, authLoading]);
 

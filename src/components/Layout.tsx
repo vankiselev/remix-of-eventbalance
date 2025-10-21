@@ -18,13 +18,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import EventsImportDialog from "@/components/EventsImportDialog";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { cn } from "@/lib/utils";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { RoleBadges } from "@/components/roles/RoleBadge";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { signOut, user, userRole, userRoleName, userProfile } = useAuth();
+  const { signOut, user, userRole, userProfile } = useAuth();
+  const { roles: userRoles } = useUserRbacRoles();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -292,9 +295,9 @@ const Layout = ({ children }: LayoutProps) => {
                       <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
                         {displayName}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {userRoleName || 'Сотрудник'}
-                      </span>
+                      <div className="text-[10px]">
+                        <RoleBadges roles={userRoles} maxDisplay={1} />
+                      </div>
                     </div>
                   </Button>
                 )}
