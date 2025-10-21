@@ -566,7 +566,7 @@ export const EmployeeProfileDialog = ({
     try {
       setLoading(true);
       const { error } = await supabase.rpc('delete_employee_permanently', {
-        employee_user_id: currentUser.id
+        p_employee_user_id: currentUser.id
       });
 
       if (error) throw error;

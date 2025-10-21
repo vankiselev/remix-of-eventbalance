@@ -1672,7 +1672,7 @@ export type Database = {
         Returns: boolean
       }
       delete_employee_permanently: {
-        Args: { employee_user_id: string }
+        Args: { p_employee_user_id: string }
         Returns: boolean
       }
       format_phone_display: {
