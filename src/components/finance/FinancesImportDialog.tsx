@@ -68,9 +68,7 @@ const FinancesImportDialog = ({
     { value: 'description', label: 'Подробное описание' },
     { value: 'expense_amount', label: 'Траты' },
     { value: 'income_amount', label: 'Приход' },
-    { value: 'balance', label: 'Остаток' },
     { value: 'category', label: 'Статья прихода/расхода' },
-    { value: 'notes', label: 'Примечания' },
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,8 +188,7 @@ const FinancesImportDialog = ({
 
   const setupColumnMapping = (fileHeaders: string[]) => {
     // Маппинг по ПОЗИЦИИ столбца (индексу), а не по названию!
-    // Порядок столбцов ЖЕСТКО задан пользователем:
-    // 1. Имя, 2. Дата, 3. Проект, 4. Чей проект, 5. Описание, 6. Траты, 7. Приход, 8. Статья
+    // Порядок столбцов: 1. Имя, 2. Дата, 3. Проект, 4. Чей проект, 5. Описание, 6. Траты, 7. Приход, 8. Остаток (ПРОПУСК), 9. Статья
     
     const autoMapping: ColumnMapping = {};
     
@@ -199,14 +196,12 @@ const FinancesImportDialog = ({
     if (fileHeaders[0]) autoMapping['creator_name'] = fileHeaders[0];      // 1. Имя
     if (fileHeaders[1]) autoMapping['operation_date'] = fileHeaders[1];    // 2. Дата операции
     if (fileHeaders[2]) autoMapping['project_name'] = fileHeaders[2];      // 3. Проект (static_project_name)
-    if (fileHeaders[3]) autoMapping['project_owner'] = fileHeaders[3];     // 4. Чей проект (project_owner, НЕ cash_type!)
+    if (fileHeaders[3]) autoMapping['project_owner'] = fileHeaders[3];     // 4. Чей проект (project_owner)
     if (fileHeaders[4]) autoMapping['description'] = fileHeaders[4];       // 5. Подробное описание
     if (fileHeaders[5]) autoMapping['expense_amount'] = fileHeaders[5];    // 6. Траты
     if (fileHeaders[6]) autoMapping['income_amount'] = fileHeaders[6];     // 7. Приход
-    if (fileHeaders[7]) autoMapping['category'] = fileHeaders[7];          // 8. Статья прихода/расхода
-    
-    // Дополнительные столбцы (если есть)
-    if (fileHeaders[8]) autoMapping['notes'] = fileHeaders[8];             // 9. Примечания (если есть)
+    // fileHeaders[7] - Остаток - ПРОПУСКАЕМ
+    if (fileHeaders[8]) autoMapping['category'] = fileHeaders[8];          // 9. Статья прихода/расхода
     
     console.log('Column mapping by position:');
     console.log('1. Имя:', fileHeaders[0], '→ creator_name');
@@ -216,7 +211,8 @@ const FinancesImportDialog = ({
     console.log('5. Описание:', fileHeaders[4], '→ description');
     console.log('6. Траты:', fileHeaders[5], '→ expense_amount');
     console.log('7. Приход:', fileHeaders[6], '→ income_amount');
-    console.log('8. Статья:', fileHeaders[7], '→ category');
+    console.log('8. Остаток:', fileHeaders[7], '→ ПРОПУСК');
+    console.log('9. Статья:', fileHeaders[8], '→ category');
     console.log('Auto-mapped columns:', autoMapping);
     
     setColumnMapping(autoMapping);
