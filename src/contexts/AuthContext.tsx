@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   userRole: string | null;
+  userRoleName: string | null;
   userProfile: { full_name: string; avatar_url: string | null } | null;
   signOut: () => Promise<void>;
 }
@@ -27,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoleName, setUserRoleName] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
 
   // Load user profile and check employment status
@@ -34,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadUserProfile = async () => {
       if (!user) {
         setUserRole(null);
+        setUserRoleName(null);
         setUserProfile(null);
         return;
       }
@@ -48,6 +51,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           full_name: data.full_name || 'Пользователь',
           avatar_url: data.avatar_url || null
         });
+
+        // Загружаем RBAC роль
+        const { data: rbacRole } = await supabase
+          .from('user_role_assignments')
+          .select('role_definitions(name, is_admin_role)')
+          .eq('user_id', user.id)
+          .single();
+
+        if (rbacRole?.role_definitions) {
+          setUserRoleName(rbacRole.role_definitions.name);
+        } else {
+          // Fallback на базовую роль
+          setUserRoleName(data.role === 'admin' ? 'Администратор' : 'Сотрудник');
+        }
 
         // Check employment status
         const { data: profile } = await supabase
@@ -68,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(null);
           setUser(null);
           setUserRole(null);
+          setUserRoleName(null);
           setUserProfile(null);
           window.location.href = '/auth';
         }
@@ -104,8 +122,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data) {
             setUserRole(data.role || 'employee');
             
+            // Загружаем новую RBAC роль
+            const { data: rbacRole } = await supabase
+              .from('user_role_assignments')
+              .select('role_definitions(name, is_admin_role)')
+              .eq('user_id', user.id)
+              .single();
+
+            const newRoleName = rbacRole?.role_definitions?.name || (data.role === 'admin' ? 'Администратор' : 'Сотрудник');
+            setUserRoleName(newRoleName);
+            
             toast.success('Ваша роль была изменена администратором', {
-              description: `Новая роль: ${data.role === 'admin' ? 'Администратор' : 'Сотрудник'}`,
+              description: `Новая роль: ${newRoleName}`,
               duration: 5000
             });
             
@@ -149,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setUser(null);
       setUserRole(null);
+      setUserRoleName(null);
       setUserProfile(null);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -160,6 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     userRole,
+    userRoleName,
     userProfile,
     signOut,
   };

@@ -24,7 +24,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { signOut, user, userRole, userProfile } = useAuth();
+  const { signOut, user, userRole, userRoleName, userProfile } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -293,7 +293,7 @@ const Layout = ({ children }: LayoutProps) => {
                         {displayName}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                        {userRoleName || (userRole === 'admin' ? 'Администратор' : 'Сотрудник')}
                       </span>
                     </div>
                   </Button>
