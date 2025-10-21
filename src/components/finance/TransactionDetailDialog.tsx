@@ -196,7 +196,12 @@ export function TransactionDetailDialog({
   const isExpense = transaction.expense_amount && transaction.expense_amount > 0;
   const amount = transaction.expense_amount || transaction.income_amount || 0;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
-  const isRejectedTransfer = isMoneyTransfer && transaction.transfer_status === 'rejected';
+  
+  // For the resend button: show only if current user is the sender (created_by) AND status is rejected
+  const isRejectedTransfer = isMoneyTransfer && 
+    transaction.transfer_status === 'rejected' && 
+    transaction.transfer_to_user_id && 
+    isExpense; // Expense means this user sent money
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
