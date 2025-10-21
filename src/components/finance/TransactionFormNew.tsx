@@ -107,6 +107,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string } | null>(null);
   const submitLockRef = useRef(false);
   const categorySearchInputRef = useRef<HTMLInputElement>(null);
+  const projectSearchInputRef = useRef<HTMLInputElement>(null);
 
   // Check user role
   useEffect(() => {
@@ -199,6 +200,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       }, 100);
     }
   }, [categorySelectOpen]);
+
+  // Auto-focus project search when select opens
+  useEffect(() => {
+    if (projectSelectOpen && projectSearchInputRef.current) {
+      setTimeout(() => {
+        projectSearchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [projectSelectOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -629,6 +639,19 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <div className="sticky top-0 p-2 bg-background border-b border-border mb-2 z-10">
+                          <input
+                            ref={projectSearchInputRef}
+                            data-project-search
+                            type="text"
+                            placeholder="Поиск проекта..."
+                            value={projectSearch}
+                            onChange={(e) => setProjectSearch(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
                         {filteredStaticProjects.map((project) => (
                           <SelectItem key={`static-${project}`} value={project}>
                             {project}
@@ -642,18 +665,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             {event.name}
                           </SelectItem>
                         ))}
-                        <div className="sticky bottom-0 p-2 bg-background border-t border-border mt-2">
-                          <input
-                            data-project-search
-                            type="text"
-                            placeholder="Поиск проекта..."
-                            value={projectSearch}
-                            onChange={(e) => setProjectSearch(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
-                          />
-                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />
