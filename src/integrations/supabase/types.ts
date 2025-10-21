@@ -1738,6 +1738,10 @@ export type Database = {
           total_cash: number
         }[]
       }
+      get_current_user_permissions: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]

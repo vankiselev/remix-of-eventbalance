@@ -32,8 +32,11 @@ export const useUserRbacRoles = (userId?: string) => {
 
   // Realtime subscription for current user's role changes
   useEffect(() => {
-    if (!userId) {
-      const channel = supabase
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const setup = async () => {
+      const uid = userId || (await supabase.auth.getUser()).data.user?.id;
+      if (!uid) return;
+      channel = supabase
         .channel('user-rbac-roles-changes')
         .on(
           'postgres_changes',
@@ -41,19 +44,19 @@ export const useUserRbacRoles = (userId?: string) => {
             event: '*',
             schema: 'public',
             table: 'user_role_assignments',
-            filter: `user_id=eq.${targetUserId}`,
+            filter: `user_id=eq.${uid}`,
           },
           () => {
             refetch();
           }
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [userId, targetUserId, refetch]);
+    };
+    setup();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [userId, refetch]);
 
   return {
     roles,

@@ -1,43 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 export const useUserPermissions = () => {
   const { isAdmin: isAdminRbac } = useUserRbacRoles();
   
-  const { data: permissions = [], isLoading } = useQuery({
+  const { data: permissions = [], isLoading, refetch } = useQuery({
     queryKey: ['user-permissions'],
     queryFn: async () => {
-      // Get current user's role assignments
-      const { data: roleAssignments, error: roleError } = await supabase
-        .from('user_role_assignments')
-        .select('role_id');
-      
-      if (roleError) throw roleError;
-      
-      if (!roleAssignments || roleAssignments.length === 0) {
-        return [];
-      }
-
-      const roleIds = roleAssignments.map(ra => ra.role_id);
-
-      // Get permissions for these roles
-      const { data: rolePermissions, error: permError } = await supabase
-        .from('role_permissions')
-        .select('permission:permissions(code)')
-        .in('role_id', roleIds)
-        .eq('granted', true);
-      
-      if (permError) throw permError;
-
-      // Extract permission codes
-      const permissionCodes = rolePermissions
-        ?.map(rp => (rp.permission as any)?.code)
-        .filter(Boolean) || [];
-
-      return permissionCodes as string[];
+      const { data, error } = await supabase.rpc('get_current_user_permissions');
+      if (error) throw error;
+      return (data as string[]) || [];
     },
   });
+
+  // Keep permissions in sync with role changes
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const setup = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const uid = authData.user?.id;
+      if (!uid) return;
+      channel = supabase
+        .channel('user-permissions-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_role_assignments', filter: `user_id=eq.${uid}` },
+          () => refetch()
+        )
+        .subscribe();
+    };
+    setup();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   const hasPermission = (code: string) => {
     // Admin override: admins have all permissions

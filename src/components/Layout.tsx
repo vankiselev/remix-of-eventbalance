@@ -27,7 +27,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const { signOut, user, userRole, userProfile } = useAuth();
-  const { roles: userRoles } = useUserRbacRoles();
+  const { roles: userRoles, isAdmin: isAdminRbac } = useUserRbacRoles();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
