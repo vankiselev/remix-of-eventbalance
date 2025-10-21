@@ -681,17 +681,37 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             }}
                           />
                         </div>
-                        {filteredStaticProjects.map((project) => (
-                          <SelectItem key={`static-${project}`} value={project}>
-                            {project}
+                        {filteredStaticProjects.map((project, index) => (
+                          <SelectItem 
+                            key={`static-${project}`} 
+                            value={project}
+                            className={index === 0 && filteredStaticProjects.length > 0 ? 
+                              "bg-primary/10 border-l-2 border-primary relative" : ""}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{project}</span>
+                              {index === 0 && filteredStaticProjects.length > 0 && (
+                                <span className="text-xs text-primary ml-2">↵ Enter</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                         {filteredStaticProjects.length > 0 && filteredEvents.length > 0 && (
                           <div className="mx-2 my-1 border-t border-border" />
                         )}
-                        {filteredEvents.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
+                        {filteredEvents.map((event, index) => (
+                          <SelectItem 
+                            key={event.id} 
+                            value={event.id}
+                            className={index === 0 && filteredStaticProjects.length === 0 ? 
+                              "bg-primary/10 border-l-2 border-primary relative" : ""}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{event.name}</span>
+                              {index === 0 && filteredStaticProjects.length === 0 && (
+                                <span className="text-xs text-primary ml-2">↵ Enter</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -779,9 +799,19 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             }}
                           />
                         </div>
-                        {filteredCategories.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
+                        {filteredCategories.map((option, index) => (
+                          <SelectItem 
+                            key={option} 
+                            value={option}
+                            className={index === 0 ? 
+                              "bg-primary/10 border-l-2 border-primary relative" : ""}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{option}</span>
+                              {index === 0 && (
+                                <span className="text-xs text-primary ml-2">↵ Enter</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -901,9 +931,19 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             }}
                           />
                         </div>
-                        {filteredOwners.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
+                        {filteredOwners.map((option, index) => (
+                          <SelectItem 
+                            key={option} 
+                            value={option}
+                            className={index === 0 ? 
+                              "bg-primary/10 border-l-2 border-primary relative" : ""}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{option}</span>
+                              {index === 0 && (
+                                <span className="text-xs text-primary ml-2">↵ Enter</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
