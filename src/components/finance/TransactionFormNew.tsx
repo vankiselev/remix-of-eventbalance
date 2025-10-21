@@ -389,10 +389,20 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       let transactionResult;
       
       if (editTransaction) {
+        // Check if this is a rejected money transfer being re-sent
+        const wasRejectedTransfer = editTransaction.transfer_status === 'rejected' && 
+                                   isMoneyTransfer && 
+                                   transferToUserId;
+
         // Update existing transaction
+        const updateData = wasRejectedTransfer ? {
+          ...transactionData,
+          transfer_rejection_reason: null, // Clear rejection reason when re-sending
+        } : transactionData;
+
         const { data: transaction, error } = await supabase
           .from('financial_transactions')
-          .update(transactionData)
+          .update(updateData)
           .eq('id', editTransaction.id)
           .select()
           .single();
@@ -408,9 +418,48 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             action: 'UPDATE',
             changed_by: user.id,
             old_data: editTransaction,
-            new_data: transactionData,
-            change_description: 'Transaction updated'
+            new_data: updateData,
+            change_description: wasRejectedTransfer ? 'Rejected transfer re-sent' : 'Transaction updated'
           }]);
+
+        // If this was a rejected transfer being edited and re-sent, send notification
+        if (wasRejectedTransfer) {
+          console.log('💸 Re-sending money transfer notification after edit...', {
+            transactionId: transaction.id,
+            recipientId: transferToUserId,
+          });
+
+          // Get sender's info
+          const { data: userData } = await supabase.auth.getUser();
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', userData.user?.id)
+            .maybeSingle();
+
+          // Send notification
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                user_id: transferToUserId,
+                title: 'Вам переведены деньги',
+                message: `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`,
+                type: 'money_transfer',
+                data: {
+                  transaction_id: transaction.id,
+                  from_user_name: profile?.full_name || 'Сотрудник',
+                  amount: data.expense_amount,
+                  cash_type: data.whose_project,
+                  description: data.description,
+                  status: 'pending',
+                },
+              },
+            });
+            console.log('✅ Money transfer notification re-sent successfully after edit');
+          } catch (notifyErr) {
+            console.error('❌ Failed to re-send transfer notification:', notifyErr);
+          }
+        }
       } else {
         // Create new transaction
         const { data: transaction, error } = await supabase
@@ -446,7 +495,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             .from('profiles')
             .select('full_name')
             .eq('id', userData.user?.id)
-            .single();
+            .maybeSingle();
 
           // Send notification directly
           try {
