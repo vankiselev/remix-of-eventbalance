@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 const reportSchema = z.object({
   project_name: z.string().min(1, "Выберите проект"),
@@ -51,6 +52,7 @@ interface Report {
 
 const Reports = () => {
   const { toast } = useToast();
+  const { isAdmin } = useUserRbacRoles();
   const [reports, setReports] = useState<Report[]>([]);
   const [projects, setProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,6 @@ const Reports = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [deletingReport, setDeletingReport] = useState<Report | null>(null);
-  const [userRole, setUserRole] = useState<string>("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   const form = useForm<ReportFormData>({
@@ -167,17 +168,6 @@ const Reports = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      
-      // Fetch user role
-      try {
-        const { data: profile, error } = await supabase.rpc('get_user_basic_profile');
-        if (error) throw error;
-        setUserRole(profile?.[0]?.role || 'employee');
-      } catch (error) {
-        console.error("Error fetching user role:", error);
-        setUserRole('employee');
-      }
-      
       await Promise.all([fetchReports(), fetchProjects()]);
       setLoading(false);
     };
@@ -341,12 +331,12 @@ const Reports = () => {
         <div className="min-w-0 flex-1">
           <h1 className="text-3xl font-bold truncate">Отчеты по мероприятиям</h1>
           <p className="text-muted-foreground truncate">
-            {userRole === 'admin' ? 'Управление отчетами и зарплатами' : 'Ваши отчеты о проведенных мероприятиях'}
+            {isAdmin ? 'Управление отчетами и зарплатами' : 'Ваши отчеты о проведенных мероприятиях'}
           </p>
         </div>
       </div>
 
-      {userRole === 'admin' ? (
+      {isAdmin ? (
         <Tabs defaultValue="my-reports" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="my-reports" className="flex items-center gap-2">

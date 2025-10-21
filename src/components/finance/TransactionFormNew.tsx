@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import {
   Dialog,
   DialogContent,
@@ -92,13 +93,13 @@ interface TransactionFormProps {
 export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransaction, inline = false }: TransactionFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { isAdmin } = useUserRbacRoles();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [projectSearch, setProjectSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isMoneyTransfer, setIsMoneyTransfer] = useState(false);
   const [transferToUserId, setTransferToUserId] = useState<string>("");
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
@@ -112,17 +113,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [whoseProjectSelectOpen, setWhoseProjectSelectOpen] = useState(false);
   const whoseProjectSearchInputRef = useRef<HTMLInputElement>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-
-  // Check user role
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: profile } = await supabase
-        .rpc("get_user_basic_profile")
-        .single();
-      setIsAdmin(profile?.role === "admin");
-    };
-    checkUserRole();
-  }, []);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {

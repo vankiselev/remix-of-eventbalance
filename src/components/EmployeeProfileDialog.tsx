@@ -141,13 +141,13 @@ export const EmployeeProfileDialog = ({
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
+  const { isAdmin: canEditRole } = useUserRbacRoles();
   const { roles } = useRoles();
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
   const { roles: rbacRoles } = useUserRbacRoles(currentUser?.id);
-  const canEditRole = userRole === 'admin';
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),

@@ -5,6 +5,7 @@ import { DollarSign, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 interface CashData {
   total_cash: number;
@@ -19,6 +20,8 @@ interface AdminCashData {
 }
 
 const CashOnHandCard = () => {
+  const { user } = useAuth();
+  const { isAdmin } = useUserRbacRoles();
   const [cashData, setCashData] = useState<CashData>({
     total_cash: 0,
     cash_nastya: 0,
@@ -32,31 +35,16 @@ const CashOnHandCard = () => {
     cash_vanya: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string>('employee');
-  const { user } = useAuth();
 
   useEffect(() => {
-    fetchUserRole();
-  }, [user]);
-
-  useEffect(() => {
-    if (userRole) {
+    if (user) {
       fetchCashData();
     }
-  }, [user, userRole]);
-
-  const fetchUserRole = async () => {
-    if (user) {
-      const { data } = await supabase
-        .rpc("get_user_basic_profile")
-        .maybeSingle();
-      setUserRole(data?.role || 'employee');
-    }
-  };
+  }, [user, isAdmin]);
 
   const fetchCashData = async () => {
     try {
-      if (userRole === 'admin') {
+      if (isAdmin) {
         // Админ видит свои данные И общую сумму по компании
         const [myData, companyData] = await Promise.all([
           supabase.rpc('calculate_user_cash_totals', { user_uuid: user?.id }).maybeSingle(),
@@ -125,7 +113,7 @@ const CashOnHandCard = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {userRole === 'admin' ? (
+        {isAdmin ? (
           /* Для админа - две колонки */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:divide-x">
             {/* Колонка 1: Деньги администратора */}

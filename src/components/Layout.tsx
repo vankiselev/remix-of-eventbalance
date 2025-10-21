@@ -154,7 +154,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     { path: "/reports", label: "Отчеты", icon: FileText },
-    ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
+    ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
   const getPageTitle = () => {
@@ -178,7 +178,7 @@ const Layout = ({ children }: LayoutProps) => {
               
               {/* Menu items */}
               <div className="flex items-center gap-2 flex-1">
-                {location.pathname === '/finances' && userRole === 'admin' && (
+                {location.pathname === '/finances' && isAdminRbac && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <div
@@ -225,7 +225,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </DropdownMenu>
                 )}
                 
-                {(location.pathname === '/calendar' || location.pathname === '/events') && userRole === 'admin' && (
+                {(location.pathname === '/calendar' || location.pathname === '/events') && isAdminRbac && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <div

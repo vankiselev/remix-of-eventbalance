@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useChatUnread } from "@/hooks/useChatUnread";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 interface NavItem {
   path: string;
@@ -16,9 +17,9 @@ interface NavItem {
 
 const MobileBottomNav = () => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRbacRoles();
   const location = useLocation();
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const { totalUnread } = useChatUnread();
   const [mainNavItems, setMainNavItems] = useState<NavItem[]>([
@@ -31,12 +32,6 @@ const MobileBottomNav = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
-        const { data: profile } = await supabase
-          .rpc("get_user_basic_profile")
-          .single();
-        
-        setUserRole(profile?.role || 'employee');
-
         // Load custom nav settings
         const { data: profileData } = await supabase
           .from('profiles')
@@ -62,7 +57,7 @@ const MobileBottomNav = () => {
     { path: "/vacations", label: "График отпусков", icon: "Plane" },
     { path: "/contacts", label: "Контакты", icon: "Briefcase" },
     { path: "/reports", label: "Отчеты", icon: "FileText" },
-    ...(userRole === 'admin' ? [{ path: "/administration", label: "Администрирование", icon: "Settings" }] : []),
+    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Settings" }] : []),
   ];
 
   const getIconComponent = (iconName: string) => {
