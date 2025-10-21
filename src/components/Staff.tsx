@@ -19,8 +19,7 @@ import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useUserPermissions } from "@/hooks/useUserPermissions";
-import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
-import { RoleBadges } from "@/components/roles/RoleBadge";
+import { UserRoleDisplay } from "@/components/roles/UserRoleDisplay";
 
 interface Profile {
   id: string;
@@ -50,7 +49,6 @@ interface CombinedUser {
   email: string;
   full_name: string;
   role: 'admin' | 'employee';
-  roleName?: string; // New role name from role_definitions
   phone?: string;
   birth_date?: string;
   avatar_url?: string;
@@ -184,38 +182,16 @@ const Staff = () => {
         });
       }
 
-      // Fetch role assignments from new role system
-      const { data: roleAssignments } = await supabase
-        .from('user_role_assignments')
-        .select(`
-          user_id,
-          role:role_definitions(name, code, is_admin_role)
-        `);
-
-      // Create a map of roles by user_id
-      const roleMap = new Map();
-      (roleAssignments || []).forEach((assignment: any) => {
-        if (assignment.role) {
-          roleMap.set(assignment.user_id, {
-            roleName: assignment.role.name,
-            roleCode: assignment.role.code,
-            isAdmin: assignment.role.is_admin_role
-          });
-        }
-      });
-
       // Combine profiles with employee data and cash data
       const combinedUsers: CombinedUser[] = (profilesData || []).map((profile: Profile) => {
         const employeeData = employeeMap.get(profile.id);
         const cashData = cashDataMap.get(profile.id);
-        const roleData = roleMap.get(profile.id);
         
         return {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
           role: profile.role, // Keep old role for backwards compatibility
-          roleName: roleData?.roleName, // New role name from role_definitions
           phone: profile.phone,
           birth_date: profile.birth_date,
           avatar_url: profile.avatar_url,
@@ -313,43 +289,6 @@ const Staff = () => {
     setFilteredUsers(filtered);
   }, [allUsers, roleFilter, searchTerm, statusTab]);
 
-  const getRoleIcon = (role: string) => {
-    return role === "admin" ? Shield : User;
-  };
-
-  const getRoleLabel = (user: CombinedUser) => {
-    // Prefer new role name if available
-    if (user.roleName) {
-      return user.roleName;
-    }
-    // Fallback to old role system
-    return user.role === "admin" ? "Администратор" : "Сотрудник";
-  };
-
-  const getRoleColor = (user: CombinedUser) => {
-    // Check new role system first
-    if (user.roleName) {
-      const roleName = user.roleName.toLowerCase();
-      if (roleName.includes('финанс')) {
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
-      }
-      if (roleName.includes('бухгалтер')) {
-        return "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400";
-      }
-      if (roleName.includes('менеджер')) {
-        return "bg-purple-500/10 text-purple-600 dark:text-purple-400";
-      }
-      if (roleName.includes('администратор') || roleName.includes('admin')) {
-        return "bg-primary/10 text-primary";
-      }
-      // Default color for custom roles
-      return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
-    }
-    // Fallback to old role system
-    return user.role === "admin" 
-      ? "bg-primary/10 text-primary" 
-      : "bg-secondary";
-  };
 
   const handleEditUser = (user: CombinedUser) => {
     // Check permissions - only admins can edit other admins
@@ -561,7 +500,6 @@ const Staff = () => {
           ) : (
             <ResponsiveGrid type="cards">
               {filteredUsers.map((user) => {
-                const RoleIcon = getRoleIcon(user.role);
                 const isTerminated = user.employment_status === 'terminated';
                 
                 return (
@@ -590,10 +528,7 @@ const Staff = () => {
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <div className="flex flex-col gap-1 items-end">
-                        <Badge className={`${getRoleColor(user)} badge-responsive`}>
-                          <RoleIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="text-truncate">{getRoleLabel(user)}</span>
-                        </Badge>
+                        <UserRoleDisplay userId={user.id} />
                         {user.employment_status === 'terminated' && (
                           <Badge variant="destructive" className="badge-responsive">
                             <span className="text-truncate">Уволен</span>
