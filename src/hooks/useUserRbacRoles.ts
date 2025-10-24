@@ -15,18 +15,26 @@ export const useUserRbacRoles = (userId?: string) => {
     queryKey: ['user-rbac-roles', targetUserId],
     queryFn: async () => {
       const uid = userId || (await supabase.auth.getUser()).data.user?.id;
-      if (!uid) return [];
+      if (!uid) return [] as RbacRole[];
 
-      const { data, error } = await supabase
+      // 1) Fetch role assignments to get role_ids
+      const { data: assignments, error: assignError } = await supabase
         .from('user_role_assignments')
-        .select('role_definitions(name, code, is_admin_role)')
+        .select('role_id')
         .eq('user_id', uid);
+      if (assignError) throw assignError;
 
-      if (error) throw error;
+      const roleIds = (assignments || []).map(a => a.role_id).filter(Boolean);
+      if (roleIds.length === 0) return [] as RbacRole[]; // no roles -> show default badge
 
-      return (data || [])
-        .map(item => item.role_definitions)
-        .filter(Boolean) as RbacRole[];
+      // 2) Fetch role definitions by ids (robust even without FK relations)
+      const { data: defs, error: defsError } = await supabase
+        .from('role_definitions')
+        .select('name, code, is_admin_role')
+        .in('id', roleIds);
+      if (defsError) throw defsError;
+
+      return (defs || []) as RbacRole[];
     },
   });
 
