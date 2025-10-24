@@ -147,7 +147,7 @@ export const EmployeeProfileDialog = ({
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
-  const { roles: rbacRoles } = useUserRbacRoles(currentUser?.id);
+  const { roles: rbacRoles, refetch: refetchRoles } = useUserRbacRoles(currentUser?.id);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -375,10 +375,16 @@ export const EmployeeProfileDialog = ({
         const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
         await logFieldChange("role", oldRole, newRole);
 
-        // Invalidate React Query cache for this user's roles
-        queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
-        queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', 'current'] });
-        queryClient.invalidateQueries({ queryKey: ['user-permissions'] });
+        // Invalidate React Query cache for this user's roles and force refetch
+        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
+        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', 'current'] });
+        await queryClient.invalidateQueries({ queryKey: ['user-permissions'] });
+        
+        // Force immediate refetch of the roles
+        await refetchRoles();
+        
+        // Small delay to ensure UI updates
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
           description: currentUser.full_name || currentUser.email,

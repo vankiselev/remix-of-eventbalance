@@ -71,5 +71,6 @@ export const useUserRbacRoles = (userId?: string) => {
     isLoading,
     isAdmin: roles.some(role => role.is_admin_role),
     primaryRole: roles[0] || null,
+    refetch,
   };
 };
