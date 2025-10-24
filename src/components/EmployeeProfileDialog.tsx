@@ -369,22 +369,35 @@ export const EmployeeProfileDialog = ({
           throw new Error(`Не удалось назначить новую роль: ${insertError.message}`);
         }
 
-        console.log('Role successfully changed:', insertedRole);
+        console.log('[RoleAssignment] Role successfully changed:', insertedRole);
+        console.log('[RoleAssignment] Old assignments:', userRoleAssignments);
         
         const oldRole = roles.find(r => r.id === userRoleAssignments[0]?.role_id)?.name || 'неизвестно';
         const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
+        console.log('[RoleAssignment] Old role:', oldRole, 'New role:', newRole);
         await logFieldChange("role", oldRole, newRole);
 
-        // Invalidate React Query cache for this user's roles and force refetch
-        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
-        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', 'current'] });
+        console.log('[RoleAssignment] Invalidating cache for user:', currentUser.id);
+        
+        // Invalidate ALL RBAC-related cache entries
+        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles'] });
         await queryClient.invalidateQueries({ queryKey: ['user-permissions'] });
+        await queryClient.invalidateQueries({ queryKey: ['user-role-assignments'] });
+        
+        // Force refetch with reset to bypass stale cache
+        await queryClient.resetQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
+        await queryClient.resetQueries({ queryKey: ['user-permissions'] });
+        
+        console.log('[RoleAssignment] Forcing refetch of roles...');
         
         // Force immediate refetch of the roles
-        await refetchRoles();
+        const refetchResult = await refetchRoles();
+        console.log('[RoleAssignment] Refetch complete:', refetchResult?.data);
         
         // Small delay to ensure UI updates
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        console.log('[RoleAssignment] UI should be updated now');
 
         toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
           description: currentUser.full_name || currentUser.email,
