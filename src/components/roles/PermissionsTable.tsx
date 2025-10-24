@@ -54,7 +54,10 @@ export const PermissionsTable = () => {
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-x-auto">
+      <div className="text-sm text-muted-foreground mb-2">
+        Всего разрешений: {permissions.length} в {Object.keys(groupedPermissions).length} категориях
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
