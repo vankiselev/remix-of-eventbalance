@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/utils/formatCurrency";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
 import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
 import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
 import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
 import CashOnHandCard from "@/components/dashboard/CashOnHandCard";
-import { FinancialTrendsChart } from "@/components/dashboard/FinancialTrendsChart";
-import { CategoryBreakdownChart } from "@/components/dashboard/CategoryBreakdownChart";
 import { useAuth } from "@/contexts/AuthContext";
-import { subDays, format } from "date-fns";
 
 interface DashboardData {
   totalEvents: number;
@@ -19,19 +18,6 @@ interface DashboardData {
   cashNastya: number;
   cashLera: number;
   cashVanya: number;
-}
-
-interface TrendData {
-  date: string;
-  income: number;
-  expenses: number;
-  profit: number;
-}
-
-interface CategoryData {
-  category: string;
-  amount: number;
-  percentage: number;
 }
 
 const Dashboard = () => {
@@ -45,8 +31,6 @@ const Dashboard = () => {
     cashLera: 0,
     cashVanya: 0,
   });
-  const [trendData, setTrendData] = useState<TrendData[]>([]);
-  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -58,17 +42,10 @@ const Dashboard = () => {
           .from("events")
           .select("*", { count: "exact", head: true });
 
-        // Get last 30 days date range
-        const endDate = new Date();
-        const startDate = subDays(endDate, 30);
-
         // Fetch financial data
         const { data: transactions } = await supabase
           .from("financial_transactions")
-          .select("income_amount, expense_amount, cash_type, operation_date, category")
-          .gte("operation_date", format(startDate, "yyyy-MM-dd"))
-          .lte("operation_date", format(endDate, "yyyy-MM-dd"))
-          .order("operation_date");
+          .select("income_amount, expense_amount, cash_type");
 
         // Calculate totals
         let totalIncome = 0;
@@ -76,12 +53,6 @@ const Dashboard = () => {
         let cashNastya = 0;
         let cashLera = 0;
         let cashVanya = 0;
-
-        // Group by date for trend chart
-        const trendMap = new Map<string, { income: number; expenses: number }>();
-        
-        // Track category expenses
-        const categoryMap = new Map<string, number>();
 
         transactions?.forEach(t => {
           if (t.income_amount) totalIncome += t.income_amount;
@@ -91,44 +62,10 @@ const Dashboard = () => {
           if (t.cash_type === 'nastya') cashNastya += netAmount;
           else if (t.cash_type === 'lera') cashLera += netAmount;
           else if (t.cash_type === 'vanya') cashVanya += netAmount;
-
-          // Aggregate by date
-          const dateKey = t.operation_date;
-          const existing = trendMap.get(dateKey) || { income: 0, expenses: 0 };
-          trendMap.set(dateKey, {
-            income: existing.income + (t.income_amount || 0),
-            expenses: existing.expenses + (t.expense_amount || 0),
-          });
-
-          // Aggregate by category (only expenses)
-          if (t.expense_amount && t.category) {
-            const categoryAmount = categoryMap.get(t.category) || 0;
-            categoryMap.set(t.category, categoryAmount + t.expense_amount);
-          }
         });
 
         const totalCash = cashNastya + cashLera + cashVanya;
         const profit = totalIncome - totalExpenses;
-
-        // Build trend data
-        const trends: TrendData[] = Array.from(trendMap.entries())
-          .map(([date, values]) => ({
-            date,
-            income: values.income,
-            expenses: values.expenses,
-            profit: values.income - values.expenses,
-          }))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        // Build category data
-        const categories: CategoryData[] = Array.from(categoryMap.entries())
-          .map(([category, amount]) => ({
-            category,
-            amount,
-            percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
-          }))
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 5); // Top 5 categories
 
         setData({
           totalEvents: eventsCount || 0,
@@ -140,8 +77,6 @@ const Dashboard = () => {
           cashLera,
           cashVanya,
         });
-        setTrendData(trends);
-        setCategoryData(categories);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -162,26 +97,9 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <DashboardStats
-        stats={{
-          totalEvents: data.totalEvents,
-          totalIncome: data.totalIncome,
-          totalExpenses: data.totalExpenses,
-          profit: data.profit,
-        }}
-        isLoading={loading}
-      />
-
       {/* Cash on hand - full width */}
       <div className="w-full">
         <CashOnHandCard />
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-2 w-full">
-        <FinancialTrendsChart data={trendData} isLoading={loading} />
-        <CategoryBreakdownChart data={categoryData} isLoading={loading} />
       </div>
 
       {/* Today's information */}

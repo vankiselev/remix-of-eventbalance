@@ -71,13 +71,6 @@
     --whatsapp-other-message: 0 0% 100%; /* White for other messages */
     --whatsapp-bg: 120 7% 93%; /* Light gray background - #ECE5DD */
     --whatsapp-hover: 0 0% 96%; /* Hover state - #F5F5F5 */
-
-    /* Chart Colors */
-    --chart-1: 142 76% 36%; /* Green for income */
-    --chart-2: 346 77% 50%; /* Red for expenses */
-    --chart-3: 262 52% 47%; /* Purple */
-    --chart-4: 43 74% 66%; /* Yellow */
-    --chart-5: 27 87% 67%; /* Orange */
   }
 
   .dark {
