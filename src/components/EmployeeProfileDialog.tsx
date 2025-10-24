@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,6 +143,7 @@ export const EmployeeProfileDialog = ({
   const { user } = useAuth();
   const { isAdmin: canEditRole } = useUserRbacRoles();
   const { roles } = useRoles();
+  const queryClient = useQueryClient();
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
@@ -372,6 +374,11 @@ export const EmployeeProfileDialog = ({
         const oldRole = roles.find(r => r.id === userRoleAssignments[0]?.role_id)?.name || 'неизвестно';
         const newRole = roles.find(r => r.id === data.role_id)?.name || 'неизвестно';
         await logFieldChange("role", oldRole, newRole);
+
+        // Invalidate React Query cache for this user's roles
+        queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
+        queryClient.invalidateQueries({ queryKey: ['user-rbac-roles', 'current'] });
+        queryClient.invalidateQueries({ queryKey: ['user-permissions'] });
 
         toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
           description: currentUser.full_name || currentUser.email,
