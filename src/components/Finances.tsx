@@ -492,7 +492,7 @@ const Finances = () => {
   }
 
   // Employee view or employee detail view for admin
-  if (!isAdmin || selectedEmployee) {
+  if ((!isAdmin && !isFinancier) || selectedEmployee) {
     const currentUserId = selectedEmployee?.id || user?.id;
 
   return (
@@ -676,13 +676,13 @@ const Finances = () => {
               {viewMode === 'cards' ? (
                 <TransactionsCardView
                   userId={user?.id}
-                  isAdmin={true}
+                  isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
                 />
               ) : (
                 <EnhancedTransactionTable
                   userId={user?.id}
-                  isAdmin={true}
+                  isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
                 />
               )}
@@ -705,12 +705,12 @@ const Finances = () => {
               <div className="pt-4 w-full">
               {viewMode === 'cards' ? (
                 <TransactionsCardView
-                  isAdmin={true}
+                  isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
                 />
               ) : (
                 <EnhancedTransactionTable
-                  isAdmin={true}
+                  isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
                 />
               )}
