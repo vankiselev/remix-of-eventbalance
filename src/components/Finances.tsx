@@ -39,7 +39,9 @@ interface CashSummary {
 
 const Finances = () => {
   const { hasPermission } = useUserPermissions();
-  const { isFinancier } = useFinancierPermissions();
+  const { isFinancier, canReview, canApprove } = useFinancierPermissions();
+  
+  console.log('[Finances] isFinancier status:', isFinancier, { canReview, canApprove });
   const [companySummary, setCompanySummary] = useState<CashSummary>({
     total_cash: 0,
     cash_nastya: 0,

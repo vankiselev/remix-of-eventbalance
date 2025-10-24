@@ -169,6 +169,9 @@ export const EmployeeProfileDialog = ({
     if ((employee || profile) && isOpen) {
       const userData = currentUser;
       if (!userData) return;
+      
+      // Force refetch roles when dialog opens to ensure fresh data
+      refetchRoles();
 
       // Fetch user role assignments
       const fetchUserRoles = async () => {
@@ -377,25 +380,21 @@ export const EmployeeProfileDialog = ({
         console.log('[RoleAssignment] Old role:', oldRole, 'New role:', newRole);
         await logFieldChange("role", oldRole, newRole);
 
-        console.log('[RoleAssignment] Invalidating cache for user:', currentUser.id);
+        console.log('[RoleAssignment] Forcing refetch for user:', currentUser.id);
         
-        // Invalidate ALL RBAC-related cache entries
-        await queryClient.invalidateQueries({ queryKey: ['user-rbac-roles'] });
-        await queryClient.invalidateQueries({ queryKey: ['user-permissions'] });
-        await queryClient.invalidateQueries({ queryKey: ['user-role-assignments'] });
+        // Use refetchQueries instead of invalidateQueries for immediate update
+        await queryClient.refetchQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
+        await queryClient.refetchQueries({ queryKey: ['user-permissions'] });
+        await queryClient.refetchQueries({ queryKey: ['user-role-assignments', currentUser.id] });
         
-        // Force refetch with reset to bypass stale cache
-        await queryClient.resetQueries({ queryKey: ['user-rbac-roles', currentUser.id] });
-        await queryClient.resetQueries({ queryKey: ['user-permissions'] });
+        console.log('[RoleAssignment] Refetch queries complete');
         
-        console.log('[RoleAssignment] Forcing refetch of roles...');
-        
-        // Force immediate refetch of the roles
+        // Force immediate refetch of the roles hook
         const refetchResult = await refetchRoles();
-        console.log('[RoleAssignment] Refetch complete:', refetchResult?.data);
+        console.log('[RoleAssignment] Roles refetched:', refetchResult?.data);
         
-        // Small delay to ensure UI updates
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Longer delay to ensure UI updates propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         console.log('[RoleAssignment] UI should be updated now');
 

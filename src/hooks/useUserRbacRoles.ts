@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface RbacRole {
   name: string;
@@ -9,12 +9,21 @@ interface RbacRole {
 }
 
 export const useUserRbacRoles = (userId?: string) => {
-  const targetUserId = userId || 'current';
+  const [resolvedUid, setResolvedUid] = useState<string | null>(null);
+  
+  // Resolve uid once
+  useEffect(() => {
+    const resolveUid = async () => {
+      const uid = userId || (await supabase.auth.getUser()).data.user?.id;
+      setResolvedUid(uid || null);
+    };
+    resolveUid();
+  }, [userId]);
   
   const { data: roles = [], isLoading, refetch } = useQuery({
-    queryKey: ['user-rbac-roles', targetUserId],
+    queryKey: ['user-rbac-roles', resolvedUid],
     queryFn: async () => {
-      const uid = userId || (await supabase.auth.getUser()).data.user?.id;
+      const uid = resolvedUid;
       console.log('[useUserRbacRoles] Fetching roles for userId:', userId, 'resolved uid:', uid);
       
       if (!uid) {
@@ -50,6 +59,7 @@ export const useUserRbacRoles = (userId?: string) => {
 
       return (defs || []) as RbacRole[];
     },
+    enabled: !!resolvedUid,
   });
 
   // Realtime subscription for current user's role changes
