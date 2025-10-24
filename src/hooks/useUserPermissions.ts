@@ -11,7 +11,9 @@ export const useUserPermissions = () => {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_current_user_permissions');
       if (error) throw error;
-      return (data as string[]) || [];
+      const list = (data as string[]) || [];
+      console.log('[useUserPermissions] permissions:', list);
+      return list;
     },
   });
 
