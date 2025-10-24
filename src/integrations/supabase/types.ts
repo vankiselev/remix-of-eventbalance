@@ -1675,12 +1675,9 @@ export type Database = {
         Args: { p_employee_user_id: string }
         Returns: boolean
       }
-      format_phone_display: {
-        Args: { phone_e164: string }
-        Returns: string
-      }
+      format_phone_display: { Args: { phone_e164: string }; Returns: string }
       get_admin_employee_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           birth_date: string
@@ -1695,7 +1692,7 @@ export type Database = {
         }[]
       }
       get_admin_profiles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           birth_date: string
@@ -1716,7 +1713,7 @@ export type Database = {
         }[]
       }
       get_all_basic_profiles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           birth_date: string
@@ -1730,7 +1727,7 @@ export type Database = {
         }[]
       }
       get_company_cash_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cash_lera: number
           cash_nastya: number
@@ -1738,23 +1735,20 @@ export type Database = {
           total_cash: number
         }[]
       }
-      get_current_user_permissions: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
+      get_current_user_permissions: { Args: never; Returns: string[] }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       get_current_vacations_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           employee_name: string
           vacation_type: string
         }[]
       }
       get_employee_basic_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           birth_date: string
@@ -1789,7 +1783,7 @@ export type Database = {
         }[]
       }
       get_my_employee_profile: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           hire_date: string
@@ -1800,7 +1794,7 @@ export type Database = {
         }[]
       }
       get_user_basic_profile: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           birth_date: string
@@ -1821,10 +1815,7 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      has_permission: {
-        Args: { p_code: string }
-        Returns: boolean
-      }
+      has_permission: { Args: { p_code: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1832,18 +1823,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_token: {
-        Args: { token_value: string }
-        Returns: string
-      }
-      is_active_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_user: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      hash_token: { Args: { token_value: string }; Returns: string }
+      is_active_user: { Args: never; Returns: boolean }
+      is_admin_user: { Args: { _user_id: string }; Returns: boolean }
       is_chat_admin: {
         Args: { _chat_room_id: string; _user_id: string }
         Returns: boolean
@@ -1873,16 +1855,13 @@ export type Database = {
         Args: { p_cash_type: string }
         Returns: undefined
       }
-      reject_money_transfer: {
-        Args:
-          | { p_rejection_reason: string; p_transaction_id: string }
-          | { p_transaction_id: string }
-        Returns: boolean
-      }
-      request_password_reset: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
+      reject_money_transfer:
+        | {
+            Args: { p_rejection_reason: string; p_transaction_id: string }
+            Returns: boolean
+          }
+        | { Args: { p_transaction_id: string }; Returns: boolean }
+      request_password_reset: { Args: { user_email: string }; Returns: boolean }
       reset_password_with_token: {
         Args: { new_password: string; reset_token: string }
         Returns: boolean
