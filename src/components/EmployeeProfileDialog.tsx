@@ -60,7 +60,6 @@ interface Employee {
     id: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'employee';
     phone?: string;
     phone_e164?: string;
     birth_date?: string;
@@ -76,7 +75,6 @@ interface Profile {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
   phone?: string;
   phone_e164?: string;
   birth_date?: string;
@@ -599,10 +597,10 @@ export const EmployeeProfileDialog = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Профиль {currentUser.role === 'admin' ? 'администратора' : 'сотрудника'}
+            Профиль пользователя
           </DialogTitle>
           <DialogDescription>
-            Просмотр и редактирование информации о {currentUser.role === 'admin' ? 'администраторе' : 'сотруднике'}
+            Просмотр и редактирование информации о пользователе
           </DialogDescription>
         </DialogHeader>
 

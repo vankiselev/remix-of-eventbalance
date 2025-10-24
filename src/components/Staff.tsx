@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
-import { Plus, Users, User, Edit, UserPlus, Search, Filter, Shield } from "lucide-react";
+import { Plus, Users, User, Edit, UserPlus, Search, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
@@ -26,7 +26,6 @@ interface Profile {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
   phone?: string;
   birth_date?: string;
   avatar_url?: string;
@@ -49,7 +48,6 @@ interface CombinedUser {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
   phone?: string;
   birth_date?: string;
   avatar_url?: string;
@@ -81,7 +79,6 @@ const Staff = () => {
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "employee">("all");
   const [statusTab, setStatusTab] = useState<"active" | "terminated">("active");
   const [formData, setFormData] = useState({
     user_id: "",
@@ -186,7 +183,6 @@ const Staff = () => {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
-          role: profile.role, // Keep old role for backwards compatibility
           phone: profile.phone,
           birth_date: profile.birth_date,
           avatar_url: profile.avatar_url,
@@ -266,11 +262,6 @@ const Staff = () => {
       return statusTab === 'terminated' ? isTerminated : !isTerminated;
     });
 
-    // Apply role filter
-    if (roleFilter !== "all") {
-      filtered = filtered.filter(user => user.role === roleFilter);
-    }
-
     // Apply search filter
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
@@ -282,20 +273,10 @@ const Staff = () => {
     }
 
     setFilteredUsers(filtered);
-  }, [allUsers, roleFilter, searchTerm, statusTab]);
+  }, [allUsers, searchTerm, statusTab]);
 
 
   const handleEditUser = (user: CombinedUser) => {
-    // Check permissions - only admins can edit other admins
-    if (user.role === 'admin' && !isAdmin) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "У вас нет прав для редактирования администраторов",
-      });
-      return;
-    }
-    
     // Users can edit their own profile or admins can edit anyone
     const canEditThisUser = user.id === currentUserProfile?.id || isAdmin;
     
@@ -450,7 +431,7 @@ const Staff = () => {
         </TabsList>
 
         <TabsContent value={statusTab} className="space-y-4">
-          {/* Search and Filter Controls */}
+          {/* Search Controls */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -461,34 +442,22 @@ const Staff = () => {
                 className="pl-10"
               />
             </div>
-            <Select value={roleFilter} onValueChange={(value: any) => setRoleFilter(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Фильтр по роли" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все пользователи</SelectItem>
-                <SelectItem value="admin">Администраторы</SelectItem>
-                <SelectItem value="employee">Сотрудники</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Results Summary */}
           <div className="text-sm text-muted-foreground">
             Найдено пользователей: {filteredUsers.length}
-            {roleFilter !== "all" && ` (фильтр: ${roleFilter === "admin" ? "Администраторы" : "Сотрудники"})`}
           </div>
 
           {filteredUsers.length === 0 ? (
             <ResponsiveCard className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                {searchTerm || roleFilter !== "all" ? "Не найдено пользователей" : "Нет пользователей"}
+                {searchTerm ? "Не найдено пользователей" : "Нет пользователей"}
               </h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || roleFilter !== "all" 
-                  ? "Попробуйте изменить параметры поиска или фильтра"
+                {searchTerm 
+                  ? "Попробуйте изменить параметры поиска"
                   : statusTab === "terminated" ? "Нет уволенных сотрудников" : "Нет активных сотрудников"}
               </p>
             </ResponsiveCard>
@@ -531,15 +500,15 @@ const Staff = () => {
                         )}
                       </div>
                       {(hasPermission('staff.edit_all') || user.id === currentUserProfile?.id) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                          className="p-1 h-8 w-8"
-                          title={user.role === 'admin' ? 'Редактировать администратора' : 'Редактировать сотрудника'}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                            className="p-1 h-8 w-8"
+                            title="Редактировать профиль"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                       )}
                     </div>
                   </div>
@@ -629,7 +598,6 @@ const Staff = () => {
               id: selectedUser.id,
               email: selectedUser.email,
               full_name: selectedUser.full_name,
-              role: selectedUser.role,
               phone: selectedUser.phone,
               birth_date: selectedUser.birth_date,
               avatar_url: selectedUser.avatar_url,
@@ -643,7 +611,6 @@ const Staff = () => {
             id: selectedUser.id,
             email: selectedUser.email,
             full_name: selectedUser.full_name,
-            role: selectedUser.role,
             phone: selectedUser.phone,
             birth_date: selectedUser.birth_date,
             avatar_url: selectedUser.avatar_url,

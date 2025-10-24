@@ -13,7 +13,6 @@ interface EmployeeBirthday {
   full_name: string;
   birth_date: string;
   avatar_url?: string;
-  role: string;
 }
 
 const Birthdays = () => {
@@ -28,7 +27,7 @@ const Birthdays = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, birth_date, avatar_url, role')
+        .select('id, full_name, birth_date, avatar_url')
         .not('birth_date', 'is', null)
         .order('birth_date', { ascending: true });
 

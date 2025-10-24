@@ -9,7 +9,6 @@ interface BirthdayEmployee {
   full_name: string;
   birth_date: string;
   avatar_url?: string;
-  role: string;
 }
 
 const TodayBirthdaysCard = () => {
@@ -24,7 +23,7 @@ const TodayBirthdaysCard = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, birth_date, avatar_url, role')
+        .select('id, full_name, birth_date, avatar_url')
         .not('birth_date', 'is', null);
 
       if (error) throw error;
@@ -107,7 +106,7 @@ const TodayBirthdaysCard = () => {
                 <div className="flex-1">
                   <h4 className="font-medium text-foreground">{employee.full_name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {employee.role === 'admin' ? 'Администратор' : 'Сотрудник'} • {calculateAge(employee.birth_date)} лет
+                    {calculateAge(employee.birth_date)} лет
                   </p>
                 </div>
                 <div className="flex-shrink-0">
