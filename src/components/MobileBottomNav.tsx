@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 
 interface NavItem {
   path: string;
@@ -18,6 +19,7 @@ interface NavItem {
 const MobileBottomNav = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRbacRoles();
+  const { isFinancier } = useFinancierPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -56,7 +58,7 @@ const MobileBottomNav = () => {
     { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
     { path: "/vacations", label: "График отпусков", icon: "Plane" },
     { path: "/contacts", label: "Контакты", icon: "Briefcase" },
-    { path: "/reports", label: "Отчеты", icon: "FileText" },
+    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: "FileText" }] : []),
     ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Settings" }] : []),
   ];
 

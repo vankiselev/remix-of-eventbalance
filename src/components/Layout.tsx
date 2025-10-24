@@ -28,6 +28,7 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const { signOut, user, userRole, userProfile } = useAuth();
   const { roles: userRoles, isAdmin: isAdminRbac } = useUserRbacRoles();
+  const { isFinancier } = useFinancierPermissions();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -153,7 +154,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
-    { path: "/reports", label: "Отчеты", icon: FileText },
+    ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
     ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
