@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import * as LucideIcons from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useChatUnread } from "@/hooks/useChatUnread";
@@ -13,46 +11,25 @@ interface NavItem {
   path: string;
   label: string;
   icon: string;
-  enabled: boolean;
 }
 
 const MobileBottomNav = () => {
-  const { user } = useAuth();
   const { isAdmin } = useUserRbacRoles();
   const { isFinancier } = useFinancierPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const { totalUnread } = useChatUnread();
-  const [mainNavItems, setMainNavItems] = useState<NavItem[]>([
-    { path: "/dashboard", label: "Главная", icon: "BarChart3", enabled: true },
-    { path: "/messages", label: "Сообщения", icon: "MessageSquare", enabled: true },
-    { path: "/transaction", label: "Создать", icon: "Plus", enabled: true },
-    { path: "/finances", label: "Финансы", icon: "DollarSign", enabled: true },
-  ]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        // Load custom nav settings
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('mobile_nav_settings')
-          .eq('id', user.id)
-          .single();
-
-        if (profileData?.mobile_nav_settings) {
-          const customSettings = profileData.mobile_nav_settings as unknown as NavItem[];
-          setMainNavItems(customSettings.filter(item => item.enabled));
-        }
-      }
-    };
-    fetchUserData();
-  }, [user]);
+  const mainNavItems: NavItem[] = [
+    { path: "/dashboard", label: "Главная", icon: "Home" },
+    { path: "/finances", label: "Финансы", icon: "DollarSign" },
+    { path: "/transaction", label: "Траты/Приход", icon: "Plus" },
+    { path: "/events", label: "Мероприятия", icon: "CalendarDays" },
+  ];
 
   const moreMenuItems = [
     { path: "/profile", label: "Профиль", icon: "User" },
-    { path: "/events", label: "Мероприятия", icon: "CalendarDays" },
+    { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/staff", label: "Сотрудники", icon: "Users" },
     { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
