@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import EventDetailDialog from "@/components/calendar/EventDetailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -85,7 +85,7 @@ const Events = () => {
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   
   const { user } = useAuth();
@@ -532,8 +532,8 @@ const Events = () => {
           ) : (
             <>
               {/* Кнопка Фильтр */}
-              <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
-                <DrawerTrigger asChild>
+              <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+                <DialogTrigger asChild>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -547,140 +547,142 @@ const Events = () => {
                       </span>
                     )}
                   </Button>
-                </DrawerTrigger>
-                <DrawerContent className="max-h-[85vh]">
-                  <DrawerHeader>
-                    <DrawerTitle>Фильтры</DrawerTitle>
-                  </DrawerHeader>
-                  <div className="p-4 space-y-4 overflow-y-auto">
-                    <div>
-                      <div className="text-sm mb-2 block font-medium">Месяц</div>
-                      <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Все месяцы" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Все месяцы</SelectItem>
-                          {getAvailableMonths().map(month => (
-                            <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <div className="text-sm mb-2 block font-medium">Год</div>
-                      <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Все годы" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Все годы</SelectItem>
-                          {getAvailableYears().map(year => (
-                            <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <div className="text-sm mb-2 block font-medium">Конкретная дата</div>
-                      <Input
-                        type="date"
-                        value={selectedDate || ""}
-                        onChange={(e) => setSelectedDate(e.target.value || null)}
-                      />
-                    </div>
-                    <div>
-                      <div className="text-sm mb-2 block font-medium">Менеджеры</div>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between"
-                          >
-                            {selectedManagers.length > 0
-                              ? `Выбрано: ${selectedManagers.length}`
-                              : "Выберите менеджеров"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Поиск менеджера..." />
-                            <CommandList>
-                              <CommandEmpty>Менеджер не найден</CommandEmpty>
-                              <CommandGroup>
-                                {employees.map((employee) => (
-                                  <CommandItem
-                                    key={employee.id}
-                                    onSelect={() => {
-                                      setSelectedManagers(prev =>
-                                        prev.includes(employee.id)
-                                          ? prev.filter(id => id !== employee.id)
-                                          : [...prev, employee.id]
-                                      );
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {employee.full_name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div>
-                      <div className="text-sm mb-2 block font-medium">Площадка</div>
-                      <Select value={selectedVenue || "all"} onValueChange={(value) => setSelectedVenue(value === "all" ? null : value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Все площадки" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Все площадки</SelectItem>
-                          {venues.map(venue => (
-                            <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Фильтры</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm mb-2 block font-medium">Месяц</div>
+                        <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все месяцы" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все месяцы</SelectItem>
+                            {getAvailableMonths().map(month => (
+                              <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <div className="text-sm mb-2 block font-medium">Год</div>
+                        <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все годы" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все годы</SelectItem>
+                            {getAvailableYears().map(year => (
+                              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <div className="text-sm mb-2 block font-medium">Конкретная дата</div>
+                        <Input
+                          type="date"
+                          value={selectedDate || ""}
+                          onChange={(e) => setSelectedDate(e.target.value || null)}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm mb-2 block font-medium">Менеджеры</div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between"
+                            >
+                              {selectedManagers.length > 0
+                                ? `Выбрано: ${selectedManagers.length}`
+                                : "Выберите менеджеров"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Поиск менеджера..." />
+                              <CommandList>
+                                <CommandEmpty>Менеджер не найден</CommandEmpty>
+                                <CommandGroup>
+                                  {employees.map((employee) => (
+                                    <CommandItem
+                                      key={employee.id}
+                                      onSelect={() => {
+                                        setSelectedManagers(prev =>
+                                          prev.includes(employee.id)
+                                            ? prev.filter(id => id !== employee.id)
+                                            : [...prev, employee.id]
+                                        );
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {employee.full_name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div>
+                        <div className="text-sm mb-2 block font-medium">Площадка</div>
+                        <Select value={selectedVenue || "all"} onValueChange={(value) => setSelectedVenue(value === "all" ? null : value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все площадки" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все площадки</SelectItem>
+                            {venues.map(venue => (
+                              <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Счетчик мероприятий */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Найдено:</span>
+                        <span className="font-semibold text-lg">{filteredEvents.length}</span>
+                        {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+                          <span className="text-muted-foreground">/ {events.length}</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Счетчик мероприятий в drawer */}
-                    <div className="flex items-center gap-2 justify-center p-3 bg-muted rounded-lg">
-                      <span className="text-muted-foreground text-sm">Найдено:</span>
-                      <span className="font-semibold text-xl">{filteredEvents.length}</span>
-                      {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
-                        <span className="text-muted-foreground">/ {events.length}</span>
+                    <div className="flex gap-2 justify-end pt-4 border-t">
+                      {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            resetFilters();
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Сбросить фильтры
+                        </Button>
                       )}
-                    </div>
-
-                    {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
                       <Button
-                        variant="outline"
-                        onClick={() => {
-                          resetFilters();
-                          setIsFilterDrawerOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2"
+                        onClick={() => setIsFilterDialogOpen(false)}
                       >
-                        <X className="h-4 w-4" />
-                        Сбросить фильтры
+                        Применить
                       </Button>
-                    )}
-                    <Button
-                      onClick={() => setIsFilterDrawerOpen(false)}
-                      className="w-full"
-                    >
-                      Применить
-                    </Button>
+                    </div>
                   </div>
-                </DrawerContent>
-              </Drawer>
+                </DialogContent>
+              </Dialog>
 
               {/* Сортировка */}
               {isMobile ? (
