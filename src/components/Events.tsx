@@ -230,6 +230,36 @@ const Events = () => {
     return uniqueYears.sort((a, b) => b - a);
   };
 
+  // Получение доступных месяцев в зависимости от периода фильтра
+  const getAvailableMonths = () => {
+    const currentMonth = new Date().getMonth() + 1; // 1-12
+    const allMonths = [
+      { value: "1", label: "Январь" },
+      { value: "2", label: "Февраль" },
+      { value: "3", label: "Март" },
+      { value: "4", label: "Апрель" },
+      { value: "5", label: "Май" },
+      { value: "6", label: "Июнь" },
+      { value: "7", label: "Июль" },
+      { value: "8", label: "Август" },
+      { value: "9", label: "Сентябрь" },
+      { value: "10", label: "Октябрь" },
+      { value: "11", label: "Ноябрь" },
+      { value: "12", label: "Декабрь" }
+    ];
+
+    if (periodFilter === 'future') {
+      // Показываем только текущий месяц и будущие
+      return allMonths.filter(month => parseInt(month.value) >= currentMonth);
+    } else if (periodFilter === 'past') {
+      // Показываем только прошедшие месяцы до текущего включительно
+      return allMonths.filter(month => parseInt(month.value) <= currentMonth);
+    }
+    
+    // Для 'all' показываем все месяцы
+    return allMonths;
+  };
+
   // Фильтрация событий по дате (месяц и год)
   const filterEventsByDate = (eventsList: Event[]) => {
     let filtered = eventsList;
@@ -578,18 +608,9 @@ const Events = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Все месяцы</SelectItem>
-                    <SelectItem value="1">Январь</SelectItem>
-                    <SelectItem value="2">Февраль</SelectItem>
-                    <SelectItem value="3">Март</SelectItem>
-                    <SelectItem value="4">Апрель</SelectItem>
-                    <SelectItem value="5">Май</SelectItem>
-                    <SelectItem value="6">Июнь</SelectItem>
-                    <SelectItem value="7">Июль</SelectItem>
-                    <SelectItem value="8">Август</SelectItem>
-                    <SelectItem value="9">Сентябрь</SelectItem>
-                    <SelectItem value="10">Октябрь</SelectItem>
-                    <SelectItem value="11">Ноябрь</SelectItem>
-                    <SelectItem value="12">Декабрь</SelectItem>
+                    {getAvailableMonths().map(month => (
+                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -709,18 +730,9 @@ const Events = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Все месяцы</SelectItem>
-                    <SelectItem value="1">Январь</SelectItem>
-                    <SelectItem value="2">Февраль</SelectItem>
-                    <SelectItem value="3">Март</SelectItem>
-                    <SelectItem value="4">Апрель</SelectItem>
-                    <SelectItem value="5">Май</SelectItem>
-                    <SelectItem value="6">Июнь</SelectItem>
-                    <SelectItem value="7">Июль</SelectItem>
-                    <SelectItem value="8">Август</SelectItem>
-                    <SelectItem value="9">Сентябрь</SelectItem>
-                    <SelectItem value="10">Октябрь</SelectItem>
-                    <SelectItem value="11">Ноябрь</SelectItem>
-                    <SelectItem value="12">Декабрь</SelectItem>
+                    {getAvailableMonths().map(month => (
+                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
