@@ -23,22 +23,26 @@ const Contacts = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="w-full justify-start">
           <TabsTrigger value="contractors" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
-            Подрядчики
+            <span className="hidden sm:inline">Подрядчики</span>
+            <span className="sm:hidden">Подр.</span>
           </TabsTrigger>
           <TabsTrigger value="animators" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Аниматоры
+            <span className="hidden sm:inline">Аниматоры</span>
+            <span className="sm:hidden">Аним.</span>
           </TabsTrigger>
           <TabsTrigger value="clients" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Клиенты
+            <span className="hidden sm:inline">Клиенты</span>
+            <span className="sm:hidden">Клиент.</span>
           </TabsTrigger>
           <TabsTrigger value="venues" className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            Площадки
+            <span className="hidden sm:inline">Площадки</span>
+            <span className="sm:hidden">Площ.</span>
           </TabsTrigger>
         </TabsList>
 

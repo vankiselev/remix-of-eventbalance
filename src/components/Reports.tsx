@@ -340,13 +340,13 @@ const Reports = () => {
 
       {isAdmin ? (
         <Tabs defaultValue="my-reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="my-reports" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="my-reports" className="flex items-center gap-1 md:gap-2">
               <User className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden xs:inline">Мои отчеты</span>
               <span className="xs:hidden">Мои</span>
             </TabsTrigger>
-            <TabsTrigger value="all-reports" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+            <TabsTrigger value="all-reports" className="flex items-center gap-1 md:gap-2">
               <Users className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden xs:inline">Все отчеты</span>
               <span className="xs:hidden">Все</span>

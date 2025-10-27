@@ -84,18 +84,21 @@ export const ChatMediaPanel = ({ chatRoomId, open, onOpenChange }: ChatMediaPane
         </SheetHeader>
 
         <Tabs defaultValue="media" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="w-full justify-start">
             <TabsTrigger value="media">
               <ImageIcon className="w-4 h-4 mr-2" />
-              Медиа
+              <span className="hidden sm:inline">Медиа</span>
+              <span className="sm:hidden">Мед.</span>
             </TabsTrigger>
             <TabsTrigger value="files">
               <FileIcon className="w-4 h-4 mr-2" />
-              Файлы
+              <span className="hidden sm:inline">Файлы</span>
+              <span className="sm:hidden">Файл.</span>
             </TabsTrigger>
             <TabsTrigger value="links">
               <LinkIcon className="w-4 h-4 mr-2" />
-              Ссылки
+              <span className="hidden sm:inline">Ссылки</span>
+              <span className="sm:hidden">Ссылк.</span>
             </TabsTrigger>
           </TabsList>
 

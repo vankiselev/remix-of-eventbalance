@@ -626,37 +626,22 @@ const Finances = () => {
       <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
-            <TabsList className={`grid w-full ${isFinancier ? 'grid-cols-5' : 'grid-cols-4'} h-10`}>
-              <TabsTrigger 
-                value="my-transactions" 
-                className="text-xs md:text-sm"
-              >
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="my-transactions">
                 Мои транзакции
               </TabsTrigger>
-              <TabsTrigger 
-                value="employees" 
-                className="text-xs md:text-sm"
-              >
+              <TabsTrigger value="employees">
                 Сотрудники
               </TabsTrigger>
-              <TabsTrigger 
-                value="all-transactions" 
-                className="text-xs md:text-sm"
-              >
+              <TabsTrigger value="all-transactions">
                 Все транзакции
               </TabsTrigger>
               {isFinancier && (
-                <TabsTrigger 
-                  value="review" 
-                  className="text-xs md:text-sm"
-                >
+                <TabsTrigger value="review">
                   Проверка
                 </TabsTrigger>
               )}
-              <TabsTrigger 
-                value="audit-log" 
-                className="text-xs md:text-sm"
-              >
+              <TabsTrigger value="audit-log">
                 Журнал
               </TabsTrigger>
             </TabsList>

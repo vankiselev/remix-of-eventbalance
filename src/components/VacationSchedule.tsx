@@ -481,9 +481,15 @@ const VacationSchedule = () => {
 
       {/* Tabs for Active and Archive */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archive')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="active">Актуальные отпуска</TabsTrigger>
-          <TabsTrigger value="archive">Архив</TabsTrigger>
+        <TabsList className="w-full justify-center">
+          <TabsTrigger value="active">
+            <span className="hidden sm:inline">Актуальные отпуска</span>
+            <span className="sm:hidden">Актуальные</span>
+          </TabsTrigger>
+          <TabsTrigger value="archive">
+            <span className="hidden sm:inline">Архив</span>
+            <span className="sm:hidden">Архив</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="active" className="space-y-4 mt-4">
