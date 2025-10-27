@@ -149,96 +149,86 @@ const CalendarV2 = () => {
   return (
     <div className="w-full overflow-x-hidden space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-3 w-full">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Календарь</h1>
-          <p className="text-sm sm:text-base text-muted-foreground truncate">
-            {viewMode === "year" ? selectedYear : `${MONTHS[selectedMonth]} ${selectedYear}`}
-          </p>
+      <div className="flex items-center justify-between gap-2 w-full flex-wrap">
+        {/* Left Side Controls */}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goToToday}
+            className="text-xs sm:text-sm px-3"
+          >
+            Сегодня
+          </Button>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
+              className="h-9 w-9 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
+              className="h-9 w-9 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {viewMode !== "year" && (
+            <>
+              <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                <SelectTrigger className="w-32 text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((month, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                <SelectTrigger className="w-24 text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
         </div>
 
-        {/* Controls - Mobile Optimized */}
-        <div className="flex flex-col sm:flex-row gap-2 w-full">
-          {/* First Row: View Mode + Navigation */}
-          <div className="flex items-center gap-2 flex-1">
-            <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-              <SelectTrigger className="w-[100px] sm:w-32 text-xs sm:text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="day">День</SelectItem>
-                <SelectItem value="week">Неделя</SelectItem>
-                <SelectItem value="month">Месяц</SelectItem>
-                <SelectItem value="year">Год</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Right Side Controls */}
+        <div className="flex items-center gap-2">
+          <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <SelectTrigger className="w-32 text-xs sm:text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">День</SelectItem>
+              <SelectItem value="week">Неделя</SelectItem>
+              <SelectItem value="month">Месяц</SelectItem>
+              <SelectItem value="year">Год</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToToday}
-              className="text-xs sm:text-sm px-2 sm:px-3"
-            >
-              Сегодня
-            </Button>
-          </div>
-
-          {/* Second Row: Month/Year + Add Button */}
-          <div className="flex items-center gap-2">
-            {viewMode !== "year" && (
-              <>
-                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                  <SelectTrigger className="flex-1 sm:w-32 text-xs sm:text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS.map((month, index) => (
-                      <SelectItem key={index} value={index.toString()}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                  <SelectTrigger className="w-20 text-xs sm:text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-
-            <Button size="sm" onClick={handleCreateEvent} className="flex-shrink-0">
-              <Plus className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Добавить</span>
-            </Button>
-          </div>
+          <Button size="sm" onClick={handleCreateEvent}>
+            <Plus className="h-4 w-4 mr-1" />
+            Добавить
+          </Button>
         </div>
       </div>
 
