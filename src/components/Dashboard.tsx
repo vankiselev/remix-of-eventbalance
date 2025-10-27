@@ -6,7 +6,6 @@ import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
 import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
 import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
 import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
-import CashOnHandCard from "@/components/dashboard/CashOnHandCard";
 import MyEventsCard from "@/components/dashboard/MyEventsCard";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -96,11 +95,6 @@ const Dashboard = () => {
         <p className="text-muted-foreground truncate">
           Добро пожаловать в EventBalance! Система управления ивентами
         </p>
-      </div>
-
-      {/* Cash on hand - full width */}
-      <div className="w-full">
-        <CashOnHandCard />
       </div>
 
       {/* Today's information */}
