@@ -78,7 +78,7 @@ const Events = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
-  const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all'>('future');
+  const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all' | 'cancelled'>('future');
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
@@ -268,18 +268,26 @@ const Events = () => {
     today.setHours(0, 0, 0, 0);
     
     // Фильтр по периоду
-    if (periodFilter === 'future') {
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.start_date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      });
-    } else if (periodFilter === 'past') {
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.start_date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate < today;
-      });
+    if (periodFilter === 'cancelled') {
+      // Показываем только отмененные
+      filtered = filtered.filter(event => event.status === 'cancelled');
+    } else {
+      // Исключаем отмененные из остальных фильтров
+      filtered = filtered.filter(event => event.status !== 'cancelled');
+      
+      if (periodFilter === 'future') {
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.start_date);
+          eventDate.setHours(0, 0, 0, 0);
+          return eventDate >= today;
+        });
+      } else if (periodFilter === 'past') {
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.start_date);
+          eventDate.setHours(0, 0, 0, 0);
+          return eventDate < today;
+        });
+      }
     }
     
     // Фильтр по конкретной дате
@@ -556,9 +564,9 @@ const Events = () => {
           type="single" 
           value={periodFilter}
           onValueChange={(value) => {
-            if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
+            if (value) setPeriodFilter(value as 'future' | 'past' | 'all' | 'cancelled');
           }}
-          className="grid grid-cols-3 w-full border rounded-md"
+          className="grid grid-cols-4 w-full border rounded-md"
         >
           <ToggleGroupItem 
             value="future" 
@@ -577,6 +585,12 @@ const Events = () => {
             className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
           >
             Все
+          </ToggleGroupItem>
+          <ToggleGroupItem 
+            value="cancelled"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+          >
+            Отмененные
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

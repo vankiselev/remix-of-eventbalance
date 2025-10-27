@@ -77,6 +77,7 @@ const CalendarV2 = () => {
         .select("*")
         .gte("start_date", startDate)
         .lte("start_date", endDate)
+        .neq("status", "cancelled")
         .order("start_date", { ascending: true });
 
       if (error) throw error;
