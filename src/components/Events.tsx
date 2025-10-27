@@ -862,10 +862,11 @@ const Events = () => {
                       
                       <div className="flex gap-4 p-6">
                         {/* Левый блок с датой */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-2xl w-32 h-32 border">
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-2xl w-32 h-32 border gap-2">
                           <div className="text-5xl font-bold">{day}</div>
                           <div className="text-sm capitalize">{month}</div>
-                          <div className="text-sm font-medium capitalize mt-1">{weekday}</div>
+                          <Separator className="w-16" />
+                          <div className="text-sm font-medium capitalize">{weekday}</div>
                         </div>
                         
                         {/* Правый блок с информацией */}
