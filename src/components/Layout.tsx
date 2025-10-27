@@ -157,7 +157,6 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
-    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
