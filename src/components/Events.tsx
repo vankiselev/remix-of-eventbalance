@@ -844,94 +844,71 @@ const Events = () => {
               <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
                 {dayKey}
               </h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+              <div className="space-y-4">
                 {dayEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
+                  const eventDate = new Date(event.start_date);
+                  const day = format(eventDate, 'd', { locale: ru });
+                  const month = format(eventDate, 'MMMM', { locale: ru });
+                  const weekday = format(eventDate, 'EEEE', { locale: ru });
+                  
                   return (
                     <Card 
                       key={event.id} 
                       className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      onClick={() => selectionMode ? toggleEventSelection(event.id) : handleEventClick(event)}
                     >
                       {selectionMode && (
-                        <div className="absolute top-3 right-3 z-10 pointer-events-none">
-                          <Checkbox
-                            checked={isSelected}
-                          />
+                        <div className="absolute top-4 right-4 z-10 pointer-events-none">
+                          <Checkbox checked={isSelected} />
                         </div>
                       )}
-                      <div onClick={() => selectionMode ? toggleEventSelection(event.id) : handleEventClick(event)}>
-                        <CardHeader className={selectionMode ? "pb-3 pr-12" : "pb-3"}>
-                          <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                      <div className="space-y-2">
-                        {event.project_owner && (
-                          <div className="flex items-start gap-2">
-                            <span className="text-muted-foreground font-medium min-w-[80px]">Чей проект:</span>
-                            <span className="text-foreground">{event.project_owner}</span>
-                          </div>
-                        )}
+                      
+                      <div className="flex gap-4 p-6">
+                        {/* Левый блок с датой */}
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-2xl w-32 h-32 border">
+                          <div className="text-5xl font-bold">{day}</div>
+                          <div className="text-sm capitalize">{month}</div>
+                          <div className="text-sm font-medium capitalize mt-1">{weekday}</div>
+                        </div>
                         
-                        {getResponsibleManager(event) && (
-                          <div className="flex items-start gap-2">
-                            <span className="text-muted-foreground font-medium min-w-[80px]">Ответственный:</span>
+                        {/* Правый блок с информацией */}
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <h3 className="text-xl font-semibold">{event.name}</h3>
+                          
+                          {event.project_owner && (
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Чей проект: </span>
+                              <span className="font-medium">{event.project_owner}</span>
+                            </div>
+                          )}
+                          
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Менеджеры: </span>
+                            <span className="font-medium">{getManagerNames(event)}</span>
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={getResponsibleManager(event)?.avatar_url || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {getResponsibleManager(event)?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-foreground text-sm">{getResponsibleManager(event)?.full_name}</span>
+                              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span>{getLocationDisplay(event)}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span>{getTimeRange(event)}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span>{getAnimatorNames(event)}</span>
                             </div>
                           </div>
-                        )}
-                        
-                        <div className="flex items-start gap-2">
-                          <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                          <div className="flex flex-col gap-1.5">
-                            {getManagerAvatars(event).length > 0 ? (
-                              getManagerAvatars(event).map((manager) => (
-                                <div key={manager.id} className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={manager.avatar_url || undefined} />
-                                    <AvatarFallback className="text-xs">
-                                      {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-foreground text-sm">{manager.full_name}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <span className="text-foreground">{getManagerNames(event)}</span>
-                            )}
-                          </div>
                         </div>
                       </div>
-
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                          <span className="text-foreground">{getLocationDisplay(event)}</span>
-                        </div>
-
-                        <div className="flex items-start gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                          <span className="text-foreground">{getTimeRange(event)}</span>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-start gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <span className="text-foreground">{getAnimatorNames(event)}</span>
-                      </div>
-                    </CardContent>
-                      </div>
-                  </Card>
+                    </Card>
                   );
                 })}
               </div>
