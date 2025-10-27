@@ -25,7 +25,7 @@ interface Event {
   project_owner: string | null;
   venue_id: string | null;
   client_id: string | null;
-  responsible_manager_id: string | null;
+  responsible_manager_ids: string[] | null;
   manager_ids: string[] | null;
   animator_ids: string[] | null;
   contractor_ids: string[] | null;
@@ -68,7 +68,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     project_owner: "",
     venue_id: "",
     client_id: "",
-    responsible_manager_id: "",
+    responsible_manager_ids: [] as string[],
     location: "",
     manager_ids: [] as string[],
     animator_ids: [] as string[],
@@ -92,7 +92,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           project_owner: event.project_owner || "",
           venue_id: event.venue_id || "",
           client_id: event.client_id || "",
-          responsible_manager_id: event.responsible_manager_id || "",
+          responsible_manager_ids: event.responsible_manager_ids || [],
           location: event.location || "",
           manager_ids: event.manager_ids || [],
           animator_ids: event.animator_ids || [],
@@ -168,7 +168,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         end_time: formData.end_time || null,
         venue_id: formData.venue_id || null,
         client_id: formData.client_id || null,
-        responsible_manager_id: formData.responsible_manager_id || null,
+        responsible_manager_ids: formData.responsible_manager_ids.length > 0 ? formData.responsible_manager_ids : null,
         photographer_contact_id: formData.photographer_contact_id || null,
         videographer_contact_id: formData.videographer_contact_id || null,
         show_program: formData.show_program || null,
@@ -206,6 +206,61 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     } finally {
       setLoading(false);
       setUploadingFile(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!event || !confirm("Вы уверены, что хотите отменить это мероприятие? Всем участникам будет отправлено уведомление.")) return;
+
+    try {
+      // Update event status to cancelled
+      const { error } = await supabase
+        .from("events")
+        .update({ status: 'cancelled' })
+        .eq("id", event.id);
+
+      if (error) throw error;
+
+      // Collect all participant IDs
+      const participantIds = new Set<string>();
+      
+      if (event.manager_ids) {
+        event.manager_ids.forEach((id) => participantIds.add(id));
+      }
+      if (event.responsible_manager_ids) {
+        event.responsible_manager_ids.forEach((id) => participantIds.add(id));
+      }
+      if (event.animator_ids) {
+        event.animator_ids.forEach((id) => participantIds.add(id));
+      }
+
+      // Send notifications to all participants
+      if (participantIds.size > 0) {
+        await supabase.functions.invoke('send-event-notification', {
+          body: {
+            event_id: event.id,
+            event_name: event.name,
+            action: 'cancelled',
+            participant_ids: Array.from(participantIds),
+            event_date: event.start_date,
+            event_time: event.event_time,
+            location: event.location,
+          },
+        });
+      }
+
+      toast({
+        title: "Успешно!",
+        description: "Мероприятие отменено, уведомления отправлены участникам",
+      });
+
+      onSave();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось отменить мероприятие",
+      });
     }
   };
 
@@ -475,38 +530,30 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             <h3 className="font-semibold">Команда</h3>
             
             <div className="space-y-2">
-              <Label htmlFor="responsible_manager_id">Ответственный менеджер</Label>
-              <Select
-                value={formData.responsible_manager_id}
-                onValueChange={(value) => {
-                  // Убираем выбранного ответственного менеджера из списка обычных менеджеров
-                  const updatedManagerIds = formData.manager_ids.filter(id => id !== value);
-                  setFormData({ 
-                    ...formData, 
-                    responsible_manager_id: value,
-                    manager_ids: updatedManagerIds
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите ответственного менеджера" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm">Ответственные менеджеры</Label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {employees.map((emp) => (
+                  <Button
+                    key={emp.id}
+                    type="button"
+                    variant={formData.responsible_manager_ids.includes(emp.id) ? "default" : "outline"}
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => setFormData({
+                      ...formData,
+                      responsible_manager_ids: toggleArrayItem(formData.responsible_manager_ids, emp.id)
+                    })}
+                  >
+                    {emp.full_name}
+                  </Button>
+                ))}
+              </div>
             </div>
             
             <div className="space-y-2">
               <Label className="text-sm">Менеджеры</Label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees
-                  .filter(emp => emp.id !== formData.responsible_manager_id) // Исключаем ответственного менеджера
-                  .map((emp) => (
+                {employees.map((emp) => (
                   <Button
                     key={emp.id}
                     type="button"
@@ -727,18 +774,29 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
         {/* Actions Footer */}
         <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 bg-background">
-          <div>
+          <div className="flex gap-2">
             {event && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                className="w-full sm:w-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Удалить
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                >
+                  Отменить мероприятие
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Удалить
+                </Button>
+              </>
             )}
           </div>
           <div className="flex gap-2">
@@ -749,7 +807,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               onClick={() => onOpenChange(false)}
               className="flex-1 sm:flex-none"
             >
-              Отмена
+              Закрыть
             </Button>
             <Button
               onClick={handleSave}

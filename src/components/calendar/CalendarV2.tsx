@@ -28,7 +28,7 @@ interface Event {
   project_owner: string | null;
   venue_id: string | null;
   client_id: string | null;
-  responsible_manager_id: string | null;
+  responsible_manager_ids: string[] | null;
   manager_ids: string[] | null;
   animator_ids: string[] | null;
   contractor_ids: string[] | null;
