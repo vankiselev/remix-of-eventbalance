@@ -5,7 +5,8 @@ import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import EventDetailDialog from "@/components/calendar/EventDetailDialog";
 
 interface UpcomingEvent {
   id: string;
@@ -22,7 +23,8 @@ interface UpcomingEvent {
 const TodayEventsCard = () => {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchUpcomingEvents();
@@ -52,8 +54,26 @@ const TodayEventsCard = () => {
     }
   };
 
-  const handleEventClick = (eventId: string) => {
-    navigate(`/events?eventId=${eventId}`);
+  const handleEventClick = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+
+      if (error) throw error;
+      
+      setSelectedEvent(data);
+      setDialogOpen(true);
+    } catch (error) {
+      console.error('Error fetching event details:', error);
+    }
+  };
+
+  const handleDialogSave = () => {
+    setDialogOpen(false);
+    fetchUpcomingEvents();
   };
 
   const getStatusVariant = (status: string) => {
@@ -94,7 +114,7 @@ const TodayEventsCard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-center">
             <CalendarDays className="w-5 h-5 text-primary" />
-            Мероприятия на неделю
+            Ближайшие мероприятия
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center">
@@ -121,44 +141,47 @@ const TodayEventsCard = () => {
             <p>На ближайшую неделю нет запланированных мероприятий</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {events.slice(0, 4).map((event) => (
-              <div 
-                key={event.id} 
-                className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => handleEventClick(event.id)}
-              >
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm leading-tight truncate">{event.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {format(new Date(event.start_date), 'd MMMM', { locale: ru })}
-                  </p>
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{formatTimeRange(event.event_time, event.end_time)}</span>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-3">
+              {events.map((event) => (
+                <div 
+                  key={event.id} 
+                  className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm leading-tight truncate">{event.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {format(new Date(event.start_date), 'd MMMM', { locale: ru })}
+                    </p>
                   </div>
                   
-                  {(event.location || event.place) && (
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{event.location || event.place}</span>
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{formatTimeRange(event.event_time, event.end_time)}</span>
                     </div>
-                  )}
+                    
+                    {(event.location || event.place) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{event.location || event.place}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            
-            {events.length > 4 && (
-              <p className="text-xs text-muted-foreground text-center pt-1">
-                И еще {events.length - 4} мероприятий...
-              </p>
-            )}
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
         )}
       </CardContent>
+
+      <EventDetailDialog
+        event={selectedEvent}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSave={handleDialogSave}
+      />
     </Card>
   );
 };
