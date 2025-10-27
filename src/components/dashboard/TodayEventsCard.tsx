@@ -110,7 +110,7 @@ const TodayEventsCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 justify-center">
           <CalendarDays className="w-5 h-5 text-primary" />
-          Мероприятия на неделю
+          Ближайшие мероприятия
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
