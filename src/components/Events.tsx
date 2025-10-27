@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2, Filter, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Search, X, MapPin, Clock, Users, Trash2, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -72,14 +72,13 @@ const Events = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
-  const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all'>('future'); // По умолчанию показываем только будущие события
+  const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all'>('future');
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
@@ -87,6 +86,7 @@ const Events = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -456,7 +456,7 @@ const Events = () => {
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          {selectedEventIds.size > 0 && (
+          {selectionMode ? (
             <>
               <Button
                 variant="outline"
@@ -464,42 +464,54 @@ const Events = () => {
                 onClick={toggleSelectAll}
                 className="flex items-center gap-2"
               >
-                <Checkbox
-                  checked={selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
                 <span className="hidden sm:inline">{selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? 'Снять всё' : 'Выбрать всё'}</span>
+                <span className="sm:hidden">{selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? 'Снять' : 'Все'}</span>
               </Button>
+              {selectedEventIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Удалить ({selectedEventIds.size})</span>
+                  <span className="sm:hidden">({selectedEventIds.size})</span>
+                </Button>
+              )}
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                className="flex items-center gap-2"
+                onClick={() => {
+                  setSelectionMode(false);
+                  setSelectedEventIds(new Set());
+                }}
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Удалить ({selectedEventIds.size})</span>
-                <span className="sm:hidden">({selectedEventIds.size})</span>
+                Отмена
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectionMode(true)}
+                className="flex items-center gap-1.5"
+              >
+                <Checkbox className="h-4 w-4" />
+                <span className="hidden sm:inline">Выбрать</span>
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={toggleSortOrder}
+                className="flex items-center gap-1.5"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
               </Button>
             </>
           )}
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={toggleSortOrder}
-            className="flex items-center gap-1.5"
-          >
-            <ArrowUpDown className="h-4 w-4" />
-            <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="flex items-center gap-1.5"
-          >
-            {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-            <span className="hidden sm:inline">{viewMode === 'grid' ? 'Список' : 'Карточки'}</span>
-          </Button>
           {hasPermission('events.create') && (
             <Button size="sm" onClick={handleCreateNew} className="ml-auto">
               <Plus className="h-4 w-4 sm:mr-2" />
@@ -895,7 +907,7 @@ const Events = () => {
             </Button>
           </CardContent>
         </Card>
-      ) : viewMode === 'grid' ? (
+      ) : (
         <div className="space-y-6">
           {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
             <div key={dayKey} className="space-y-3">
@@ -910,20 +922,22 @@ const Events = () => {
                       key={event.id} 
                       className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
                     >
-                      <div 
-                        className="absolute top-3 right-3 z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleEventSelection(event.id);
-                        }}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleEventSelection(event.id)}
-                        />
-                      </div>
+                      {selectionMode && (
+                        <div 
+                          className="absolute top-3 right-3 z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleEventSelection(event.id);
+                          }}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleEventSelection(event.id)}
+                          />
+                        </div>
+                      )}
                       <div onClick={() => handleEventClick(event)}>
-                        <CardHeader className="pb-3 pr-12">
+                        <CardHeader className={selectionMode ? "pb-3 pr-12" : "pb-3"}>
                           <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
@@ -991,113 +1005,6 @@ const Events = () => {
                       <div className="flex items-start gap-2">
                         <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <span className="text-foreground">{getAnimatorNames(event)}</span>
-                      </div>
-                    </CardContent>
-                      </div>
-                  </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
-            <div key={dayKey} className="space-y-3">
-              <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
-                {dayKey}
-              </h3>
-              <div className="space-y-2">
-                {dayEvents.map((event) => {
-                  const isSelected = selectedEventIds.has(event.id);
-                  return (
-                    <Card 
-                      key={event.id} 
-                      className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                    >
-                      <div 
-                        className="absolute top-4 right-4 z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleEventSelection(event.id);
-                        }}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleEventSelection(event.id)}
-                        />
-                      </div>
-                      <div onClick={() => handleEventClick(event)}>
-                        <CardContent className="p-4 pr-12">
-                          <div className="space-y-3">
-                        <h3 className="font-semibold text-base">{event.name}</h3>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                          {event.project_owner && (
-                            <div className="flex items-start gap-2">
-                              <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
-                              <span className="text-foreground">{event.project_owner}</span>
-                            </div>
-                          )}
-                          
-                          {getResponsibleManager(event) && (
-                            <div className="flex items-start gap-2">
-                              <span className="text-muted-foreground font-medium min-w-[80px]">Ответственный:</span>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={getResponsibleManager(event)?.avatar_url || undefined} />
-                                  <AvatarFallback className="text-xs">
-                                    {getResponsibleManager(event)?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-foreground text-sm">{getResponsibleManager(event)?.full_name}</span>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-start gap-2">
-                            <span className="text-muted-foreground font-medium min-w-[80px]">Менеджеры:</span>
-                            <div className="flex flex-col gap-1.5">
-                              {getManagerAvatars(event).length > 0 ? (
-                                getManagerAvatars(event).map((manager) => (
-                                  <div key={manager.id} className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
-                                      <AvatarImage src={manager.avatar_url || undefined} />
-                                      <AvatarFallback className="text-xs">
-                                        {manager.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-foreground text-sm">{manager.full_name}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-foreground">{getManagerNames(event)}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-foreground">{getLocationDisplay(event)}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-foreground">{getTimeRange(event)}</span>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div className="flex items-center gap-2 text-sm">
-                          <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-foreground">{getAnimatorNames(event)}</span>
-                        </div>
                       </div>
                     </CardContent>
                       </div>
