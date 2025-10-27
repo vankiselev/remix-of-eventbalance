@@ -39,6 +39,7 @@ const TodayEventsCard = () => {
         .gte('start_date', today)
         .lte('start_date', weekLater)
         .eq('is_archived', false)
+        .neq('status', 'cancelled')
         .order('start_date', { ascending: true })
         .order('event_time', { ascending: true });
 
