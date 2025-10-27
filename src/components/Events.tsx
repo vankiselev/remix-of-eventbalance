@@ -519,6 +519,38 @@ const Events = () => {
         </div>
       </div>
 
+      {/* Период - отдельная секция */}
+      <div>
+        <div className="text-sm mb-2 font-medium">Период</div>
+        <ToggleGroup 
+          type="single" 
+          value={periodFilter}
+          onValueChange={(value) => {
+            if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
+          }}
+          className="grid grid-cols-3 w-full border rounded-md"
+        >
+          <ToggleGroupItem 
+            value="future" 
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+          >
+            Предстоящие
+          </ToggleGroupItem>
+          <ToggleGroupItem 
+            value="past"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+          >
+            Прошедшие
+          </ToggleGroupItem>
+          <ToggleGroupItem 
+            value="all"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+          >
+            Все
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
       {/* Фильтры - показываем кнопку на мобильных, саму карточку на десктопе */}
       {isMobile ? (
         <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
@@ -526,7 +558,7 @@ const Events = () => {
             <Button variant="outline" className="w-full flex items-center gap-2">
               <Filter className="h-4 w-4" />
               Фильтры
-              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || periodFilter !== 'future') && (
+              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue) && (
                 <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                   Активны
                 </span>
@@ -538,36 +570,6 @@ const Events = () => {
               <DrawerTitle>Фильтры</DrawerTitle>
             </DrawerHeader>
             <div className="p-4 space-y-4 overflow-y-auto">
-              <div>
-                <div className="text-sm mb-2 block font-medium">Период</div>
-                <ToggleGroup 
-                  type="single" 
-                  value={periodFilter}
-                  onValueChange={(value) => {
-                    if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
-                  }}
-                  className="grid grid-cols-3 w-full border rounded-md"
-                >
-                  <ToggleGroupItem 
-                    value="future" 
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Предстоящие
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="past"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Прошедшие
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="all"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Все
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
               <div>
                 <div className="text-sm mb-2 block font-medium">Месяц</div>
                 <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
@@ -673,7 +675,7 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
-              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -699,36 +701,6 @@ const Events = () => {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <div className="text-sm mb-2 block font-medium">Период</div>
-                <ToggleGroup 
-                  type="single" 
-                  value={periodFilter}
-                  onValueChange={(value) => {
-                    if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
-                  }}
-                  className="grid grid-cols-3 w-full border rounded-md"
-                >
-                  <ToggleGroupItem 
-                    value="future" 
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Предстоящие
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="past"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Прошедшие
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="all"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                  >
-                    Все
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
               <div>
                 <div className="text-sm mb-2 block font-medium">Месяц</div>
                 <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
@@ -835,7 +807,7 @@ const Events = () => {
                 </Select>
               </div>
             </div>
-            {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+            {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
               <div className="mt-4">
                 <Button
                   variant="outline"
