@@ -23,26 +23,22 @@ const Contacts = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="contractors" className="flex items-center gap-2">
+        <TabsList className="w-full overflow-x-auto scrollbar-hide">
+          <TabsTrigger value="contractors" className="flex items-center gap-2 whitespace-nowrap">
             <Briefcase className="h-4 w-4" />
-            <span className="hidden sm:inline">Подрядчики</span>
-            <span className="sm:hidden">Подр.</span>
+            Подрядчики
           </TabsTrigger>
-          <TabsTrigger value="animators" className="flex items-center gap-2">
+          <TabsTrigger value="animators" className="flex items-center gap-2 whitespace-nowrap">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Аниматоры</span>
-            <span className="sm:hidden">Аним.</span>
+            Аниматоры
           </TabsTrigger>
-          <TabsTrigger value="clients" className="flex items-center gap-2">
+          <TabsTrigger value="clients" className="flex items-center gap-2 whitespace-nowrap">
             <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Клиенты</span>
-            <span className="sm:hidden">Клиент.</span>
+            Клиенты
           </TabsTrigger>
-          <TabsTrigger value="venues" className="flex items-center gap-2">
+          <TabsTrigger value="venues" className="flex items-center gap-2 whitespace-nowrap">
             <MapPin className="h-4 w-4" />
-            <span className="hidden sm:inline">Площадки</span>
-            <span className="sm:hidden">Площ.</span>
+            Площадки
           </TabsTrigger>
         </TabsList>
 

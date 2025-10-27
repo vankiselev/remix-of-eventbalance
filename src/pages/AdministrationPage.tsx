@@ -17,21 +17,18 @@ const AdministrationPage = () => {
         </div>
 
         <Tabs defaultValue="roles" className="w-full">
-          <TabsList className="w-full max-w-2xl mx-auto justify-start">
-            <TabsTrigger value="roles" className="flex items-center gap-2">
+          <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="roles" className="flex items-center gap-2 whitespace-nowrap">
               <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Выдача прав</span>
-              <span className="sm:hidden">Права</span>
+              Выдача прав
             </TabsTrigger>
-            <TabsTrigger value="invitations" className="flex items-center gap-2">
+            <TabsTrigger value="invitations" className="flex items-center gap-2 whitespace-nowrap">
               <UserPlus className="h-4 w-4" />
-              <span className="hidden sm:inline">Приглашения</span>
-              <span className="sm:hidden">Пригл.</span>
+              Приглашения
             </TabsTrigger>
-            <TabsTrigger value="icons" className="flex items-center gap-2">
+            <TabsTrigger value="icons" className="flex items-center gap-2 whitespace-nowrap">
               <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Иконки</span>
-              <span className="sm:hidden">Ик.</span>
+              Иконки
             </TabsTrigger>
           </TabsList>
 

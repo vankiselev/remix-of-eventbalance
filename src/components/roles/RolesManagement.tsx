@@ -208,10 +208,11 @@ export const RolesManagement = () => {
         <Tabs defaultValue="permissions" className="w-full">
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
             <TabsTrigger value="permissions" className="whitespace-nowrap">
-              <span className="hidden sm:inline">Матрица разрешений</span>
-              <span className="sm:hidden">Разрешения</span>
+              Матрица разрешений
             </TabsTrigger>
-            <TabsTrigger value="roles" className="whitespace-nowrap">Роли</TabsTrigger>
+            <TabsTrigger value="roles" className="whitespace-nowrap">
+              Роли
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="permissions" className="mt-6">

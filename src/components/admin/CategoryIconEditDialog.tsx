@@ -56,21 +56,18 @@ export const CategoryIconEditDialog = ({ icon, open, onOpenChange }: CategoryIco
         </DialogHeader>
 
         <Tabs defaultValue={iconType} onValueChange={(v) => setIconType(v as any)} className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="lucide" className="flex items-center gap-2">
+          <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="lucide" className="flex items-center gap-2 whitespace-nowrap">
               <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Lucide Icons</span>
-              <span className="sm:hidden">Luc.</span>
+              Lucide Icons
             </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
+            <TabsTrigger value="upload" className="flex items-center gap-2 whitespace-nowrap">
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Загрузить</span>
-              <span className="sm:hidden">Загр.</span>
+              Загрузить
             </TabsTrigger>
-            <TabsTrigger value="url" className="flex items-center gap-2">
+            <TabsTrigger value="url" className="flex items-center gap-2 whitespace-nowrap">
               <Link className="h-4 w-4" />
-              <span className="hidden sm:inline">URL</span>
-              <span className="sm:hidden">URL</span>
+              URL
             </TabsTrigger>
           </TabsList>
 

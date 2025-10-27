@@ -421,14 +421,12 @@ const Staff = () => {
 
       {/* Tabs for Active/Terminated */}
       <Tabs value={statusTab} onValueChange={(value: any) => setStatusTab(value)}>
-        <TabsList className="w-full max-w-md mx-auto justify-center">
-          <TabsTrigger value="active">
-            <span className="hidden sm:inline">Активные сотрудники</span>
-            <span className="sm:hidden">Активные</span>
+        <TabsList className="w-full overflow-x-auto scrollbar-hide">
+          <TabsTrigger value="active" className="whitespace-nowrap">
+            Активные сотрудники
           </TabsTrigger>
-          <TabsTrigger value="terminated">
-            <span className="hidden sm:inline">Уволенные</span>
-            <span className="sm:hidden">Уволен.</span>
+          <TabsTrigger value="terminated" className="whitespace-nowrap">
+            Уволенные
           </TabsTrigger>
         </TabsList>
 

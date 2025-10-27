@@ -558,15 +558,9 @@ const Finances = () => {
         <CardContent className="pt-0 w-full overflow-x-auto">
           <div className="flex justify-center py-4 border-b w-full">
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
-              <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
-                  <span className="hidden sm:inline">Карточки</span>
-                  <span className="sm:hidden">Карт.</span>
-                </TabsTrigger>
-                <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
-                  <span className="hidden sm:inline">Таблица</span>
-                  <span className="sm:hidden">Табл.</span>
-                </TabsTrigger>
+              <TabsList className="w-full overflow-x-auto scrollbar-hide">
+                <TabsTrigger value="cards" className="whitespace-nowrap">Карточки</TabsTrigger>
+                <TabsTrigger value="table" className="whitespace-nowrap">Таблица</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -632,22 +626,22 @@ const Finances = () => {
       <Card className="w-full">
         <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="my-transactions">
+            <TabsList className="w-full overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="my-transactions" className="whitespace-nowrap">
                 Мои транзакции
               </TabsTrigger>
-              <TabsTrigger value="employees">
+              <TabsTrigger value="employees" className="whitespace-nowrap">
                 Сотрудники
               </TabsTrigger>
-              <TabsTrigger value="all-transactions">
+              <TabsTrigger value="all-transactions" className="whitespace-nowrap">
                 Все транзакции
               </TabsTrigger>
               {isFinancier && (
-                <TabsTrigger value="review">
+                <TabsTrigger value="review" className="whitespace-nowrap">
                   Проверка
                 </TabsTrigger>
               )}
-              <TabsTrigger value="audit-log">
+              <TabsTrigger value="audit-log" className="whitespace-nowrap">
                 Журнал
               </TabsTrigger>
             </TabsList>
@@ -657,15 +651,9 @@ const Finances = () => {
             <TabsContent value="my-transactions" className="mt-0 w-full">
               <div className="flex justify-center py-4 border-b w-full">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
-                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                    <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
-                      <span className="hidden sm:inline">Карточки</span>
-                      <span className="sm:hidden">Карт.</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
-                      <span className="hidden sm:inline">Таблица</span>
-                      <span className="sm:hidden">Табл.</span>
-                    </TabsTrigger>
+                  <TabsList className="w-full overflow-x-auto scrollbar-hide">
+                    <TabsTrigger value="cards" className="whitespace-nowrap">Карточки</TabsTrigger>
+                    <TabsTrigger value="table" className="whitespace-nowrap">Таблица</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -693,15 +681,9 @@ const Finances = () => {
             <TabsContent value="all-transactions" className="mt-0 w-full">
               <div className="flex justify-center py-4 border-b w-full">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
-                  <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                    <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
-                      <span className="hidden sm:inline">Карточки</span>
-                      <span className="sm:hidden">Карт.</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
-                      <span className="hidden sm:inline">Таблица</span>
-                      <span className="sm:hidden">Табл.</span>
-                    </TabsTrigger>
+                  <TabsList className="w-full overflow-x-auto scrollbar-hide">
+                    <TabsTrigger value="cards" className="whitespace-nowrap">Карточки</TabsTrigger>
+                    <TabsTrigger value="table" className="whitespace-nowrap">Таблица</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
