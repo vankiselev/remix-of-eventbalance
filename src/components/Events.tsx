@@ -493,6 +493,7 @@ const Events = () => {
           <p className="text-sm md:text-base text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
         </div>
         
+        {/* Верхняя панель: Сортировка, Поиск, Создать */}
         <div className="flex flex-wrap items-center gap-2">
           {selectionMode ? (
             <>
@@ -530,6 +531,55 @@ const Events = () => {
             </>
           ) : (
             <>
+              {/* Сортировка */}
+              {isMobile ? (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSortOrder}
+                  className="flex items-center gap-1.5"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
+                </Button>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5"
+                    >
+                      <ArrowUpDown className="h-4 w-4" />
+                      Сортировка
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56" align="start">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Порядок сортировки</h4>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant={sortOrder === 'asc' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSortOrder('asc')}
+                          className="w-full justify-start"
+                        >
+                          По возрастанию (старые → новые)
+                        </Button>
+                        <Button
+                          variant={sortOrder === 'desc' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSortOrder('desc')}
+                          className="w-full justify-start"
+                        >
+                          По убыванию (новые → старые)
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
               <Button 
                 variant="outline"
                 size="sm"
@@ -537,18 +587,22 @@ const Events = () => {
               >
                 Выбрать
               </Button>
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={toggleSortOrder}
-                className="flex items-center gap-1.5"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
-              </Button>
+
+              {/* Поиск */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по названию, описанию, месту..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-9"
+                />
+              </div>
             </>
           )}
-          {hasPermission('events.create') && (
+          
+          {/* Кнопка создания */}
+          {hasPermission('events.create') && !selectionMode && (
             <Button size="sm" onClick={handleCreateNew} className="ml-auto">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Создать мероприятие</span>
@@ -710,6 +764,16 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Счетчик мероприятий в drawer */}
+              <div className="flex items-center gap-2 justify-center p-3 bg-muted rounded-lg">
+                <span className="text-muted-foreground text-sm">Найдено:</span>
+                <span className="font-semibold text-xl">{filteredEvents.length}</span>
+                {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+                  <span className="text-muted-foreground">/ {events.length}</span>
+                )}
+              </div>
+
               {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
                 <Button
                   variant="outline"
@@ -832,6 +896,15 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Счетчик мероприятий - встроен в фильтры */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Найдено:</span>
+                <span className="font-semibold text-lg">{filteredEvents.length}</span>
+                {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+                  <span className="text-muted-foreground">/ {events.length}</span>
+                )}
+              </div>
             </div>
             {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
               <div className="mt-4">
@@ -848,37 +921,6 @@ const Events = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Счетчик отфильтрованных событий */}
-      <div className="bg-card text-card-foreground rounded-lg border p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">
-            {selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future' ? 'Отфильтровано' : 'Предстоящих мероприятий'}
-          </h3>
-        </div>
-        <div className="text-2xl font-bold">
-          {filteredEvents.length}
-          {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
-            <span className="text-lg text-muted-foreground"> / {events.length}</span>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future'
-            ? 'Найдено мероприятий' 
-            : 'Мероприятий от сегодня'}
-        </p>
-      </div>
-
-      {/* Поиск */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Поиск по названию, описанию, месту..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
 
       {events.length === 0 ? (
         <Card>
