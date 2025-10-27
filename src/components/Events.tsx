@@ -75,7 +75,7 @@ const Events = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedProjectOwner, setSelectedProjectOwner] = useState<string | null>(null);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all' | 'cancelled'>('future');
@@ -260,6 +260,14 @@ const Events = () => {
     return allMonths;
   };
 
+  // Получение уникальных владельцев проектов
+  const getAvailableProjectOwners = (): string[] => {
+    const owners = events
+      .map(event => event.project_owner)
+      .filter((owner): owner is string => !!owner);
+    return [...new Set(owners)].sort();
+  };
+
   // Фильтрация событий по дате (месяц и год)
   const filterEventsByDate = (eventsList: Event[]) => {
     let filtered = eventsList;
@@ -290,12 +298,9 @@ const Events = () => {
       }
     }
     
-    // Фильтр по конкретной дате
-    if (selectedDate) {
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.start_date).toISOString().split('T')[0];
-        return eventDate === selectedDate;
-      });
+    // Фильтр по владельцу проекта
+    if (selectedProjectOwner) {
+      filtered = filtered.filter(event => event.project_owner === selectedProjectOwner);
     }
     
     if (selectedMonth) {
@@ -387,7 +392,7 @@ const Events = () => {
   const resetFilters = () => {
     setSelectedMonth(null);
     setSelectedYear(null);
-    setSelectedDate(null);
+    setSelectedProjectOwner(null);
     setSelectedManagers([]);
     setSelectedVenue(null);
     setSearchQuery("");
@@ -541,9 +546,9 @@ const Events = () => {
                   >
                     <Filter className="h-4 w-4" />
                     Фильтр
-                    {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue) && (
+                    {(selectedMonth || selectedYear || selectedProjectOwner || selectedManagers.length > 0 || selectedVenue) && (
                       <span className="ml-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                        {[selectedMonth, selectedYear, selectedDate, selectedManagers.length > 0, selectedVenue].filter(Boolean).length}
+                        {[selectedMonth, selectedYear, selectedProjectOwner, selectedManagers.length > 0, selectedVenue].filter(Boolean).length}
                       </span>
                     )}
                   </Button>
@@ -583,12 +588,18 @@ const Events = () => {
                         </Select>
                       </div>
                       <div>
-                        <div className="text-sm mb-2 block font-medium">Конкретная дата</div>
-                        <Input
-                          type="date"
-                          value={selectedDate || ""}
-                          onChange={(e) => setSelectedDate(e.target.value || null)}
-                        />
+                        <div className="text-sm mb-2 block font-medium">Чей проект</div>
+                        <Select value={selectedProjectOwner || "all"} onValueChange={(value) => setSelectedProjectOwner(value === "all" ? null : value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Все проекты" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все проекты</SelectItem>
+                            {getAvailableProjectOwners().map(owner => (
+                              <SelectItem key={owner} value={owner}>{owner}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <div className="text-sm mb-2 block font-medium">Менеджеры</div>
@@ -655,14 +666,14 @@ const Events = () => {
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-muted-foreground">Найдено:</span>
                         <span className="font-semibold text-lg">{filteredEvents.length}</span>
-                        {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+                        {(selectedMonth || selectedYear || selectedProjectOwner || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
                           <span className="text-muted-foreground">/ {events.length}</span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex gap-2 justify-end pt-4 border-t">
-                      {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
+                      {(selectedMonth || selectedYear || selectedProjectOwner || selectedManagers.length > 0 || selectedVenue || searchQuery) && (
                         <Button
                           variant="outline"
                           onClick={() => {
