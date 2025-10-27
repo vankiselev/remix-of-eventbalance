@@ -840,11 +840,7 @@ const Events = () => {
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
-            <div key={dayKey} className="space-y-3">
-              <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
-                {dayKey}
-              </h3>
-              <div className="space-y-4">
+            <div key={dayKey} className="space-y-4">
                 {dayEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
                   const eventDate = new Date(event.start_date);
@@ -911,7 +907,6 @@ const Events = () => {
                     </Card>
                   );
                 })}
-              </div>
             </div>
           ))}
         </div>
