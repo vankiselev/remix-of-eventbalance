@@ -81,7 +81,7 @@ const MobileBottomNav = () => {
                       variant="destructive" 
                       className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] rounded-full"
                     >
-                      {badgeCount > 9 ? '9+' : badgeCount}
+                      {badgeCount}
                     </Badge>
                   )}
                 </div>
@@ -132,7 +132,7 @@ const MobileBottomNav = () => {
                              variant="destructive" 
                              className="ml-auto h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
                            >
-                             {badgeCount > 9 ? '9+' : badgeCount}
+                             {badgeCount}
                            </Badge>
                          )}
                       </button>

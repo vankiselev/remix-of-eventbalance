@@ -646,7 +646,7 @@ const Finances = () => {
                       variant="destructive" 
                       className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
                     >
-                      {pendingCount > 9 ? '9+' : pendingCount}
+                      {pendingCount}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -658,7 +658,7 @@ const Finances = () => {
                     variant="destructive" 
                     className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
                   >
-                    {pendingCount > 9 ? '9+' : pendingCount}
+                    {pendingCount}
                   </Badge>
                 )}
               </TabsTrigger>

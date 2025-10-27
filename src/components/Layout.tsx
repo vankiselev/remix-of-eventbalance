@@ -157,7 +157,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
-    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck, ...(pendingCount > 0 && { badge: pendingCount }) }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck, badge: pendingCount }] : []),
     ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 
@@ -356,18 +356,18 @@ const Layout = ({ children }: LayoutProps) => {
                               <span className="ml-3 truncate flex-1 text-left">{item.label}</span>
                             )}
                              {!sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
-                              <Badge variant="destructive" className="ml-auto">
-                                {item.badge > 9 ? '9+' : item.badge}
-                              </Badge>
-                            )}
-                            {sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
-                              <Badge 
-                                variant="destructive" 
-                                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full"
-                              >
-                                {item.badge > 9 ? '9+' : item.badge}
-                              </Badge>
-                            )}
+                               <Badge variant="destructive" className="ml-auto">
+                                 {item.badge}
+                               </Badge>
+                             )}
+                             {sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
+                               <Badge 
+                                 variant="destructive" 
+                                 className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full"
+                               >
+                                 {item.badge}
+                               </Badge>
+                             )}
                           </Button>
                         </li>
                       );
