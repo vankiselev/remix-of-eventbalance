@@ -884,7 +884,7 @@ const Events = () => {
               <h3 className="text-lg font-semibold capitalize text-primary sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 z-10 border-b">
                 {dayKey}
               </h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
                 {dayEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
                   return (
