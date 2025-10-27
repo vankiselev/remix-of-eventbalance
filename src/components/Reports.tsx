@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
@@ -779,40 +781,24 @@ const EmployeeReportsView = ({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {report.start_time.substring(0, 5)} - {report.end_time.substring(0, 5)}
-                  </span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Время:</span>
+                    <span>{report.start_time.substring(0, 5)} - {report.end_time.substring(0, 5)}</span>
+                  </div>
+                  
+                  {(report.car_kilometers || report.without_car) && (
+                    <div className="text-sm">
+                      <span className="font-medium">Информация о поездке:</span>{' '}
+                      {report.without_car ? (
+                        <span>без машины</span>
+                      ) : report.car_kilometers ? (
+                        <span>{report.car_kilometers} км</span>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
-
-                {report.salaries && report.salaries.length > 0 && (
-                  <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Banknote className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-green-800">Назначенные выплаты:</span>
-                    </div>
-                    {report.salaries.map((salary: any, index: number) => (
-                      <div key={index} className="text-sm text-green-700">
-                        {salary.salary_type}: {salary.amount.toLocaleString('ru-RU')} ₽ ({salary.wallet_type})
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {(report.car_kilometers || report.without_car) && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Car className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-800">Информация о поездке:</span>
-                    </div>
-                    {report.without_car ? (
-                      <div className="text-sm text-blue-700">Работал без машины</div>
-                    ) : report.car_kilometers ? (
-                      <div className="text-sm text-blue-700">Пробег: {report.car_kilometers} км</div>
-                    ) : null}
-                  </div>
-                )}
                 
                 <div className="space-y-4">
                   <div>
@@ -824,6 +810,22 @@ const EmployeeReportsView = ({
                     <p className="text-sm text-muted-foreground">{report.onsite_work}</p>
                   </div>
                 </div>
+
+                {report.salaries && report.salaries.length > 0 && (
+                  <>
+                    <Separator className="my-4" />
+                    <div>
+                      <h4 className="font-medium mb-2">Назначенные выплаты:</h4>
+                      <div className="space-y-1">
+                        {report.salaries.map((salary: any, index: number) => (
+                          <div key={index} className="text-sm text-muted-foreground">
+                            {salary.salary_type}: {formatCurrency(salary.amount)} ({salary.wallet_type})
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Button
