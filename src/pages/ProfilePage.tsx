@@ -13,7 +13,7 @@ import { PhoneInputRU } from "@/components/ui/phone-input-ru";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, LogOut } from "lucide-react";
 import { NotificationSettings } from '@/components/NotificationSettings';
 
 const profileSchema = z.object({
@@ -37,7 +37,7 @@ interface Profile {
 }
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -361,6 +361,23 @@ const ProfilePage = () => {
         </Card>
 
         <NotificationSettings />
+
+        {/* Sign Out Button for Mobile */}
+        <Card className="w-full mt-4">
+          <CardContent className="pt-6">
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={async () => {
+                await signOut();
+                navigate('/auth');
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Выйти из системы
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
