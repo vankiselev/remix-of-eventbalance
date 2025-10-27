@@ -28,7 +28,6 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
-    { path: "/profile", label: "Профиль", icon: "User" },
     { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/staff", label: "Сотрудники", icon: "Users" },
