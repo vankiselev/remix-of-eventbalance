@@ -651,16 +651,8 @@ const Finances = () => {
                   )}
                 </TabsTrigger>
               )}
-              <TabsTrigger value="audit-log" className="whitespace-nowrap relative">
+              <TabsTrigger value="audit-log" className="whitespace-nowrap">
                 Журнал
-                {pendingCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
-                  >
-                    {pendingCount}
-                  </Badge>
-                )}
               </TabsTrigger>
             </TabsList>
           </CardHeader>
