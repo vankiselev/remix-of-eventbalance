@@ -914,7 +914,7 @@ const Events = () => {
                       <div className="space-y-2">
                         {event.project_owner && (
                           <div className="flex items-start gap-2">
-                            <span className="text-muted-foreground font-medium min-w-[80px]">Проект:</span>
+                            <span className="text-muted-foreground font-medium min-w-[80px]">Чей проект:</span>
                             <span className="text-foreground">{event.project_owner}</span>
                           </div>
                         )}
