@@ -191,7 +191,7 @@ export default function SiriIntegrationPage() {
                   <Separator />
 
                   <div>
-                    <h3 className="font-semibold mb-2">3. Добавьте действие "Запросить ввод"</h3>
+                    <h3 className="font-semibold mb-2">3. Добавьте действие "Запросить ввод" (Ask for Input)</h3>
                     
                     <div className="space-y-3 ml-2">
                       <div>
@@ -273,7 +273,7 @@ export default function SiriIntegrationPage() {
                   <Separator />
 
                   <div>
-                    <h3 className="font-semibold mb-2">4. Добавьте действие "Диктовка текста"</h3>
+                    <h3 className="font-semibold mb-2">4. Добавьте действие "Диктовка текста" (Dictate Text)</h3>
                     <p className="text-sm text-muted-foreground">
                       Это позволит вам надиктовывать детали транзакции
                     </p>
@@ -302,7 +302,7 @@ export default function SiriIntegrationPage() {
                   <Separator />
 
                   <div>
-                    <h3 className="font-semibold mb-2">6. Добавьте действие "Получить содержимое URL"</h3>
+                    <h3 className="font-semibold mb-2">6. Добавьте действие "Получить содержимое URL" (Get Contents of URL)</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       Это ключевой шаг - здесь настраивается отправка голосовой команды на сервер для обработки
                     </p>
@@ -352,7 +352,7 @@ export default function SiriIntegrationPage() {
                   <Separator />
 
                   <div>
-                    <h3 className="font-semibold mb-2">7. Добавьте действие "Показать результат"</h3>
+                    <h3 className="font-semibold mb-2">7. Добавьте действие "Показать результат" (Show Result)</h3>
                     <p className="text-sm text-muted-foreground">
                       Выберите "message" из ответа сервера
                     </p>
