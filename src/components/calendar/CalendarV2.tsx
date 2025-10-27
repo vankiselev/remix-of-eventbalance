@@ -161,24 +161,14 @@ const CalendarV2 = () => {
             Сегодня
           </Button>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
-              className="h-9 w-9 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
-              className="h-9 w-9 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
+            className="h-9 w-9 p-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
 
           {viewMode !== "year" && (
             <>
@@ -209,6 +199,15 @@ const CalendarV2 = () => {
               </Select>
             </>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
+            className="h-9 w-9 p-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Right Side Controls */}
