@@ -559,8 +559,14 @@ const Finances = () => {
           <div className="flex justify-center py-4 border-b w-full">
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
               <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
-                <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
+                <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
+                  <span className="hidden sm:inline">Карточки</span>
+                  <span className="sm:hidden">Карт.</span>
+                </TabsTrigger>
+                <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
+                  <span className="hidden sm:inline">Таблица</span>
+                  <span className="sm:hidden">Табл.</span>
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -652,8 +658,14 @@ const Finances = () => {
               <div className="flex justify-center py-4 border-b w-full">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
                   <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                    <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
-                    <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
+                    <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
+                      <span className="hidden sm:inline">Карточки</span>
+                      <span className="sm:hidden">Карт.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
+                      <span className="hidden sm:inline">Таблица</span>
+                      <span className="sm:hidden">Табл.</span>
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -682,8 +694,14 @@ const Finances = () => {
               <div className="flex justify-center py-4 border-b w-full">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">
                   <TabsList className="grid w-full max-w-[280px] grid-cols-2 h-10 mx-auto">
-                    <TabsTrigger value="cards" className="text-sm">Карточки</TabsTrigger>
-                    <TabsTrigger value="table" className="text-sm">Таблица</TabsTrigger>
+                    <TabsTrigger value="cards" className="text-xs sm:text-sm whitespace-nowrap">
+                      <span className="hidden sm:inline">Карточки</span>
+                      <span className="sm:hidden">Карт.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="table" className="text-xs sm:text-sm whitespace-nowrap">
+                      <span className="hidden sm:inline">Таблица</span>
+                      <span className="sm:hidden">Табл.</span>
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>

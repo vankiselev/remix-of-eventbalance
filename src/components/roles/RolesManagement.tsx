@@ -206,9 +206,12 @@ export const RolesManagement = () => {
         <Skeleton className="h-[500px] w-full" />
       ) : (
         <Tabs defaultValue="permissions" className="w-full">
-          <TabsList>
-            <TabsTrigger value="permissions">Матрица разрешений</TabsTrigger>
-            <TabsTrigger value="roles">Роли</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="permissions" className="whitespace-nowrap">
+              <span className="hidden sm:inline">Матрица разрешений</span>
+              <span className="sm:hidden">Разрешения</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="whitespace-nowrap">Роли</TabsTrigger>
           </TabsList>
           
           <TabsContent value="permissions" className="mt-6">
