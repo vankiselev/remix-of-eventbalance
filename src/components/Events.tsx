@@ -496,10 +496,8 @@ const Events = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectionMode(true)}
-                className="flex items-center gap-1.5"
               >
-                <Checkbox className="h-4 w-4" />
-                <span className="hidden sm:inline">Выбрать</span>
+                Выбрать
               </Button>
               <Button 
                 variant="outline"
