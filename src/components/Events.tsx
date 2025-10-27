@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2 } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2, Filter } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import EventDetailDialog from "@/components/calendar/EventDetailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,9 +79,11 @@ const Events = () => {
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchEvents();
@@ -466,92 +470,201 @@ const Events = () => {
         </div>
       </div>
 
-      {/* Фильтры по месяцу и году */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="text-sm mb-2 block font-medium">Период</div>
-              <ToggleGroup 
-                type="single" 
-                value={periodFilter}
-                onValueChange={(value) => {
-                  if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
-                }}
-                className="grid grid-cols-3 w-full border rounded-md"
-              >
-                <ToggleGroupItem 
-                  value="future" 
-                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+      {/* Фильтры - показываем кнопку на мобильных, саму карточку на десктопе */}
+      {isMobile ? (
+        <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Фильтры
+              {(selectedMonth || selectedYear || periodFilter !== 'future') && (
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                  Активны
+                </span>
+              )}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[85vh]">
+            <DrawerHeader>
+              <DrawerTitle>Фильтры</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4 overflow-y-auto">
+              <div>
+                <div className="text-sm mb-2 block font-medium">Период</div>
+                <ToggleGroup 
+                  type="single" 
+                  value={periodFilter}
+                  onValueChange={(value) => {
+                    if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
+                  }}
+                  className="grid grid-cols-3 w-full border rounded-md"
                 >
-                  Предстоящие
-                </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="past"
-                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                >
-                  Прошедшие
-                </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="all"
-                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
-                >
-                  Все
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm mb-2 block font-medium">Месяц</div>
-              <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
-                <SelectTrigger id="month-filter">
-                  <SelectValue placeholder="Все месяцы" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все месяцы</SelectItem>
-                  <SelectItem value="1">Январь</SelectItem>
-                  <SelectItem value="2">Февраль</SelectItem>
-                  <SelectItem value="3">Март</SelectItem>
-                  <SelectItem value="4">Апрель</SelectItem>
-                  <SelectItem value="5">Май</SelectItem>
-                  <SelectItem value="6">Июнь</SelectItem>
-                  <SelectItem value="7">Июль</SelectItem>
-                  <SelectItem value="8">Август</SelectItem>
-                  <SelectItem value="9">Сентябрь</SelectItem>
-                  <SelectItem value="10">Октябрь</SelectItem>
-                  <SelectItem value="11">Ноябрь</SelectItem>
-                  <SelectItem value="12">Декабрь</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm mb-2 block font-medium">Год</div>
-              <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
-                <SelectTrigger id="year-filter">
-                  <SelectValue placeholder="Все годы" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все годы</SelectItem>
-                  {getAvailableYears().map(year => (
-                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
-              <div className="flex items-end">
+                  <ToggleGroupItem 
+                    value="future" 
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Предстоящие
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="past"
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Прошедшие
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="all"
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Все
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Месяц</div>
+                <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Все месяцы" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все месяцы</SelectItem>
+                    <SelectItem value="1">Январь</SelectItem>
+                    <SelectItem value="2">Февраль</SelectItem>
+                    <SelectItem value="3">Март</SelectItem>
+                    <SelectItem value="4">Апрель</SelectItem>
+                    <SelectItem value="5">Май</SelectItem>
+                    <SelectItem value="6">Июнь</SelectItem>
+                    <SelectItem value="7">Июль</SelectItem>
+                    <SelectItem value="8">Август</SelectItem>
+                    <SelectItem value="9">Сентябрь</SelectItem>
+                    <SelectItem value="10">Октябрь</SelectItem>
+                    <SelectItem value="11">Ноябрь</SelectItem>
+                    <SelectItem value="12">Декабрь</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Год</div>
+                <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Все годы" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все годы</SelectItem>
+                    {getAvailableYears().map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
                 <Button
                   variant="outline"
-                  onClick={resetFilters}
-                  className="flex items-center gap-2"
+                  onClick={() => {
+                    resetFilters();
+                    setIsFilterDrawerOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Сбросить фильтры
                 </Button>
+              )}
+              <Button
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className="w-full"
+              >
+                Применить
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="text-sm mb-2 block font-medium">Период</div>
+                <ToggleGroup 
+                  type="single" 
+                  value={periodFilter}
+                  onValueChange={(value) => {
+                    if (value) setPeriodFilter(value as 'future' | 'past' | 'all');
+                  }}
+                  className="grid grid-cols-3 w-full border rounded-md"
+                >
+                  <ToggleGroupItem 
+                    value="future" 
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Предстоящие
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="past"
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Прошедшие
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="all"
+                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+                  >
+                    Все
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex-1">
+                <div className="text-sm mb-2 block font-medium">Месяц</div>
+                <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
+                  <SelectTrigger id="month-filter">
+                    <SelectValue placeholder="Все месяцы" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все месяцы</SelectItem>
+                    <SelectItem value="1">Январь</SelectItem>
+                    <SelectItem value="2">Февраль</SelectItem>
+                    <SelectItem value="3">Март</SelectItem>
+                    <SelectItem value="4">Апрель</SelectItem>
+                    <SelectItem value="5">Май</SelectItem>
+                    <SelectItem value="6">Июнь</SelectItem>
+                    <SelectItem value="7">Июль</SelectItem>
+                    <SelectItem value="8">Август</SelectItem>
+                    <SelectItem value="9">Сентябрь</SelectItem>
+                    <SelectItem value="10">Октябрь</SelectItem>
+                    <SelectItem value="11">Ноябрь</SelectItem>
+                    <SelectItem value="12">Декабрь</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm mb-2 block font-medium">Год</div>
+                <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
+                  <SelectTrigger id="year-filter">
+                    <SelectValue placeholder="Все годы" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все годы</SelectItem>
+                    {getAvailableYears().map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={resetFilters}
+                    className="flex items-center gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Сбросить фильтры
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Счетчик отфильтрованных событий */}
       <div className="bg-card text-card-foreground rounded-lg border p-6">
