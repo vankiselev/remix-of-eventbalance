@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2, Filter } from "lucide-react";
+import { Plus, CalendarIcon, ArrowUpDown, Grid3X3, List, Search, X, MapPin, Clock, Users, Trash2, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -17,6 +17,9 @@ import EventDetailDialog from "@/components/calendar/EventDetailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,10 +71,14 @@ const Events = () => {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all'>('future'); // По умолчанию показываем только будущие события
   const [employees, setEmployees] = useState<any[]>([]);
   const [animators, setAnimators] = useState<any[]>([]);
@@ -244,7 +251,14 @@ const Events = () => {
         return eventDate < today;
       });
     }
-    // Если 'all', то не фильтруем по дате
+    
+    // Фильтр по конкретной дате
+    if (selectedDate) {
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date).toISOString().split('T')[0];
+        return eventDate === selectedDate;
+      });
+    }
     
     if (selectedMonth) {
       filtered = filtered.filter(event => {
@@ -258,6 +272,19 @@ const Events = () => {
         const eventYear = new Date(event.start_date).getFullYear();
         return eventYear === parseInt(selectedYear);
       });
+    }
+    
+    // Фильтр по менеджерам
+    if (selectedManagers.length > 0) {
+      filtered = filtered.filter(event => {
+        if (!event.manager_ids || event.manager_ids.length === 0) return false;
+        return selectedManagers.some(managerId => event.manager_ids?.includes(managerId));
+      });
+    }
+    
+    // Фильтр по площадке
+    if (selectedVenue) {
+      filtered = filtered.filter(event => event.venue_id === selectedVenue);
     }
     
     return filtered;
@@ -278,17 +305,20 @@ const Events = () => {
     );
   };
 
-  // Исправленная сортировка событий - используем start_date
+  // Сортировка событий по дате
   const sortEvents = (eventsList: Event[]) => {
-    if (!sortByName) return eventsList;
-
     return [...eventsList].sort((a, b) => {
-      // Сортируем по дате начала события
       const dateA = new Date(a.start_date);
       const dateB = new Date(b.start_date);
       
-      return dateA.getTime() - dateB.getTime();
+      return sortOrder === 'asc' 
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
     });
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
   // Группировка событий по дням для отображения списком
@@ -319,9 +349,12 @@ const Events = () => {
   const resetFilters = () => {
     setSelectedMonth(null);
     setSelectedYear(null);
+    setSelectedDate(null);
+    setSelectedManagers([]);
+    setSelectedVenue(null);
     setSearchQuery("");
-    setSortByName(false);
     setPeriodFilter('future');
+    setSortOrder('asc');
   };
 
   // Обработка выбора мероприятий
@@ -416,16 +449,18 @@ const Events = () => {
         onSave={handleEventSave}
       />
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-bold truncate">Мероприятия</h1>
-          <p className="text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
+      <div className="flex flex-col gap-4 w-full">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold truncate">Мероприятия</h1>
+          <p className="text-sm md:text-base text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto flex-shrink-0">
+        
+        <div className="flex flex-wrap items-center gap-2">
           {selectedEventIds.size > 0 && (
             <>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={toggleSelectAll}
                 className="flex items-center gap-2"
               >
@@ -433,38 +468,42 @@ const Events = () => {
                   checked={selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
-                {selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? 'Снять всё' : 'Выбрать всё'}
+                <span className="hidden sm:inline">{selectedEventIds.size === filteredEvents.length && filteredEvents.length > 0 ? 'Снять всё' : 'Выбрать всё'}</span>
               </Button>
               <Button
                 variant="destructive"
+                size="sm"
                 onClick={() => setIsDeleteDialogOpen(true)}
                 className="flex items-center gap-2"
               >
                 <Trash2 className="h-4 w-4" />
-                Удалить ({selectedEventIds.size})
+                <span className="hidden sm:inline">Удалить ({selectedEventIds.size})</span>
+                <span className="sm:hidden">({selectedEventIds.size})</span>
               </Button>
             </>
           )}
           <Button 
-            variant="outline" 
-            onClick={() => setSortByName(!sortByName)}
-            className="flex items-center gap-2"
+            variant="outline"
+            size="sm"
+            onClick={toggleSortOrder}
+            className="flex items-center gap-1.5"
           >
             <ArrowUpDown className="h-4 w-4" />
-            {sortByName ? "Сброс сортировки" : "Сортировка по дате"}
+            <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5"
           >
             {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-            {viewMode === 'grid' ? 'Список' : 'Карточки'}
+            <span className="hidden sm:inline">{viewMode === 'grid' ? 'Список' : 'Карточки'}</span>
           </Button>
           {hasPermission('events.create') && (
-            <Button onClick={handleCreateNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              Создать мероприятие
+            <Button size="sm" onClick={handleCreateNew} className="ml-auto">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Создать мероприятие</span>
             </Button>
           )}
         </div>
@@ -477,7 +516,7 @@ const Events = () => {
             <Button variant="outline" className="w-full flex items-center gap-2">
               <Filter className="h-4 w-4" />
               Фильтры
-              {(selectedMonth || selectedYear || periodFilter !== 'future') && (
+              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || periodFilter !== 'future') && (
                 <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                   Активны
                 </span>
@@ -556,7 +595,75 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
-              {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
+              <div>
+                <div className="text-sm mb-2 block font-medium">Конкретная дата</div>
+                <Input
+                  type="date"
+                  value={selectedDate || ""}
+                  onChange={(e) => setSelectedDate(e.target.value || null)}
+                />
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Менеджеры</div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                    >
+                      {selectedManagers.length > 0
+                        ? `Выбрано: ${selectedManagers.length}`
+                        : "Выберите менеджеров"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Поиск менеджера..." />
+                      <CommandList>
+                        <CommandEmpty>Менеджер не найден</CommandEmpty>
+                        <CommandGroup>
+                          {employees.map((employee) => (
+                            <CommandItem
+                              key={employee.id}
+                              onSelect={() => {
+                                setSelectedManagers(prev =>
+                                  prev.includes(employee.id)
+                                    ? prev.filter(id => id !== employee.id)
+                                    : [...prev, employee.id]
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {employee.full_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Площадка</div>
+                <Select value={selectedVenue || "all"} onValueChange={(value) => setSelectedVenue(value === "all" ? null : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Все площадки" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все площадки</SelectItem>
+                    {venues.map(venue => (
+                      <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -581,8 +688,8 @@ const Events = () => {
       ) : (
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
                 <div className="text-sm mb-2 block font-medium">Период</div>
                 <ToggleGroup 
                   type="single" 
@@ -612,7 +719,7 @@ const Events = () => {
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
-              <div className="flex-1">
+              <div>
                 <div className="text-sm mb-2 block font-medium">Месяц</div>
                 <Select value={selectedMonth || "all"} onValueChange={(value) => setSelectedMonth(value === "all" ? null : value)}>
                   <SelectTrigger id="month-filter">
@@ -635,7 +742,7 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-1">
+              <div>
                 <div className="text-sm mb-2 block font-medium">Год</div>
                 <Select value={selectedYear || "all"} onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}>
                   <SelectTrigger id="year-filter">
@@ -649,19 +756,87 @@ const Events = () => {
                   </SelectContent>
                 </Select>
               </div>
-              {(selectedMonth || selectedYear || searchQuery || sortByName || periodFilter !== 'future') && (
-                <div className="flex items-end">
-                  <Button
-                    variant="outline"
-                    onClick={resetFilters}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Сбросить фильтры
-                  </Button>
-                </div>
-              )}
+              <div>
+                <div className="text-sm mb-2 block font-medium">Конкретная дата</div>
+                <Input
+                  type="date"
+                  value={selectedDate || ""}
+                  onChange={(e) => setSelectedDate(e.target.value || null)}
+                />
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Менеджеры</div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                    >
+                      {selectedManagers.length > 0
+                        ? `Выбрано: ${selectedManagers.length}`
+                        : "Выберите менеджеров"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Поиск менеджера..." />
+                      <CommandList>
+                        <CommandEmpty>Менеджер не найден</CommandEmpty>
+                        <CommandGroup>
+                          {employees.map((employee) => (
+                            <CommandItem
+                              key={employee.id}
+                              onSelect={() => {
+                                setSelectedManagers(prev =>
+                                  prev.includes(employee.id)
+                                    ? prev.filter(id => id !== employee.id)
+                                    : [...prev, employee.id]
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {employee.full_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <div className="text-sm mb-2 block font-medium">Площадка</div>
+                <Select value={selectedVenue || "all"} onValueChange={(value) => setSelectedVenue(value === "all" ? null : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Все площадки" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все площадки</SelectItem>
+                    {venues.map(venue => (
+                      <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Сбросить фильтры
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -670,17 +845,17 @@ const Events = () => {
       <div className="bg-card text-card-foreground rounded-lg border p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">
-            {selectedMonth || selectedYear || searchQuery || periodFilter !== 'future' ? 'Отфильтровано' : 'Предстоящих мероприятий'}
+            {selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future' ? 'Отфильтровано' : 'Предстоящих мероприятий'}
           </h3>
         </div>
         <div className="text-2xl font-bold">
           {filteredEvents.length}
-          {(selectedMonth || selectedYear || searchQuery || periodFilter !== 'future') && (
+          {(selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future') && (
             <span className="text-lg text-muted-foreground"> / {events.length}</span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {selectedMonth || selectedYear || searchQuery || periodFilter !== 'future'
+          {selectedMonth || selectedYear || selectedDate || selectedManagers.length > 0 || selectedVenue || searchQuery || periodFilter !== 'future'
             ? 'Найдено мероприятий' 
             : 'Мероприятий от сегодня'}
         </p>
