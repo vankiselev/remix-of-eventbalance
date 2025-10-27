@@ -1475,6 +1475,36 @@ export type Database = {
           },
         ]
       }
+      user_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_role_assignments: {
         Row: {
           assigned_at: string
@@ -1676,6 +1706,7 @@ export type Database = {
         Returns: boolean
       }
       format_phone_display: { Args: { phone_e164: string }; Returns: string }
+      generate_user_api_key: { Args: never; Returns: string }
       get_admin_employee_data: {
         Args: never
         Returns: {
@@ -1877,6 +1908,7 @@ export type Database = {
         Args: { employee_user_id: string; termination_reason_text?: string }
         Returns: boolean
       }
+      validate_api_key: { Args: { p_api_key: string }; Returns: string }
       validate_password_reset_token: {
         Args: { reset_token: string }
         Returns: boolean

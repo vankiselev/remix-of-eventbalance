@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.overdue-reports-check]
 verify_jwt = false
+
+[functions.voice-transaction]
+verify_jwt = false
