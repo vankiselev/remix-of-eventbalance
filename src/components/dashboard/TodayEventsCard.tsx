@@ -127,16 +127,11 @@ const TodayEventsCard = () => {
                 className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => handleEventClick(event.id)}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm leading-tight truncate">{event.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {format(new Date(event.start_date), 'd MMMM', { locale: ru })}
-                    </p>
-                  </div>
-                  <Badge variant={getStatusVariant(event.status)} className="text-xs flex-shrink-0">
-                    {getStatusText(event.status)}
-                  </Badge>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm leading-tight truncate">{event.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(event.start_date), 'd MMMM', { locale: ru })}
+                  </p>
                 </div>
                 
                 <div className="space-y-1">
