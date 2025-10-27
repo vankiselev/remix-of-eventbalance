@@ -232,22 +232,50 @@ export default function SiriIntegrationPage() {
 
                   <div>
                     <h3 className="font-semibold mb-2">6. Добавьте действие "Получить содержимое URL"</h3>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
-                      <li>Метод: POST</li>
-                      <li>Заголовки: Content-Type = application/json</li>
-                      <li>Тело запроса: JSON</li>
-                    </ul>
-                    <div className="mt-2 p-3 bg-muted rounded-md">
-                      <pre className="text-xs overflow-x-auto">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Это ключевой шаг - здесь настраивается отправка голосовой команды на сервер для обработки
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium mb-1">Настройки запроса:</p>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                          <li><span className="font-medium">Метод:</span> POST</li>
+                          <li><span className="font-medium">Заголовки:</span> Content-Type = application/json</li>
+                          <li><span className="font-medium">Тело запроса:</span> JSON</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium mb-2">Структура JSON:</p>
+                        <div className="p-3 bg-muted rounded-md">
+                          <pre className="text-xs overflow-x-auto">
 {`{
   "text": "[Результат диктовки]",
   "apiKey": "${apiKey}"
 }`}
-                      </pre>
+                          </pre>
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <p>• <span className="font-medium">text:</span> Вставьте переменную "Результат диктовки" из предыдущего шага</p>
+                          <p>• <span className="font-medium">apiKey:</span> Ваш уникальный API ключ для аутентификации</p>
+                        </div>
+                      </div>
+
+                      <Alert className="mt-3">
+                        <AlertDescription className="text-xs">
+                          <p className="font-semibold mb-1">💡 Как это работает:</p>
+                          <p>Система использует AI для распознавания вашей голосовой команды и автоматически:</p>
+                          <ul className="list-disc list-inside ml-2 mt-1 space-y-0.5">
+                            <li>Определяет сумму и описание</li>
+                            <li>Подбирает категорию (такси → Доставка, продукты → Продукты и т.д.)</li>
+                            <li>Распознает владельца проекта (наличка Настя, корп карта и т.д.)</li>
+                            <li>Ищет проект по названию или префиксу (0111, 0101 саманта)</li>
+                            <li>Создает транзакцию без обязательного чека (можно добавить позже в приложении)</li>
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Замените [Результат диктовки] на переменную из шага диктовки
-                    </p>
                   </div>
 
                   <Separator />
@@ -279,39 +307,109 @@ export default function SiriIntegrationPage() {
                   Шаг 3: Примеры использования
                 </CardTitle>
                 <CardDescription>
-                  Как правильно формулировать команды для Siri
+                  Как правильно формулировать команды для Siri. Система автоматически распознает суммы, категории, владельцев и проекты.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
-                      Расходы:
+                      Базовые расходы:
                     </h4>
                     <ul className="space-y-2 text-sm">
                       <li>• "потратил 500 рублей на такси"</li>
                       <li>• "купил продукты на тысячу"</li>
-                      <li>• "заправка 2500"</li>
-                      <li>• "оплатил интернет 800 рублей"</li>
+                      <li>• "заправка 2500 рублей"</li>
+                      <li>• "оплатил интернет 800"</li>
                     </ul>
                   </div>
 
                   <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Расходы с владельцем проекта:
+                    </h4>
+                    <ul className="space-y-2 text-sm">
+                      <li>• "добавь расход 200 рублей такси наличка настя"</li>
+                      <li>• "трата 1500 аниматоры корп карта лера"</li>
+                      <li>• "расход 3000 продукты наличка ваня"</li>
+                      <li>• "потратил 500 на доставку ИП настя"</li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Владельцы: Наличка Настя/Лера/Ваня, Корп. карта Настя/Лера/Ваня, ИП Настя/Лера/Ваня, ООО Настя/Лера/Ваня, Своя Настя/Лера/Ваня
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Расходы с указанием проекта:
+                    </h4>
+                    <ul className="space-y-2 text-sm">
+                      <li>• "добавь расход 200 рублей Такси до офиса наличка настя проект 0101 саманта"</li>
+                      <li>• "трата 500 такси проект 0111"</li>
+                      <li>• "расход 1500 аниматоры корп карта лера проект День рождения"</li>
+                      <li>• "потратил 800 на фотографа проект 0112 корпоратив"</li>
+                    </ul>
+                    <Alert className="mt-3">
+                      <AlertDescription className="text-xs">
+                        <p className="font-semibold mb-1">🎯 Умный поиск проектов:</p>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          <li><span className="font-medium">Точное совпадение:</span> "проект 0101 саманта" найдет событие с таким названием</li>
+                          <li><span className="font-medium">Префикс:</span> "проект 0111" покажет все проекты, начинающиеся с 0111</li>
+                          <li><span className="font-medium">Частичное:</span> "проект день рождения" найдет события с этими словами</li>
+                          <li><span className="font-medium">Не найдено:</span> проект будет сохранен как статическое название</li>
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
                       Доходы:
                     </h4>
                     <ul className="space-y-2 text-sm">
                       <li>• "приход 5000 за мероприятие"</li>
-                      <li>• "получил зарплату 50000"</li>
-                      <li>• "продал товар за 3000"</li>
+                      <li>• "получил зарплату 50000 корп карта настя"</li>
+                      <li>• "доход 3000 от клиента проект 0101 саманта"</li>
+                      <li>• "приход 10000 оплата за событие наличка лера"</li>
                     </ul>
                   </div>
 
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-semibold mb-3">Автоматическое определение категорий:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="font-medium text-xs mb-1">Транспорт:</p>
+                        <p className="text-xs text-muted-foreground">такси, трансфер, доставка, парковка</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-xs mb-1">Персонал:</p>
+                        <p className="text-xs text-muted-foreground">аниматоры, шоу, зарплата, бонус</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-xs mb-1">Медиа:</p>
+                        <p className="text-xs text-muted-foreground">фото, видео, фотограф</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-xs mb-1">Расходы:</p>
+                        <p className="text-xs text-muted-foreground">продукты, закупки, реквизит, костюмы</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Alert>
-                    <AlertDescription>
-                      💡 Совет: Чем конкретнее вы опишете транзакцию, тем точнее AI определит категорию и детали
+                    <AlertDescription className="space-y-2">
+                      <p className="font-semibold">💡 Советы по использованию:</p>
+                      <ul className="text-sm space-y-1 ml-4 list-disc">
+                        <li>Чек не обязателен - его можно добавить позже в приложении</li>
+                        <li>Все транзакции через Siri помечаются для проверки</li>
+                        <li>Если проект не найден точно, система предложит выбрать из списка</li>
+                        <li>Владелец по умолчанию - "Наличка Настя"</li>
+                        <li>Система понимает вариации: "наличка настя", "наличные Настя" и т.д.</li>
+                      </ul>
                     </AlertDescription>
                   </Alert>
                 </div>
