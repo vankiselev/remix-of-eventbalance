@@ -45,7 +45,7 @@ export const TransactionVerificationDialog = ({
   const handleVerify = async (action: 'approved' | 'rejected' | 'requested_changes') => {
     setIsSubmitting(true);
     try {
-      const newStatus = action === 'approved' ? 'approved' : 'rejected';
+      const newStatus = action === 'approved' ? 'approved' : action === 'rejected' ? 'rejected' : 'pending';
       
       // Обновить статус транзакции
       const { error: updateError } = await supabase
@@ -74,10 +74,57 @@ export const TransactionVerificationDialog = ({
 
       if (historyError) throw historyError;
 
+      // Send notification to transaction creator
+      let notificationTitle: string;
+      let notificationMessage: string;
+      
+      if (action === 'approved') {
+        notificationTitle = 'Транзакция одобрена';
+        notificationMessage = `Ваша транзакция на сумму ${formatCurrency(amount)} одобрена финансистом`;
+        if (comment) {
+          notificationMessage += `\nКомментарий: ${comment}`;
+        }
+      } else if (action === 'rejected') {
+        notificationTitle = 'Транзакция отклонена';
+        notificationMessage = `Ваша транзакция на сумму ${formatCurrency(amount)} отклонена`;
+        if (comment) {
+          notificationMessage += `\nПричина: ${comment}`;
+        }
+      } else {
+        notificationTitle = 'Требуется дополнительная информация';
+        notificationMessage = `По вашей транзакции на сумму ${formatCurrency(amount)} запрошена дополнительная информация`;
+        if (comment) {
+          notificationMessage += `\nКомментарий: ${comment}`;
+        }
+      }
+
+      // Send notification
+      const { error: notifyError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: transaction.created_by,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: 'transaction',
+          data: {
+            transaction_id: transaction.id,
+            action,
+            amount: amount,
+            category: transaction.category,
+            verification_comment: comment || null,
+          },
+        });
+
+      if (notifyError) {
+        console.error('Notification error:', notifyError);
+      }
+
       toast.success(
         action === 'approved' 
           ? 'Транзакция утверждена' 
-          : 'Транзакция отклонена'
+          : action === 'rejected'
+          ? 'Транзакция отклонена'
+          : 'Запрошена дополнительная информация'
       );
 
       setComment("");

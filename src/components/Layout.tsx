@@ -20,6 +20,7 @@ import { useChatUnread } from "@/hooks/useChatUnread";
 import { cn } from "@/lib/utils";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
+import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const { totalUnread } = useChatUnread();
+  const { pendingCount } = usePendingTransactionsCount();
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
@@ -149,12 +151,13 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
-    { path: "/finances", label: t('finances'), icon: RussianRuble },
+    { path: "/finances", label: t('finances'), icon: RussianRuble, ...(isFinancier && pendingCount > 0 && { badge: pendingCount }) },
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: ClipboardCheck, ...(pendingCount > 0 && { badge: pendingCount }) }] : []),
     ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
   ];
 

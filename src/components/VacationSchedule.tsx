@@ -17,6 +17,8 @@ import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { VacationApprovalDialog } from "@/components/vacation/VacationApprovalDialog";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 interface Vacation {
   id: string;
@@ -41,6 +43,8 @@ const VacationSchedule = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
   const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalVacation, setApprovalVacation] = useState<Vacation | null>(null);
   
   const [formData, setFormData] = useState({
     start_date: undefined as Date | undefined,
@@ -51,6 +55,7 @@ const VacationSchedule = () => {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isAdmin } = useUserRbacRoles();
 
   useEffect(() => {
     if (user) {
@@ -127,7 +132,7 @@ const VacationSchedule = () => {
         end_date: formData.end_date.toISOString().split('T')[0],
         vacation_type: formData.vacation_type,
         description: formData.description || null,
-        status: 'approved',
+        status: 'pending',
       };
 
       const { error } = await supabase.from("vacations").insert(vacationData);
@@ -158,7 +163,7 @@ const VacationSchedule = () => {
 
       toast({
         title: "Успешно!",
-        description: "Заявка на отпуск создана",
+        description: "Заявка на отпуск создана и отправлена на одобрение",
       });
 
       resetForm();
@@ -173,14 +178,21 @@ const VacationSchedule = () => {
   };
 
   const handleEditVacation = (vacation: Vacation) => {
-    setEditingVacation(vacation);
-    setFormData({
-      start_date: new Date(vacation.start_date),
-      end_date: new Date(vacation.end_date),
-      vacation_type: vacation.vacation_type as any,
-      description: vacation.description || "",
-    });
-    setShowEditDialog(true);
+    // Admins see approval dialog for pending vacations
+    if (isAdmin && vacation.status === 'pending') {
+      setApprovalVacation(vacation);
+      setShowApprovalDialog(true);
+    } else {
+      // Users edit their own vacations
+      setEditingVacation(vacation);
+      setFormData({
+        start_date: new Date(vacation.start_date),
+        end_date: new Date(vacation.end_date),
+        vacation_type: vacation.vacation_type as any,
+        description: vacation.description || "",
+      });
+      setShowEditDialog(true);
+    }
   };
 
   const handleUpdateVacation = async (e: React.FormEvent) => {
@@ -741,6 +753,14 @@ const VacationSchedule = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Vacation Approval Dialog for Admins */}
+      <VacationApprovalDialog
+        vacation={approvalVacation}
+        open={showApprovalDialog}
+        onOpenChange={setShowApprovalDialog}
+        onSuccess={fetchVacations}
+      />
     </div>
   );
 };

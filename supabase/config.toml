@@ -11,3 +11,15 @@ verify_jwt = true
 
 [functions.handle-money-transfer]
 verify_jwt = true
+
+[functions.vacation-status-notification]
+verify_jwt = true
+
+[functions.send-event-notification]
+verify_jwt = true
+
+[functions.birthday-notifications]
+verify_jwt = false
+
+[functions.overdue-reports-check]
+verify_jwt = false
