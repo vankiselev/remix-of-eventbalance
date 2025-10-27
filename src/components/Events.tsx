@@ -853,20 +853,13 @@ const Events = () => {
                       className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
                     >
                       {selectionMode && (
-                        <div 
-                          className="absolute top-3 right-3 z-10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleEventSelection(event.id);
-                          }}
-                        >
+                        <div className="absolute top-3 right-3 z-10 pointer-events-none">
                           <Checkbox
                             checked={isSelected}
-                            onCheckedChange={() => toggleEventSelection(event.id)}
                           />
                         </div>
                       )}
-                      <div onClick={() => handleEventClick(event)}>
+                      <div onClick={() => selectionMode ? toggleEventSelection(event.id) : handleEventClick(event)}>
                         <CardHeader className={selectionMode ? "pb-3 pr-12" : "pb-3"}>
                           <CardTitle className="text-lg line-clamp-1">{event.name}</CardTitle>
                         </CardHeader>
