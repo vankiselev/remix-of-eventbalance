@@ -344,11 +344,9 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <SelectValue placeholder="Выберите владельца" />
                 </SelectTrigger>
                 <SelectContent className="z-[100] bg-background">
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.full_name || ""}>
-                      {employee.full_name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Ваня">Ваня</SelectItem>
+                  <SelectItem value="Настя">Настя</SelectItem>
+                  <SelectItem value="Лера">Лера</SelectItem>
                 </SelectContent>
               </Select>
             </div>
