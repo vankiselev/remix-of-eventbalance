@@ -32,7 +32,7 @@ export const IncomesBreakdownDialog = ({
     percentage: item.percentage,
   }));
 
-  // Custom label to show percentage
+  // Custom label to show percentage outside with line
   const renderLabel = (entry: any) => {
     return `${entry.percentage.toFixed(0)}%`;
   };
@@ -52,24 +52,26 @@ export const IncomesBreakdownDialog = ({
         </div>
 
         {/* Pie Chart */}
-        <div className="w-full h-[220px] mb-6 flex items-center justify-center">
+        <div className="w-full h-[280px] mb-6 flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius={65}
-                outerRadius={95}
-                paddingAngle={3}
+                innerRadius={70}
+                outerRadius={110}
+                paddingAngle={2}
                 dataKey="value"
                 label={renderLabel}
-                labelLine={false}
+                labelLine={true}
               >
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={getCategoryColor(entry.name, true)}
+                    stroke="white"
+                    strokeWidth={2}
                   />
                 ))}
               </Pie>
