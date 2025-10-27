@@ -192,11 +192,82 @@ export default function SiriIntegrationPage() {
 
                   <div>
                     <h3 className="font-semibold mb-2">3. Добавьте действие "Запросить ввод"</h3>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
-                      <li>Тип: Текст</li>
-                      <li>Вопрос: "Какую транзакцию добавить?"</li>
-                      <li>По умолчанию: пусто</li>
-                    </ul>
+                    
+                    <div className="space-y-3 ml-2">
+                      <div>
+                        <p className="text-sm font-medium mb-1">Как найти действие:</p>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                          <li>В поле поиска введите <span className="font-mono bg-muted px-1 rounded">Запросить ввод</span> или <span className="font-mono bg-muted px-1 rounded">Ask for Input</span></li>
+                          <li>Выберите действие с иконкой "+" голубого цвета</li>
+                          <li>Полное название: <span className="font-semibold">Запросить ввод</span></li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium mb-1">Настройка параметров:</p>
+                        <div className="space-y-2">
+                          <div className="text-sm">
+                            <span className="font-medium">Тип ввода:</span>
+                            <p className="text-muted-foreground ml-2">→ Выберите <span className="font-semibold">Текст</span> из выпадающего списка</p>
+                            <p className="text-xs text-muted-foreground ml-2">Это позволит вводить данные голосом или с клавиатуры</p>
+                          </div>
+                          
+                          <div className="text-sm">
+                            <span className="font-medium">Вопрос:</span>
+                            <p className="text-muted-foreground ml-2">→ Введите: <span className="font-mono bg-muted px-1 rounded">"Какую транзакцию добавить?"</span></p>
+                            <p className="text-xs text-muted-foreground ml-2">Это то, что Siri спросит при запуске команды</p>
+                          </div>
+                          
+                          <div className="text-sm">
+                            <span className="font-medium">По умолчанию:</span>
+                            <p className="text-muted-foreground ml-2">→ Оставьте <span className="font-semibold">пустым</span></p>
+                            <p className="text-xs text-muted-foreground ml-2">Не заполняйте, так как каждый раз детали будут разные</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Alert>
+                        <AlertDescription className="text-xs">
+                          <p className="font-semibold mb-1">💡 Зачем это нужно:</p>
+                          <ul className="list-disc list-inside space-y-0.5">
+                            <li>Активирует голосовой или текстовый ввод</li>
+                            <li>Позволяет Siri запросить у вас информацию о транзакции</li>
+                            <li>Передает введенный текст в следующие шаги команды</li>
+                            <li>После ответа текст сохраняется как переменная для шага 4</li>
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="p-3 bg-muted rounded-md">
+                        <p className="text-xs font-medium mb-2">Как должно выглядеть готовое действие:</p>
+                        <pre className="text-xs text-muted-foreground">
+{`┌─────────────────────────────────┐
+│ Запросить ввод                   │
+│ ────────────────────────────    │
+│ Тип: Текст                       │
+│ Вопрос: "Какую транзакцию        │
+│         добавить?"               │
+│ По умолчанию: [пусто]            │
+└─────────────────────────────────┘`}
+                        </pre>
+                      </div>
+
+                      <div className="text-xs space-y-1">
+                        <p className="font-medium text-destructive">⚠️ Частые ошибки:</p>
+                        <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                          <li>❌ Не выбирайте "Запросить входные данные" - это другое действие</li>
+                          <li>❌ Не используйте "Спросить Алису" или другие голосовые ассистенты</li>
+                          <li>✅ Нужно именно "Запросить ввод" с иконкой "+"</li>
+                        </ul>
+                      </div>
+
+                      <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-900">
+                        <AlertDescription className="text-xs">
+                          <p className="font-semibold mb-1">⚡ Альтернативный способ (для опытных):</p>
+                          <p>Можно пропустить этот шаг и сразу начать с шага 4 "Диктовка текста". В этом случае Siri сразу активирует микрофон при запуске команды, но не будет показан текстовый вопрос-подсказка.</p>
+                        </AlertDescription>
+                      </Alert>
+                    </div>
                   </div>
 
                   <Separator />
