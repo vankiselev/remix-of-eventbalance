@@ -591,7 +591,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     const uploadPromises = files.map(async (fileItem) => {
       const fileExtension = fileItem.file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExtension}`;
-      const storagePath = `receipts/${transactionId}/${fileName}`;
+      const storagePath = `${userId}/${transactionId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('receipts')
