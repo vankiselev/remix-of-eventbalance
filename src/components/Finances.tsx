@@ -12,6 +12,7 @@ import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +41,7 @@ interface CashSummary {
 const Finances = () => {
   const { hasPermission } = useUserPermissions();
   const { isFinancier, canReview, canApprove } = useFinancierPermissions();
+  const { pendingCount } = usePendingTransactionsCount();
   
   console.log('[Finances] isFinancier status:', isFinancier, { canReview, canApprove });
   const [companySummary, setCompanySummary] = useState<CashSummary>({
@@ -637,12 +639,28 @@ const Finances = () => {
                 Все транзакции
               </TabsTrigger>
               {isFinancier && (
-                <TabsTrigger value="review" className="whitespace-nowrap">
+                <TabsTrigger value="review" className="whitespace-nowrap relative">
                   Проверка
+                  {pendingCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
+                    >
+                      {pendingCount > 9 ? '9+' : pendingCount}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               )}
-              <TabsTrigger value="audit-log" className="whitespace-nowrap">
+              <TabsTrigger value="audit-log" className="whitespace-nowrap relative">
                 Журнал
+                {pendingCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
+                  >
+                    {pendingCount > 9 ? '9+' : pendingCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
           </CardHeader>
