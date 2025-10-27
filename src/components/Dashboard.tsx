@@ -7,6 +7,7 @@ import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
 import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
 import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
 import CashOnHandCard from "@/components/dashboard/CashOnHandCard";
+import MyEventsCard from "@/components/dashboard/MyEventsCard";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardData {
@@ -107,6 +108,11 @@ const Dashboard = () => {
         <TodayEventsCard />
         <TodayBirthdaysCard />
         <TodayVacationsCard />
+      </div>
+
+      {/* My Events */}
+      <div className="w-full">
+        <MyEventsCard />
       </div>
     </div>
   );
