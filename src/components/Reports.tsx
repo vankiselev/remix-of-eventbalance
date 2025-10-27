@@ -327,12 +327,12 @@ const Reports = () => {
   }
 
   return (
-    <div className="p-6 space-y-8 w-full max-w-none overflow-x-hidden">
-      <div className="flex items-center gap-3 w-full">
-        <FileText className="h-8 w-8 text-primary flex-shrink-0" />
+    <div className="p-3 md:p-6 space-y-4 md:space-y-8 w-full max-w-none overflow-x-hidden">
+      <div className="flex items-center gap-2 md:gap-3 w-full">
+        <FileText className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-bold truncate">Отчеты по мероприятиям</h1>
-          <p className="text-muted-foreground truncate">
+          <h1 className="text-xl md:text-3xl font-bold truncate">Отчеты по мероприятиям</h1>
+          <p className="text-xs md:text-sm text-muted-foreground truncate hidden sm:block">
             {isAdmin ? 'Управление отчетами и зарплатами' : 'Ваши отчеты о проведенных мероприятиях'}
           </p>
         </div>
@@ -341,13 +341,15 @@ const Reports = () => {
       {isAdmin ? (
         <Tabs defaultValue="my-reports" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="my-reports" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Мои отчеты
+            <TabsTrigger value="my-reports" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <User className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden xs:inline">Мои отчеты</span>
+              <span className="xs:hidden">Мои</span>
             </TabsTrigger>
-            <TabsTrigger value="all-reports" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Все отчеты
+            <TabsTrigger value="all-reports" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Users className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden xs:inline">Все отчеты</span>
+              <span className="xs:hidden">Все</span>
             </TabsTrigger>
           </TabsList>
           
@@ -434,15 +436,15 @@ const EmployeeReportsView = ({
   setViewMode
 }: any) => {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Мои отчеты</h2>
-          <p className="text-muted-foreground">Создавайте и управляйте своими отчетами</p>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg md:text-xl font-semibold">Мои отчеты</h2>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Создавайте и управляйте своими отчетами</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex border rounded-lg">
+        <div className="flex items-center gap-2 md:gap-3 justify-between sm:justify-end">
+          <div className="hidden md:flex border rounded-lg">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="sm"
@@ -464,27 +466,27 @@ const EmployeeReportsView = ({
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить отчет
+            <Button size="sm" className="flex-1 sm:flex-none">
+              <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="text-xs md:text-sm">Добавить</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
             <DialogHeader>
-              <DialogTitle>Новый отчет по мероприятию</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base md:text-lg">Новый отчет по мероприятию</DialogTitle>
+              <DialogDescription className="text-xs md:text-sm">
                 Заполните информацию о проведенном мероприятии
               </DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
                 <FormField
                   control={form.control}
                   name="project_name"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Проект</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm md:text-base">Проект</FormLabel>
                       <Popover open={projectOpen} onOpenChange={setProjectOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -545,9 +547,9 @@ const EmployeeReportsView = ({
                     name="start_time"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Время начала на площадке
+                        <FormLabel className="flex items-center gap-2 text-sm md:text-base">
+                          <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                          Время начала
                         </FormLabel>
                         <FormControl>
                           <div className="flex gap-2">
@@ -594,9 +596,9 @@ const EmployeeReportsView = ({
                     name="end_time"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Время окончания на площадке
+                        <FormLabel className="flex items-center gap-2 text-sm md:text-base">
+                          <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                          Время окончания
                         </FormLabel>
                         <FormControl>
                           <div className="flex gap-2">
@@ -643,8 +645,8 @@ const EmployeeReportsView = ({
                   control={form.control}
                   name="preparation_work"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Работа по подготовке мероприятия</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm md:text-base">Работа по подготовке мероприятия</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="Опишите что было сделано для подготовки мероприятия..."
@@ -661,8 +663,8 @@ const EmployeeReportsView = ({
                   control={form.control}
                   name="onsite_work"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Работа на площадке</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-sm md:text-base">Работа на площадке</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="Опишите работу, проделанную на площадке..."
@@ -681,9 +683,9 @@ const EmployeeReportsView = ({
                     name="car_kilometers"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          Пробег на машине (км)
+                        <FormLabel className="flex items-center gap-2 text-sm md:text-base">
+                          <MapPin className="h-3 w-3 md:h-4 md:w-4" />
+                          Пробег (км)
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -705,7 +707,7 @@ const EmployeeReportsView = ({
                     control={form.control}
                     name="without_car"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 md:p-4">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
@@ -713,11 +715,11 @@ const EmployeeReportsView = ({
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel>
+                          <FormLabel className="text-sm md:text-base">
                             Был без машины
                           </FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Отметьте, если работали без использования автомобиля
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            Отметьте, если работали без автомобиля
                           </p>
                         </div>
                       </FormItem>
@@ -725,15 +727,15 @@ const EmployeeReportsView = ({
                   />
                 </div>
 
-                <Button type="submit" disabled={submitting} className="w-full">
+                <Button type="submit" disabled={submitting} className="w-full text-sm md:text-base">
                   {submitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
                       Сохранение...
                     </>
                   ) : (
                     <>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                       Создать отчет
                     </>
                   )}
@@ -747,15 +749,15 @@ const EmployeeReportsView = ({
 
       {reports.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Нет отчетов</h3>
-            <p className="text-muted-foreground text-center mb-4">
+          <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
+            <FileText className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+            <h3 className="text-base md:text-lg font-semibold mb-2">Нет отчетов</h3>
+            <p className="text-xs md:text-sm text-muted-foreground text-center mb-3 md:mb-4">
               Вы еще не создали ни одного отчета по мероприятиям
             </p>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Создать первый отчет
                 </Button>
@@ -764,32 +766,30 @@ const EmployeeReportsView = ({
           </CardContent>
         </Card>
       ) : (
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+        <div className="space-y-3 md:space-y-4">
           {reports.map((report: any) => (
             <Card key={report.id}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold">{report.project_name}</h3>
-                  <div className="text-right">
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(report.created_at).toLocaleDateString('ru-RU', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
+              <CardContent className="p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 md:mb-4">
+                  <h3 className="text-base md:text-xl font-semibold line-clamp-2">{report.project_name}</h3>
+                  <span className="text-xs md:text-sm text-muted-foreground shrink-0">
+                    {new Date(report.created_at).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </span>
                 </div>
                 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-2 mb-3 md:mb-4">
+                  <div className="flex items-center gap-2 text-xs md:text-sm">
+                    <Clock className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <span className="font-medium">Время:</span>
                     <span>{report.start_time.substring(0, 5)} - {report.end_time.substring(0, 5)}</span>
                   </div>
                   
                   {(report.car_kilometers || report.without_car) && (
-                    <div className="text-sm">
+                    <div className="text-xs md:text-sm">
                       <span className="font-medium">Информация о поездке:</span>{' '}
                       {report.without_car ? (
                         <span>без машины</span>
@@ -800,25 +800,25 @@ const EmployeeReportsView = ({
                   )}
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <h4 className="font-medium mb-2">Работа по подготовке мероприятия:</h4>
-                    <p className="text-sm text-muted-foreground">{report.preparation_work}</p>
+                    <h4 className="text-sm md:text-base font-medium mb-1 md:mb-2">Работа по подготовке мероприятия:</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">{report.preparation_work}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">Работа на площадке:</h4>
-                    <p className="text-sm text-muted-foreground">{report.onsite_work}</p>
+                    <h4 className="text-sm md:text-base font-medium mb-1 md:mb-2">Работа на площадке:</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">{report.onsite_work}</p>
                   </div>
                 </div>
 
                 {report.salaries && report.salaries.length > 0 && (
                   <>
-                    <Separator className="my-4" />
+                    <Separator className="my-3 md:my-4" />
                     <div>
-                      <h4 className="font-medium mb-2">Назначенные выплаты:</h4>
+                      <h4 className="text-sm md:text-base font-medium mb-2">Назначенные выплаты:</h4>
                       <div className="space-y-1">
                         {report.salaries.map((salary: any, index: number) => (
-                          <div key={index} className="text-sm text-muted-foreground">
+                          <div key={index} className="text-xs md:text-sm text-muted-foreground">
                             {salary.salary_type}: {formatCurrency(salary.amount)} ({salary.wallet_type})
                           </div>
                         ))}
@@ -827,15 +827,16 @@ const EmployeeReportsView = ({
                   </>
                 )}
 
-                <div className="flex gap-2 mt-4 pt-4 border-t">
+                <div className="flex gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEdit(report)}
-                    className="flex-1"
+                    className="flex-1 text-xs md:text-sm"
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Редактировать
+                    <Pencil className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden xs:inline">Редактировать</span>
+                    <span className="xs:hidden">Ред.</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -844,10 +845,11 @@ const EmployeeReportsView = ({
                       setDeletingReport(report);
                       setDeleteDialogOpen(true);
                     }}
-                    className="flex-1 text-destructive hover:text-destructive"
+                    className="flex-1 text-xs md:text-sm text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Удалить
+                    <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden xs:inline">Удалить</span>
+                    <span className="xs:hidden">Удал.</span>
                   </Button>
                 </div>
               </CardContent>
@@ -858,16 +860,16 @@ const EmployeeReportsView = ({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Редактировать отчет</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base md:text-lg">Редактировать отчет</DialogTitle>
+            <DialogDescription className="text-xs md:text-sm">
               Внесите изменения в отчет по мероприятию
             </DialogDescription>
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onUpdate)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onUpdate)} className="space-y-4 md:space-y-6">
               <FormField
                 control={form.control}
                 name="project_name"
@@ -1114,15 +1116,15 @@ const EmployeeReportsView = ({
                 />
               </div>
 
-              <Button type="submit" disabled={submitting} className="w-full">
+              <Button type="submit" disabled={submitting} className="w-full text-sm md:text-base">
                 {submitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
                     Сохранение...
                   </>
                 ) : (
                   <>
-                    <Check className="mr-2 h-4 w-4" />
+                    <Check className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                     Сохранить изменения
                   </>
                 )}
@@ -1134,23 +1136,23 @@ const EmployeeReportsView = ({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[90vw] sm:w-full max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить отчет?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base md:text-lg">Удалить отчет?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs md:text-sm">
               Вы уверены, что хотите удалить отчет по проекту "{deletingReport?.project_name}"? 
               Это действие нельзя отменить.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto text-xs md:text-sm">Отмена</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs md:text-sm"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
                   Удаление...
                 </>
               ) : (
