@@ -151,7 +151,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
-    { path: "/finances", label: t('finances'), icon: RussianRuble, ...(isFinancier && pendingCount > 0 && { badge: pendingCount }) },
+    { path: "/finances", label: t('finances'), icon: RussianRuble },
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
