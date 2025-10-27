@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
+import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 
 interface NavItem {
   path: string;
@@ -20,6 +21,7 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const { totalUnread } = useChatUnread();
+  const { pendingCount } = usePendingTransactionsCount();
   const mainNavItems: NavItem[] = [
     { path: "/dashboard", label: "Главная", icon: "Home" },
     { path: "/finances", label: "Финансы", icon: "DollarSign" },
@@ -35,6 +37,7 @@ const MobileBottomNav = () => {
     { path: "/vacations", label: "График отпусков", icon: "Plane" },
     { path: "/contacts", label: "Контакты", icon: "Briefcase" },
     ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: "FileText" }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: "ClipboardCheck" }] : []),
     ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Settings" }] : []),
   ];
 
@@ -58,7 +61,9 @@ const MobileBottomNav = () => {
           {/* Dynamic main nav items */}
           {mainNavItems.slice(0, 4).map((item) => {
             const IconComponent = getIconComponent(item.icon);
-            const showBadge = item.path === '/messages' && totalUnread > 0;
+            const showBadge = (item.path === '/messages' && totalUnread > 0) || 
+                              (item.path === '/finances' && isFinancier && pendingCount > 0);
+            const badgeCount = item.path === '/messages' ? totalUnread : pendingCount;
             return (
               <div key={item.path} className="flex flex-col items-center gap-1.5">
                 <div className="relative">
@@ -77,7 +82,7 @@ const MobileBottomNav = () => {
                       variant="destructive" 
                       className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] rounded-full"
                     >
-                      {totalUnread > 9 ? '9+' : totalUnread}
+                      {badgeCount > 9 ? '9+' : badgeCount}
                     </Badge>
                   )}
                 </div>
@@ -108,7 +113,9 @@ const MobileBottomNav = () => {
                 <div className="grid gap-2 pb-6">
                   {moreMenuItems.map((item) => {
                     const IconComponent = getIconComponent(item.icon);
-                    const showBadge = item.path === '/messages' && totalUnread > 0;
+                    const showBadge = (item.path === '/messages' && totalUnread > 0) || 
+                                      (item.path === '/transactions-review' && pendingCount > 0);
+                    const badgeCount = item.path === '/messages' ? totalUnread : pendingCount;
                     return (
                       <button
                         key={item.path}
@@ -126,7 +133,7 @@ const MobileBottomNav = () => {
                              variant="destructive" 
                              className="ml-auto h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
                            >
-                             {totalUnread > 9 ? '9+' : totalUnread}
+                             {badgeCount > 9 ? '9+' : badgeCount}
                            </Badge>
                          )}
                       </button>
