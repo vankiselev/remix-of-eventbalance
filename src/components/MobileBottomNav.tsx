@@ -61,9 +61,8 @@ const MobileBottomNav = () => {
           {/* Dynamic main nav items */}
           {mainNavItems.slice(0, 4).map((item) => {
             const IconComponent = getIconComponent(item.icon);
-            const showBadge = (item.path === '/messages' && totalUnread > 0) || 
-                              (item.path === '/finances' && isFinancier && pendingCount > 0);
-            const badgeCount = item.path === '/messages' ? totalUnread : pendingCount;
+            const showBadge = item.path === '/messages' && totalUnread > 0;
+            const badgeCount = totalUnread;
             return (
               <div key={item.path} className="flex flex-col items-center gap-1.5">
                 <div className="relative">
