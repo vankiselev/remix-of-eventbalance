@@ -143,31 +143,35 @@ export function FilePreviewModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span className="truncate">{file?.original_filename}</span>
-            <div className="flex items-center gap-2 ml-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownload}
-                disabled={!fileUrl}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Скачать
-              </Button>
-              {canDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Удалить
-                </Button>
-              )}
-            </div>
+          <DialogTitle className="pr-8">
+            {file?.original_filename}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 px-6 pb-4 border-b">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={!fileUrl}
+            className="flex-1 sm:flex-none"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Скачать
+          </Button>
+          {canDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              className="flex-1 sm:flex-none"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Удалить
+            </Button>
+          )}
+        </div>
 
         <div className="flex-1 overflow-auto">
           {loading ? (
