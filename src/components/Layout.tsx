@@ -147,7 +147,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
-    { path: "/messages", label: "Сообщения", icon: MessageSquare, ...(totalUnread > 0 && { badge: totalUnread }) },
+    ...(isAdminRbac ? [{ path: "/messages", label: "Сообщения", icon: MessageSquare, ...(totalUnread > 0 && { badge: totalUnread }) }] : []),
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },

@@ -30,7 +30,7 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
-    { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
+    ...(isAdmin ? [{ path: "/messages", label: "Сообщения", icon: "MessageSquare" }] : []),
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/staff", label: "Сотрудники", icon: "Users" },
     { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
