@@ -7,7 +7,9 @@ import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
 import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
 import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
 import MyEventsCard from "@/components/dashboard/MyEventsCard";
+import { EventActionRequestsCard } from "@/components/dashboard/EventActionRequestsCard";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface DashboardData {
   totalEvents: number;
@@ -33,6 +35,7 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { isAdmin } = useUserPermissions();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -96,6 +99,13 @@ const Dashboard = () => {
           Добро пожаловать в EventBalance! Система управления ивентами
         </p>
       </div>
+
+      {/* Event Action Requests (Admin only) */}
+      {isAdmin && (
+        <div className="w-full">
+          <EventActionRequestsCard />
+        </div>
+      )}
 
       {/* Today's information */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr w-full">

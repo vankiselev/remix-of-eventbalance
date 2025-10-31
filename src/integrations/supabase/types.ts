@@ -282,6 +282,56 @@ export type Database = {
           },
         ]
       }
+      event_action_requests: {
+        Row: {
+          action_type: string
+          comment: string
+          created_at: string
+          event_id: string
+          id: string
+          requested_by: string
+          review_comment: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          comment: string
+          created_at?: string
+          event_id: string
+          id?: string
+          requested_by: string
+          review_comment?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          comment?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          requested_by?: string
+          review_comment?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_action_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_report_salaries: {
         Row: {
           amount: number
@@ -1668,6 +1718,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      calculate_all_users_cash: {
+        Args: never
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+          user_id: string
+        }[]
+      }
       calculate_user_cash_totals: {
         Args: { user_uuid: string }
         Returns: {
@@ -1778,6 +1838,7 @@ export type Database = {
           vacation_type: string
         }[]
       }
+      get_dashboard_stats: { Args: { user_uuid: string }; Returns: Json }
       get_employee_basic_data: {
         Args: never
         Returns: {
@@ -1838,6 +1899,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_full_context: { Args: { user_uuid: string }; Returns: Json }
       get_user_highest_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

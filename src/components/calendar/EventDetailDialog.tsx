@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Trash2, MapPin, Plus, File } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { EventActionRequestDialog } from "@/components/events/EventActionRequestDialog";
 
 interface Event {
   id: string;
@@ -48,6 +50,7 @@ interface EventDetailDialogProps {
 const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: EventDetailDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasPermission } = useUserPermissions();
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [venues, setVenues] = useState<any[]>([]);
@@ -59,6 +62,10 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [uploadingFile, setUploadingFile] = useState(false);
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [actionRequestDialog, setActionRequestDialog] = useState<{ open: boolean; type: 'delete' | 'cancel' | null }>({
+    open: false,
+    type: null,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -777,25 +784,51 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           <div className="flex gap-2">
             {event && (
               <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
-                >
-                  Отменить мероприятие
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="w-full sm:w-auto"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Удалить
-                </Button>
+                {hasPermission('events.delete') ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                      className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                    >
+                      Отменить мероприятие
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDelete}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Удалить
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActionRequestDialog({ open: true, type: 'cancel' })}
+                      className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                    >
+                      Запрос на отмену
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActionRequestDialog({ open: true, type: 'delete' })}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Запрос на удаление
+                    </Button>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -820,6 +853,17 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           </div>
         </div>
       </DialogContent>
+      
+      {/* Action Request Dialog */}
+      {event && actionRequestDialog.type && (
+        <EventActionRequestDialog
+          open={actionRequestDialog.open}
+          onOpenChange={(open) => setActionRequestDialog({ open, type: null })}
+          eventId={event.id}
+          eventName={event.name}
+          actionType={actionRequestDialog.type}
+        />
+      )}
     </Dialog>
   );
 };
