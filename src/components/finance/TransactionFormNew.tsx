@@ -80,6 +80,7 @@ type TransactionFormData = z.infer<typeof transactionSchema>;
 interface Event {
   id: string;
   name: string;
+  project_owner?: string | null;
 }
 
 interface TransactionFormProps {
@@ -113,6 +114,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [whoseProjectSelectOpen, setWhoseProjectSelectOpen] = useState(false);
   const whoseProjectSearchInputRef = useRef<HTMLInputElement>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [isWhoseProjectAutoFilled, setIsWhoseProjectAutoFilled] = useState(false);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {
@@ -157,6 +159,18 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     } catch (error) {
       console.error('Error loading current user profile:', error);
     }
+  };
+
+  const mapProjectOwnerToCashType = (owner: string | null): string | undefined => {
+    if (!owner) return undefined;
+    
+    const mapping: Record<string, string> = {
+      'Настя': 'Наличка Настя',
+      'Лера': 'Наличка Лера',
+      'Ваня': 'Наличка Ваня'
+    };
+    
+    return mapping[owner];
   };
 
   const form = useForm<TransactionFormData>({
@@ -252,6 +266,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       } else {
         setIsMoneyTransfer(false);
         setTransferToUserId("");
+        setIsWhoseProjectAutoFilled(false);
         form.reset({
           operation_date: new Date(),
           project_id: undefined,
@@ -273,7 +288,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('id, name')
+        .select('id, name, project_owner')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -709,7 +724,40 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     <FormLabel>Проект</FormLabel>
                     <Select 
                       value={field.value} 
-                      onValueChange={field.onChange}
+                      onValueChange={async (value) => {
+                        field.onChange(value);
+                        
+                        // Check if this is an event (UUID) or static project
+                        const isStaticProject = STATIC_PROJECTS.includes(value);
+                        
+                        if (!isStaticProject) {
+                          // This is an event ID, find it in the events array
+                          const selectedEvent = events.find(e => e.id === value);
+                          
+                          if (selectedEvent?.project_owner) {
+                            const cashType = mapProjectOwnerToCashType(selectedEvent.project_owner);
+                            if (cashType) {
+                              form.setValue('whose_project', cashType);
+                              setIsWhoseProjectAutoFilled(true);
+                              
+                              // Show toast notification
+                              toast({
+                                title: "Автоматически заполнено",
+                                description: `Выбрано: ${cashType}`,
+                                duration: 2000,
+                              });
+                              
+                              // Auto-hide the indicator after 3 seconds
+                              setTimeout(() => {
+                                setIsWhoseProjectAutoFilled(false);
+                              }, 3000);
+                            }
+                          }
+                        } else {
+                          // For static projects, reset auto-fill state
+                          setIsWhoseProjectAutoFilled(false);
+                        }
+                      }}
                       open={projectSelectOpen}
                       onOpenChange={setProjectSelectOpen}
                     >
@@ -956,15 +1004,33 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
                 return (
                   <FormItem>
-                    <FormLabel>Чей проект</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Чей проект</FormLabel>
+                      {isWhoseProjectAutoFilled && (
+                        <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 animate-in fade-in-50 duration-300">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Автоматически
+                        </span>
+                      )}
+                    </div>
                     <Select 
                       value={field.value} 
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // If user manually changes the value, remove auto-fill indicator
+                        setIsWhoseProjectAutoFilled(false);
+                      }}
                       open={whoseProjectSelectOpen}
                       onOpenChange={setWhoseProjectSelectOpen}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger 
+                          className={cn(
+                            isWhoseProjectAutoFilled && "border-green-500 bg-green-50 dark:bg-green-950/20 ring-2 ring-green-500/20"
+                          )}
+                        >
                           <SelectValue placeholder="Выберите" />
                         </SelectTrigger>
                       </FormControl>
