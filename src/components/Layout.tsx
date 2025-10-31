@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
+import { formatFullName, getInitials } from "@/utils/formatName";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,14 +47,9 @@ const Layout = ({ children }: LayoutProps) => {
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
-  const displayName = userProfile?.full_name || (user as any)?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Пользователь';
+  const displayName = userProfile ? formatFullName(userProfile) : user?.email?.split('@')[0] || 'Пользователь';
   const avatarUrl = userProfile?.avatar_url || (user as any)?.user_metadata?.avatar_url || null;
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const initials = userProfile ? getInitials(userProfile) : displayName.charAt(0).toUpperCase();
 
   const handleSignOut = async () => {
     try {
@@ -157,7 +153,8 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/vacations", label: "График отпусков", icon: Plane },
     { path: "/contacts", label: t('contacts'), icon: Contact },
     ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
-    ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: Settings }] : []),
+    { path: "/settings", label: "Настройки", icon: Settings },
+    ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: UserPlus }] : []),
   ];
 
   const getPageTitle = () => {

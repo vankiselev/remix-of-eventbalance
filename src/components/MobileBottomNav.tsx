@@ -38,7 +38,8 @@ const MobileBottomNav = () => {
     { path: "/contacts", label: "Контакты", icon: "Briefcase" },
     ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: "FileText" }] : []),
     ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: "ClipboardCheck" }] : []),
-    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Settings" }] : []),
+    { path: "/settings", label: "Настройки", icon: "Settings" },
+    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Shield" }] : []),
   ];
 
   const getIconComponent = (iconName: string) => {

@@ -1212,12 +1212,15 @@ export type Database = {
           created_at: string
           email: string
           employment_status: string
+          first_name: string | null
           full_name: string
           google_drive_folder_id: string | null
           google_drive_folder_url: string | null
           google_sheet_id: string | null
           google_sheet_url: string | null
           id: string
+          last_name: string | null
+          middle_name: string | null
           mobile_nav_settings: Json | null
           phone: string | null
           phone_e164: string | null
@@ -1236,12 +1239,15 @@ export type Database = {
           created_at?: string
           email: string
           employment_status?: string
+          first_name?: string | null
           full_name: string
           google_drive_folder_id?: string | null
           google_drive_folder_url?: string | null
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id: string
+          last_name?: string | null
+          middle_name?: string | null
           mobile_nav_settings?: Json | null
           phone?: string | null
           phone_e164?: string | null
@@ -1260,12 +1266,15 @@ export type Database = {
           created_at?: string
           email?: string
           employment_status?: string
+          first_name?: string | null
           full_name?: string
           google_drive_folder_id?: string | null
           google_drive_folder_url?: string | null
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id?: string
+          last_name?: string | null
+          middle_name?: string | null
           mobile_nav_settings?: Json | null
           phone?: string | null
           phone_e164?: string | null
@@ -1811,8 +1820,11 @@ export type Database = {
           created_at: string
           email: string
           employment_status: string
+          first_name: string
           full_name: string
           id: string
+          last_name: string
+          middle_name: string
           phone: string
           role: Database["public"]["Enums"]["user_role"]
         }[]
@@ -1892,11 +1904,15 @@ export type Database = {
           birth_date: string
           created_at: string
           email: string
+          first_name: string
           full_name: string
           id: string
+          last_name: string
+          middle_name: string
           phone: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
+          user_position: string
         }[]
       }
       get_user_full_context: { Args: { user_uuid: string }; Returns: Json }

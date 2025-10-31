@@ -25,6 +25,7 @@ import ContactsPage from "./pages/ContactsPage";
 import ReportsPage from "./pages/ReportsPage";
 import InvitationsPage from "./pages/InvitationsPage";
 import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 import AdministrationPage from "./pages/AdministrationPage";
 import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import MessagesPage from "./pages/MessagesPage";
@@ -74,6 +75,7 @@ const App = () => {
             <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />

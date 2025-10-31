@@ -14,10 +14,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2, LogOut } from "lucide-react";
-import { NotificationSettings } from '@/components/NotificationSettings';
+
 
 const profileSchema = z.object({
-  full_name: z.string().min(1, "Имя обязательно"),
+  last_name: z.string().min(1, "Фамилия обязательна"),
+  first_name: z.string().min(1, "Имя обязательно"),
+  middle_name: z.string().optional(),
   email: z.string().email("Некорректный email"),
   phone_display: z.string().optional(),
   birth_date: z.string().optional(),
@@ -29,11 +31,15 @@ interface Profile {
   id: string;
   email: string;
   full_name: string;
+  last_name?: string;
+  first_name?: string;
+  middle_name?: string;
   role: 'admin' | 'employee';
   phone?: string;
   phone_e164?: string;
   birth_date?: string;
   avatar_url?: string;
+  user_position?: string;
 }
 
 const ProfilePage = () => {
@@ -48,7 +54,9 @@ const ProfilePage = () => {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      full_name: "",
+      last_name: "",
+      first_name: "",
+      middle_name: "",
       email: "",
       phone_display: "",
       birth_date: "",
@@ -76,7 +84,9 @@ const ProfilePage = () => {
         setAvatarUrl(data.avatar_url);
         
         form.reset({
-          full_name: data.full_name || "",
+          last_name: data.last_name || "",
+          first_name: data.first_name || "",
+          middle_name: data.middle_name || "",
           email: data.email || "",
           phone_display: data.phone || "",
           birth_date: data.birth_date || "",
@@ -184,7 +194,10 @@ const ProfilePage = () => {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: data.full_name,
+          last_name: data.last_name,
+          first_name: data.first_name,
+          middle_name: data.middle_name || null,
+          full_name: `${data.last_name} ${data.first_name}${data.middle_name ? ' ' + data.middle_name : ''}`,
           email: data.email,
           phone: data.phone_display || null,
           birth_date: data.birth_date || null,
@@ -277,17 +290,53 @@ const ProfilePage = () => {
               </div>
             </div>
 
+            {/* Position (read-only) */}
+            {profile.user_position && (
+              <div className="rounded-lg border p-4 bg-muted/50">
+                <div className="text-sm font-medium mb-1">Должность</div>
+                <div className="text-base">{profile.user_position}</div>
+              </div>
+            )}
+
             {/* Profile Form */}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="full_name"
+                  name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Полное имя</FormLabel>
+                      <FormLabel>Фамилия</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Иван Иванов" />
+                        <Input {...field} placeholder="Иванов" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Иван" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="middle_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Отчество (необязательно)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Иванович" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -359,8 +408,6 @@ const ProfilePage = () => {
             </Form>
           </CardContent>
         </Card>
-
-        <NotificationSettings />
 
         {/* Sign Out Button for Mobile */}
         <Card className="w-full mt-4">

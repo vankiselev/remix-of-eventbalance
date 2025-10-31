@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatFullName } from '@/utils/formatName';
 
 interface AuthContextType {
   session: Session | null;
@@ -9,7 +10,13 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   userRoleName: string | null;
-  userProfile: { full_name: string; avatar_url: string | null } | null;
+  userProfile: { 
+    full_name: string; 
+    last_name?: string;
+    first_name?: string;
+    middle_name?: string;
+    avatar_url: string | null;
+  } | null;
   signOut: () => Promise<void>;
 }
 
@@ -29,7 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userRoleName, setUserRoleName] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ 
+    full_name: string;
+    last_name?: string;
+    first_name?: string;
+    middle_name?: string;
+    avatar_url: string | null;
+  } | null>(null);
 
   // Load user profile and check employment status
   useEffect(() => {
@@ -48,7 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data) {
         setUserRole(data.role || 'employee');
         setUserProfile({
-          full_name: data.full_name || 'Пользователь',
+          full_name: formatFullName(data),
+          last_name: data.last_name,
+          first_name: data.first_name,
+          middle_name: data.middle_name,
           avatar_url: data.avatar_url || null
         });
 
