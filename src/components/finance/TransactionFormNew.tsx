@@ -115,6 +115,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const whoseProjectSearchInputRef = useRef<HTMLInputElement>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [isWhoseProjectAutoFilled, setIsWhoseProjectAutoFilled] = useState(false);
+  const [isDescriptionAutoFilled, setIsDescriptionAutoFilled] = useState(false);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {
@@ -267,6 +268,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         setIsMoneyTransfer(false);
         setTransferToUserId("");
         setIsWhoseProjectAutoFilled(false);
+        setIsDescriptionAutoFilled(false);
         form.reset({
           operation_date: new Date(),
           project_id: undefined,
@@ -851,14 +853,39 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         // Automatically enable money transfer for employee transfer category
                         if (value === 'Передано или получено от сотрудника') {
                           setIsMoneyTransfer(true);
+                          setIsDescriptionAutoFilled(true);
                           // Auto-set no_receipt for money transfers
                           form.setValue('no_receipt', true);
                           form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
                           // Clear income amount for money transfers
                           form.setValue('income_amount', undefined);
+                          
+                          // Auto-hide the indicator after 3 seconds
+                          setTimeout(() => {
+                            setIsDescriptionAutoFilled(false);
+                          }, 3000);
+                        } else if (value === 'Получено/Возвращено клиенту') {
+                          // Auto-fill description for client category
+                          form.setValue('description', 'Получил от клиента');
+                          setIsDescriptionAutoFilled(true);
+                          
+                          toast({
+                            title: "Автоматически заполнено",
+                            description: "Описание: Получил от клиента",
+                            duration: 2000,
+                          });
+                          
+                          // Auto-hide the indicator after 3 seconds
+                          setTimeout(() => {
+                            setIsDescriptionAutoFilled(false);
+                          }, 3000);
+                          
+                          setIsMoneyTransfer(false);
+                          setTransferToUserId("");
                         } else {
                           setIsMoneyTransfer(false);
                           setTransferToUserId("");
+                          setIsDescriptionAutoFilled(false);
                           // Reset no_receipt when switching away
                           form.setValue('no_receipt', false);
                           form.setValue('no_receipt_reason', '');
@@ -892,17 +919,39 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 if (firstResult) {
                                   field.onChange(firstResult);
                                   // Handle category selection logic
-                                  if (firstResult === 'Передано или получено от сотрудника') {
-                                    setIsMoneyTransfer(true);
-                                    form.setValue('no_receipt', true);
-                                    form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-                                    form.setValue('income_amount', undefined);
-                                  } else {
-                                    setIsMoneyTransfer(false);
-                                    setTransferToUserId("");
-                                    form.setValue('no_receipt', false);
-                                    form.setValue('no_receipt_reason', '');
-                                  }
+                                   if (firstResult === 'Передано или получено от сотрудника') {
+                                     setIsMoneyTransfer(true);
+                                     setIsDescriptionAutoFilled(true);
+                                     form.setValue('no_receipt', true);
+                                     form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                                     form.setValue('income_amount', undefined);
+                                     
+                                     setTimeout(() => {
+                                       setIsDescriptionAutoFilled(false);
+                                     }, 3000);
+                                   } else if (firstResult === 'Получено/Возвращено клиенту') {
+                                     form.setValue('description', 'Получил от клиента');
+                                     setIsDescriptionAutoFilled(true);
+                                     
+                                     toast({
+                                       title: "Автоматически заполнено",
+                                       description: "Описание: Получил от клиента",
+                                       duration: 2000,
+                                     });
+                                     
+                                     setTimeout(() => {
+                                       setIsDescriptionAutoFilled(false);
+                                     }, 3000);
+                                     
+                                     setIsMoneyTransfer(false);
+                                     setTransferToUserId("");
+                                   } else {
+                                     setIsMoneyTransfer(false);
+                                     setTransferToUserId("");
+                                     setIsDescriptionAutoFilled(false);
+                                     form.setValue('no_receipt', false);
+                                     form.setValue('no_receipt_reason', '');
+                                   }
                                   setCategorySelectOpen(false);
                                   setCategorySearch('');
                                 }
@@ -1088,7 +1137,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Подробное описание</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Подробное описание</FormLabel>
+                    {isDescriptionAutoFilled && (
+                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 animate-in fade-in-50 duration-300">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Автоматически
+                      </span>
+                    )}
+                  </div>
                   <FormControl>
                     <Textarea
                       placeholder={
@@ -1096,8 +1155,18 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           ? "Например: Передал на наличные расходы по проекту"
                           : "Опишите операцию..."
                       }
-                      className="resize-none"
+                      className={cn(
+                        "resize-none",
+                        isDescriptionAutoFilled && "border-green-500 bg-green-50 dark:bg-green-950/20 ring-2 ring-green-500/20"
+                      )}
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // If user manually changes the value, remove auto-fill indicator
+                        if (isDescriptionAutoFilled) {
+                          setIsDescriptionAutoFilled(false);
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
