@@ -1,78 +1,14 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-
-interface MyEvent {
-  id: string;
-  name: string;
-  start_date: string;
-  event_time?: string;
-  location?: string;
-  place?: string;
-  status: string;
-  role: 'manager' | 'responsible_manager';
-}
+import { useMyEvents } from "@/hooks/useMyEvents";
 
 const MyEventsCard = () => {
-  const [events, setEvents] = useState<MyEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isLoading: loading } = useMyEvents();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (!user) return;
-    fetchMyEvents();
-  }, [user]);
-
-  const fetchMyEvents = async () => {
-    if (!user) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, name, start_date, event_time, location, place, status, manager_ids, responsible_manager_ids')
-        .gte('start_date', today)
-        .eq('is_archived', false)
-        .order('start_date', { ascending: true })
-        .order('event_time', { ascending: true });
-
-      if (error) throw error;
-
-      // Filter events where user is manager or responsible manager
-      const myEvents: MyEvent[] = [];
-      data?.forEach(event => {
-        const isManager = event.manager_ids?.includes(user.id);
-        const isResponsibleManager = event.responsible_manager_ids?.includes(user.id);
-        
-        if (isManager || isResponsibleManager) {
-          myEvents.push({
-            id: event.id,
-            name: event.name,
-            start_date: event.start_date,
-            event_time: event.event_time,
-            location: event.location,
-            place: event.place,
-            status: event.status,
-            role: isResponsibleManager ? 'responsible_manager' : 'manager'
-          });
-        }
-      });
-
-      setEvents(myEvents);
-    } catch (error) {
-      console.error('Error fetching my events:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEventClick = (eventId: string) => {
     navigate(`/events?eventId=${eventId}`);

@@ -1,58 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EventDetailDialog from "@/components/calendar/EventDetailDialog";
-
-interface UpcomingEvent {
-  id: string;
-  name: string;
-  description?: string;
-  start_date: string;
-  event_time?: string;
-  end_time?: string;
-  location?: string;
-  place?: string;
-  status: string;
-}
+import { useUpcomingEvents } from "@/hooks/useUpcomingEvents";
+import { useQueryClient } from "@tanstack/react-query";
 
 const TodayEventsCard = () => {
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isLoading: loading } = useUpcomingEvents();
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  useEffect(() => {
-    fetchUpcomingEvents();
-  }, []);
-
-  const fetchUpcomingEvents = async () => {
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const weekLater = format(addDays(new Date(), 7), 'yyyy-MM-dd');
-      
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, name, description, start_date, event_time, end_time, location, place, status')
-        .gte('start_date', today)
-        .lte('start_date', weekLater)
-        .eq('is_archived', false)
-        .neq('status', 'cancelled')
-        .order('start_date', { ascending: true })
-        .order('event_time', { ascending: true });
-
-      if (error) throw error;
-      setEvents(data || []);
-    } catch (error) {
-      console.error('Error fetching upcoming events:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const queryClient = useQueryClient();
 
   const handleEventClick = async (eventId: string) => {
     try {
@@ -73,7 +34,7 @@ const TodayEventsCard = () => {
 
   const handleDialogSave = () => {
     setDialogOpen(false);
-    fetchUpcomingEvents();
+    queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
   };
 
   const getStatusVariant = (status: string) => {

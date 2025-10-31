@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { notificationSound } from '@/utils/notificationSound';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export interface Notification {
   id: string;
@@ -21,6 +22,8 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const pendingNotificationsRef = useRef<Notification[]>([]);
+  const debouncedNotifications = useDebounce(pendingNotificationsRef.current, 500);
 
   const fetchNotifications = async () => {
     try {
@@ -190,14 +193,8 @@ export const useNotifications = () => {
               setNotifications(prev => [newNotif, ...prev]);
               setUnreadCount(prev => prev + 1);
               
-              // Play notification sound
-              notificationSound.play();
-              
-              // Show toast for new notification
-              toast({
-                title: newNotif.title,
-                description: newNotif.message,
-              });
+              // Add to pending queue for debounced notification
+              pendingNotificationsRef.current = [...pendingNotificationsRef.current, newNotif];
             } else if (payload.eventType === 'UPDATE') {
               const updated = payload.new as Notification;
               if (!seenIdsRef.current.has(updated.id)) {
@@ -230,6 +227,31 @@ export const useNotifications = () => {
       cleanup?.();
     };
   }, []);
+
+  // Handle debounced notifications
+  useEffect(() => {
+    if (debouncedNotifications.length > 0) {
+      // Play sound once for all notifications
+      notificationSound.play();
+      
+      // Show toast for the latest notification
+      const latest = debouncedNotifications[debouncedNotifications.length - 1];
+      if (debouncedNotifications.length === 1) {
+        toast({
+          title: latest.title,
+          description: latest.message,
+        });
+      } else {
+        toast({
+          title: 'Новые уведомления',
+          description: `Получено ${debouncedNotifications.length} новых уведомлений`,
+        });
+      }
+      
+      // Clear the pending queue
+      pendingNotificationsRef.current = [];
+    }
+  }, [debouncedNotifications, toast]);
 
   return {
     notifications,
