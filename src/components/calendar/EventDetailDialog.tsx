@@ -17,6 +17,9 @@ import { CalendarIcon, Clock, Trash2, MapPin, Plus, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { EventActionRequestDialog } from "@/components/events/EventActionRequestDialog";
+import { useVacationConflicts, VacationConflict } from "@/hooks/useVacationConflicts";
+import { VacationConflictBadge } from "./VacationConflictBadge";
+import { VacationConflictDialog } from "./VacationConflictDialog";
 
 interface Event {
   id: string;
@@ -66,6 +69,14 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     open: false,
     type: null,
   });
+  const [vacationConflicts, setVacationConflicts] = useState<Map<string, VacationConflict>>(new Map());
+  const [selectedConflictEmployee, setSelectedConflictEmployee] = useState<{
+    id: string;
+    name: string;
+    conflict: VacationConflict;
+    listType: 'responsible_manager_ids' | 'manager_ids';
+  } | null>(null);
+  const { checkConflicts } = useVacationConflicts();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -119,6 +130,24 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
     }
   }, [event, open, defaultDate]);
 
+  // Check vacation conflicts when date or managers change
+  useEffect(() => {
+    if (formData.start_date && open) {
+      const managerIds = [
+        ...formData.responsible_manager_ids,
+        ...formData.manager_ids,
+      ];
+      
+      if (managerIds.length > 0) {
+        checkConflicts(formData.start_date, managerIds).then((conflicts) => {
+          setVacationConflicts(conflicts);
+        });
+      } else {
+        setVacationConflicts(new Map());
+      }
+    }
+  }, [formData.start_date, formData.responsible_manager_ids, formData.manager_ids, open, checkConflicts]);
+
   const loadData = async () => {
     try {
       const [venuesRes, animatorsRes, contractorsRes, employeesRes, clientsRes] = await Promise.all([
@@ -141,6 +170,32 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   const handleSave = async () => {
     if (!user) return;
+
+    // Check for vacation conflicts before saving
+    const allManagerIds = [
+      ...formData.responsible_manager_ids,
+      ...formData.manager_ids,
+    ];
+    
+    const conflictedManagers: string[] = [];
+    allManagerIds.forEach((managerId) => {
+      if (vacationConflicts.has(managerId)) {
+        const emp = employees.find((e) => e.id === managerId);
+        if (emp) {
+          conflictedManagers.push(emp.full_name);
+        }
+      }
+    });
+
+    if (conflictedManagers.length > 0) {
+      const confirmed = confirm(
+        `⚠️ Следующие менеджеры имеют конфликты с отпусками:\n\n${conflictedManagers.map((name) => `• ${name}`).join('\n')}\n\nСохранить мероприятие?`
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -539,42 +594,93 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             <div className="space-y-2">
               <Label className="text-sm">Ответственные менеджеры</Label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees.map((emp) => (
-                  <Button
-                    key={emp.id}
-                    type="button"
-                    variant={formData.responsible_manager_ids.includes(emp.id) ? "default" : "outline"}
-                    size="sm"
-                    className="text-xs h-7 px-2"
-                    onClick={() => setFormData({
-                      ...formData,
-                      responsible_manager_ids: toggleArrayItem(formData.responsible_manager_ids, emp.id)
-                    })}
-                  >
-                    {emp.full_name}
-                  </Button>
-                ))}
+                {employees.map((emp) => {
+                  const hasConflict = vacationConflicts.has(emp.id);
+                  const isSelected = formData.responsible_manager_ids.includes(emp.id);
+                  
+                  return (
+                    <Button
+                      key={emp.id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "text-xs h-7 px-2 relative",
+                        hasConflict && "border-destructive border-2"
+                      )}
+                      onClick={() => {
+                        if (hasConflict && !isSelected) {
+                          setSelectedConflictEmployee({
+                            id: emp.id,
+                            name: emp.full_name,
+                            conflict: vacationConflicts.get(emp.id)!,
+                            listType: 'responsible_manager_ids',
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            responsible_manager_ids: toggleArrayItem(
+                              formData.responsible_manager_ids,
+                              emp.id
+                            ),
+                          });
+                        }
+                      }}
+                    >
+                      <span className="flex items-center gap-1">
+                        {emp.full_name}
+                        {hasConflict && (
+                          <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
+                        )}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
             
             <div className="space-y-2">
               <Label className="text-sm">Менеджеры</Label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees.map((emp) => (
-                  <Button
-                    key={emp.id}
-                    type="button"
-                    variant={formData.manager_ids.includes(emp.id) ? "default" : "outline"}
-                    size="sm"
-                    className="text-xs h-7 px-2"
-                    onClick={() => setFormData({
-                      ...formData,
-                      manager_ids: toggleArrayItem(formData.manager_ids, emp.id)
-                    })}
-                  >
-                    {emp.full_name}
-                  </Button>
-                ))}
+                {employees.map((emp) => {
+                  const hasConflict = vacationConflicts.has(emp.id);
+                  const isSelected = formData.manager_ids.includes(emp.id);
+                  
+                  return (
+                    <Button
+                      key={emp.id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "text-xs h-7 px-2 relative",
+                        hasConflict && "border-destructive border-2"
+                      )}
+                      onClick={() => {
+                        if (hasConflict && !isSelected) {
+                          setSelectedConflictEmployee({
+                            id: emp.id,
+                            name: emp.full_name,
+                            conflict: vacationConflicts.get(emp.id)!,
+                            listType: 'manager_ids',
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            manager_ids: toggleArrayItem(formData.manager_ids, emp.id),
+                          });
+                        }
+                      }}
+                    >
+                      <span className="flex items-center gap-1">
+                        {emp.full_name}
+                        {hasConflict && (
+                          <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
+                        )}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -864,6 +970,25 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           actionType={actionRequestDialog.type}
         />
       )}
+
+      {/* Vacation Conflict Dialog */}
+      <VacationConflictDialog
+        open={selectedConflictEmployee !== null}
+        onOpenChange={(open) => !open && setSelectedConflictEmployee(null)}
+        employee={selectedConflictEmployee}
+        onConfirm={() => {
+          if (selectedConflictEmployee) {
+            const { id, listType } = selectedConflictEmployee;
+            
+            setFormData({
+              ...formData,
+              [listType]: [...formData[listType], id],
+            });
+            
+            setSelectedConflictEmployee(null);
+          }
+        }}
+      />
     </Dialog>
   );
 };
