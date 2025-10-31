@@ -141,9 +141,9 @@ export function FilePreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden [&>button]:hidden">
         <DialogHeader>
-          <DialogTitle className="pr-8">
+          <DialogTitle>
             {file?.original_filename}
           </DialogTitle>
         </DialogHeader>
@@ -171,6 +171,15 @@ export function FilePreviewModal({
               Удалить
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            className="flex-1 sm:flex-none"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Закрыть
+          </Button>
         </div>
 
         <div className="flex-1 overflow-auto">
