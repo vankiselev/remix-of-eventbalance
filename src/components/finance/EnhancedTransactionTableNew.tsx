@@ -103,20 +103,67 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     fetchTransactions();
   }, [userId]);
 
-  // Realtime subscription for automatic updates
+  // Optimized realtime subscription - update only changed records
   useEffect(() => {
     const channel = supabase
       .channel('transactions-table-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'financial_transactions'
+        },
+        async (payload) => {
+          console.log('Transaction inserted:', payload.new);
+          // Fetch only the new transaction with full details
+          const { data: newTx } = await supabase
+            .from("financial_transactions")
+            .select(`
+              *,
+              events:project_id(name),
+              attachments_count:financial_attachments(count),
+              profiles!financial_transactions_created_by_fkey(full_name, email)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+          
+          if (newTx) {
+            setTransactions(prev => [{
+              ...newTx,
+              attachments_count: newTx.attachments_count?.[0]?.count || 0,
+              user_name: (newTx.profiles as any)?.full_name
+            }, ...prev]);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'financial_transactions'
         },
         (payload) => {
-          console.log('Transaction table change detected:', payload);
-          fetchTransactions(); // Refresh table on any change
+          console.log('Transaction updated:', payload.new);
+          setTransactions(prev => 
+            prev.map(tx => tx.id === payload.new.id 
+              ? { ...tx, ...payload.new } 
+              : tx
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'financial_transactions'
+        },
+        (payload) => {
+          console.log('Transaction deleted:', payload.old);
+          setTransactions(prev => prev.filter(tx => tx.id !== payload.old.id));
         }
       )
       .subscribe();
@@ -126,45 +173,55 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     };
   }, [userId]);
 
+  // Debounce search for better performance
   useEffect(() => {
-    let filtered = [...transactions];
+    const timeoutId = setTimeout(() => {
+      let filtered = [...transactions];
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.project_owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (transaction.static_project_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (transaction.events?.name || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+      // Apply search filter
+      if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        filtered = filtered.filter(transaction =>
+          transaction.description.toLowerCase().includes(lowerSearch) ||
+          transaction.project_owner.toLowerCase().includes(lowerSearch) ||
+          transaction.category.toLowerCase().includes(lowerSearch) ||
+          (transaction.static_project_name || "").toLowerCase().includes(lowerSearch) ||
+          (transaction.events?.name || "").toLowerCase().includes(lowerSearch)
+        );
+      }
 
-    // Apply sorting unless default (created_at asc) to preserve import order
-    if (!(sortField === "created_at" && sortDirection === "asc")) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortField];
-        const bValue = b[sortField];
-        
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        
-        const result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-        return sortDirection === "asc" ? result : -result;
-      });
-    }
+      // Apply sorting unless default (created_at asc) to preserve import order
+      if (!(sortField === "created_at" && sortDirection === "asc")) {
+        filtered.sort((a, b) => {
+          const aValue = a[sortField];
+          const bValue = b[sortField];
+          
+          if (aValue === null || aValue === undefined) return 1;
+          if (bValue === null || bValue === undefined) return -1;
+          
+          const result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          return sortDirection === "asc" ? result : -result;
+        });
+      }
 
-    setFilteredTransactions(filtered);
+      setFilteredTransactions(filtered);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [transactions, searchTerm, sortField, sortDirection]);
 
   const fetchTransactions = async () => {
     try {
+      // Optimized: Use JOIN to get user profiles in single query
       let query = supabase
         .from("financial_transactions")
         .select(`
           *,
           events:project_id(name),
-          attachments_count:financial_attachments(count)
+          attachments_count:financial_attachments(count),
+          profiles!financial_transactions_created_by_fkey(full_name, email),
+          transfer_to_profile:profiles!financial_transactions_transfer_to_user_id_fkey(full_name, email),
+          transfer_from_profile:profiles!financial_transactions_transfer_from_user_id_fkey(full_name, email)
         `)
         .order("created_at", { ascending: true });
 
@@ -177,46 +234,26 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
       if (error) throw error;
 
-      // Get unique user IDs to fetch their profiles
-      const userIds = Array.from(new Set((data || []).map(t => t.created_by)));
-      
-      // Also collect transfer user IDs
-      const transferToUserIds = (data || [])
-        .filter(t => t.transfer_to_user_id)
-        .map(t => t.transfer_to_user_id as string);
-      const transferFromUserIds = (data || [])
-        .filter(t => t.transfer_from_user_id)
-        .map(t => t.transfer_from_user_id as string);
-      
-      const allUserIds = Array.from(new Set([...userIds, ...transferToUserIds, ...transferFromUserIds]));
-      
-      // Fetch user profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", allUserIds);
-
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-      }
-
-      // Create user map for quick lookup
-      const userMap = new Map((profilesData || []).map(profile => [profile.id, profile]));
-
-      // Transform the data to flatten attachments_count and add user names
-      const transformedData = (data || []).map(transaction => ({
+      // Transform data with user names and attachment counts from JOINs
+      const transactions = (data || []).map(transaction => ({
         ...transaction,
+        user_name: (transaction.profiles as any)?.full_name,
         attachments_count: transaction.attachments_count?.[0]?.count || 0,
-        user_name: getUserDisplayName(userMap.get(transaction.created_by) || null, transaction.created_by),
-        transfer_to_user: transaction.transfer_to_user_id 
-          ? userMap.get(transaction.transfer_to_user_id) || null
+        transfer_to_user: transaction.transfer_to_profile 
+          ? {
+              full_name: (transaction.transfer_to_profile as any)?.full_name,
+              email: (transaction.transfer_to_profile as any)?.email
+            }
           : null,
-        transfer_from_user: transaction.transfer_from_user_id
-          ? userMap.get(transaction.transfer_from_user_id) || null
+        transfer_from_user: transaction.transfer_from_profile
+          ? {
+              full_name: (transaction.transfer_from_profile as any)?.full_name,
+              email: (transaction.transfer_from_profile as any)?.email
+            }
           : null,
       }));
 
-      setTransactions(transformedData);
+      setTransactions(transactions);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
       toast({

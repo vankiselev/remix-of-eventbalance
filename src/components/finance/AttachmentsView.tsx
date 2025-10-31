@@ -55,24 +55,45 @@ export function AttachmentsView({
 
       if (error) throw error;
       
-      // Load preview URLs for images
-      const attachmentsWithPreviews = await Promise.all(
-        (data || []).map(async (file) => {
-          if (file.mime_type.startsWith('image/')) {
-            try {
-              const { data: urlData } = await supabase.storage
-                .from('receipts')
-                .createSignedUrl(file.storage_path, 3600);
-              
-              return { ...file, preview_url: urlData?.signedUrl };
-            } catch (err) {
-              console.error('Error loading preview:', err);
-              return file;
+      if (!data || data.length === 0) {
+        setAttachments([]);
+        return;
+      }
+      
+      // Batch load preview URLs for all images at once
+      const imagePaths = data
+        .filter(file => file.mime_type.startsWith('image/'))
+        .map(file => file.storage_path);
+      
+      let previewUrlMap = new Map<string, string>();
+      
+      if (imagePaths.length > 0) {
+        try {
+          // Use createSignedUrls (batch) instead of individual requests
+          const { data: urlsData, error: urlError } = await supabase.storage
+            .from('receipts')
+            .createSignedUrls(imagePaths, 3600);
+          
+          if (urlError) throw urlError;
+          
+          // Create map of path -> signed URL
+          urlsData?.forEach((item, index) => {
+            if (item.signedUrl) {
+              previewUrlMap.set(imagePaths[index], item.signedUrl);
             }
-          }
-          return file;
-        })
-      );
+          });
+        } catch (err) {
+          console.error('Error batch loading previews:', err);
+        }
+      }
+      
+      // Apply preview URLs to attachments
+      const attachmentsWithPreviews = data.map(file => ({
+        ...file,
+        preview_url: file.mime_type.startsWith('image/') 
+          ? previewUrlMap.get(file.storage_path) 
+          : undefined
+      }));
       
       setAttachments(attachmentsWithPreviews);
     } catch (error) {

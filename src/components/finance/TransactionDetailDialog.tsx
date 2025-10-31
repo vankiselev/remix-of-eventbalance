@@ -92,56 +92,53 @@ export function TransactionDetailDialog({
   const [isResending, setIsResending] = useState(false);
   const [auditHistory, setAuditHistory] = useState<AuditLogEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [auditHistoryLoaded, setAuditHistoryLoaded] = useState(false);
   
   if (!transaction) return null;
 
-  // Load audit history for admins
-  useEffect(() => {
-    if (!isOpen || !isAdmin || !transaction.id) return;
+  // Load audit history ONLY when user expands the collapsible (lazy loading)
+  const loadAuditHistory = async () => {
+    if (auditHistoryLoaded || !isAdmin || !transaction.id) return;
     
-    const loadAuditHistory = async () => {
-      setIsLoadingHistory(true);
-      try {
-        const { data: auditLogs, error } = await supabase
-          .from('financial_audit_log')
-          .select(`
-            id,
-            action,
-            changed_by,
-            changed_at,
-            change_description
-          `)
-          .eq('transaction_id', transaction.id)
-          .order('changed_at', { ascending: false });
+    setIsLoadingHistory(true);
+    try {
+      // Use JOIN to get user names in single query (performance optimization)
+      const { data: auditLogs, error } = await supabase
+        .from('financial_audit_log')
+        .select(`
+          id,
+          action,
+          changed_by,
+          changed_at,
+          change_description,
+          profiles!financial_audit_log_changed_by_fkey (
+            full_name
+          )
+        `)
+        .eq('transaction_id', transaction.id)
+        .order('changed_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (auditLogs && auditLogs.length > 0) {
-          // Get user names
-          const userIds = [...new Set(auditLogs.map(log => log.changed_by))];
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', userIds);
+      if (auditLogs && auditLogs.length > 0) {
+        const enrichedLogs: AuditLogEntry[] = auditLogs.map(log => ({
+          id: log.id,
+          action: log.action,
+          changed_by: log.changed_by,
+          changed_at: log.changed_at,
+          change_description: log.change_description,
+          user_name: (log.profiles as any)?.full_name || 'Неизвестный пользователь'
+        }));
 
-          const userMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-
-          const enrichedLogs: AuditLogEntry[] = auditLogs.map(log => ({
-            ...log,
-            user_name: userMap.get(log.changed_by) || 'Неизвестный пользователь'
-          }));
-
-          setAuditHistory(enrichedLogs);
-        }
-      } catch (error) {
-        console.error('Error loading audit history:', error);
-      } finally {
-        setIsLoadingHistory(false);
+        setAuditHistory(enrichedLogs);
+        setAuditHistoryLoaded(true);
       }
-    };
-
-    loadAuditHistory();
-  }, [isOpen, isAdmin, transaction.id]);
+    } catch (error) {
+      console.error('Error loading audit history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   const handleEdit = () => {
     if (onEdit) {
@@ -410,16 +407,31 @@ export function TransactionDetailDialog({
           </div>
 
           {/* Audit History - Only for Admins */}
-          {isAdmin && auditHistory.length > 0 && (
+          {isAdmin && (
             <div className="border-t pt-4">
-              <Collapsible defaultOpen={false}>
+              <Collapsible defaultOpen={false} onOpenChange={(open) => {
+                if (open && !auditHistoryLoaded) {
+                  loadAuditHistory();
+                }
+              }}>
                 <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline w-full">
                   <History className="h-4 w-4" />
                   История изменений
-                  <Badge variant="secondary" className="ml-auto">{auditHistory.length}</Badge>
+                  {auditHistory.length > 0 && (
+                    <Badge variant="secondary" className="ml-auto">{auditHistory.length}</Badge>
+                  )}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-3 space-y-2">
-                  {auditHistory.map(log => {
+                  {isLoadingHistory ? (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      Загрузка истории...
+                    </div>
+                  ) : auditHistory.length === 0 ? (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      История изменений пуста
+                    </div>
+                  ) : (
+                    auditHistory.map(log => {
                     const actionIcon = {
                       'CREATE': <Plus className="h-3 w-3 text-green-600" />,
                       'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
@@ -451,7 +463,8 @@ export function TransactionDetailDialog({
                         </span>
                       </div>
                     );
-                  })}
+                  })
+                  )}
                 </CollapsibleContent>
               </Collapsible>
             </div>
