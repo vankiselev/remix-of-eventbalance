@@ -510,7 +510,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             action: 'CREATE',
             changed_by: user.id,
             new_data: transactionData,
-            change_description: 'Transaction created'
+            change_description: 'Транзакция создана'
           }]);
 
         // If this is a money transfer, send notification to recipient

@@ -14,6 +14,7 @@ interface FileAttachment {
   size_bytes: number;
   created_by: string;
   created_at: string;
+  preview_url?: string;
 }
 
 interface AttachmentsViewProps {
@@ -53,7 +54,27 @@ export function AttachmentsView({
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setAttachments(data || []);
+      
+      // Load preview URLs for images
+      const attachmentsWithPreviews = await Promise.all(
+        (data || []).map(async (file) => {
+          if (file.mime_type.startsWith('image/')) {
+            try {
+              const { data: urlData } = await supabase.storage
+                .from('receipts')
+                .createSignedUrl(file.storage_path, 3600);
+              
+              return { ...file, preview_url: urlData?.signedUrl };
+            } catch (err) {
+              console.error('Error loading preview:', err);
+              return file;
+            }
+          }
+          return file;
+        })
+      );
+      
+      setAttachments(attachmentsWithPreviews);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast({
@@ -201,54 +222,73 @@ export function AttachmentsView({
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            {attachments.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-xl">{getFileIcon(file.mime_type)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" title={file.original_filename}>
-                      {file.original_filename}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(file.size_bytes)} • {file.mime_type}
-                    </p>
+            {attachments.map((file) => {
+              const isImage = file.mime_type.startsWith('image/');
+              
+              return (
+                <div
+                  key={file.id}
+                  className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  {/* Image Preview */}
+                  {isImage && file.preview_url ? (
+                    <div className="relative">
+                      <img 
+                        src={file.preview_url} 
+                        alt={file.original_filename}
+                        className="w-full h-auto max-h-96 object-contain bg-gray-50 cursor-pointer"
+                        onClick={() => handleFileClick(file)}
+                      />
+                    </div>
+                  ) : null}
+                  
+                  {/* File Info and Actions */}
+                  <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {!isImage && <span className="text-xl">{getFileIcon(file.mime_type)}</span>}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" title={file.original_filename}>
+                          {file.original_filename}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(file.size_bytes)} • {file.mime_type}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleFileClick(file)}
+                        title="Открыть"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownload(file)}
+                        title="Скачать"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(file.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Удалить"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleFileClick(file)}
-                    title="Предпросмотр"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownload(file)}
-                    title="Скачать"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(file.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      title="Удалить"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
