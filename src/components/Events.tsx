@@ -744,13 +744,15 @@ const Events = () => {
                 </Popover>
               )}
 
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectionMode(true)}
-              >
-                Выбрать
-              </Button>
+              {hasPermission('events.delete') && (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectionMode(true)}
+                >
+                  Выбрать
+                </Button>
+              )}
 
               {/* Поиск */}
               <div className="relative flex-1 min-w-[200px]">
