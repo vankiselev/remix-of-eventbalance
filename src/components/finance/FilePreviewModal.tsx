@@ -143,8 +143,10 @@ export function FilePreviewModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between pr-8">
-            <span className="truncate flex-1 mr-4">{file?.original_filename}</span>
+          <div className="flex items-center justify-between pr-12">
+            <DialogTitle className="truncate flex-1 mr-4">
+              {file?.original_filename}
+            </DialogTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -166,7 +168,7 @@ export function FilePreviewModal({
                 </Button>
               )}
             </div>
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
