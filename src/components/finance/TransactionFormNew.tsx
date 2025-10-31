@@ -866,12 +866,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }, 3000);
                         } else if (value === 'Получено/Возвращено клиенту') {
                           // Auto-fill description for client category
-                          form.setValue('description', 'Получил от клиента');
+                          form.setValue('description', 'Получил(а) от клиента');
                           setIsDescriptionAutoFilled(true);
                           
                           toast({
                             title: "Автоматически заполнено",
-                            description: "Описание: Получил от клиента",
+                            description: "Описание: Получил(а) от клиента",
                             duration: 2000,
                           });
                           
@@ -930,12 +930,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                        setIsDescriptionAutoFilled(false);
                                      }, 3000);
                                    } else if (firstResult === 'Получено/Возвращено клиенту') {
-                                     form.setValue('description', 'Получил от клиента');
+                                     form.setValue('description', 'Получил(а) от клиента');
                                      setIsDescriptionAutoFilled(true);
                                      
                                      toast({
                                        title: "Автоматически заполнено",
-                                       description: "Описание: Получил от клиента",
+                                       description: "Описание: Получил(а) от клиента",
                                        duration: 2000,
                                      });
                                      
