@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,9 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { UserRoleDisplay } from "@/components/roles/UserRoleDisplay";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { useProfiles, useEmployeesData } from "@/hooks/useProfiles";
+import { useAllUsersCashTotals } from "@/hooks/useAllUsersCashTotals";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Profile {
   id: string;
@@ -70,11 +73,17 @@ interface CombinedUser {
 const Staff = () => {
   const { hasPermission } = useUserPermissions();
   const { isAdmin } = useUserRbacRoles();
-  const [allUsers, setAllUsers] = useState<CombinedUser[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<CombinedUser[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { t } = useTranslation();
+
+  // React Query hooks для данных
+  const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useProfiles();
+  const { data: employeesData = [], isLoading: employeesLoading } = useEmployeesData();
+  const { data: cashTotals = [], isLoading: cashLoading } = useAllUsersCashTotals();
+
+  // Local state
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -86,133 +95,88 @@ const Staff = () => {
     salary: "",
     hire_date: "",
   });
-  
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { t } = useTranslation();
 
+  // Fetch current user profile
   useEffect(() => {
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
-    if (!user) return;
-
-    try {
-      // Get current user profile
+    const fetchCurrentProfile = async () => {
+      if (!user) return;
       const { data: currentProfile } = await supabase
         .rpc("get_user_basic_profile")
         .single();
-
       setCurrentUserProfile(currentProfile);
+    };
+    fetchCurrentProfile();
+  }, [user]);
 
-      // Fetch all profiles - admins see full data, employees see basic data only
-      let profilesData;
-      if (isAdmin) {
-        const { data, error: adminError } = await supabase.rpc("get_admin_profiles");
-        if (adminError) {
-          console.error("Error fetching admin profiles:", adminError);
-          throw adminError;
-        }
-        profilesData = data;
-      } else {
-        // Non-admin users can see all basic profiles (active only)
-        const { data, error: basicError } = await supabase.rpc("get_all_basic_profiles");
-        if (basicError) {
-          console.error("Error fetching basic profiles:", basicError);
-          throw basicError;
-        }
-        profilesData = data;
-      }
-
-      setProfiles(profilesData || []);
-
-      // Fetch employees data to get employment details
-      const { data: employeesData, error: employeesError } = await supabase
-        .from("employees")
-        .select(`
-          id,
-          user_id,
-          position,
-          hire_date,
-          created_at,
-          updated_at
-          ${isAdmin ? ', salary' : ''}
-        `)
-        .order("hire_date", { ascending: false });
-
-      if (employeesError) {
-        console.error("Error fetching employees:", employeesError);
-        throw employeesError;
-      }
-
-      // Create a map of employee data by user_id for quick lookup
-      const employeeMap = new Map();
-      (employeesData || []).forEach((emp: any) => {
-        employeeMap.set(emp.user_id, {
-          employee_id: emp.id,
-          position: emp.position,
-          salary: isAdmin ? emp.salary : null,
-          hire_date: emp.hire_date
-        });
+  // Объединяем все данные в один массив с useMemo
+  const allUsers = useMemo(() => {
+    // Создаем мапы для быстрого поиска
+    const employeeMap = new Map();
+    employeesData.forEach((emp: any) => {
+      employeeMap.set(emp.user_id, {
+        employee_id: emp.id,
+        position: emp.position,
+        salary: emp.salary || null,
+        hire_date: emp.hire_date
       });
+    });
 
-      // Fetch cash data for all users if admin
-      const cashDataMap = new Map();
-      if (isAdmin) {
-        const cashPromises = (profilesData || []).map(async (profile: Profile) => {
-          const { data } = await supabase
-            .rpc('calculate_user_cash_totals', { user_uuid: profile.id })
-            .maybeSingle();
-          return { userId: profile.id, cashData: data };
-        });
-        const cashResults = await Promise.all(cashPromises);
-        cashResults.forEach(result => {
-          if (result.cashData) {
-            cashDataMap.set(result.userId, result.cashData);
-          }
-        });
-      }
-
-      // Combine profiles with employee data and cash data
-      const combinedUsers: CombinedUser[] = (profilesData || []).map((profile: Profile) => {
-        const employeeData = employeeMap.get(profile.id);
-        const cashData = cashDataMap.get(profile.id);
-        
-        return {
-          id: profile.id,
-          email: profile.email,
-          full_name: profile.full_name,
-          phone: profile.phone,
-          birth_date: profile.birth_date,
-          avatar_url: profile.avatar_url,
-          created_at: profile.created_at,
-          employment_status: profile.employment_status,
-          termination_date: profile.termination_date,
-          termination_reason: profile.termination_reason,
-          ...employeeData,
-          ...(cashData && {
-            total_cash: cashData.total_cash,
-            cash_nastya: cashData.cash_nastya,
-            cash_lera: cashData.cash_lera,
-            cash_vanya: cashData.cash_vanya
-          })
-        };
+    const cashMap = new Map();
+    cashTotals.forEach((cash: any) => {
+      cashMap.set(cash.user_id, {
+        total_cash: cash.total_cash,
+        cash_nastya: cash.cash_nastya,
+        cash_lera: cash.cash_lera,
+        cash_vanya: cash.cash_vanya
       });
+    });
 
-      setAllUsers(combinedUsers);
-      setFilteredUsers(combinedUsers);
-    } catch (error) {
-      console.error("Error fetching staff data:", error);
-      toast({
-        variant: "destructive",
-        title: t('error'),
-        description: "Не удалось загрузить данные о пользователях",
-      });
-    } finally {
-      setLoading(false);
+    // Объединяем данные
+    return profiles.map((profile: any) => {
+      const employeeData = employeeMap.get(profile.id);
+      const cashData = cashMap.get(profile.id);
+      
+      return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        phone: profile.phone,
+        birth_date: profile.birth_date,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        employment_status: profile.employment_status,
+        termination_date: profile.termination_date,
+        termination_reason: profile.termination_reason,
+        ...employeeData,
+        ...cashData
+      };
+    });
+  }, [profiles, employeesData, cashTotals]);
+
+  // Фильтрация пользователей
+  const filteredUsers = useMemo(() => {
+    let filtered = allUsers;
+
+    // Фильтр по статусу
+    filtered = filtered.filter(user => {
+      const isTerminated = user.employment_status === 'terminated';
+      return statusTab === 'terminated' ? isTerminated : !isTerminated;
+    });
+
+    // Фильтр по поиску
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(user => 
+        user.full_name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        (user.position && user.position.toLowerCase().includes(searchLower))
+      );
     }
-  };
+
+    return filtered;
+  }, [allUsers, searchTerm, statusTab]);
+
+  const loading = profilesLoading || employeesLoading || cashLoading;
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,7 +206,7 @@ const Staff = () => {
         hire_date: "",
       });
       setShowCreateDialog(false);
-      fetchData();
+      refetchProfiles();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -251,29 +215,6 @@ const Staff = () => {
       });
     }
   };
-
-  // Filter and search functionality
-  useEffect(() => {
-    let filtered = allUsers;
-
-    // Apply employment status filter
-    filtered = filtered.filter(user => {
-      const isTerminated = user.employment_status === 'terminated';
-      return statusTab === 'terminated' ? isTerminated : !isTerminated;
-    });
-
-    // Apply search filter
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(user => 
-        user.full_name.toLowerCase().includes(searchLower) ||
-        user.email.toLowerCase().includes(searchLower) ||
-        (user.position && user.position.toLowerCase().includes(searchLower))
-      );
-    }
-
-    setFilteredUsers(filtered);
-  }, [allUsers, searchTerm, statusTab]);
 
 
   const handleEditUser = (user: CombinedUser) => {
@@ -294,15 +235,17 @@ const Staff = () => {
   };
 
   const handleProfileSuccess = async (wasTerminated?: boolean) => {
-    // Принудительно обновляем все данные
-    await fetchData();
+    // Обновляем данные через React Query
+    await refetchProfiles();
+    
     // Переключаем вкладку в зависимости от действия
     if (wasTerminated === true) {
-      setStatusTab('terminated'); // Переключаем на "Уволенные"
+      setStatusTab('terminated');
     } else if (wasTerminated === false) {
-      setStatusTab('active'); // Переключаем на "Активные"
+      setStatusTab('active');
     }
-    // Закрываем диалог и сбрасываем состояние
+    
+    // Закрываем диалог
     setShowProfileDialog(false);
     setSelectedUser(null);
   };
