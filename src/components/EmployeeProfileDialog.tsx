@@ -390,8 +390,8 @@ export const EmployeeProfileDialog = ({
         console.log('[RoleAssignment] Refetch queries complete');
         
         // Force immediate refetch of the roles hook
-        const refetchResult = await refetchRoles();
-        console.log('[RoleAssignment] Roles refetched:', refetchResult?.data);
+        await refetchRoles();
+        console.log('[RoleAssignment] Roles refetched');
         
         // Longer delay to ensure UI updates propagate
         await new Promise(resolve => setTimeout(resolve, 500));

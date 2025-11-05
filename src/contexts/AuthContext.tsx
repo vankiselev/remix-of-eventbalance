@@ -4,6 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatFullName } from '@/utils/formatName';
 
+interface RbacRole {
+  name: string;
+  code: string;
+  is_admin_role: boolean;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -17,10 +23,18 @@ interface AuthContextType {
     middle_name?: string;
     avatar_url: string | null;
   } | null;
+  rbacRoles: RbacRole[];
+  permissions: string[];
+  isAdmin: boolean;
+  hasPermission: (code: string) => boolean;
   signOut: () => Promise<void>;
+  refetchUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const CACHE_KEY = 'user_profile_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -43,62 +57,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     middle_name?: string;
     avatar_url: string | null;
   } | null>(null);
+  const [rbacRoles, setRbacRoles] = useState<RbacRole[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Load user profile and check employment status
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      if (!user) {
-        setUserRole(null);
-        setUserRoleName(null);
-        setUserProfile(null);
-        return;
-      }
-
-      const { data } = await supabase
-        .rpc("get_user_basic_profile")
-        .single();
-      
-      if (data) {
-        setUserRole(data.role || 'employee');
-        setUserProfile({
-          full_name: formatFullName(data),
-          last_name: data.last_name,
-          first_name: data.first_name,
-          middle_name: data.middle_name,
-          avatar_url: data.avatar_url || null
-        });
-
-        // Загружаем RBAC роли пользователя и определяем, является ли он админом
-        const { data: rbacRoles } = await supabase
-          .from('user_role_assignments')
-          .select('role_definitions(is_admin_role, name)')
-          .eq('user_id', user.id);
-
-        const hasAdminRole = Array.isArray(rbacRoles)
-          ? rbacRoles.some((r: any) => r.role_definitions?.is_admin_role === true)
-          : false;
-
-        // Синхронизируем совместимый userRole для всего приложения
-        setUserRole(hasAdminRole ? 'admin' : (data.role || 'employee'));
-
-        // Человекочитаемое имя роли для бейджа
-        if (rbacRoles && rbacRoles.length > 0) {
-          const firstRoleName = rbacRoles[0]?.role_definitions?.name;
-          setUserRoleName(firstRoleName || (hasAdminRole ? 'Администратор' : 'Сотрудник'));
-        } else {
-          setUserRoleName(hasAdminRole ? 'Администратор' : 'Сотрудник');
+  // Load cached data immediately
+  const loadFromCache = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          console.log('[AuthContext] Loading from cache');
+          if (data.profile) {
+            setUserRole(data.profile.role || 'employee');
+            setUserProfile({
+              full_name: formatFullName(data.profile),
+              last_name: data.profile.last_name,
+              first_name: data.profile.first_name,
+              middle_name: data.profile.middle_name,
+              avatar_url: data.profile.avatar_url || null
+            });
+          }
+          setRbacRoles(data.rbac_roles || []);
+          setPermissions(data.permissions || []);
+          const adminStatus = data.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
+          setIsAdmin(adminStatus);
+          setUserRoleName(data.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'));
+          return true;
         }
+      }
+    } catch (e) {
+      console.error('[AuthContext] Cache load error:', e);
+    }
+    return false;
+  };
 
+  // Unified data loading function
+  const loadUserData = async (showLoadingState = true) => {
+    if (!user) {
+      setUserRole(null);
+      setUserRoleName(null);
+      setUserProfile(null);
+      setRbacRoles([]);
+      setPermissions([]);
+      setIsAdmin(false);
+      localStorage.removeItem(CACHE_KEY);
+      return;
+    }
+
+    try {
+      // Load all data in one call using optimized RPC
+      const { data, error } = await supabase.rpc('get_user_profile_with_roles');
+      
+      if (error) throw error;
+      
+      console.log('[AuthContext] Loaded user data:', data);
+      
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const profileData = data as any;
+        
         // Check employment status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('employment_status, termination_date')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.employment_status === 'terminated') {
-          const terminationDate = profile.termination_date 
-            ? new Date(profile.termination_date).toLocaleDateString('ru-RU')
+        if (profileData.profile?.employment_status === 'terminated') {
+          const terminationDate = profileData.profile.termination_date 
+            ? new Date(profileData.profile.termination_date).toLocaleDateString('ru-RU')
             : '';
           const message = terminationDate 
             ? `Доступ закрыт! Вы были уволены ${terminationDate}`
@@ -110,70 +132,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserRole(null);
           setUserRoleName(null);
           setUserProfile(null);
+          setRbacRoles([]);
+          setPermissions([]);
+          setIsAdmin(false);
+          localStorage.removeItem(CACHE_KEY);
           window.location.href = '/auth';
+          return;
         }
-      }
-    };
 
-    if (user) {
-      loadUserProfile();
+        // Set profile data
+        if (profileData.profile) {
+          const adminStatus = profileData.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
+          setUserRole(adminStatus ? 'admin' : (profileData.profile.role || 'employee'));
+          setUserProfile({
+            full_name: formatFullName(profileData.profile),
+            last_name: profileData.profile.last_name,
+            first_name: profileData.profile.first_name,
+            middle_name: profileData.profile.middle_name,
+            avatar_url: profileData.profile.avatar_url || null
+          });
+          setRbacRoles(profileData.rbac_roles || []);
+          setPermissions(profileData.permissions || []);
+          setIsAdmin(adminStatus);
+          setUserRoleName(profileData.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'));
+        }
+
+        // Cache the data
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: profileData,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('[AuthContext] Error loading user data:', error);
     }
+  };
+
+  // Load user profile and check employment status
+  useEffect(() => {
+    if (!user) {
+      loadUserData();
+      return;
+    }
+
+    // Load from cache first (instant)
+    const hasCache = loadFromCache();
+    
+    // Then load fresh data in background
+    loadUserData(false);
   }, [user]);
 
-  // Real-time subscription for role changes
+  // Single realtime subscription for all user data changes
   useEffect(() => {
     if (!user) return;
 
-    const roleChannel = supabase
-      .channel(`user-role-${user.id}`)
+    const channel = supabase
+      .channel('user-data-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'user_role_assignments',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${user.id}`,
         },
-        async (payload) => {
-          console.log('Role changed for current user:', payload);
-          
-          // Reload user profile
-          const { data } = await supabase
-            .rpc("get_user_basic_profile")
-            .single();
-          
-          if (data) {
-            // Перечитываем RBAC роли и определяем админский статус
-            const { data: rbacRoles } = await supabase
-              .from('user_role_assignments')
-              .select('role_definitions(is_admin_role, name)')
-              .eq('user_id', user.id);
-
-            const hasAdminRole = Array.isArray(rbacRoles)
-              ? rbacRoles.some((r: any) => r.role_definitions?.is_admin_role === true)
-              : false;
-
-            setUserRole(hasAdminRole ? 'admin' : (data.role || 'employee'));
-
-            const newRoleName = (rbacRoles && rbacRoles[0]?.role_definitions?.name) || (hasAdminRole ? 'Администратор' : 'Сотрудник');
-            setUserRoleName(newRoleName);
-            
-            toast.success('Ваша роль была изменена администратором', {
-              description: `Новая роль: ${newRoleName}`,
-              duration: 5000
-            });
-            
-            // Force page reload after 2 seconds
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          }
+        () => {
+          console.log('[AuthContext] Role assignment changed, reloading...');
+          setTimeout(() => loadUserData(false), 0);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        () => {
+          console.log('[AuthContext] Profile changed, reloading...');
+          setTimeout(() => loadUserData(false), 0);
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(roleChannel);
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
@@ -205,9 +249,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserRole(null);
       setUserRoleName(null);
       setUserProfile(null);
+      setRbacRoles([]);
+      setPermissions([]);
+      setIsAdmin(false);
+      localStorage.removeItem(CACHE_KEY);
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const hasPermission = (code: string) => {
+    if (isAdmin) return true;
+    return permissions.includes(code);
+  };
+
+  const refetchUserData = async () => {
+    await loadUserData();
   };
 
   const value = {
@@ -217,7 +274,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userRole,
     userRoleName,
     userProfile,
+    rbacRoles,
+    permissions,
+    isAdmin,
+    hasPermission,
     signOut,
+    refetchUserData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

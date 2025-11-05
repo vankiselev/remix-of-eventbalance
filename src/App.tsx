@@ -32,7 +32,17 @@ import MessagesPage from "./pages/MessagesPage";
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import { notificationSound } from "@/utils/notificationSound";
 
-const queryClient = new QueryClient();
+// Optimized React Query configuration for better caching
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes - data is considered fresh
+      gcTime: 10 * 60 * 1000, // 10 minutes - cache retention (formerly cacheTime)
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      retry: 1, // Only 1 retry instead of default 3
+    },
+  },
+});
 
 const App = () => {
   useEffect(() => {

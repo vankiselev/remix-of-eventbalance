@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +18,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import EventsImportDialog from "@/components/EventsImportDialog";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { cn } from "@/lib/utils";
-import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { formatFullName, getInitials } from "@/utils/formatName";
@@ -28,8 +27,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { signOut, user, userRole, userProfile } = useAuth();
-  const { roles: userRoles, isAdmin: isAdminRbac } = useUserRbacRoles();
+  const { signOut, user, userProfile, rbacRoles, isAdmin: isAdminRbac } = useAuth();
   const { isFinancier } = useFinancierPermissions();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -296,7 +294,7 @@ const Layout = ({ children }: LayoutProps) => {
                         {displayName}
                       </span>
                       <div className="text-[10px]">
-                        <RoleBadges roles={userRoles} maxDisplay={1} />
+                        <RoleBadges roles={rbacRoles} maxDisplay={1} />
                       </div>
                     </div>
                   </Button>
