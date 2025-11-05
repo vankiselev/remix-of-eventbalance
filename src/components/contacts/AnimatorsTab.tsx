@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAnimators } from "@/hooks/useAnimators";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -22,8 +23,7 @@ interface Animator {
 
 const AnimatorsTab = () => {
   const { hasPermission } = useUserPermissions();
-  const [animators, setAnimators] = useState<Animator[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: animators = [], isLoading: loading, refetch: refetchAnimators } = useAnimators();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAnimator, setEditingAnimator] = useState<Animator | null>(null);
   const [formData, setFormData] = useState({
@@ -35,26 +35,6 @@ const AnimatorsTab = () => {
     specialization: ""
   });
 
-  const fetchAnimators = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('animators')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setAnimators(data || []);
-    } catch (error) {
-      console.error('Error fetching animators:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить аниматоров",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +67,7 @@ const AnimatorsTab = () => {
         description: "",
         specialization: ""
       });
-      fetchAnimators();
+      refetchAnimators();
     } catch (error) {
       console.error('Error saving animator:', error);
       toast({
@@ -122,7 +102,7 @@ const AnimatorsTab = () => {
       
       if (error) throw error;
       toast({ title: "Аниматор удален" });
-      fetchAnimators();
+      refetchAnimators();
     } catch (error) {
       console.error('Error deleting animator:', error);
       toast({
@@ -133,9 +113,6 @@ const AnimatorsTab = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAnimators();
-  }, []);
 
   if (loading) {
     return <div>Загрузка...</div>;

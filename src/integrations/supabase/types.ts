@@ -1829,6 +1829,16 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
         }[]
       }
+      get_all_users_cash_totals: {
+        Args: never
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+          user_id: string
+        }[]
+      }
       get_company_cash_summary: {
         Args: never
         Returns: {
@@ -1850,7 +1860,9 @@ export type Database = {
           vacation_type: string
         }[]
       }
-      get_dashboard_stats: { Args: { user_uuid: string }; Returns: Json }
+      get_dashboard_stats:
+        | { Args: { user_uuid: string }; Returns: Json }
+        | { Args: never; Returns: Json }
       get_employee_basic_data: {
         Args: never
         Returns: {

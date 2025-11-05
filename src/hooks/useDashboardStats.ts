@@ -19,52 +19,30 @@ export const useDashboardStats = () => {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      // Using direct queries with correct column names
-      const { count: eventsCount } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_archived', false);
-
-      const { data: transactions } = await supabase
-        .from('financial_transactions')
-        .select('income_amount, expense_amount, cash_type');
-
-      let totalIncome = 0;
-      let totalExpenses = 0;
-      let nastyaCash = 0;
-      let leraCash = 0;
-      let vanyaCash = 0;
-
-      transactions?.forEach(t => {
-        if (t.income_amount) totalIncome += t.income_amount;
-        if (t.expense_amount) totalExpenses += t.expense_amount;
-        
-        const netAmount = (t.income_amount || 0) - (t.expense_amount || 0);
-        if (t.cash_type === 'nastya') nastyaCash += netAmount;
-        else if (t.cash_type === 'lera') leraCash += netAmount;
-        else if (t.cash_type === 'vanya') vanyaCash += netAmount;
-      });
-
-      const totalCash = nastyaCash + leraCash + vanyaCash;
-      const profit = totalIncome - totalExpenses;
-
+      // Use optimized RPC function instead of loading all transactions
+      const { data, error } = await supabase.rpc('get_dashboard_stats');
+      
+      if (error) throw error;
+      
+      const result = data as any;
+      
       const stats: DashboardStats = {
-        total_events: eventsCount || 0,
-        upcoming_events: eventsCount || 0,
+        total_events: result?.total_events || 0,
+        upcoming_events: result?.total_events || 0,
         today_events: 0,
         this_week_events: 0,
-        total_income: totalIncome,
-        total_expenses: totalExpenses,
-        profit,
-        cash_on_hand: totalCash,
-        nastya_cash: nastyaCash,
-        lera_cash: leraCash,
-        vanya_cash: vanyaCash,
+        total_income: result?.total_income || 0,
+        total_expenses: result?.total_expenses || 0,
+        profit: (result?.total_income || 0) - (result?.total_expenses || 0),
+        cash_on_hand: (result?.cash_nastya || 0) + (result?.cash_lera || 0) + (result?.cash_vanya || 0),
+        nastya_cash: result?.cash_nastya || 0,
+        lera_cash: result?.cash_lera || 0,
+        vanya_cash: result?.cash_vanya || 0,
       };
       
       return stats;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 3 * 60 * 1000, // 3 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };

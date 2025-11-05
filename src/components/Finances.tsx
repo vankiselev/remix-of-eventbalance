@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
+import { useCompanyCashSummary } from "@/hooks/useCompanyCashSummary";
+import { useUserCashSummary } from "@/hooks/useUserCashSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, ArrowLeft, Upload, Trash2, CheckCircle, XCircle, Clock, Search, Filter } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -42,20 +45,15 @@ const Finances = () => {
   const { hasPermission } = useUserPermissions();
   const { isFinancier, canReview, canApprove } = useFinancierPermissions();
   const { pendingCount } = usePendingTransactionsCount();
+  const { user } = useAuth();
+  const { isAdmin: isAdminRbac } = useUserRbacRoles();
   
   console.log('[Finances] isFinancier status:', isFinancier, { canReview, canApprove });
-  const [companySummary, setCompanySummary] = useState<CashSummary>({
-    total_cash: 0,
-    cash_nastya: 0,
-    cash_lera: 0,
-    cash_vanya: 0,
-  });
-  const [userSummary, setUserSummary] = useState<CashSummary>({
-    total_cash: 0,
-    cash_nastya: 0,
-    cash_lera: 0,
-    cash_vanya: 0,
-  });
+  
+  // Use React Query hooks for cash summaries
+  const { data: companySummary = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 } } = useCompanyCashSummary(isAdminRbac);
+  const { data: userSummary = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 } } = useUserCashSummary(user?.id);
+  
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<{id: string, name: string} | null>(null);
@@ -78,10 +76,9 @@ const Finances = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { user } = useAuth();
-  const { isAdmin: isAdminRbac } = useUserRbacRoles();
   const { toast } = useToast();
   const { setActions } = useFinancesActions();
+  const queryClient = useQueryClient();
 
   // Fetch transactions for review
   const { data: reviewTransactions, isLoading: reviewLoading, refetch: refetchReview } = useQuery({
@@ -208,11 +205,7 @@ const Finances = () => {
     }
   }, [user, isAdminRbac]);
 
-  useEffect(() => {
-    if (user && !loading) {
-      fetchData();
-    }
-  }, [user, isAdmin, loading]);
+  // Removed useEffect that called fetchData - React Query hooks handle this
 
   // Set actions for the Layout dropdown menu without causing render loops
   useEffect(() => {
@@ -231,96 +224,7 @@ const Finances = () => {
     };
   }, [setActions, handleExportClick, handleImportClick, handleDeleteClick]);
 
-  // Realtime subscription for automatic updates with instant optimistic totals
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('financial-transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          try {
-            const calc = (row: any) => {
-              if (!row) return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined };
-              const raw = (row.cash_type as string | undefined) || '';
-              const cashType = raw.trim().toLowerCase();
-              // Учитываем только наличные кошельки (регистр не важен)
-              const isNastya = cashType === 'наличка настя' || raw === 'Наличка Настя';
-              const isLera = cashType === 'наличка лера' || raw === 'Наличка Лера';
-              const isVanya = cashType === 'наличка ваня' || raw === 'Наличка Ваня';
-              if (!isNastya && !isLera && !isVanya) {
-                return { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: row.created_by };
-              }
-              const income = Number(row.income_amount || 0);
-              const expense = Number(row.expense_amount || 0);
-              const delta = income - expense; // дельта по транзакции
-              const nastya = isNastya ? delta : 0;
-              const lera = isLera ? delta : 0;
-              const vanya = isVanya ? delta : 0;
-              const total = nastya + lera + vanya; // сумма дельт по кошелькам
-              return { total, nastya, lera, vanya, created_by: row.created_by };
-            };
-
-            let d = { total: 0, nastya: 0, lera: 0, vanya: 0, created_by: undefined as string | undefined };
-            if (payload.eventType === 'INSERT') {
-              d = calc(payload.new);
-            } else if (payload.eventType === 'DELETE') {
-              const x = calc(payload.old);
-              d = { ...x, total: -x.total, nastya: -x.nastya, lera: -x.lera, vanya: -x.vanya };
-            } else if (payload.eventType === 'UPDATE') {
-              const n = calc(payload.new);
-              const o = calc(payload.old);
-              d = { total: n.total - o.total, nastya: n.nastya - o.nastya, lera: n.lera - o.lera, vanya: n.vanya - o.vanya, created_by: payload.new?.created_by } as any;
-            }
-
-            // Update personal summary instantly
-            if (d.created_by && d.created_by === user.id) {
-              setUserSummary(prev => ({
-                total_cash: prev.total_cash + d.total,
-                cash_nastya: prev.cash_nastya + d.nastya,
-                cash_lera: prev.cash_lera + d.lera,
-                cash_vanya: prev.cash_vanya + d.vanya,
-              }));
-            }
-
-            // Update selected employee summary instantly (for admin viewing employee)
-            if (selectedEmployee?.id && d.created_by === selectedEmployee.id) {
-              setSelectedEmployeeSummary(prev => ({
-                total_cash: prev.total_cash + d.total,
-                cash_nastya: prev.cash_nastya + d.nastya,
-                cash_lera: prev.cash_lera + d.lera,
-                cash_vanya: prev.cash_vanya + d.vanya,
-              }));
-            }
-
-            // Update company summary instantly for admins
-            if (isAdmin) {
-              setCompanySummary(prev => ({
-                total_cash: prev.total_cash + d.total,
-                cash_nastya: prev.cash_nastya + d.nastya,
-                cash_lera: prev.cash_lera + d.lera,
-                cash_vanya: prev.cash_vanya + d.vanya,
-              }));
-            }
-          } catch (e) {
-            console.error('Realtime delta apply failed:', e);
-            // Only refetch on error to reconcile
-            fetchData();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, isAdmin, selectedEmployee]);
+  // Removed old realtime subscription - React Query handles caching and updates
 
   const checkUserRole = async () => {
     try {
@@ -338,86 +242,7 @@ const Finances = () => {
     }
   };
 
-  const fetchData = async () => {
-    try {
-      // Helper to normalize cash type
-      const norm = (v?: string) => (v || '').trim().toLowerCase();
-      const reduceTotals = (rows: any[]) => {
-        let nastya = 0, lera = 0, vanya = 0;
-        for (const r of rows) {
-          const delta = Number(r.income_amount || 0) - Number(r.expense_amount || 0);
-          const ct = norm(r.cash_type as string);
-          if (ct === 'наличка настя') nastya += delta;
-          else if (ct === 'наличка лера') lera += delta;
-          else if (ct === 'наличка ваня') vanya += delta;
-        }
-        return {
-          total_cash: nastya + lera + vanya,
-          cash_nastya: nastya,
-          cash_lera: lera,
-          cash_vanya: vanya,
-        };
-      };
-
-      // Company summary
-      if (isAdmin) {
-        const { data: summary, error } = await supabase.rpc('get_company_cash_summary');
-        if (error) {
-          console.warn('get_company_cash_summary failed, using fallback:', error.message);
-        }
-        if (summary && summary.length > 0) {
-          setCompanySummary(summary[0]);
-          const s = summary[0] as any;
-          const allZero = Number(s.total_cash || 0) === 0 && Number(s.cash_nastya || 0) === 0 && Number(s.cash_lera || 0) === 0 && Number(s.cash_vanya || 0) === 0;
-          if (allZero) {
-            const { data: rows } = await supabase
-              .from('financial_transactions')
-              .select('cash_type,income_amount,expense_amount')
-              .limit(5000);
-            if (rows) setCompanySummary(reduceTotals(rows));
-          }
-        } else {
-          // Fallback: compute on client
-          const { data: rows } = await supabase
-            .from('financial_transactions')
-            .select('cash_type,income_amount,expense_amount')
-            .limit(5000);
-          if (rows) setCompanySummary(reduceTotals(rows));
-        }
-      }
-
-      // Personal summary
-      const { data: userSummaryData } = await supabase
-        .rpc('calculate_user_cash_totals', { user_uuid: user?.id });
-      if (userSummaryData && userSummaryData.length > 0) {
-        setUserSummary(userSummaryData[0]);
-        const s = userSummaryData[0] as any;
-        const allZero = Number(s.total_cash || 0) === 0 && Number(s.cash_nastya || 0) === 0 && Number(s.cash_lera || 0) === 0 && Number(s.cash_vanya || 0) === 0;
-        if (allZero && user?.id) {
-          const { data: rows } = await supabase
-            .from('financial_transactions')
-            .select('cash_type,income_amount,expense_amount,created_by')
-            .eq('created_by', user.id)
-            .limit(5000);
-          if (rows) setUserSummary(reduceTotals(rows));
-        }
-      } else if (user?.id) {
-        const { data: rows } = await supabase
-          .from('financial_transactions')
-          .select('cash_type,income_amount,expense_amount,created_by')
-          .eq('created_by', user.id)
-          .limit(5000);
-        if (rows) setUserSummary(reduceTotals(rows));
-      }
-    } catch (error: any) {
-      console.error('Error fetching financial data:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Ошибка',
-        description: 'Не удалось загрузить финансовые данные',
-      });
-    }
-  };
+  // Removed fetchData - now using React Query hooks
 
   const handleDeleteAllTransactions = async () => {
     try {
@@ -433,7 +258,9 @@ const Finances = () => {
         description: "Все транзакции были удалены",
       });
 
-      fetchData(); // Обновляем данные после удаления
+      // Invalidate caches to refetch data
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
     } catch (error: any) {
       console.error("Error deleting all transactions:", error);
       toast({
@@ -472,7 +299,9 @@ const Finances = () => {
   };
 
   const handleTransactionSuccess = () => {
-    fetchData();
+    // Invalidate caches to refetch data
+    queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
     setEditTransaction(null);
   };
 

@@ -57,7 +57,7 @@ const App = () => {
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
     <AuthProvider>
       <FinancesActionsProvider>
         <ImportProgressProvider>

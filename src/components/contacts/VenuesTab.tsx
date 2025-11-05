@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useVenues } from "@/hooks/useVenues";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -23,8 +24,7 @@ interface Venue {
 
 const VenuesTab = () => {
   const { hasPermission } = useUserPermissions();
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: venues = [], isLoading: loading, refetch: refetchVenues } = useVenues();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [formData, setFormData] = useState({
@@ -37,26 +37,6 @@ const VenuesTab = () => {
     description: ""
   });
 
-  const fetchVenues = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('venues')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setVenues(data || []);
-    } catch (error) {
-      console.error('Error fetching venues:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить площадки",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +75,7 @@ const VenuesTab = () => {
         capacity: "",
         description: ""
       });
-      fetchVenues();
+      refetchVenues();
     } catch (error) {
       console.error('Error saving venue:', error);
       toast({
@@ -131,7 +111,7 @@ const VenuesTab = () => {
       
       if (error) throw error;
       toast({ title: "Площадка удалена" });
-      fetchVenues();
+      refetchVenues();
     } catch (error) {
       console.error('Error deleting venue:', error);
       toast({
@@ -142,9 +122,6 @@ const VenuesTab = () => {
     }
   };
 
-  useEffect(() => {
-    fetchVenues();
-  }, []);
 
   if (loading) {
     return <div>Загрузка...</div>;

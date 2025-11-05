@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useVacations } from "@/hooks/useVacations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,13 +35,12 @@ interface Vacation {
 }
 
 const VacationSchedule = () => {
-  const [vacations, setVacations] = useState<Vacation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+  const { data: vacations = [], isLoading: loading, refetch: refetchVacations } = useVacations(activeTab);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingVacation, setEditingVacation] = useState<Vacation | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
   const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -59,10 +59,9 @@ const VacationSchedule = () => {
 
   useEffect(() => {
     if (user) {
-      fetchVacations();
       fetchUserProfile();
     }
-  }, [user, activeTab]);
+  }, [user]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -81,35 +80,6 @@ const VacationSchedule = () => {
     }
   };
 
-  const fetchVacations = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      let query = supabase
-        .from("vacations")
-        .select("*");
-      
-      if (activeTab === 'active') {
-        query = query.gte('end_date', today).order("start_date", { ascending: true });
-      } else {
-        query = query.lt('end_date', today).order("start_date", { ascending: false });
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setVacations(data || []);
-    } catch (error) {
-      console.error("Error fetching vacations:", error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Не удалось загрузить график отпусков",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateVacation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,7 +137,7 @@ const VacationSchedule = () => {
       });
 
       resetForm();
-      fetchVacations();
+      refetchVacations();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -229,7 +199,7 @@ const VacationSchedule = () => {
       });
 
       resetForm();
-      fetchVacations();
+      refetchVacations();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -257,7 +227,7 @@ const VacationSchedule = () => {
       });
 
       resetForm();
-      fetchVacations();
+      refetchVacations();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -759,7 +729,7 @@ const VacationSchedule = () => {
         vacation={approvalVacation}
         open={showApprovalDialog}
         onOpenChange={setShowApprovalDialog}
-        onSuccess={fetchVacations}
+        onSuccess={refetchVacations}
       />
     </div>
   );

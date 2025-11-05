@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useContractors } from "@/hooks/useContractors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -22,8 +23,7 @@ interface Contractor {
 
 const ContractorsTab = () => {
   const { hasPermission } = useUserPermissions();
-  const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: contractors = [], isLoading: loading, refetch: refetchContractors } = useContractors();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
   const [formData, setFormData] = useState({
@@ -35,26 +35,6 @@ const ContractorsTab = () => {
     specialization: ""
   });
 
-  const fetchContractors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('contractors')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setContractors(data || []);
-    } catch (error) {
-      console.error('Error fetching contractors:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить подрядчиков",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +67,7 @@ const ContractorsTab = () => {
         description: "",
         specialization: ""
       });
-      fetchContractors();
+      refetchContractors();
     } catch (error) {
       console.error('Error saving contractor:', error);
       toast({
@@ -122,7 +102,7 @@ const ContractorsTab = () => {
       
       if (error) throw error;
       toast({ title: "Подрядчик удален" });
-      fetchContractors();
+      refetchContractors();
     } catch (error) {
       console.error('Error deleting contractor:', error);
       toast({
@@ -133,9 +113,6 @@ const ContractorsTab = () => {
     }
   };
 
-  useEffect(() => {
-    fetchContractors();
-  }, []);
 
   if (loading) {
     return <div>Загрузка...</div>;

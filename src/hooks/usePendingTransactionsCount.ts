@@ -25,7 +25,9 @@ export const usePendingTransactionsCount = () => {
       return count || 0;
     },
     enabled: isFinancier,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
+    // Removed aggressive refetchInterval - rely on realtime instead
   });
 
   // Realtime subscription for transaction changes

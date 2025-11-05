@@ -28,6 +28,8 @@ export const useCategoryIcons = () => {
       if (error) throw error;
       return data as CategoryIcon[];
     },
+    staleTime: 15 * 60 * 1000, // 15 minutes - icons rarely change
+    gcTime: 60 * 60 * 1000, // 1 hour
   });
 
   const updateCategoryIcon = useMutation({

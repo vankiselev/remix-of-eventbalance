@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useEvents } from "@/hooks/useEvents";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useAnimators } from "@/hooks/useAnimators";
+import { useVenues } from "@/hooks/useVenues";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,8 +70,12 @@ interface Event {
 
 const Events = () => {
   const { hasPermission } = useUserPermissions();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isLoading: eventsLoading, refetch: refetchEvents } = useEvents();
+  const { data: employees = [] } = useEmployees('active');
+  const { data: animators = [] } = useAnimators();
+  const { data: venues = [] } = useVenues();
+  
+  const loading = eventsLoading;
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sortByName, setSortByName] = useState(false);
@@ -79,9 +87,6 @@ const Events = () => {
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [periodFilter, setPeriodFilter] = useState<'future' | 'past' | 'all' | 'cancelled'>('future');
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [animators, setAnimators] = useState<any[]>([]);
-  const [venues, setVenues] = useState<any[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -92,47 +97,6 @@ const Events = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    fetchEvents();
-    loadRelatedData();
-  }, []);
-
-  const loadRelatedData = async () => {
-    try {
-      const [employeesRes, animatorsRes, venuesRes] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, avatar_url").eq("employment_status", "active").order("full_name"),
-        supabase.from("animators").select("*").order("name"),
-        supabase.from("venues").select("*").order("name"),
-      ]);
-
-      if (employeesRes.data) setEmployees(employeesRes.data);
-      if (animatorsRes.data) setAnimators(animatorsRes.data);
-      if (venuesRes.data) setVenues(venuesRes.data);
-    } catch (error) {
-      console.error("Error loading related data:", error);
-    }
-  };
-
-  const fetchEvents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .order("start_date", { ascending: true });
-
-      if (error) throw error;
-      setEvents(data || []);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Не удалось загрузить мероприятия",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
@@ -150,7 +114,7 @@ const Events = () => {
   };
 
   const handleEventSave = () => {
-    fetchEvents();
+    refetchEvents();
     handleDialogClose();
   };
 
@@ -437,7 +401,7 @@ const Events = () => {
       });
 
       setSelectedEventIds(new Set());
-      await fetchEvents();
+      await refetchEvents();
     } catch (error) {
       console.error('Error deleting events:', error);
       toast({

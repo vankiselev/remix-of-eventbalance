@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useClients } from "@/hooks/useClients";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -22,8 +23,7 @@ interface Client {
 
 const ClientsTab = () => {
   const { hasPermission } = useUserPermissions();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: clients = [], isLoading: loading, refetch: refetchClients } = useClients();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formData, setFormData] = useState({
@@ -35,26 +35,6 @@ const ClientsTab = () => {
     description: ""
   });
 
-  const fetchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setClients(data || []);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить клиентов",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +67,7 @@ const ClientsTab = () => {
         company: "",
         description: ""
       });
-      fetchClients();
+      refetchClients();
     } catch (error) {
       console.error('Error saving client:', error);
       toast({
@@ -122,7 +102,7 @@ const ClientsTab = () => {
       
       if (error) throw error;
       toast({ title: "Клиент удален" });
-      fetchClients();
+      refetchClients();
     } catch (error) {
       console.error('Error deleting client:', error);
       toast({
@@ -133,9 +113,6 @@ const ClientsTab = () => {
     }
   };
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
 
   if (loading) {
     return <div>Загрузка...</div>;
