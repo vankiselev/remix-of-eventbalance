@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FinancesActionsProvider } from "@/contexts/FinancesActionsContext";
@@ -31,6 +31,7 @@ import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import MessagesPage from "./pages/MessagesPage";
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import { notificationSound } from "@/utils/notificationSound";
+import { supabase } from "@/integrations/supabase/client";
 
 // Optimized React Query configuration for better caching
 const queryClient = new QueryClient({
@@ -43,6 +44,58 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const RealtimeSync = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Централизованные realtime подписки для автоматической инвалидации кэша
+    const channel = supabase
+      .channel('global-changes')
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'events' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['events'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'financial_transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['all-users-cash-totals'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'vacations' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['vacations'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'profiles' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['profiles'] });
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        queryClient.invalidateQueries({ queryKey: ['all-users-cash-totals'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'animators' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['animators'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'clients' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'contractors' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['contractors'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'venues' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['venues'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'category_icons' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['category-icons'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return null;
+};
 
 const App = () => {
   useEffect(() => {
@@ -57,15 +110,16 @@ const App = () => {
   }, []);
 
   return (
-    <BrowserRouter>
-    <AuthProvider>
-      <FinancesActionsProvider>
-        <ImportProgressProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <FinancesActionsProvider>
+            <ImportProgressProvider>
+              <TooltipProvider>
+                <RealtimeSync />
+                <Toaster />
+                <Sonner />
+                <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -96,13 +150,13 @@ const App = () => {
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-        </ImportProgressProvider>
-      </FinancesActionsProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+                </Routes>
+              </TooltipProvider>
+            </ImportProgressProvider>
+          </FinancesActionsProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 
