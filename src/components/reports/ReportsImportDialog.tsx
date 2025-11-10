@@ -180,22 +180,10 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
   const setupColumnMapping = (headers: string[]) => {
     const mapping: ColumnMapping = {
-      project_name: null,
-      preparation_work: null,
-      onsite_work: null,
+      project_name: headers.length > 1 ? 1 : null,  // Столбец B (индекс 1)
+      preparation_work: headers.length > 3 ? 3 : null,  // Столбец D (индекс 3)
+      onsite_work: headers.length > 4 ? 4 : null,  // Столбец E (индекс 4)
     };
-
-    headers.forEach((header, index) => {
-      const lowerHeader = header.toLowerCase().trim();
-      
-      if (lowerHeader.includes('проект') || lowerHeader.includes('project')) {
-        mapping.project_name = index;
-      } else if (lowerHeader.includes('подготов') || lowerHeader.includes('preparation')) {
-        mapping.preparation_work = index;
-      } else if (lowerHeader.includes('площадк') || lowerHeader.includes('onsite')) {
-        mapping.onsite_work = index;
-      }
-    });
 
     setColumnMapping(mapping);
   };
