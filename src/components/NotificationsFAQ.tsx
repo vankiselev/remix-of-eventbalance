@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertCircle, Smartphone, Globe, Bell } from 'lucide-react';
+import { AlertCircle, Smartphone, Globe, Bell, HelpCircle, Home } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const NotificationsFAQ = () => {
@@ -95,7 +95,10 @@ export const NotificationsFAQ = () => {
 
           <AccordionItem value="item-4">
             <AccordionTrigger>
-              Почему не приходят уведомления?
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                Почему не приходят уведомления?
+              </div>
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-3 text-sm">
@@ -118,9 +121,12 @@ export const NotificationsFAQ = () => {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="item-5">
+          <AccordionItem value="item-5" className="border-b-0">
             <AccordionTrigger>
-              Можно ли добавить приложение на главный экран?
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Можно ли добавить приложение на главный экран?
+              </div>
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-3 text-sm">
