@@ -1912,19 +1912,18 @@ export type Database = {
       get_user_basic_profile: {
         Args: never
         Returns: {
-          avatar_url: string
-          birth_date: string
-          created_at: string
-          email: string
-          first_name: string
-          full_name: string
-          id: string
-          last_name: string
-          middle_name: string
-          phone: string
-          role: Database["public"]["Enums"]["user_role"]
-          updated_at: string
+          user_avatar_url: string
+          user_birth_date: string
+          user_email: string
+          user_employment_status: string
+          user_first_name: string
+          user_full_name: string
+          user_id: string
+          user_last_name: string
+          user_middle_name: string
+          user_phone: string
           user_position: string
+          user_salary: number
         }[]
       }
       get_user_full_context: { Args: { user_uuid: string }; Returns: Json }

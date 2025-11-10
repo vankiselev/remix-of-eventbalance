@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2, LogOut } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 
 const profileSchema = z.object({
@@ -28,18 +29,18 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface Profile {
-  id: string;
-  email: string;
-  full_name: string;
-  last_name?: string;
-  first_name?: string;
-  middle_name?: string;
-  role: 'admin' | 'employee';
-  phone?: string;
-  phone_e164?: string;
-  birth_date?: string;
-  avatar_url?: string;
+  user_id: string;
+  user_email: string;
+  user_full_name: string;
+  user_last_name?: string;
+  user_first_name?: string;
+  user_middle_name?: string;
+  user_phone?: string;
+  user_birth_date?: string;
+  user_avatar_url?: string;
   user_position?: string;
+  user_salary?: number;
+  user_employment_status?: string;
 }
 
 const ProfilePage = () => {
@@ -81,15 +82,15 @@ const ProfilePage = () => {
 
       if (data) {
         setProfile(data);
-        setAvatarUrl(data.avatar_url);
+        setAvatarUrl(data.user_avatar_url);
         
         form.reset({
-          last_name: data.last_name || "",
-          first_name: data.first_name || "",
-          middle_name: data.middle_name || "",
-          email: data.email || "",
-          phone_display: data.phone || "",
-          birth_date: data.birth_date || "",
+          last_name: data.user_last_name || "",
+          first_name: data.user_first_name || "",
+          middle_name: data.user_middle_name || "",
+          email: data.user_email || "",
+          phone_display: data.user_phone || "",
+          birth_date: data.user_birth_date || "",
         });
       }
     } catch (error: any) {
@@ -251,7 +252,7 @@ const ProfilePage = () => {
               <Avatar className="h-24 w-24">
                 <AvatarImage src={avatarUrl || undefined} />
                 <AvatarFallback className="text-2xl">
-                  {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
+                  {profile.user_full_name?.charAt(0)?.toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-center gap-2">
@@ -295,6 +296,14 @@ const ProfilePage = () => {
               <div className="rounded-lg border p-4 bg-muted/50">
                 <div className="text-sm font-medium mb-1">Должность</div>
                 <div className="text-base">{profile.user_position}</div>
+              </div>
+            )}
+
+            {/* Salary (read-only) */}
+            {profile.user_salary && (
+              <div className="rounded-lg border p-4 bg-muted/50">
+                <div className="text-sm font-medium mb-1">Оклад</div>
+                <div className="text-base font-semibold">{formatCurrency(profile.user_salary)}</div>
               </div>
             )}
 

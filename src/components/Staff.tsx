@@ -106,7 +106,17 @@ const Staff = () => {
       const { data: currentProfile } = await supabase
         .rpc("get_user_basic_profile")
         .single();
-      setCurrentUserProfile(currentProfile);
+      if (currentProfile) {
+        // Map to expected Profile structure
+        setCurrentUserProfile({
+          user_id: currentProfile.user_id,
+          user_email: currentProfile.user_email,
+          user_full_name: currentProfile.user_full_name,
+          user_avatar_url: currentProfile.user_avatar_url,
+          user_position: currentProfile.user_position,
+          user_salary: currentProfile.user_salary,
+        } as any);
+      }
     };
     fetchCurrentProfile();
   }, [user]);

@@ -233,8 +233,7 @@ const Finances = () => {
         .single();
 
       if (error) throw error;
-      const isUserAdmin = profile?.role === "admin";
-      setIsAdmin(isUserAdmin);
+      // Check admin status from rbac_roles via context instead
       setLoading(false);
     } catch (error) {
       console.error("Error checking user role:", error);
