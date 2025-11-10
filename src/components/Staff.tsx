@@ -529,7 +529,7 @@ const Staff = () => {
                                   <CurrencyInput
                                     value={editedSalary || undefined}
                                     onChange={(value) => setEditedSalary(value || null)}
-                                    className="w-32"
+                                    className="w-48"
                                   />
                                 </div>
                               ) : (
