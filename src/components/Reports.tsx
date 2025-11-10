@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2, Upload } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2, Upload, X, CheckSquare } from "lucide-react";
 import { ReportsImportDialog } from "./reports/ReportsImportDialog";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -70,6 +70,7 @@ const Reports = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedReports, setSelectedReports] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -370,6 +371,13 @@ const Reports = () => {
     }
   };
 
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      setSelectedReports([]);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -468,12 +476,14 @@ const Reports = () => {
           importDialogOpen={importDialogOpen}
           setImportDialogOpen={setImportDialogOpen}
           fetchReports={fetchReports}
-          selectedReports={selectedReports}
-          toggleReportSelection={toggleReportSelection}
-          toggleSelectAll={toggleSelectAll}
-          bulkDeleteDialogOpen={bulkDeleteDialogOpen}
-          setBulkDeleteDialogOpen={setBulkDeleteDialogOpen}
-          handleBulkDelete={handleBulkDelete}
+        selectedReports={selectedReports}
+        toggleReportSelection={toggleReportSelection}
+        toggleSelectAll={toggleSelectAll}
+        bulkDeleteDialogOpen={bulkDeleteDialogOpen}
+        setBulkDeleteDialogOpen={setBulkDeleteDialogOpen}
+        handleBulkDelete={handleBulkDelete}
+        isSelectionMode={isSelectionMode}
+        toggleSelectionMode={toggleSelectionMode}
         />
       )}
     </div>
@@ -510,7 +520,9 @@ const EmployeeReportsView = ({
   toggleSelectAll,
   bulkDeleteDialogOpen,
   setBulkDeleteDialogOpen,
-  handleBulkDelete
+  handleBulkDelete,
+  isSelectionMode,
+  toggleSelectionMode
 }: any) => {
   return (
     <div className="space-y-4 md:space-y-6">
@@ -526,7 +538,26 @@ const EmployeeReportsView = ({
         </div>
         
         <div className="flex items-center gap-2 md:gap-3 justify-between sm:justify-end">
-          {selectedReports.length > 0 && (
+          <Button 
+            variant={isSelectionMode ? "default" : "outline"}
+            size="sm" 
+            onClick={toggleSelectionMode}
+            className="flex-1 sm:flex-none"
+          >
+            {isSelectionMode ? (
+              <>
+                <X className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                <span className="text-xs md:text-sm">Отмена</span>
+              </>
+            ) : (
+              <>
+                <CheckSquare className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                <span className="text-xs md:text-sm">Выбрать</span>
+              </>
+            )}
+          </Button>
+
+          {isSelectionMode && selectedReports.length > 0 && (
             <Button 
               variant="destructive" 
               size="sm" 
@@ -876,7 +907,7 @@ const EmployeeReportsView = ({
         </Card>
       ) : (
         <div className="space-y-3 md:space-y-4">
-          {reports.length > 0 && (
+          {isSelectionMode && reports.length > 0 && (
             <div className="flex items-center gap-2 p-2 border rounded-lg bg-muted/50">
               <Checkbox
                 checked={selectedReports.length === reports.length}
@@ -896,13 +927,15 @@ const EmployeeReportsView = ({
             )}>
               <CardContent className="p-4 md:p-6">
                 <div className="flex gap-3">
-                  <div className="pt-1">
-                    <Checkbox
-                      checked={selectedReports.includes(report.id)}
-                      onCheckedChange={() => toggleReportSelection(report.id)}
-                      id={`report-${report.id}`}
-                    />
-                  </div>
+                  {isSelectionMode && (
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={selectedReports.includes(report.id)}
+                        onCheckedChange={() => toggleReportSelection(report.id)}
+                        id={`report-${report.id}`}
+                      />
+                    </div>
+                  )}
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 md:mb-4">
