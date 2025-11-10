@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Clock, FileText, Check, ChevronsUpDown, Users, User, Grid, List, Banknote, Car, MapPin, Pencil, Trash2, Upload } from "lucide-react";
+import { ReportsImportDialog } from "./reports/ReportsImportDialog";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ const Reports = () => {
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [deletingReport, setDeletingReport] = useState<Report | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -374,6 +376,9 @@ const Reports = () => {
               setProjectOpen={setProjectOpen}
               viewMode={viewMode}
               setViewMode={setViewMode}
+              importDialogOpen={importDialogOpen}
+              setImportDialogOpen={setImportDialogOpen}
+              fetchReports={fetchReports}
             />
           </TabsContent>
           
@@ -404,6 +409,9 @@ const Reports = () => {
           setProjectOpen={setProjectOpen}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          importDialogOpen={importDialogOpen}
+          setImportDialogOpen={setImportDialogOpen}
+          fetchReports={fetchReports}
         />
       )}
     </div>
@@ -431,7 +439,10 @@ const EmployeeReportsView = ({
   projectOpen, 
   setProjectOpen,
   viewMode,
-  setViewMode
+  setViewMode,
+  importDialogOpen,
+  setImportDialogOpen,
+  fetchReports
 }: any) => {
   return (
     <div className="space-y-4 md:space-y-6">
@@ -461,6 +472,15 @@ const EmployeeReportsView = ({
             </Button>
           </div>
           
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setImportDialogOpen(true)}
+            className="flex-1 sm:flex-none"
+          >
+            <Upload className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+            <span className="text-xs md:text-sm">Импорт</span>
+          </Button>
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -742,6 +762,12 @@ const EmployeeReportsView = ({
             </Form>
           </DialogContent>
           </Dialog>
+
+          <ReportsImportDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            onImportComplete={fetchReports}
+          />
         </div>
       </div>
 
