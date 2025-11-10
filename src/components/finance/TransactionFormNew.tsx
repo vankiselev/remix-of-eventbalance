@@ -1233,7 +1233,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Сумма Траты (₽)
+                      Сумма Траты
                       {form.watch("category") === "Передано или получено от сотрудника" && (
                         <span className="ml-2 text-xs text-primary font-normal">
                           ← Заполните это поле
@@ -1266,7 +1266,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                 name="income_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Сумма Прихода (₽)</FormLabel>
+                    <FormLabel>Сумма Прихода</FormLabel>
                     <FormControl>
                       <CurrencyInput
                         value={field.value}
