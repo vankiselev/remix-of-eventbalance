@@ -2,8 +2,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RolesManagement } from "@/components/roles/RolesManagement";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
 import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagement";
+import { TransactionCategoriesManagement } from "@/components/admin/TransactionCategoriesManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -26,6 +27,10 @@ const AdministrationPage = () => {
               <UserPlus className="h-4 w-4" />
               Приглашения
             </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2 whitespace-nowrap">
+              <Tags className="h-4 w-4" />
+              Категории
+            </TabsTrigger>
             <TabsTrigger value="icons" className="flex items-center gap-2 whitespace-nowrap">
               <Palette className="h-4 w-4" />
               Иконки
@@ -38,6 +43,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="invitations" className="mt-6">
             <InvitationsManagement />
+          </TabsContent>
+
+          <TabsContent value="categories" className="mt-6">
+            <TransactionCategoriesManagement />
           </TabsContent>
 
           <TabsContent value="icons" className="mt-6">

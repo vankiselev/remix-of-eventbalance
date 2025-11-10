@@ -15,7 +15,8 @@ import { FileUpload, UploadedFile } from './FileUpload';
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
-import { PROJECT_OWNERS, EXPENSE_INCOME_CATEGORIES, STATIC_PROJECTS } from '@/utils/constants';
+import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
+import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import {
@@ -95,6 +96,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRbacRoles();
+  const { categories: transactionCategories } = useTransactionCategories();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -887,7 +889,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   "Передано или получено от сотрудника"
                 ];
                 
-                const filteredCategories = (isMoneyTransferProject ? moneyTransferCategories : EXPENSE_INCOME_CATEGORIES)
+                const categoryNames = transactionCategories.map(c => c.name);
+                const filteredCategories = (isMoneyTransferProject ? moneyTransferCategories : categoryNames)
                   .filter(category =>
                     category.toLowerCase().includes(categorySearch.toLowerCase())
                   );
