@@ -567,17 +567,21 @@ const Staff = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
-                            <CardTitle className="text-base leading-tight">
-                              <TextTruncate lines={2}>
-                                {user.full_name}
-                          </TextTruncate>
-                        </CardTitle>
-                        <CardDescription className="text-sm">
-                          <TextTruncate>
-                            {user.email}
-                          </TextTruncate>
-                        </CardDescription>
-                      </div>
+                            <div className="space-y-0.5">
+                              {user.full_name.split(' ').map((namePart, index) => (
+                                <div key={index} className="text-sm font-medium leading-tight">
+                                  <TextTruncate lines={1}>
+                                    {namePart}
+                                  </TextTruncate>
+                                </div>
+                              ))}
+                            </div>
+                            <CardDescription className="text-sm mt-1">
+                              <TextTruncate>
+                                {user.email}
+                              </TextTruncate>
+                            </CardDescription>
+                          </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <div className="flex flex-col gap-1 items-end">

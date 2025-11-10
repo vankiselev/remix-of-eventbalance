@@ -1932,6 +1932,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_profile_with_roles: { Args: never; Returns: Json }
+      get_user_rbac_roles_by_id: {
+        Args: { target_user_id: string }
+        Returns: Json
+      }
       get_user_role: {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["user_role"]

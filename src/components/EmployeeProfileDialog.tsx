@@ -747,7 +747,11 @@ export const EmployeeProfileDialog = ({
                     <FormItem>
                       <FormLabel>Должность</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Введите должность" />
+                        <Input 
+                          {...field} 
+                          placeholder="Введите должность"
+                          disabled={!isAdmin}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
