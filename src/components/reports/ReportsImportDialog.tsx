@@ -94,7 +94,24 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
         complete: (results) => {
           if (results.data && results.data.length > 0) {
             const data = results.data as string[][];
-            const headerRow = data[0];
+            
+            // Get column letters (A, B, C, etc.)
+            const getColumnLetter = (index: number): string => {
+              let letter = '';
+              while (index >= 0) {
+                letter = String.fromCharCode((index % 26) + 65) + letter;
+                index = Math.floor(index / 26) - 1;
+              }
+              return letter;
+            };
+
+            // Create headers with column letters
+            const headerRow = data[0].map((cell: string, index: number) => {
+              const columnLetter = getColumnLetter(index);
+              const cellValue = cell ? String(cell).trim() : '';
+              return cellValue ? `${columnLetter}: ${cellValue}` : `Столбец ${columnLetter}`;
+            });
+            
             setHeaders(headerRow);
             
             const rows = data.slice(1).filter(row => row.some(cell => cell && cell.trim()));
@@ -133,13 +150,29 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
   const processExcelSheet = async (wb: XLSX.WorkBook, sheetName: string) => {
     const sheet = wb.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as any[][];
     
     if (jsonData.length === 0) {
       throw new Error('Лист пуст');
     }
 
-    const headerRow = jsonData[0].map(String);
+    // Get column letters (A, B, C, etc.)
+    const getColumnLetter = (index: number): string => {
+      let letter = '';
+      while (index >= 0) {
+        letter = String.fromCharCode((index % 26) + 65) + letter;
+        index = Math.floor(index / 26) - 1;
+      }
+      return letter;
+    };
+
+    // Create headers with column letters
+    const headerRow = jsonData[0].map((cell: any, index: number) => {
+      const columnLetter = getColumnLetter(index);
+      const cellValue = cell ? String(cell).trim() : '';
+      return cellValue ? `${columnLetter}: ${cellValue}` : `Столбец ${columnLetter}`;
+    });
+    
     setHeaders(headerRow);
     
     const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim()));
