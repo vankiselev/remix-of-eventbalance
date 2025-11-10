@@ -443,6 +443,8 @@ const Reports = () => {
               bulkDeleteDialogOpen={bulkDeleteDialogOpen}
               setBulkDeleteDialogOpen={setBulkDeleteDialogOpen}
               handleBulkDelete={handleBulkDelete}
+              isSelectionMode={isSelectionMode}
+              toggleSelectionMode={toggleSelectionMode}
             />
           </TabsContent>
           
