@@ -74,7 +74,7 @@ interface CombinedUser {
 const Staff = () => {
   const { hasPermission } = useUserPermissions();
   const { isAdmin } = useUserRbacRoles();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -102,7 +102,7 @@ const Staff = () => {
   // Fetch current user profile
   useEffect(() => {
     const fetchCurrentProfile = async () => {
-      if (!user) return;
+      if (!authUser) return;
       const { data: currentProfile } = await supabase
         .rpc("get_user_basic_profile")
         .single();
@@ -119,7 +119,7 @@ const Staff = () => {
       }
     };
     fetchCurrentProfile();
-  }, [user]);
+  }, [authUser]);
 
   // Объединяем все данные в один массив с useMemo
   const allUsers = useMemo(() => {
@@ -193,7 +193,7 @@ const Staff = () => {
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!authUser) return;
 
     try {
       const employeeData = {
@@ -637,9 +637,9 @@ const Staff = () => {
                           <span className="font-medium">Телефон:</span> {user.phone}
                         </div>
                       )}
-                      {hasPermission('staff.view_all') && user.salary && (
+                      {(hasPermission('staff.view_all') || user.id === authUser?.id) && user.salary && (
                         <div className="text-sm">
-                          <span className="font-medium">Зарплата:</span>{" "}
+                          <span className="font-medium">Оклад:</span>{" "}
                           <span>{formatCurrency(user.salary)}</span>
                         </div>
                       )}
