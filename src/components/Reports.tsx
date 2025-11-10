@@ -921,14 +921,19 @@ const EmployeeReportsView = ({
           )}
           
           {reports.map((report: any) => (
-            <Card key={report.id} className={cn(
-              "transition-colors",
-              selectedReports.includes(report.id) && "ring-2 ring-primary"
-            )}>
+            <Card 
+              key={report.id} 
+              className={cn(
+                "transition-colors",
+                selectedReports.includes(report.id) && "ring-2 ring-primary",
+                isSelectionMode && "cursor-pointer"
+              )}
+              onClick={() => isSelectionMode && toggleReportSelection(report.id)}
+            >
               <CardContent className="p-4 md:p-6">
                 <div className="flex gap-3">
                   {isSelectionMode && (
-                    <div className="pt-1">
+                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedReports.includes(report.id)}
                         onCheckedChange={() => toggleReportSelection(report.id)}
@@ -995,7 +1000,7 @@ const EmployeeReportsView = ({
                   </>
                 )}
 
-                <div className="flex gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
+                <div className="flex gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t" onClick={(e) => e.stopPropagation()}>
                   <Button
                     variant="outline"
                     size="sm"
