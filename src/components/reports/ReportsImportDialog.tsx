@@ -397,7 +397,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите лист" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100] bg-popover">
                   {workbook.SheetNames.map((sheetName) => (
                     <SelectItem key={sheetName} value={sheetName}>
                       {sheetName}
@@ -438,7 +438,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                     <SelectTrigger>
                       <SelectValue placeholder="Выберите столбец" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[100] bg-popover">
                       {headers.map((header, index) => (
                         <SelectItem key={index} value={index.toString()}>
                           {header}
@@ -457,7 +457,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                     <SelectTrigger>
                       <SelectValue placeholder="Выберите столбец" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[100] bg-popover">
                       {headers.map((header, index) => (
                         <SelectItem key={index} value={index.toString()}>
                           {header}
@@ -476,7 +476,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                     <SelectTrigger>
                       <SelectValue placeholder="Выберите столбец" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[100] bg-popover">
                       {headers.map((header, index) => (
                         <SelectItem key={index} value={index.toString()}>
                           {header}
