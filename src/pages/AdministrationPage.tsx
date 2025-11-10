@@ -3,8 +3,9 @@ import { RolesManagement } from "@/components/roles/RolesManagement";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
 import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagement";
 import { TransactionCategoriesManagement } from "@/components/admin/TransactionCategoriesManagement";
+import { TransactionProjectsManagement } from "@/components/admin/TransactionProjectsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -31,6 +32,10 @@ const AdministrationPage = () => {
               <Tags className="h-4 w-4" />
               Категории
             </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2 whitespace-nowrap">
+              <FolderKanban className="h-4 w-4" />
+              Проекты
+            </TabsTrigger>
             <TabsTrigger value="icons" className="flex items-center gap-2 whitespace-nowrap">
               <Palette className="h-4 w-4" />
               Иконки
@@ -47,6 +52,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="categories" className="mt-6">
             <TransactionCategoriesManagement />
+          </TabsContent>
+
+          <TabsContent value="projects" className="mt-6">
+            <TransactionProjectsManagement />
           </TabsContent>
 
           <TabsContent value="icons" className="mt-6">
