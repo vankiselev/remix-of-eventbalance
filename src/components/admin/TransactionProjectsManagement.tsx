@@ -32,10 +32,8 @@ export function TransactionProjectsManagement() {
   const handleCreate = () => {
     if (!newProjectName.trim()) return;
     
-    const maxOrder = Math.max(...allProjects.map(p => p.display_order), 0);
     createProject.mutate({
       name: newProjectName.trim(),
-      display_order: maxOrder + 1,
     });
     
     setNewProjectName("");
@@ -115,9 +113,6 @@ export function TransactionProjectsManagement() {
                   {!project.is_active && (
                     <Badge variant="secondary">Неактивен</Badge>
                   )}
-                  <span className="text-xs text-muted-foreground">
-                    Порядок: {project.display_order}
-                  </span>
                 </div>
                 <div className="flex gap-2">
                   <Button

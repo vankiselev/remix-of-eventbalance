@@ -32,10 +32,8 @@ export function TransactionCategoriesManagement() {
   const handleCreate = () => {
     if (!newCategoryName.trim()) return;
     
-    const maxOrder = Math.max(...allCategories.map(c => c.display_order), 0);
     createCategory.mutate({
       name: newCategoryName.trim(),
-      display_order: maxOrder + 1,
     });
     
     setNewCategoryName("");
@@ -115,9 +113,6 @@ export function TransactionCategoriesManagement() {
                   {!category.is_active && (
                     <Badge variant="secondary">Неактивна</Badge>
                   )}
-                  <span className="text-xs text-muted-foreground">
-                    Порядок: {category.display_order}
-                  </span>
                 </div>
                 <div className="flex gap-2">
                   <Button

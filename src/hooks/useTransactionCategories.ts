@@ -22,7 +22,7 @@ export const useTransactionCategories = () => {
         .from('transaction_categories')
         .select('*')
         .eq('is_active', true)
-        .order('display_order');
+        .order('name');
       
       if (error) throw error;
       return data as TransactionCategory[];
@@ -36,7 +36,7 @@ export const useTransactionCategories = () => {
       const { data, error } = await supabase
         .from('transaction_categories')
         .select('*')
-        .order('display_order');
+        .order('name');
       
       if (error) throw error;
       return data as TransactionCategory[];
@@ -45,12 +45,11 @@ export const useTransactionCategories = () => {
   });
 
   const createCategory = useMutation({
-    mutationFn: async (category: { name: string; display_order: number }) => {
+    mutationFn: async (category: { name: string }) => {
       const { error } = await supabase
         .from('transaction_categories')
         .insert({
           name: category.name,
-          display_order: category.display_order,
           is_active: true,
         });
       
@@ -73,7 +72,6 @@ export const useTransactionCategories = () => {
         .from('transaction_categories')
         .update({
           name: category.name,
-          display_order: category.display_order,
           is_active: category.is_active,
         })
         .eq('id', category.id);

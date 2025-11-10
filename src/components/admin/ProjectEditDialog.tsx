@@ -15,7 +15,6 @@ interface ProjectEditDialogProps {
 
 export function ProjectEditDialog({ project, open, onOpenChange, onSave }: ProjectEditDialogProps) {
   const [name, setName] = useState(project?.name || "");
-  const [displayOrder, setDisplayOrder] = useState(project?.display_order || 0);
   const [isActive, setIsActive] = useState(project?.is_active ?? true);
 
   const handleSave = () => {
@@ -24,7 +23,6 @@ export function ProjectEditDialog({ project, open, onOpenChange, onSave }: Proje
     onSave({
       id: project.id,
       name,
-      display_order: displayOrder,
       is_active: isActive,
     });
     
@@ -46,17 +44,6 @@ export function ProjectEditDialog({ project, open, onOpenChange, onSave }: Proje
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Введите название"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="order">Порядок сортировки</Label>
-            <Input
-              id="order"
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-              placeholder="0"
             />
           </div>
           
