@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
-import { Plus, Users, User, Edit, UserPlus, Search, Shield } from "lucide-react";
+import { Plus, Users, User, Edit, UserPlus, Search, Shield, Save, DollarSign, Check, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
@@ -24,6 +24,7 @@ import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useProfiles, useEmployeesData } from "@/hooks/useProfiles";
 import { useAllUsersCashTotals } from "@/hooks/useAllUsersCashTotals";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Profile {
   id: string;
@@ -88,7 +89,9 @@ const Staff = () => {
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusTab, setStatusTab] = useState<"active" | "terminated">("active");
+  const [statusTab, setStatusTab] = useState<"active" | "terminated" | "salaries">("active");
+  const [editingSalaryUserId, setEditingSalaryUserId] = useState<string | null>(null);
+  const [editedSalary, setEditedSalary] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     user_id: "",
     position: "",
@@ -250,6 +253,60 @@ const Staff = () => {
     setSelectedUser(null);
   };
 
+  const handleStartEditSalary = (userId: string, currentSalary: number | null) => {
+    setEditingSalaryUserId(userId);
+    setEditedSalary(currentSalary);
+  };
+
+  const handleCancelEditSalary = () => {
+    setEditingSalaryUserId(null);
+    setEditedSalary(null);
+  };
+
+  const handleSaveSalary = async (userId: string) => {
+    try {
+      const user = allUsers.find(u => u.id === userId);
+      if (!user) return;
+
+      if (user.employee_id) {
+        // Обновляем существующего сотрудника
+        const { error } = await supabase
+          .from('employees')
+          .update({ salary: editedSalary })
+          .eq('id', user.employee_id);
+
+        if (error) throw error;
+      } else {
+        // Создаем новую запись сотрудника, если её нет
+        const { error } = await supabase
+          .from('employees')
+          .insert({
+            user_id: userId,
+            position: 'Не указано',
+            salary: editedSalary,
+            hire_date: new Date().toISOString().split('T')[0]
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Успешно",
+        description: "Оклад обновлен",
+      });
+
+      setEditingSalaryUserId(null);
+      setEditedSalary(null);
+      await refetchProfiles();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить оклад",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -362,7 +419,7 @@ const Staff = () => {
         )}
       </div>
 
-      {/* Tabs for Active/Terminated */}
+      {/* Tabs for Active/Terminated/Salaries */}
       <Tabs value={statusTab} onValueChange={(value: any) => setStatusTab(value)}>
         <TabsList className="w-full overflow-x-auto scrollbar-hide">
           <TabsTrigger value="active" className="whitespace-nowrap">
@@ -371,28 +428,38 @@ const Staff = () => {
           <TabsTrigger value="terminated" className="whitespace-nowrap">
             Уволенные
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="salaries" className="whitespace-nowrap">
+              <DollarSign className="h-4 w-4 mr-1" />
+              Оклады
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value={statusTab} className="space-y-4">
-          {/* Search Controls */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Поиск по имени, email или должности..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+          {statusTab !== "salaries" && (
+            <>
+              {/* Search Controls */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Поиск по имени, email или должности..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
 
-          {/* Results Summary */}
-          <div className="text-sm text-muted-foreground">
-            Найдено пользователей: {filteredUsers.length}
-          </div>
+              {/* Results Summary */}
+              <div className="text-sm text-muted-foreground">
+                Найдено пользователей: {filteredUsers.length}
+              </div>
+            </>
+          )}
 
-          {filteredUsers.length === 0 ? (
+          {filteredUsers.length === 0 && statusTab !== "salaries" ? (
             <ResponsiveCard className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
@@ -404,6 +471,98 @@ const Staff = () => {
                   : statusTab === "terminated" ? "Нет уволенных сотрудников" : "Нет активных сотрудников"}
               </p>
             </ResponsiveCard>
+          ) : statusTab === "salaries" ? (
+            /* Salaries Tab Content */
+            <Card>
+              <CardHeader>
+                <CardTitle>Оклады сотрудников</CardTitle>
+                <CardDescription>
+                  Управление окладами активных сотрудников
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Сотрудник</TableHead>
+                        <TableHead>Должность</TableHead>
+                        <TableHead>Оклад</TableHead>
+                        <TableHead className="text-right">Действия</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allUsers
+                        .filter(user => user.employment_status !== 'terminated')
+                        .map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={user.avatar_url} />
+                                  <AvatarFallback>
+                                    {user.full_name.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">{user.full_name}</div>
+                                  <div className="text-sm text-muted-foreground">{user.email}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {user.position || <span className="text-muted-foreground">Не указано</span>}
+                            </TableCell>
+                            <TableCell>
+                              {editingSalaryUserId === user.id ? (
+                                <div className="flex items-center gap-2">
+                                  <CurrencyInput
+                                    value={editedSalary || undefined}
+                                    onChange={(value) => setEditedSalary(value || null)}
+                                    className="w-32"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="font-medium">
+                                  {user.salary ? formatCurrency(user.salary) : <span className="text-muted-foreground">Не указано</span>}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {editingSalaryUserId === user.id ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleSaveSalary(user.id)}
+                                  >
+                                    <Check className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleCancelEditSalary}
+                                  >
+                                    <X className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleStartEditSalary(user.id, user.salary || null)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <ResponsiveGrid type="cards">
               {filteredUsers.map((user) => {
