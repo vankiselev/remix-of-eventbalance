@@ -160,6 +160,24 @@ export const EmployeeProfileDialog = ({
       const userData = currentUser;
       if (!userData) return;
 
+      // Fetch employee data if not provided
+      const fetchEmployeeData = async () => {
+        if (!employee && userData) {
+          const { data: empData } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('user_id', userData.id)
+            .maybeSingle();
+          
+          if (empData) {
+            form.setValue('position', empData.position || '');
+            form.setValue('hire_date', empData.hire_date || '');
+            form.setValue('salary', empData.salary?.toString() || '');
+            form.setValue('work_phone', empData.phone || '');
+          }
+        }
+      };
+
       // Fetch user role assignments
       const fetchUserRoles = async () => {
         const { data } = await supabase
@@ -174,12 +192,14 @@ export const EmployeeProfileDialog = ({
       };
 
       fetchUserRoles();
+      fetchEmployeeData();
 
       form.reset({
         full_name: userData.full_name,
         email: userData.email,
         phone_display: userData.phone || "",
         phone_e164: userData.phone_e164 || "",
+        work_phone: employee?.phone || "",
         birth_date: userData.birth_date || "",
         position: employee?.position || "",
         hire_date: employee?.hire_date || "",
@@ -394,10 +414,11 @@ export const EmployeeProfileDialog = ({
       if (profileError) throw profileError;
 
       // Handle employee data - create or update
-      if (data.position || data.hire_date || (isAdmin && data.salary)) {
+      if (data.position || data.hire_date || data.work_phone || (isAdmin && data.salary)) {
         const employeeUpdates: any = {
           position: data.position || "",
           hire_date: data.hire_date || new Date().toISOString().split('T')[0],
+          phone: data.work_phone || null,
         };
 
         if (isAdmin) {
@@ -411,6 +432,9 @@ export const EmployeeProfileDialog = ({
           }
           if (data.hire_date !== currentEmployee?.hire_date) {
             await logFieldChange("hire_date", currentEmployee?.hire_date, data.hire_date);
+          }
+          if (data.work_phone !== (employee?.phone || "")) {
+            await logFieldChange("work_phone", employee?.phone, data.work_phone);
           }
           if (isAdmin && data.salary !== (currentEmployee?.salary?.toString() || "")) {
             await logFieldChange("salary", currentEmployee?.salary?.toString(), data.salary);
@@ -436,6 +460,7 @@ export const EmployeeProfileDialog = ({
           await logFieldChange("employee_record_created", null, "true");
           if (data.position) await logFieldChange("position", null, data.position);
           if (data.hire_date) await logFieldChange("hire_date", null, data.hire_date);
+          if (data.work_phone) await logFieldChange("work_phone", null, data.work_phone);
           if (isAdmin && data.salary) await logFieldChange("salary", null, data.salary);
         }
       }
@@ -468,6 +493,7 @@ export const EmployeeProfileDialog = ({
       'full_name': 'ФИО',
       'email': 'Email',
       'phone': 'Телефон',
+      'work_phone': 'Рабочий телефон',
       'birth_date': 'Дата рождения',
       'position': 'Должность',
       'hire_date': 'Дата найма',
@@ -680,6 +706,20 @@ export const EmployeeProfileDialog = ({
                             form.setValue("phone_e164", result.e164);
                           }}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="work_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Рабочий телефон</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="+7 (999) 123-45-67" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
