@@ -290,8 +290,8 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           .insert({
             user_id: userId,
             project_name: projectName,
-            preparation_work: preparationWork || 'Не указано',
-            onsite_work: onsiteWork || 'Не указано',
+            preparation_work: preparationWork || '',
+            onsite_work: onsiteWork || '',
             start_time: '00:00',
             end_time: '00:00',
             without_car: true,
