@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRbacRoles } from "./useUserRbacRoles";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useProfiles = () => {
   const { isAdmin } = useUserRbacRoles();
@@ -25,18 +26,23 @@ export const useProfiles = () => {
 
 export const useEmployeesData = () => {
   const { isAdmin } = useUserRbacRoles();
+  const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['employees-data', isAdmin],
+    queryKey: ['employees-data', isAdmin, user?.id || 'anon'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('employees')
         .select(`
-          id, user_id, position, hire_date, created_at, updated_at
-          ${isAdmin ? ', salary' : ''}
+          id, user_id, position, hire_date, created_at, updated_at, salary
         `)
         .order('hire_date', { ascending: false });
       
+      if (!isAdmin && user?.id) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },

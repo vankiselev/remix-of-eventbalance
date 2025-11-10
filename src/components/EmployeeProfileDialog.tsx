@@ -41,6 +41,7 @@ const profileSchema = z.object({
   email: z.string().email("Некорректный email"),
   phone_display: z.string().optional(),
   phone_e164: z.string().optional(),
+  work_phone: z.string().optional(),
   birth_date: z.string().optional(),
   position: z.string().optional(), // Made optional for administrators
   hire_date: z.string().optional(), // Made optional for administrators
@@ -57,6 +58,7 @@ interface Employee {
   position: string;
   salary: number | null;
   hire_date: string;
+  phone?: string | null;
   profiles: {
     id: string;
     email: string;
@@ -143,6 +145,7 @@ export const EmployeeProfileDialog = ({
       email: "",
       phone_display: "",
       phone_e164: "",
+      work_phone: "",
       birth_date: "",
       position: "",
       hire_date: "",
