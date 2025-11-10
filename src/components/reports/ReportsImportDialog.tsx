@@ -227,12 +227,6 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     if (columnMapping.project_name === null) {
       errors.push('Не выбран столбец "Проект"');
     }
-    if (columnMapping.preparation_work === null) {
-      errors.push('Не выбран столбец "Работа по подготовке"');
-    }
-    if (columnMapping.onsite_work === null) {
-      errors.push('Не выбран столбец "Работа на площадке"');
-    }
 
     return errors;
   };
@@ -280,11 +274,12 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
         const preparationWork = columnMapping.preparation_work !== null ? String(row[headers[columnMapping.preparation_work]] || '').trim() : '';
         const onsiteWork = columnMapping.onsite_work !== null ? String(row[headers[columnMapping.onsite_work]] || '').trim() : '';
 
-        if (!projectName || !preparationWork || !onsiteWork) {
+        // Проверяем только наличие проекта
+        if (!projectName) {
           result.failed++;
           result.errors.push({
             row: i + 2,
-            reason: 'Отсутствуют обязательные поля',
+            reason: 'Отсутствует название проекта',
             data: { projectName, preparationWork, onsiteWork }
           });
           continue;
@@ -295,8 +290,8 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           .insert({
             user_id: userId,
             project_name: projectName,
-            preparation_work: preparationWork,
-            onsite_work: onsiteWork,
+            preparation_work: preparationWork || 'Не указано',
+            onsite_work: onsiteWork || 'Не указано',
             start_time: '00:00',
             end_time: '00:00',
             without_car: true,
@@ -378,10 +373,11 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
               <AlertDescription>
                 Поддерживаемые форматы: Excel (.xlsx, .xls) и CSV. Файл должен содержать столбцы:
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Проект</li>
-                  <li>Работа по подготовке мероприятия</li>
-                  <li>Работа на площадке</li>
+                  <li><strong>Проект</strong> (обязательно)</li>
+                  <li>Работа по подготовке мероприятия (опционально)</li>
+                  <li>Работа на площадке (опционально)</li>
                 </ul>
+                <p className="mt-2 text-xs">Будут импортированы все строки, где указан проект, даже если другие поля пустые.</p>
               </AlertDescription>
             </Alert>
 
@@ -470,13 +466,13 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Работа по подготовке мероприятия *</Label>
+                  <Label>Работа по подготовке мероприятия</Label>
                   <Select
                     value={columnMapping.preparation_work?.toString()}
                     onValueChange={(value) => setColumnMapping({ ...columnMapping, preparation_work: parseInt(value) })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите столбец" />
+                      <SelectValue placeholder="Выберите столбец (опционально)" />
                     </SelectTrigger>
                     <SelectContent className="z-[100] bg-popover">
                       {headers.map((header, index) => (
@@ -489,13 +485,13 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Работа на площадке *</Label>
+                  <Label>Работа на площадке</Label>
                   <Select
                     value={columnMapping.onsite_work?.toString()}
                     onValueChange={(value) => setColumnMapping({ ...columnMapping, onsite_work: parseInt(value) })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите столбец" />
+                      <SelectValue placeholder="Выберите столбец (опционально)" />
                     </SelectTrigger>
                     <SelectContent className="z-[100] bg-popover">
                       {headers.map((header, index) => (

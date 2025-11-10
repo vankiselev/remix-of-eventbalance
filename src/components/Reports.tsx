@@ -68,6 +68,8 @@ const Reports = () => {
   const [deletingReport, setDeletingReport] = useState<Report | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedReports, setSelectedReports] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -320,6 +322,54 @@ const Reports = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedReports.length === 0) return;
+    
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("event_reports")
+        .delete()
+        .in("id", selectedReports);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: `Удалено отчетов: ${selectedReports.length}`,
+      });
+
+      setBulkDeleteDialogOpen(false);
+      setSelectedReports([]);
+      fetchReports();
+    } catch (error) {
+      console.error("Error deleting reports:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить отчеты",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleReportSelection = (reportId: string) => {
+    setSelectedReports(prev => 
+      prev.includes(reportId) 
+        ? prev.filter(id => id !== reportId)
+        : [...prev, reportId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedReports.length === reports.length) {
+      setSelectedReports([]);
+    } else {
+      setSelectedReports(reports.map(r => r.id));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -379,6 +429,12 @@ const Reports = () => {
               importDialogOpen={importDialogOpen}
               setImportDialogOpen={setImportDialogOpen}
               fetchReports={fetchReports}
+              selectedReports={selectedReports}
+              toggleReportSelection={toggleReportSelection}
+              toggleSelectAll={toggleSelectAll}
+              bulkDeleteDialogOpen={bulkDeleteDialogOpen}
+              setBulkDeleteDialogOpen={setBulkDeleteDialogOpen}
+              handleBulkDelete={handleBulkDelete}
             />
           </TabsContent>
           
@@ -412,6 +468,12 @@ const Reports = () => {
           importDialogOpen={importDialogOpen}
           setImportDialogOpen={setImportDialogOpen}
           fetchReports={fetchReports}
+          selectedReports={selectedReports}
+          toggleReportSelection={toggleReportSelection}
+          toggleSelectAll={toggleSelectAll}
+          bulkDeleteDialogOpen={bulkDeleteDialogOpen}
+          setBulkDeleteDialogOpen={setBulkDeleteDialogOpen}
+          handleBulkDelete={handleBulkDelete}
         />
       )}
     </div>
@@ -442,17 +504,40 @@ const EmployeeReportsView = ({
   setViewMode,
   importDialogOpen,
   setImportDialogOpen,
-  fetchReports
+  fetchReports,
+  selectedReports,
+  toggleReportSelection,
+  toggleSelectAll,
+  bulkDeleteDialogOpen,
+  setBulkDeleteDialogOpen,
+  handleBulkDelete
 }: any) => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg md:text-xl font-semibold">Мои отчеты</h2>
-          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Создавайте и управляйте своими отчетами</p>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
+            {selectedReports.length > 0 
+              ? `Выбрано отчетов: ${selectedReports.length}` 
+              : 'Создавайте и управляйте своими отчетами'
+            }
+          </p>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3 justify-between sm:justify-end">
+          {selectedReports.length > 0 && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              className="flex-1 sm:flex-none"
+            >
+              <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+              <span className="text-xs md:text-sm">Удалить ({selectedReports.length})</span>
+            </Button>
+          )}
+          
           <div className="hidden md:flex border rounded-lg">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -791,19 +876,45 @@ const EmployeeReportsView = ({
         </Card>
       ) : (
         <div className="space-y-3 md:space-y-4">
+          {reports.length > 0 && (
+            <div className="flex items-center gap-2 p-2 border rounded-lg bg-muted/50">
+              <Checkbox
+                checked={selectedReports.length === reports.length}
+                onCheckedChange={toggleSelectAll}
+                id="select-all"
+              />
+              <label htmlFor="select-all" className="text-sm cursor-pointer">
+                Выбрать все
+              </label>
+            </div>
+          )}
+          
           {reports.map((report: any) => (
-            <Card key={report.id}>
+            <Card key={report.id} className={cn(
+              "transition-colors",
+              selectedReports.includes(report.id) && "ring-2 ring-primary"
+            )}>
               <CardContent className="p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 md:mb-4">
-                  <h3 className="text-base md:text-xl font-semibold line-clamp-2">{report.project_name}</h3>
-                  <span className="text-xs md:text-sm text-muted-foreground shrink-0">
-                    {new Date(report.created_at).toLocaleDateString('ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
+                <div className="flex gap-3">
+                  <div className="pt-1">
+                    <Checkbox
+                      checked={selectedReports.includes(report.id)}
+                      onCheckedChange={() => toggleReportSelection(report.id)}
+                      id={`report-${report.id}`}
+                    />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 md:mb-4">
+                      <h3 className="text-base md:text-xl font-semibold line-clamp-2">{report.project_name}</h3>
+                      <span className="text-xs md:text-sm text-muted-foreground shrink-0">
+                        {new Date(report.created_at).toLocaleDateString('ru-RU', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
                 
                 <div className="space-y-2 mb-3 md:mb-4">
                   <div className="flex items-center gap-2 text-xs md:text-sm">
@@ -875,6 +986,8 @@ const EmployeeReportsView = ({
                     <span className="hidden xs:inline">Удалить</span>
                     <span className="xs:hidden">Удал.</span>
                   </Button>
+                </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1181,6 +1294,38 @@ const EmployeeReportsView = ({
                 </>
               ) : (
                 'Удалить'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent className="w-[90vw] sm:w-full max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base md:text-lg">Удалить отчеты?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs md:text-sm">
+              Вы уверены, что хотите удалить {selectedReports.length} {
+                selectedReports.length === 1 ? 'отчет' : 
+                selectedReports.length < 5 ? 'отчета' : 'отчетов'
+              }? 
+              Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto text-xs md:text-sm">Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs md:text-sm"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                  Удаление...
+                </>
+              ) : (
+                'Удалить все'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
