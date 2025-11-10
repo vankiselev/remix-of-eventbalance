@@ -7,7 +7,7 @@ interface UserRoleDisplayProps {
   maxDisplay?: number;
 }
 
-export const UserRoleDisplay = ({ userId, maxDisplay = 1 }: UserRoleDisplayProps) => {
+export const UserRoleDisplay = ({ userId, maxDisplay }: UserRoleDisplayProps) => {
   const { roles, isLoading } = useUserRbacRoles(userId);
   
   if (isLoading) {

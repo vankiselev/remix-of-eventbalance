@@ -412,9 +412,11 @@ const Staff = () => {
           <TabsTrigger value="active" className="whitespace-nowrap">
             Активные сотрудники
           </TabsTrigger>
-          <TabsTrigger value="terminated" className="whitespace-nowrap">
-            Уволенные
-          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="terminated" className="whitespace-nowrap">
+              Уволенные
+            </TabsTrigger>
+          )}
           {isAdmin && (
             <TabsTrigger value="salaries" className="whitespace-nowrap">
               <DollarSign className="h-4 w-4 mr-1" />
@@ -614,7 +616,7 @@ const Staff = () => {
                           <span className="font-medium">Телефон:</span> {user.phone}
                         </div>
                       )}
-                      {(hasPermission('staff.view_all') || user.id === authUser?.id) && user.salary && (
+                      {(isAdmin || user.id === authUser?.id) && user.salary && (
                         <div className="text-sm">
                           <span className="font-medium">Оклад:</span>{" "}
                           <span>{formatCurrency(user.salary)}</span>

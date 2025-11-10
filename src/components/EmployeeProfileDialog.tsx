@@ -757,7 +757,7 @@ export const EmployeeProfileDialog = ({
                   />
                 )}
 
-                {isAdmin && (
+                {(isAdmin || currentUser.id === user?.id) && (
                   <FormField
                     control={form.control}
                     name="salary"
@@ -769,6 +769,7 @@ export const EmployeeProfileDialog = ({
                             value={field.value ? Number(field.value) : undefined}
                             onChange={(value) => field.onChange(value?.toString() || "")}
                             placeholder="Введите зарплату"
+                            disabled={!isAdmin}
                           />
                         </FormControl>
                         <FormMessage />
