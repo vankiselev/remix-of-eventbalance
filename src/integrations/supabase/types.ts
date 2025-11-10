@@ -1802,9 +1802,13 @@ export type Database = {
           created_at: string
           email: string
           employment_status: string
+          first_name: string
           full_name: string
           id: string
+          last_name: string
+          middle_name: string
           phone: string
+          phone_e164: string
           role: Database["public"]["Enums"]["user_role"]
           termination_date: string
           termination_reason: string

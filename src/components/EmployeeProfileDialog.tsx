@@ -37,17 +37,19 @@ import { formatDate, formatDateTime } from '@/utils/dateFormat';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 const profileSchema = z.object({
-  full_name: z.string().min(1, "Имя обязательно"),
-  email: z.string().email("Некорректный email"),
+  last_name: z.string().trim().min(1, "Фамилия обязательна").max(100, "Фамилия не может быть длиннее 100 символов"),
+  first_name: z.string().trim().min(1, "Имя обязательно").max(100, "Имя не может быть длиннее 100 символов"),
+  middle_name: z.string().trim().max(100, "Отчество не может быть длиннее 100 символов").optional(),
+  email: z.string().trim().email("Некорректный email").max(255, "Email не может быть длиннее 255 символов"),
   phone_display: z.string().optional(),
   phone_e164: z.string().optional(),
-  work_phone: z.string().optional(),
+  work_phone: z.string().trim().max(50, "Телефон не может быть длиннее 50 символов").optional(),
   birth_date: z.string().optional(),
-  position: z.string().optional(), // Made optional for administrators
-  hire_date: z.string().optional(), // Made optional for administrators
+  position: z.string().trim().max(200, "Должность не может быть длиннее 200 символов").optional(),
+  hire_date: z.string().optional(),
   salary: z.string().optional(),
   role_id: z.string().optional(),
-  notes: z.string().optional(), // Added notes field
+  notes: z.string().trim().max(1000, "Примечания не могут быть длиннее 1000 символов").optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -63,6 +65,9 @@ interface Employee {
     id: string;
     email: string;
     full_name: string;
+    last_name?: string;
+    first_name?: string;
+    middle_name?: string;
     phone?: string;
     phone_e164?: string;
     birth_date?: string;
@@ -78,6 +83,9 @@ interface Profile {
   id: string;
   email: string;
   full_name: string;
+  last_name?: string;
+  first_name?: string;
+  middle_name?: string;
   phone?: string;
   phone_e164?: string;
   birth_date?: string;
@@ -141,7 +149,9 @@ export const EmployeeProfileDialog = ({
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      full_name: "",
+      last_name: "",
+      first_name: "",
+      middle_name: "",
       email: "",
       phone_display: "",
       phone_e164: "",
@@ -195,7 +205,9 @@ export const EmployeeProfileDialog = ({
       fetchEmployeeData();
 
       form.reset({
-        full_name: userData.full_name,
+        last_name: (userData as any).last_name || "",
+        first_name: (userData as any).first_name || "",
+        middle_name: (userData as any).middle_name || "",
         email: userData.email,
         phone_display: userData.phone || "",
         phone_e164: userData.phone_e164 || "",
@@ -205,7 +217,7 @@ export const EmployeeProfileDialog = ({
         hire_date: employee?.hire_date || "",
         salary: employee?.salary?.toString() || "",
         role_id: "",
-        notes: "", // Will be populated if we add notes to database
+        notes: "",
       });
       
       fetchEditHistory();
@@ -307,7 +319,10 @@ export const EmployeeProfileDialog = ({
 
       // Update profile data
       const profileUpdates: any = {
-        full_name: data.full_name,
+        last_name: data.last_name?.trim(),
+        first_name: data.first_name?.trim(),
+        middle_name: data.middle_name?.trim() || null,
+        full_name: [data.last_name?.trim(), data.first_name?.trim(), data.middle_name?.trim()].filter(Boolean).join(' '),
         phone: data.phone_display || null,
         phone_e164: data.phone_e164 || null,
         birth_date: data.birth_date || null,
@@ -393,8 +408,17 @@ export const EmployeeProfileDialog = ({
       }
 
       // Log changes for profile
-      if (data.full_name !== currentProfile.full_name) {
-        await logFieldChange("full_name", currentProfile.full_name, data.full_name);
+      const currentFullName = [currentProfile.last_name, currentProfile.first_name, currentProfile.middle_name].filter(Boolean).join(' ');
+      const newFullName = [data.last_name, data.first_name, data.middle_name].filter(Boolean).join(' ');
+      
+      if (data.last_name !== (currentProfile.last_name || "")) {
+        await logFieldChange("last_name", currentProfile.last_name || "", data.last_name);
+      }
+      if (data.first_name !== (currentProfile.first_name || "")) {
+        await logFieldChange("first_name", currentProfile.first_name || "", data.first_name);
+      }
+      if ((data.middle_name || "") !== (currentProfile.middle_name || "")) {
+        await logFieldChange("middle_name", currentProfile.middle_name || "", data.middle_name || "");
       }
       if (data.phone_display !== (currentProfile.phone || "")) {
         await logFieldChange("phone", currentProfile.phone, data.phone_display);
@@ -490,6 +514,9 @@ export const EmployeeProfileDialog = ({
   const translateFieldName = (fieldName: string): string => {
     const translations: Record<string, string> = {
       'employment_status': 'Статус занятости',
+      'last_name': 'Фамилия',
+      'first_name': 'Имя',
+      'middle_name': 'Отчество',
       'full_name': 'ФИО',
       'email': 'Email',
       'phone': 'Телефон',
@@ -666,12 +693,40 @@ export const EmployeeProfileDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="full_name"
+                  name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ФИО</FormLabel>
+                      <FormLabel>Фамилия</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="Введите фамилию" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Введите имя" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="middle_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Отчество</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Введите отчество" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
