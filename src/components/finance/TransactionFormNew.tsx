@@ -750,6 +750,29 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         // Check if this is an event (UUID) or static project
                         const isStaticProject = STATIC_PROJECTS.includes(value);
                         
+                        // Reset category if switching to/from "Передача денег" project
+                        const isMoneyTransferProject = value === "Передача денег";
+                        const currentCategory = form.watch("category");
+                        const moneyTransferCategories = [
+                          "Передано или получено от Леры/Насти/Вани",
+                          "Передано или получено от сотрудника"
+                        ];
+                        
+                        // If switching to money transfer project and current category is not in allowed list
+                        if (isMoneyTransferProject && currentCategory && !moneyTransferCategories.includes(currentCategory)) {
+                          form.setValue("category", undefined);
+                          toast({
+                            title: "Внимание",
+                            description: "Для проекта 'Передача денег' выберите одну из категорий передачи",
+                            duration: 3000,
+                          });
+                        }
+                        
+                        // If switching from money transfer project to another and category is transfer-specific
+                        if (!isMoneyTransferProject && currentCategory && moneyTransferCategories.includes(currentCategory)) {
+                          form.setValue("category", undefined);
+                        }
+                        
                         if (!isStaticProject) {
                           // This is an event ID, find it in the events array
                           const selectedEvent = events.find(e => e.id === value);
@@ -857,9 +880,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               control={form.control}
               name="category"
               render={({ field }) => {
-                const filteredCategories = EXPENSE_INCOME_CATEGORIES.filter(category =>
-                  category.toLowerCase().includes(categorySearch.toLowerCase())
-                );
+                // If "Передача денег" project is selected, show only transfer categories
+                const isMoneyTransferProject = form.watch("project_id") === "Передача денег";
+                const moneyTransferCategories = [
+                  "Передано или получено от Леры/Насти/Вани",
+                  "Передано или получено от сотрудника"
+                ];
+                
+                const filteredCategories = (isMoneyTransferProject ? moneyTransferCategories : EXPENSE_INCOME_CATEGORIES)
+                  .filter(category =>
+                    category.toLowerCase().includes(categorySearch.toLowerCase())
+                  );
 
                 return (
                   <FormItem>
