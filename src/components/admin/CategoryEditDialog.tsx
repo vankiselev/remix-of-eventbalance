@@ -15,6 +15,7 @@ interface CategoryEditDialogProps {
 
 export function CategoryEditDialog({ category, open, onOpenChange, onSave }: CategoryEditDialogProps) {
   const [name, setName] = useState(category?.name || "");
+  const [displayOrder, setDisplayOrder] = useState(category?.display_order || 0);
   const [isActive, setIsActive] = useState(category?.is_active ?? true);
 
   const handleSave = () => {
@@ -23,6 +24,7 @@ export function CategoryEditDialog({ category, open, onOpenChange, onSave }: Cat
     onSave({
       id: category.id,
       name,
+      display_order: displayOrder,
       is_active: isActive,
     });
     
@@ -44,6 +46,17 @@ export function CategoryEditDialog({ category, open, onOpenChange, onSave }: Cat
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Введите название"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="order">Порядок сортировки</Label>
+            <Input
+              id="order"
+              type="number"
+              value={displayOrder}
+              onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
+              placeholder="0"
             />
           </div>
           

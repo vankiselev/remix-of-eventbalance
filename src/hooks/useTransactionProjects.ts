@@ -22,7 +22,7 @@ export const useTransactionProjects = () => {
         .from('transaction_projects')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('display_order');
       
       if (error) throw error;
       return data as TransactionProject[];
@@ -36,7 +36,7 @@ export const useTransactionProjects = () => {
       const { data, error } = await supabase
         .from('transaction_projects')
         .select('*')
-        .order('name');
+        .order('display_order');
       
       if (error) throw error;
       return data as TransactionProject[];
@@ -45,11 +45,12 @@ export const useTransactionProjects = () => {
   });
 
   const createProject = useMutation({
-    mutationFn: async (project: { name: string }) => {
+    mutationFn: async (project: { name: string; display_order: number }) => {
       const { error } = await supabase
         .from('transaction_projects')
         .insert({
           name: project.name,
+          display_order: project.display_order,
           is_active: true,
         });
       
@@ -72,6 +73,7 @@ export const useTransactionProjects = () => {
         .from('transaction_projects')
         .update({
           name: project.name,
+          display_order: project.display_order,
           is_active: project.is_active,
         })
         .eq('id', project.id);
