@@ -134,7 +134,7 @@ export const ru = {
   email: 'Email',
   phone: 'Телефон',
   position: 'Должность',
-  salary: 'Зарплата',
+  salary: 'Оклад',
   avatar: 'Фото',
   
   // Financial

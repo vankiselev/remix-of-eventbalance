@@ -503,7 +503,7 @@ export const EmployeeProfileDialog = ({
       'birth_date': 'Дата рождения',
       'position': 'Должность',
       'hire_date': 'Дата найма',
-      'salary': 'Зарплата',
+      'salary': 'Оклад',
       'role': 'Роль',
       'avatar_url': 'Фото профиля',
       'employee_record_created': 'Создание записи сотрудника'
@@ -831,7 +831,7 @@ export const EmployeeProfileDialog = ({
                     name="salary"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Зарплата (₽)</FormLabel>
+                        <FormLabel>Оклад (₽)</FormLabel>
                         <FormControl>
                           <CurrencyInput
                             value={field.value ? Number(field.value) : undefined}
