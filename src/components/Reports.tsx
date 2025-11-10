@@ -180,6 +180,39 @@ const Reports = () => {
     };
 
     loadData();
+
+    // Real-time subscription for salary changes
+    const channel = supabase
+      .channel('event-reports-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_report_salaries'
+        },
+        (payload) => {
+          console.log('Real-time salary update:', payload);
+          fetchReports();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_reports'
+        },
+        (payload) => {
+          console.log('Real-time report update:', payload);
+          fetchReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const onSubmit = async (data: ReportFormData) => {

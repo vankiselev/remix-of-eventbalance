@@ -125,6 +125,39 @@ const AdminReportsView = () => {
 
   useEffect(() => {
     fetchReports();
+
+    // Real-time subscription for reports and salary changes
+    const channel = supabase
+      .channel('admin-reports-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_report_salaries'
+        },
+        (payload) => {
+          console.log('Real-time salary update (admin):', payload);
+          fetchReports();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_reports'
+        },
+        (payload) => {
+          console.log('Real-time report update (admin):', payload);
+          fetchReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {

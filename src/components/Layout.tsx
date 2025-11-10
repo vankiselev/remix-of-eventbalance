@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { formatFullName, getInitials } from "@/utils/formatName";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,6 +42,9 @@ const Layout = ({ children }: LayoutProps) => {
   
   const { totalUnread } = useChatUnread();
   const { pendingCount } = usePendingTransactionsCount();
+  
+  // Enable real-time updates globally
+  useRealtimeUpdates();
   
   const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
