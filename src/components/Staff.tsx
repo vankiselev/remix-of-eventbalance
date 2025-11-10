@@ -408,22 +408,20 @@ const Staff = () => {
 
       {/* Tabs for Active/Terminated/Salaries */}
       <Tabs value={statusTab} onValueChange={(value: any) => setStatusTab(value)}>
-        <TabsList className="w-full overflow-x-auto scrollbar-hide">
-          <TabsTrigger value="active" className="whitespace-nowrap">
-            Активные сотрудники
-          </TabsTrigger>
-          {isAdmin && (
+        {isAdmin && (
+          <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="active" className="whitespace-nowrap">
+              Активные сотрудники
+            </TabsTrigger>
             <TabsTrigger value="terminated" className="whitespace-nowrap">
               Уволенные
             </TabsTrigger>
-          )}
-          {isAdmin && (
             <TabsTrigger value="salaries" className="whitespace-nowrap">
               <DollarSign className="h-4 w-4 mr-1" />
               Оклады
             </TabsTrigger>
-          )}
-        </TabsList>
+          </TabsList>
+        )}
 
         <TabsContent value={statusTab} className="space-y-4">
           {statusTab !== "salaries" && (
