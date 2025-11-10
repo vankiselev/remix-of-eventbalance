@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
 import { useRoles } from "@/hooks/useRoles";
-import { Upload, ChevronDown, History, Wallet, UserX, Trash2, UserCheck } from "lucide-react";
+import { Upload, ChevronDown, History, UserX, Trash2, UserCheck } from "lucide-react";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import {
@@ -90,13 +90,6 @@ interface RoleAssignment {
   role_id: string;
 }
 
-interface CashSummary {
-  total_cash: number;
-  cash_nastya: number;
-  cash_lera: number;
-  cash_vanya: number;
-}
-
 interface EditHistory {
   id: string;
   field_name: string;
@@ -129,12 +122,6 @@ export const EmployeeProfileDialog = ({
   const [uploading, setUploading] = useState(false);
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [cashSummary, setCashSummary] = useState<CashSummary>({
-    total_cash: 0,
-    cash_nastya: 0,
-    cash_lera: 0,
-    cash_vanya: 0,
-  });
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
@@ -169,9 +156,6 @@ export const EmployeeProfileDialog = ({
     if ((employee || profile) && isOpen) {
       const userData = currentUser;
       if (!userData) return;
-      
-      // Force refetch roles when dialog opens to ensure fresh data
-      refetchRoles();
 
       // Fetch user role assignments
       const fetchUserRoles = async () => {
@@ -202,7 +186,6 @@ export const EmployeeProfileDialog = ({
       });
       
       fetchEditHistory();
-      fetchCashSummary();
     }
   }, [employee, profile, isOpen, form, currentUser]);
 
@@ -228,23 +211,6 @@ export const EmployeeProfileDialog = ({
       setEditHistory(data || []);
     } catch (error) {
       console.error("Error fetching edit history:", error);
-    }
-  };
-
-  const fetchCashSummary = async () => {
-    if (!currentUser) return;
-
-    try {
-      const { data, error } = await supabase
-        .rpc("get_employee_cash_summary", { employee_user_id: currentUser.id });
-
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setCashSummary(data[0]);
-      }
-    } catch (error) {
-      console.error("Error fetching cash summary:", error);
     }
   };
 
@@ -477,7 +443,6 @@ export const EmployeeProfileDialog = ({
 
       // Refresh the edit history and data immediately
       await fetchEditHistory();
-      await fetchCashSummary();
       
       // Вызываем onSuccess для обновления списка и закрываем диалог
       onSuccess();
@@ -665,39 +630,6 @@ export const EmployeeProfileDialog = ({
               </div>
             </div>
           </div>
-
-          {/* Cash Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
-                Наличные на руках
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Total Amount - Centered */}
-              <div className="text-center mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Деньги на руках:</p>
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(cashSummary.total_cash)}</p>
-              </div>
-              
-              {/* Individual Balances - 3 columns */}
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Наличка Настя</p>
-                  <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_nastya)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Наличка Лера</p>
-                  <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_lera)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Наличка Ваня</p>
-                  <p className="text-base font-semibold">{formatCurrency(cashSummary.cash_vanya)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Edit Form */}
           <Form {...form}>
