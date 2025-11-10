@@ -38,8 +38,10 @@ interface ImportResult {
 
 export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: ReportsImportDialogProps) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [file, setFile] = useState<File | null>(null);
+  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
@@ -71,10 +73,11 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     try {
       if (fileType === 'csv') {
         await processCSVFile(uploadedFile);
+        setStep(3); // Skip sheet selection for CSV
       } else {
-        await processExcelFile(uploadedFile);
+        await loadExcelWorkbook(uploadedFile);
+        setStep(2); // Show sheet selection for Excel
       }
-      setStep(2);
     } catch (error) {
       console.error('Error processing file:', error);
       toast({
@@ -115,14 +118,25 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     });
   };
 
-  const processExcelFile = async (file: File) => {
+  const loadExcelWorkbook = async (file: File) => {
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+    const wb = XLSX.read(data);
+    setWorkbook(wb);
+    
+    // Auto-select first sheet if only one exists
+    if (wb.SheetNames.length === 1) {
+      setSelectedSheet(wb.SheetNames[0]);
+      await processExcelSheet(wb, wb.SheetNames[0]);
+      setStep(3);
+    }
+  };
+
+  const processExcelSheet = async (wb: XLSX.WorkBook, sheetName: string) => {
+    const sheet = wb.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
     
     if (jsonData.length === 0) {
-      throw new Error('Файл пуст');
+      throw new Error('Лист пуст');
     }
 
     const headerRow = jsonData[0].map(String);
@@ -139,6 +153,29 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     
     setParsedData(parsedRows);
     setupColumnMapping(headerRow);
+  };
+
+  const handleSheetSelect = async () => {
+    if (!workbook || !selectedSheet) {
+      toast({
+        title: 'Ошибка',
+        description: 'Выберите лист для импорта',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await processExcelSheet(workbook, selectedSheet);
+      setStep(3);
+    } catch (error) {
+      console.error('Error processing sheet:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обработать лист',
+        variant: 'destructive',
+      });
+    }
   };
 
   const setupColumnMapping = (headers: string[]) => {
@@ -191,7 +228,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     }
 
     setImporting(true);
-    setStep(3);
+    setStep(4);
     setImportProgress(0);
 
     const result: ImportResult = {
@@ -268,7 +305,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
     setImportResult(result);
     setImporting(false);
-    setStep(4);
+    setStep(5);
 
     if (result.inserted > 0) {
       toast({
@@ -282,6 +319,8 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
   const resetDialog = () => {
     setStep(1);
     setFile(null);
+    setWorkbook(null);
+    setSelectedSheet('');
     setParsedData([]);
     setHeaders([]);
     setColumnMapping({
@@ -343,7 +382,43 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           </div>
         )}
 
-        {step === 2 && (
+        {step === 2 && workbook && (
+          <div className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Выберите лист для импорта. Найдено листов: {workbook.SheetNames.length}
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label>Лист Excel *</Label>
+              <Select value={selectedSheet} onValueChange={setSelectedSheet}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите лист" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workbook.SheetNames.map((sheetName) => (
+                    <SelectItem key={sheetName} value={sheetName}>
+                      {sheetName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                Отмена
+              </Button>
+              <Button onClick={handleSheetSelect} disabled={!selectedSheet}>
+                Продолжить
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
           <div className="space-y-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -448,7 +523,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -461,7 +536,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           </div>
         )}
 
-        {step === 4 && importResult && (
+        {step === 5 && importResult && (
           <div className="space-y-4">
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
