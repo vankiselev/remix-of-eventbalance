@@ -190,16 +190,30 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   });
 
   const watchNoReceipt = form.watch("no_receipt");
+  const watchProjectId = form.watch("project_id");
+  const watchCategory = form.watch("category");
+
+  // Check if this is an internal money transfer (not requiring receipt)
+  const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
+    watchCategory === "Передано или получено от Леры/Насти/Вани";
+
+  // Auto-fill no_receipt and reason for internal money transfers
+  useEffect(() => {
+    if (isInternalMoneyTransfer && !editTransaction) {
+      form.setValue("no_receipt", true);
+      form.setValue("no_receipt_reason", "Внутренняя передача денег");
+    }
+  }, [isInternalMoneyTransfer, form, editTransaction]);
 
   useEffect(() => {
-    if (watchNoReceipt && files.length === 0 && !isMoneyTransfer) {
+    if (watchNoReceipt && files.length === 0 && !isMoneyTransfer && !isInternalMoneyTransfer) {
       // Auto-focus on reason field when "no receipt" is checked and no files
       const reasonField = document.querySelector('textarea[name="no_receipt_reason"]') as HTMLTextAreaElement;
       if (reasonField) {
         reasonField.focus();
       }
     }
-  }, [watchNoReceipt, files.length, isMoneyTransfer]);
+  }, [watchNoReceipt, files.length, isMoneyTransfer, isInternalMoneyTransfer]);
 
   // Auto-focus category search when select opens
   useEffect(() => {
@@ -342,8 +356,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       }
     }
 
+    // Check if this is an internal money transfer (doesn't require receipt)
+    const isInternalTransfer = data.project_id === "Передача денег" && 
+      data.category === "Передано или получено от Леры/Насти/Вани";
+
     // Validate no_receipt_reason for regular users
-    if (!isAdmin && data.no_receipt && (!data.no_receipt_reason || data.no_receipt_reason.trim().length < 10)) {
+    if (!isAdmin && data.no_receipt && !isInternalTransfer && (!data.no_receipt_reason || data.no_receipt_reason.trim().length < 10)) {
       toast({
         title: "Ошибка",
         description: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
@@ -354,8 +372,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
     // Validate files and no_receipt logic
     // For regular users, require files OR no_receipt with reason
-    // For money transfers, files are optional
-    if (!isAdmin && !isMoneyTransfer) {
+    // For money transfers and internal transfers, files are optional
+    if (!isAdmin && !isMoneyTransfer && !isInternalTransfer) {
       if (!data.no_receipt && files.length === 0) {
         toast({
           title: "Ошибка",
@@ -1242,12 +1260,20 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             <div className="space-y-4">
               <FormLabel>Чек / вложения</FormLabel>
               
-              <FileUpload
-                files={files}
-                onFilesChange={setFiles}
-                maxFiles={5}
-                maxSize={10} // 10MB
-              />
+              {!isInternalMoneyTransfer && (
+                <FileUpload
+                  files={files}
+                  onFilesChange={setFiles}
+                  maxFiles={5}
+                  maxSize={10} // 10MB
+                />
+              )}
+
+              {isInternalMoneyTransfer && (
+                <p className="text-sm text-muted-foreground">
+                  Для внутренней передачи денег чек не требуется
+                </p>
+              )}
 
               <div className="flex items-center space-x-2">
                 <FormField
@@ -1259,6 +1285,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isInternalMoneyTransfer}
                         />
                       </FormControl>
                       <FormLabel className="text-sm font-normal">
@@ -1281,10 +1308,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           placeholder="Укажите причину отсутствия чека (минимум 10 символов)..."
                           className="resize-none"
                           {...field}
+                          disabled={isInternalMoneyTransfer}
                         />
                       </FormControl>
                       <FormDescription>
-                        Минимум 10 символов
+                        {isInternalMoneyTransfer 
+                          ? "Автоматически заполнено для внутренней передачи денег"
+                          : "Минимум 10 символов"
+                        }
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
