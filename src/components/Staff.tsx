@@ -84,7 +84,6 @@ const Staff = () => {
   const { data: cashTotals = [], isLoading: cashLoading } = useAllUsersCashTotals();
 
   // Local state
-  const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -98,28 +97,6 @@ const Staff = () => {
     salary: "",
     hire_date: "",
   });
-
-  // Fetch current user profile
-  useEffect(() => {
-    const fetchCurrentProfile = async () => {
-      if (!authUser) return;
-      const { data: currentProfile } = await supabase
-        .rpc("get_user_basic_profile")
-        .single();
-      if (currentProfile) {
-        // Map to expected Profile structure
-        setCurrentUserProfile({
-          user_id: currentProfile.user_id,
-          user_email: currentProfile.user_email,
-          user_full_name: currentProfile.user_full_name,
-          user_avatar_url: currentProfile.user_avatar_url,
-          user_position: currentProfile.user_position,
-          user_salary: currentProfile.user_salary,
-        } as any);
-      }
-    };
-    fetchCurrentProfile();
-  }, [authUser]);
 
   // Объединяем все данные в один массив с useMemo
   const allUsers = useMemo(() => {
@@ -232,7 +209,7 @@ const Staff = () => {
 
   const handleEditUser = (user: CombinedUser) => {
     // Users can edit their own profile or admins can edit anyone
-    const canEditThisUser = user.id === currentUserProfile?.id || isAdmin;
+    const canEditThisUser = user.id === authUser?.id || isAdmin;
     
     if (!canEditThisUser) {
       toast({
@@ -611,7 +588,7 @@ const Staff = () => {
                           </Badge>
                         )}
                       </div>
-                      {(hasPermission('staff.edit_all') || user.id === currentUserProfile?.id) && (
+                      {(hasPermission('staff.edit_all') || user.id === authUser?.id) && (
                           <Button
                             variant="ghost"
                             size="sm"
