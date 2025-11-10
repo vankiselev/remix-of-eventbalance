@@ -58,7 +58,7 @@ const AdminReportsView = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const walletTypes = ["Наличка Настя", "Наличка Лера", "Наличка Ваня"];
-  const salaryTypes = ["ЗП", "ПРОЦЕНТ/БОНУС"];
+  const salaryTypes = ["ЗП", "Оклад", "ПРОЦЕНТ/БОНУС"];
 
   // Format time without seconds
   const formatTime = (time: string) => {
