@@ -51,21 +51,49 @@ export const useWarehouseTasks = () => {
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['warehouse-tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Step 1: Fetch tasks with related data (no profiles)
+      const { data: tasksData, error: tasksError } = await supabase
         .from('warehouse_tasks' as any)
         .select(`
           *,
           event:events(name),
-          assigned_to_profile:profiles!warehouse_tasks_assigned_to_fkey(full_name),
-          created_by_profile:profiles!warehouse_tasks_created_by_fkey(full_name),
           items:warehouse_task_items(*),
           comments:warehouse_task_comments(*)
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return (data || []) as unknown as WarehouseTaskWithDetails[];
+      if (tasksError) throw tasksError;
+      if (!tasksData || tasksData.length === 0) return [];
+
+      // Step 2: Get unique user IDs
+      const userIds = [...new Set([
+        ...tasksData.map((t: any) => t.assigned_to),
+        ...tasksData.map((t: any) => t.created_by)
+      ].filter(Boolean))];
+
+      // Step 3: Fetch profiles separately (cached)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      
+      if (profilesError) throw profilesError;
+
+      // Step 4: Map profiles to tasks on client side
+      const profilesMap = new Map(
+        (profilesData || []).map((p: any) => [p.id, p.full_name])
+      );
+
+      return (tasksData || []).map((task: any) => ({
+        ...task,
+        assigned_to_profile: task.assigned_to ? { full_name: profilesMap.get(task.assigned_to) } : null,
+        created_by_profile: task.created_by ? { full_name: profilesMap.get(task.created_by) } : null,
+      })) as WarehouseTaskWithDetails[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const createTask = useMutation({

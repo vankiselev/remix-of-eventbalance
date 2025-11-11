@@ -60,6 +60,10 @@ export const useWarehouseMovements = () => {
         created_by_name: m.created_by_user?.full_name,
       })) as WarehouseMovementWithDetails[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   // Create movement and update stock

@@ -29,6 +29,10 @@ export const useWarehouseLocations = () => {
       if (error) throw error;
       return (data || []) as unknown as WarehouseLocation[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const createLocation = useMutation({

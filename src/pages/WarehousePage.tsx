@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Layout from "@/components/Layout";
 import { Package, FileText, CheckSquare, BarChart3 } from "lucide-react";
@@ -7,6 +8,8 @@ import WarehouseTasksPage from "./warehouse/WarehouseTasksPage";
 import { WarehouseReportsPage } from "./warehouse/WarehouseReportsPage";
 
 const WarehousePage = () => {
+  const [activeTab, setActiveTab] = React.useState("items");
+
   return (
     <Layout>
       <div className="space-y-6 w-full overflow-x-hidden">
@@ -17,7 +20,7 @@ const WarehousePage = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="items" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
             <TabsTrigger value="items" className="flex items-center gap-2 whitespace-nowrap">
               <Package className="h-4 w-4" />
@@ -38,19 +41,19 @@ const WarehousePage = () => {
           </TabsList>
 
           <TabsContent value="items" className="mt-6">
-            <WarehouseItemsPage />
+            {activeTab === "items" && <WarehouseItemsPage />}
           </TabsContent>
 
           <TabsContent value="movements" className="mt-6">
-            <WarehouseMovementsPage />
+            {activeTab === "movements" && <WarehouseMovementsPage />}
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-6">
-            <WarehouseTasksPage />
+            {activeTab === "tasks" && <WarehouseTasksPage />}
           </TabsContent>
 
           <TabsContent value="reports" className="mt-6">
-            <WarehouseReportsPage />
+            {activeTab === "reports" && <WarehouseReportsPage />}
           </TabsContent>
         </Tabs>
       </div>

@@ -32,6 +32,10 @@ export const useWarehouseCategories = () => {
       if (error) throw error;
       return (data || []) as unknown as WarehouseCategory[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const createCategory = useMutation({

@@ -29,41 +29,46 @@ export const useWarehouseItems = () => {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['warehouse-items'],
     queryFn: async () => {
-      // Fetch items with aggregated stock
-      const { data: itemsData, error: itemsError } = await supabase
+      const { data, error } = await supabase
         .from('warehouse_items' as any)
         .select(`
           *,
-          warehouse_categories!category_id(name)
+          warehouse_categories!category_id(name),
+          warehouse_stock(quantity)
         `)
         .eq('is_active', true)
-        .order('name', { ascending: true });
+        .order('created_at', { ascending: false });
       
-      if (itemsError) throw itemsError;
+      if (error) throw error;
 
-      // Fetch stock for all items
-      const { data: stockData, error: stockError } = await supabase
-        .from('warehouse_stock' as any)
-        .select('item_id, quantity');
-      
-      if (stockError) throw stockError;
+      return (data || []).map((item: any) => {
+        const totalQuantity = item.warehouse_stock?.reduce(
+          (sum: number, stock: any) => sum + (stock.quantity || 0),
+          0
+        ) || 0;
 
-      // Calculate total quantity for each item
-      const stockMap = new Map<string, number>();
-      (stockData || []).forEach((stock: any) => {
-        const current = stockMap.get(stock.item_id) || 0;
-        stockMap.set(stock.item_id, current + (stock.quantity || 0));
-      });
-
-      // Combine items with stock data
-      const itemsWithStock = (itemsData || []).map((item: any) => ({
-        ...item,
-        total_quantity: stockMap.get(item.id) || 0,
-        category_name: item.warehouse_categories?.name || null,
-      }));
-
-      return itemsWithStock as WarehouseItemWithStock[];
+        return {
+          id: item.id,
+          sku: item.sku,
+          name: item.name,
+          description: item.description,
+          category_id: item.category_id,
+          category_name: item.warehouse_categories?.name || null,
+          photo_url: item.photo_url,
+          unit: item.unit,
+          min_stock: item.min_stock,
+          is_active: item.is_active,
+          created_by: item.created_by,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          total_quantity: totalQuantity,
+        };
+      }) as WarehouseItemWithStock[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const createItem = useMutation({
