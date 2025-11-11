@@ -4,8 +4,9 @@ import { InvitationsManagement } from "@/components/admin/InvitationsManagement"
 import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagement";
 import { TransactionCategoriesManagement } from "@/components/admin/TransactionCategoriesManagement";
 import { TransactionProjectsManagement } from "@/components/admin/TransactionProjectsManagement";
+import { WarehouseSettingsManagement } from "@/components/admin/WarehouseSettingsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -40,6 +41,10 @@ const AdministrationPage = () => {
               <Palette className="h-4 w-4" />
               Иконки
             </TabsTrigger>
+            <TabsTrigger value="warehouse" className="flex items-center gap-2 whitespace-nowrap">
+              <Settings className="h-4 w-4" />
+              Склад
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="roles" className="mt-6">
@@ -60,6 +65,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="icons" className="mt-6">
             <CategoryIconsManagement />
+          </TabsContent>
+
+          <TabsContent value="warehouse" className="mt-6">
+            <WarehouseSettingsManagement />
           </TabsContent>
         </Tabs>
       </div>
