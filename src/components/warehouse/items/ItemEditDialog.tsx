@@ -70,7 +70,7 @@ export const ItemEditDialog = ({
       sku: "",
       name: "",
       description: "",
-      category_id: "",
+      category_id: "none",
       photo_url: "",
       unit: "шт",
       min_stock: 10,
@@ -84,7 +84,7 @@ export const ItemEditDialog = ({
         sku: item.sku,
         name: item.name,
         description: item.description || "",
-        category_id: item.category_id || "",
+        category_id: item.category_id || "none",
         photo_url: item.photo_url || "",
         unit: item.unit,
         min_stock: item.min_stock,
@@ -111,7 +111,7 @@ export const ItemEditDialog = ({
     const data = {
       ...values,
       description: values.description || null,
-      category_id: values.category_id || null,
+      category_id: values.category_id === 'none' ? null : values.category_id || null,
       photo_url: values.photo_url || null,
     };
 
@@ -228,7 +228,7 @@ export const ItemEditDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Без категории</SelectItem>
+                        <SelectItem value="none">Без категории</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
