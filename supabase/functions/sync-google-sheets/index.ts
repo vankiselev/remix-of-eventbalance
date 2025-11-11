@@ -45,8 +45,49 @@ serve(async (req) => {
 
     const { sheetId, month, year }: SyncRequest = await req.json()
 
+    // Validation functions for input security
+    const isValidSheetId = (id: string): boolean => {
+      return typeof id === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(id);
+    };
+
+    const isValidMonth = (m: string): boolean => {
+      const validMonths = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                           'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+      return typeof m === 'string' && validMonths.includes(m);
+    };
+
+    const isValidYear = (y: number): boolean => {
+      return typeof y === 'number' && Number.isInteger(y) && y >= 2020 && y <= 2050;
+    };
+
+    // Validate required parameters
     if (!sheetId || !month || !year) {
-      throw new Error('Missing required parameters: sheetId, month, year')
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required parameters: sheetId, month, year' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate input formats
+    if (!isValidSheetId(sheetId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid sheet ID format. Must be alphanumeric with dashes/underscores, 20-100 characters.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isValidMonth(month)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid month. Must be a valid Russian month name.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isValidYear(year)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid year. Must be an integer between 2020 and 2050.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const apiKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
