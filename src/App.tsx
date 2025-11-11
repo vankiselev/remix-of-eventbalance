@@ -30,6 +30,7 @@ import AdministrationPage from "./pages/AdministrationPage";
 import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import MessagesPage from "./pages/MessagesPage";
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
+import WarehousePage from "./pages/WarehousePage";
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -87,6 +88,21 @@ const RealtimeSync = () => {
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'category_icons' }, () => {
         queryClient.invalidateQueries({ queryKey: ['category-icons'] });
       })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_items' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['warehouse-items'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_stock' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['warehouse-items'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_categories' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['warehouse-categories'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_locations' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['warehouse-locations'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_tasks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      })
       .subscribe();
 
     return () => {
@@ -143,6 +159,7 @@ const App = () => {
             <Route path="/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
+            <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
             
             {/* Admin-only routes */}
             <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
