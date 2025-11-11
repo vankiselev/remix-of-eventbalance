@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { FileInput } from "@/components/ui/file-input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ import { EventActionRequestDialog } from "@/components/events/EventActionRequest
 import { useVacationConflicts, VacationConflict } from "@/hooks/useVacationConflicts";
 import { VacationConflictBadge } from "./VacationConflictBadge";
 import { VacationConflictDialog } from "./VacationConflictDialog";
+import { EventPropsTab } from "./EventPropsTab";
 
 interface Event {
   id: string;
@@ -399,8 +401,14 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4">
-          <div className="space-y-4">
+        <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="mx-4 sm:mx-6 mt-2">
+            <TabsTrigger value="details">Основное</TabsTrigger>
+            {event && <TabsTrigger value="props">Реквизит</TabsTrigger>}
+          </TabsList>
+
+          <TabsContent value="details" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4">
+            <div className="space-y-4">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -881,9 +889,18 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 </div>
               )}
             </div>
-          </div>
-          </div>
-        </div>
+            </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="props" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4">
+            <EventPropsTab
+              eventId={event?.id || null}
+              eventName={formData.name}
+              eventDate={formData.start_date}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Actions Footer */}
         <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 bg-background">
