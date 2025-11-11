@@ -1767,6 +1767,435 @@ export type Database = {
         }
         Relationships: []
       }
+      warehouse_categories: {
+        Row: {
+          bg_color: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          icon_color: string
+          icon_type: string
+          icon_value: string
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bg_color?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          icon_color?: string
+          icon_type?: string
+          icon_value?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bg_color?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          icon_color?: string
+          icon_type?: string
+          icon_value?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_items: {
+        Row: {
+          barcode: string | null
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          min_stock: number
+          name: string
+          photo_url: string | null
+          price: number
+          sku: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name: string
+          photo_url?: string | null
+          price?: number
+          sku?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name?: string
+          photo_url?: string | null
+          price?: number
+          sku?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_locations: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          display_order: number
+          employee_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          employee_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warehouse_movements: {
+        Row: {
+          created_at: string
+          created_by: string
+          from_location_id: string | null
+          id: string
+          item_id: string
+          movement_type: string
+          notes: string | null
+          operation_date: string
+          photo_url: string | null
+          quantity: number
+          to_location_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          from_location_id?: string | null
+          id?: string
+          item_id: string
+          movement_type: string
+          notes?: string | null
+          operation_date?: string
+          photo_url?: string | null
+          quantity: number
+          to_location_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          from_location_id?: string | null
+          id?: string
+          item_id?: string
+          movement_type?: string
+          notes?: string | null
+          operation_date?: string
+          photo_url?: string | null
+          quantity?: number
+          to_location_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_movements_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_movements_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_settings: {
+        Row: {
+          created_at: string
+          default_currency: string
+          default_unit: string
+          enable_notifications: boolean
+          id: string
+          low_stock_threshold_percent: number
+          notify_on_low_stock: boolean
+          notify_on_overdue_return: boolean
+          notify_on_task_assigned: boolean
+          notify_on_task_due: boolean
+          return_reminder_days: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_currency?: string
+          default_unit?: string
+          enable_notifications?: boolean
+          id?: string
+          low_stock_threshold_percent?: number
+          notify_on_low_stock?: boolean
+          notify_on_overdue_return?: boolean
+          notify_on_task_assigned?: boolean
+          notify_on_task_due?: boolean
+          return_reminder_days?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_currency?: string
+          default_unit?: string
+          enable_notifications?: boolean
+          id?: string
+          low_stock_threshold_percent?: number
+          notify_on_low_stock?: boolean
+          notify_on_overdue_return?: boolean
+          notify_on_task_assigned?: boolean
+          notify_on_task_due?: boolean
+          return_reminder_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warehouse_stock: {
+        Row: {
+          id: string
+          item_id: string
+          location_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          location_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          location_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_stock_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_task_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          photo_url: string | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          photo_url?: string | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          photo_url?: string | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_task_items: {
+        Row: {
+          collected_quantity: number
+          created_at: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          task_id: string
+        }
+        Insert: {
+          collected_quantity?: number
+          created_at?: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity: number
+          task_id: string
+        }
+        Update: {
+          collected_quantity?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_task_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_task_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          due_date: string | null
+          event_id: string | null
+          id: string
+          notes: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_tasks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
