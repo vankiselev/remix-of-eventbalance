@@ -4,6 +4,7 @@ import { Package, FileText, CheckSquare, BarChart3 } from "lucide-react";
 import { WarehouseItemsPage } from "./warehouse/WarehouseItemsPage";
 import { WarehouseMovementsPage } from "./warehouse/WarehouseMovementsPage";
 import WarehouseTasksPage from "./warehouse/WarehouseTasksPage";
+import { WarehouseReportsPage } from "./warehouse/WarehouseReportsPage";
 
 const WarehousePage = () => {
   return (
@@ -49,9 +50,7 @@ const WarehousePage = () => {
           </TabsContent>
 
           <TabsContent value="reports" className="mt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              Отчёты склада (в разработке)
-            </div>
+            <WarehouseReportsPage />
           </TabsContent>
         </Tabs>
       </div>
