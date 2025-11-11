@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Layout from "@/components/Layout";
 import { Package, FileText, CheckSquare, BarChart3 } from "lucide-react";
 import { WarehouseItemsPage } from "./warehouse/WarehouseItemsPage";
+import { WarehouseMovementsPage } from "./warehouse/WarehouseMovementsPage";
 
 const WarehousePage = () => {
   return (
@@ -39,9 +40,7 @@ const WarehousePage = () => {
           </TabsContent>
 
           <TabsContent value="movements" className="mt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              Движения товаров (в разработке)
-            </div>
+            <WarehouseMovementsPage />
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-6">
