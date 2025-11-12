@@ -29,6 +29,13 @@ export const ItemQRScanner = ({
   const startScanning = async () => {
     try {
       setError(null);
+      
+      // Проверка поддержки камеры браузером
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError("Ваш браузер не поддерживает доступ к камере");
+        return;
+      }
+
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
 
@@ -38,34 +45,59 @@ export const ItemQRScanner = ({
         aspectRatio: 1.0,
       };
 
-      await scanner.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          // Парсим QR код, ожидаем JSON с полями: id, sku, name
-          try {
-            const data = JSON.parse(decodedText);
-            if (data.id) {
-              onScan(data.id);
-              stopScanning();
-              onOpenChange(false);
-            }
-          } catch (e) {
-            setError("Неверный формат QR-кода товара");
+      const onScanSuccess = (decodedText: string) => {
+        try {
+          const data = JSON.parse(decodedText);
+          if (data.id) {
+            onScan(data.id);
+            stopScanning();
+            onOpenChange(false);
           }
-        },
-        (errorMessage) => {
-          // Игнорируем ошибки сканирования (нет QR кода в кадре)
-          console.debug("QR scan error:", errorMessage);
+        } catch (e) {
+          setError("Неверный формат QR-кода товара");
         }
-      );
+      };
+
+      const onScanError = (errorMessage: string) => {
+        console.debug("QR scan error:", errorMessage);
+      };
+
+      // Попытка запустить заднюю камеру, fallback на переднюю
+      try {
+        await scanner.start(
+          { facingMode: { exact: "environment" } },
+          config,
+          onScanSuccess,
+          onScanError
+        );
+      } catch (err) {
+        await scanner.start(
+          { facingMode: "user" },
+          config,
+          onScanSuccess,
+          onScanError
+        );
+      }
 
       setIsScanning(true);
     } catch (err: any) {
       console.error("Error starting scanner:", err);
-      setError(
-        err?.message || "Не удалось получить доступ к камере. Проверьте разрешения."
-      );
+      
+      let errorMessage = "Не удалось получить доступ к камере";
+      
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        errorMessage = "Доступ к камере запрещён. Разрешите доступ в настройках Safari: Настройки → Safari → Камера → Разрешить";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        errorMessage = "Камера не найдена на устройстве";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        errorMessage = "Камера занята другим приложением. Закройте другие приложения, использующие камеру.";
+      } else if (err.name === "OverconstrainedError") {
+        errorMessage = "Камера не поддерживает требуемые настройки";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     }
   };
 
@@ -82,9 +114,7 @@ export const ItemQRScanner = ({
   };
 
   useEffect(() => {
-    if (open) {
-      startScanning();
-    } else {
+    if (!open) {
       stopScanning();
     }
 
@@ -107,6 +137,18 @@ export const ItemQRScanner = ({
         </DialogHeader>
 
         <div className="space-y-4">
+          {!isScanning && !error && (
+            <Alert>
+              <AlertDescription>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Нажмите "Запустить камеру"</li>
+                  <li>Разрешите доступ к камере в браузере</li>
+                  <li>Наведите на QR-код товара</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -114,9 +156,16 @@ export const ItemQRScanner = ({
             </Alert>
           )}
 
+          {!isScanning && (
+            <Button onClick={startScanning} className="w-full">
+              <Camera className="h-4 w-4 mr-2" />
+              Запустить камеру
+            </Button>
+          )}
+
           <div
             id="qr-reader"
-            className="w-full rounded-lg overflow-hidden border border-border"
+            className={`w-full rounded-lg overflow-hidden border border-border ${isScanning ? '' : 'hidden'}`}
           />
 
           <div className="flex justify-end gap-2">
