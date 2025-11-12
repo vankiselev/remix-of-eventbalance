@@ -4,13 +4,15 @@ import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Package, ScanLine, Printer } from "lucide-react";
+import { Plus, Search, Package, ScanLine, Printer, Download, Upload } from "lucide-react";
 import { ItemCard } from "@/components/warehouse/items/ItemCard";
 import { ItemEditDialog } from "@/components/warehouse/items/ItemEditDialog";
 import { ItemQRScanner } from "@/components/warehouse/items/ItemQRScanner";
 import { ItemQRCodeBatch } from "@/components/warehouse/items/ItemQRCodeBatch";
+import { WarehouseImportDialog } from "@/components/warehouse/items/WarehouseImportDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { exportWarehouseItemsToExcel } from "@/utils/warehouseExcelUtils";
 import {
   Select,
   SelectContent,
@@ -29,6 +31,7 @@ export const WarehouseItemsPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isBatchQROpen, setIsBatchQROpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
@@ -88,6 +91,19 @@ export const WarehouseItemsPage = () => {
     setIsBatchQROpen(true);
   };
 
+  const handleExport = () => {
+    if (filteredItems.length === 0) {
+      toast.error("Нет товаров для экспорта");
+      return;
+    }
+    try {
+      exportWarehouseItemsToExcel(filteredItems);
+      toast.success(`Экспортировано ${filteredItems.length} товаров`);
+    } catch (error) {
+      toast.error("Ошибка при экспорте: " + (error as Error).message);
+    }
+  };
+
   const selectedItemsData = items.filter(item => selectedItems.has(item.id));
 
   if (isLoading) {
@@ -134,6 +150,25 @@ export const WarehouseItemsPage = () => {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={filteredItems.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Экспорт
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Импорт
+          </Button>
+        </div>
 
         <Button
           variant="outline"
@@ -226,6 +261,12 @@ export const WarehouseItemsPage = () => {
         open={isBatchQROpen}
         onOpenChange={setIsBatchQROpen}
         items={selectedItemsData}
+      />
+
+      {/* Диалог импорта из Excel */}
+      <WarehouseImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
       />
     </div>
   );

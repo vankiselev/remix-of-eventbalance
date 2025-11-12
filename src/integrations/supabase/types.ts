@@ -1982,40 +1982,102 @@ export type Database = {
           },
         ]
       }
+      warehouse_items_audit_log: {
+        Row: {
+          action: string
+          change_description: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_fields: string[] | null
+          id: string
+          ip_address: unknown
+          item_id: string
+          new_data: Json | null
+          old_data: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          change_description?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: string
+          ip_address?: unknown
+          item_id: string
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          change_description?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: string
+          ip_address?: unknown
+          item_id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_items_audit_log_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warehouse_locations: {
         Row: {
           address: string | null
+          cell: string | null
           created_at: string
           created_by: string | null
           display_order: number
           employee_id: string | null
+          floor: string | null
           id: string
           is_active: boolean
           name: string
+          rack: string | null
+          shelf: string | null
           type: string
           updated_at: string
         }
         Insert: {
           address?: string | null
+          cell?: string | null
           created_at?: string
           created_by?: string | null
           display_order?: number
           employee_id?: string | null
+          floor?: string | null
           id?: string
           is_active?: boolean
           name: string
+          rack?: string | null
+          shelf?: string | null
           type?: string
           updated_at?: string
         }
         Update: {
           address?: string | null
+          cell?: string | null
           created_at?: string
           created_by?: string | null
           display_order?: number
           employee_id?: string | null
+          floor?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          rack?: string | null
+          shelf?: string | null
           type?: string
           updated_at?: string
         }

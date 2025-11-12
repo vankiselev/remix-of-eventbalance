@@ -8,6 +8,10 @@ export interface WarehouseLocation {
   type: 'warehouse' | 'vehicle' | 'office' | 'employee' | 'other';
   address: string | null;
   employee_id: string | null;
+  floor: string | null;
+  rack: string | null;
+  shelf: string | null;
+  cell: string | null;
   is_active: boolean;
   display_order: number;
   created_at: string;

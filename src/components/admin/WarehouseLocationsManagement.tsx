@@ -37,6 +37,10 @@ interface LocationForm {
   address: string;
   employee_id: string | null;
   display_order: number;
+  floor: string;
+  rack: string;
+  shelf: string;
+  cell: string;
 }
 
 const LOCATION_TYPES = [
@@ -59,6 +63,10 @@ export const WarehouseLocationsManagement = () => {
     address: "",
     employee_id: null,
     display_order: 0,
+    floor: "",
+    rack: "",
+    shelf: "",
+    cell: "",
   });
 
   const handleOpenDialog = (locationId?: string) => {
@@ -71,6 +79,10 @@ export const WarehouseLocationsManagement = () => {
           address: location.address || "",
           employee_id: location.employee_id,
           display_order: location.display_order,
+          floor: (location as any).floor || "",
+          rack: (location as any).rack || "",
+          shelf: (location as any).shelf || "",
+          cell: (location as any).cell || "",
         });
         setEditingLocation(locationId);
       }
@@ -81,6 +93,10 @@ export const WarehouseLocationsManagement = () => {
         address: "",
         employee_id: null,
         display_order: locations.length,
+        floor: "",
+        rack: "",
+        shelf: "",
+        cell: "",
       });
       setEditingLocation(null);
     }

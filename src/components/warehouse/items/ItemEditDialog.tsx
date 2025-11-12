@@ -10,6 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -44,6 +50,7 @@ import {
 import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { ItemPhotoUpload } from "./ItemPhotoUpload";
+import { ItemAuditLog } from "./ItemAuditLog";
 import { Loader2, Sparkles, Check, ChevronsUpDown } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
 import { cn } from "@/lib/utils";
@@ -180,7 +187,7 @@ export const ItemEditDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? "Редактировать товар" : "Добавить товар"}
@@ -192,8 +199,15 @@ export const ItemEditDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {isEditMode ? (
+          <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="info">Информация</TabsTrigger>
+              <TabsTrigger value="history">История изменений</TabsTrigger>
+            </TabsList>
+            <TabsContent value="info" className="flex-1 overflow-y-auto">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Фото */}
             <FormField
               control={form.control}
@@ -444,6 +458,258 @@ export const ItemEditDialog = ({
             </div>
           </form>
         </Form>
+            </TabsContent>
+            <TabsContent value="history" className="flex-1 overflow-y-auto">
+              {itemId && <ItemAuditLog itemId={itemId} />}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* ... keep existing code (all form fields) */}
+              <FormField
+                control={form.control}
+                name="photo_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Фотография товара</FormLabel>
+                    <FormControl>
+                      <ItemPhotoUpload
+                        value={field.value}
+                        onChange={handlePhotoUpload}
+                        isUploading={isUploading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Название *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Костюм пирата"
+                          onChange={(e) => handleNameChange(e.target.value, field.onChange)}
+                        />
+                      </FormControl>
+                      {!isEditMode && !skuManuallyEdited && (
+                        <FormDescription className="flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Артикул сгенерируется автоматически
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Артикул (SKU) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="WH-001"
+                          onChange={(e) => handleSkuChange(e.target.value, field.onChange)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {skuManuallyEdited || isEditMode ? "Уникальный идентификатор" : "Автоматически из названия"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Описание</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Дополнительная информация о товаре"
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Категория</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите категорию" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Без категории</SelectItem>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Единица измерения *</FormLabel>
+                      <Popover open={unitOpen} onOpenChange={setUnitOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value || "Выберите единицу"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Поиск или ввод..."
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                <Button
+                                  variant="ghost"
+                                  className="w-full"
+                                  onClick={() => {
+                                    setUnitOpen(false);
+                                  }}
+                                >
+                                  Использовать "{field.value || "новая единица"}"
+                                </Button>
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {STANDARD_UNITS.map((unit) => (
+                                  <CommandItem
+                                    key={unit.value}
+                                    value={unit.value}
+                                    onSelect={() => {
+                                      field.onChange(unit.value);
+                                      setUnitOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === unit.value
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {unit.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="min_stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Минимальный остаток *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" min="0" />
+                      </FormControl>
+                      <FormDescription>
+                        Уведомление при достижении
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Цена закупки (₽)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" min="0" step="0.01" />
+                      </FormControl>
+                      <FormDescription>Для финансового учёта</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    createItem.isPending || updateItem.isPending || isUploading
+                  }
+                >
+                  {(createItem.isPending || updateItem.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Создать
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
