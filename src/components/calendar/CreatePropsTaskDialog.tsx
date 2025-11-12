@@ -47,6 +47,7 @@ export const CreatePropsTaskDialog = ({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<TaskItem[]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   const [formData, setFormData] = useState({
     assigned_to: "",
@@ -288,11 +289,13 @@ export const CreatePropsTaskDialog = ({
                   placeholder="Поиск товаров по названию или артикулу..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                   className="pl-9"
                 />
               </div>
 
-              {searchQuery && (
+              {(searchQuery || isSearchFocused) && (
                 <Card>
                   <CardContent className="p-2">
                     <ScrollArea className="h-[120px]">
