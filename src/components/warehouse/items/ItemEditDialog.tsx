@@ -49,11 +49,13 @@ import {
 } from "@/components/ui/select";
 import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
+import { useAuth } from "@/contexts/AuthContext";
 import { ItemPhotoUpload } from "./ItemPhotoUpload";
 import { ItemAuditLog } from "./ItemAuditLog";
 import { Loader2, Sparkles, Check, ChevronsUpDown } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 // Стандартные единицы измерения
 const STANDARD_UNITS = [
@@ -98,6 +100,7 @@ export const ItemEditDialog = ({
 }: ItemEditDialogProps) => {
   const { items, createItem, updateItem, uploadPhoto } = useWarehouseItems();
   const { categories } = useWarehouseCategories();
+  const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
   const [unitOpen, setUnitOpen] = useState(false);
@@ -170,19 +173,29 @@ export const ItemEditDialog = ({
   };
 
   const onSubmit = async (values: FormValues) => {
-    const data = {
-      ...values,
-      description: values.description || null,
-      category_id: values.category_id === 'none' ? null : values.category_id || null,
-      photo_url: values.photo_url || null,
-    };
+    try {
+      const data = {
+        ...values,
+        description: values.description || null,
+        category_id: values.category_id === 'none' ? null : values.category_id || null,
+        photo_url: values.photo_url || null,
+        created_by: user?.id || null,
+      };
 
-    if (isEditMode && itemId) {
-      await updateItem.mutateAsync({ id: itemId, updates: data });
-    } else {
-      await createItem.mutateAsync(data);
+      if (isEditMode && itemId) {
+        await updateItem.mutateAsync({ id: itemId, updates: data });
+      } else {
+        await createItem.mutateAsync(data);
+      }
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error submitting form:", error);
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить товар",
+        variant: "destructive",
+      });
     }
-    onOpenChange(false);
   };
 
   return (
