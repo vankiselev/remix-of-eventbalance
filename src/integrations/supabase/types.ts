@@ -2271,6 +2271,7 @@ export type Database = {
           collected_quantity: number
           created_at: string
           id: string
+          is_collected: boolean
           item_id: string
           notes: string | null
           quantity: number
@@ -2280,6 +2281,7 @@ export type Database = {
           collected_quantity?: number
           created_at?: string
           id?: string
+          is_collected?: boolean
           item_id: string
           notes?: string | null
           quantity: number
@@ -2289,6 +2291,7 @@ export type Database = {
           collected_quantity?: number
           created_at?: string
           id?: string
+          is_collected?: boolean
           item_id?: string
           notes?: string | null
           quantity?: number
