@@ -24,19 +24,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -52,9 +39,8 @@ import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { useAuth } from "@/contexts/AuthContext";
 import { ItemPhotoUpload } from "./ItemPhotoUpload";
 import { ItemAuditLog } from "./ItemAuditLog";
-import { Loader2, Sparkles, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
-import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 // Стандартные единицы измерения
@@ -103,7 +89,6 @@ export const ItemEditDialog = ({
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
-  const [unitOpen, setUnitOpen] = useState(false);
 
   const item = itemId ? items.find((i) => i.id === itemId) : null;
   const isEditMode = !!itemId;
@@ -344,69 +329,25 @@ export const ItemEditDialog = ({
                 control={form.control}
                 name="unit"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Единица измерения *</FormLabel>
-                    <Popover open={unitOpen} onOpenChange={setUnitOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value || "Выберите единицу"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput
-                            placeholder="Поиск или ввод..."
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          />
-                          <CommandList>
-                            <CommandEmpty>
-                              <Button
-                                variant="ghost"
-                                className="w-full"
-                                onClick={() => {
-                                  setUnitOpen(false);
-                                }}
-                              >
-                                Использовать "{field.value || "новая единица"}"
-                              </Button>
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {STANDARD_UNITS.map((unit) => (
-                                <CommandItem
-                                  key={unit.value}
-                                  value={unit.value}
-                                  onSelect={() => {
-                                    field.onChange(unit.value);
-                                    setUnitOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      field.value === unit.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {unit.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите единицу" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {STANDARD_UNITS.map((unit) => (
+                          <SelectItem key={unit.value} value={unit.value}>
+                            {unit.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -598,69 +539,25 @@ export const ItemEditDialog = ({
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Единица измерения *</FormLabel>
-                      <Popover open={unitOpen} onOpenChange={setUnitOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value || "Выберите единицу"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Поиск или ввод..."
-                              value={field.value}
-                              onValueChange={field.onChange}
-                            />
-                            <CommandList>
-                              <CommandEmpty>
-                                <Button
-                                  variant="ghost"
-                                  className="w-full"
-                                  onClick={() => {
-                                    setUnitOpen(false);
-                                  }}
-                                >
-                                  Использовать "{field.value || "новая единица"}"
-                                </Button>
-                              </CommandEmpty>
-                              <CommandGroup>
-                                {STANDARD_UNITS.map((unit) => (
-                                  <CommandItem
-                                    key={unit.value}
-                                    value={unit.value}
-                                    onSelect={() => {
-                                      field.onChange(unit.value);
-                                      setUnitOpen(false);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        field.value === unit.value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {unit.label}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите единицу" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {STANDARD_UNITS.map((unit) => (
+                            <SelectItem key={unit.value} value={unit.value}>
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
