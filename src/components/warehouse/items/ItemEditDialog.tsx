@@ -464,9 +464,10 @@ export const ItemEditDialog = ({
             </TabsContent>
           </Tabs>
         ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* ... keep existing code (all form fields) */}
+          <div className="flex-1 overflow-y-auto">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
+                {/* ... keep existing code (all form fields) */}
               <FormField
                 control={form.control}
                 name="photo_url"
@@ -707,8 +708,9 @@ export const ItemEditDialog = ({
                   Создать
                 </Button>
               </div>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </div>
         )}
       </DialogContent>
     </Dialog>
