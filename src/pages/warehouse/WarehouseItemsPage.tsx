@@ -3,10 +3,12 @@ import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Package, ScanLine } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Package, ScanLine, Printer } from "lucide-react";
 import { ItemCard } from "@/components/warehouse/items/ItemCard";
 import { ItemEditDialog } from "@/components/warehouse/items/ItemEditDialog";
 import { ItemQRScanner } from "@/components/warehouse/items/ItemQRScanner";
+import { ItemQRCodeBatch } from "@/components/warehouse/items/ItemQRCodeBatch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -25,6 +27,8 @@ export const WarehouseItemsPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBatchQROpen, setIsBatchQROpen] = useState(false);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
@@ -57,6 +61,34 @@ export const WarehouseItemsPage = () => {
       toast.error("Товар не найден");
     }
   };
+
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredItems.map(item => item.id)));
+    }
+  };
+
+  const handleBatchQRPrint = () => {
+    if (selectedItems.size === 0) {
+      toast.error("Выберите товары для печати QR-кодов");
+      return;
+    }
+    setIsBatchQROpen(true);
+  };
+
+  const selectedItemsData = items.filter(item => selectedItems.has(item.id));
 
   if (isLoading) {
     return (
@@ -118,6 +150,29 @@ export const WarehouseItemsPage = () => {
         </Button>
       </div>
 
+      {/* Панель массовых действий */}
+      {filteredItems.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center gap-4">
+            <Checkbox
+              checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span className="text-sm font-medium">
+              {selectedItems.size > 0
+                ? `Выбрано: ${selectedItems.size} из ${filteredItems.length}`
+                : `Выбрать все (${filteredItems.length})`}
+            </span>
+          </div>
+          {selectedItems.size > 0 && (
+            <Button variant="outline" onClick={handleBatchQRPrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Печать QR-кодов ({selectedItems.size})
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Список товаров */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-12">
@@ -138,7 +193,16 @@ export const WarehouseItemsPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredItems.map((item) => (
-            <ItemCard key={item.id} item={item} onEdit={handleEdit} />
+            <div key={item.id} className="relative">
+              <div className="absolute top-2 left-2 z-10">
+                <Checkbox
+                  checked={selectedItems.has(item.id)}
+                  onCheckedChange={() => toggleItemSelection(item.id)}
+                  className="bg-background shadow-md"
+                />
+              </div>
+              <ItemCard item={item} onEdit={handleEdit} />
+            </div>
           ))}
         </div>
       )}
@@ -155,6 +219,13 @@ export const WarehouseItemsPage = () => {
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
         onScan={handleScan}
+      />
+
+      {/* Диалог массовой печати QR-кодов */}
+      <ItemQRCodeBatch
+        open={isBatchQROpen}
+        onOpenChange={setIsBatchQROpen}
+        items={selectedItemsData}
       />
     </div>
   );

@@ -18,6 +18,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -31,8 +44,26 @@ import {
 import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { ItemPhotoUpload } from "./ItemPhotoUpload";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Check, ChevronsUpDown } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
+import { cn } from "@/lib/utils";
+
+// Стандартные единицы измерения
+const STANDARD_UNITS = [
+  { value: "шт", label: "шт (штуки)" },
+  { value: "пара", label: "пара" },
+  { value: "комплект", label: "комплект" },
+  { value: "кг", label: "кг (килограмм)" },
+  { value: "г", label: "г (грамм)" },
+  { value: "л", label: "л (литр)" },
+  { value: "мл", label: "мл (миллилитр)" },
+  { value: "м", label: "м (метр)" },
+  { value: "см", label: "см (сантиметр)" },
+  { value: "м²", label: "м² (квадратный метр)" },
+  { value: "м³", label: "м³ (кубический метр)" },
+  { value: "упак", label: "упак (упаковка)" },
+  { value: "коробка", label: "коробка" },
+];
 
 const formSchema = z.object({
   sku: z.string().min(1, "Артикул обязателен"),
@@ -62,6 +93,7 @@ export const ItemEditDialog = ({
   const { categories } = useWarehouseCategories();
   const [isUploading, setIsUploading] = useState(false);
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
+  const [unitOpen, setUnitOpen] = useState(false);
 
   const item = itemId ? items.find((i) => i.id === itemId) : null;
   const isEditMode = !!itemId;
@@ -285,11 +317,69 @@ export const ItemEditDialog = ({
                 control={form.control}
                 name="unit"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Единица измерения *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="шт, кг, м, л" />
-                    </FormControl>
+                    <Popover open={unitOpen} onOpenChange={setUnitOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value || "Выберите единицу"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Поиск или ввод..."
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              <Button
+                                variant="ghost"
+                                className="w-full"
+                                onClick={() => {
+                                  setUnitOpen(false);
+                                }}
+                              >
+                                Использовать "{field.value || "новая единица"}"
+                              </Button>
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {STANDARD_UNITS.map((unit) => (
+                                <CommandItem
+                                  key={unit.value}
+                                  value={unit.value}
+                                  onSelect={() => {
+                                    field.onChange(unit.value);
+                                    setUnitOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === unit.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {unit.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
