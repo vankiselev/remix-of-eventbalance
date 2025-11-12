@@ -29,12 +29,17 @@ export const ItemQRScanner = ({
   const startScanning = async () => {
     try {
       setError(null);
+      setIsScanning(true); // Показываем элемент ДО инициализации
       
       // Проверка поддержки камеры браузером
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError("Ваш браузер не поддерживает доступ к камере");
+        setIsScanning(false);
         return;
       }
+
+      // Небольшая задержка, чтобы DOM успел обновиться
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
@@ -78,9 +83,8 @@ export const ItemQRScanner = ({
           onScanError
         );
       }
-
-      setIsScanning(true);
     } catch (err: any) {
+      setIsScanning(false);
       console.error("Error starting scanner:", err);
       
       let errorMessage = "Не удалось получить доступ к камере";
@@ -163,10 +167,12 @@ export const ItemQRScanner = ({
             </Button>
           )}
 
-          <div
-            id="qr-reader"
-            className={`w-full rounded-lg overflow-hidden border border-border ${isScanning ? '' : 'hidden'}`}
-          />
+          {isScanning && (
+            <div
+              id="qr-reader"
+              className="w-full min-h-[300px] rounded-lg overflow-hidden border border-border"
+            />
+          )}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
