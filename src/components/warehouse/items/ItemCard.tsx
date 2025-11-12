@@ -96,10 +96,10 @@ export const ItemCard = ({ item, onEdit }: ItemCardProps) => {
           </div>
         </div>
 
-        {item.purchase_price > 0 && (
+        {item.price > 0 && (
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground">Цена закупки</p>
-            <p className="text-sm font-medium">{item.purchase_price} ₽</p>
+            <p className="text-sm font-medium">{item.price} ₽</p>
           </div>
         )}
       </CardContent>

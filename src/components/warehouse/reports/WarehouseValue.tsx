@@ -13,7 +13,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
   const categoryValues = categories.map(category => {
     const categoryItems = items.filter(item => item.category_id === category.id);
     const value = categoryItems.reduce((sum, item) => 
-      sum + (item.total_quantity || 0) * item.purchase_price, 0
+      sum + (item.total_quantity || 0) * item.price, 0
     );
 
     return {
@@ -31,7 +31,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
   const topItems = [...items]
     .map(item => ({
       ...item,
-      value: (item.total_quantity || 0) * item.purchase_price,
+      value: (item.total_quantity || 0) * item.price,
     }))
     .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value)
@@ -136,7 +136,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
                         style: 'currency',
                         currency: 'RUB',
                         minimumFractionDigits: 0,
-                      }).format(item.purchase_price)}
+                      }).format(item.price)}
                     </p>
                   </div>
                 </div>

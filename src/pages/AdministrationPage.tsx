@@ -5,8 +5,9 @@ import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagem
 import { TransactionCategoriesManagement } from "@/components/admin/TransactionCategoriesManagement";
 import { TransactionProjectsManagement } from "@/components/admin/TransactionProjectsManagement";
 import { WarehouseSettingsManagement } from "@/components/admin/WarehouseSettingsManagement";
+import { WarehouseCategoriesManagement } from "@/components/admin/WarehouseCategoriesManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -41,6 +42,10 @@ const AdministrationPage = () => {
               <Palette className="h-4 w-4" />
               Иконки
             </TabsTrigger>
+            <TabsTrigger value="warehouse-categories" className="flex items-center gap-2 whitespace-nowrap">
+              <Package className="h-4 w-4" />
+              Категории товаров
+            </TabsTrigger>
             <TabsTrigger value="warehouse" className="flex items-center gap-2 whitespace-nowrap">
               <Settings className="h-4 w-4" />
               Склад
@@ -65,6 +70,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="icons" className="mt-6">
             <CategoryIconsManagement />
+          </TabsContent>
+
+          <TabsContent value="warehouse-categories" className="mt-6">
+            <WarehouseCategoriesManagement />
           </TabsContent>
 
           <TabsContent value="warehouse" className="mt-6">

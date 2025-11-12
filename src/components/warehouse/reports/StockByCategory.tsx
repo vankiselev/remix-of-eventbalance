@@ -15,7 +15,7 @@ export const StockByCategory = ({ items, categories }: StockByCategoryProps) => 
     const categoryItems = items.filter(item => item.category_id === category.id);
     const totalQuantity = categoryItems.reduce((sum, item) => sum + (item.total_quantity || 0), 0);
     const totalValue = categoryItems.reduce((sum, item) => 
-      sum + (item.total_quantity || 0) * item.purchase_price, 0
+      sum + (item.total_quantity || 0) * item.price, 0
     );
     const lowStockCount = categoryItems.filter(item => 
       (item.total_quantity || 0) < item.min_stock

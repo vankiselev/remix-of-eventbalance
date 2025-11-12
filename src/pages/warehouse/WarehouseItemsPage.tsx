@@ -3,10 +3,12 @@ import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Package } from "lucide-react";
+import { Plus, Search, Package, ScanLine } from "lucide-react";
 import { ItemCard } from "@/components/warehouse/items/ItemCard";
 import { ItemEditDialog } from "@/components/warehouse/items/ItemEditDialog";
+import { ItemQRScanner } from "@/components/warehouse/items/ItemQRScanner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -22,6 +24,7 @@ export const WarehouseItemsPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
@@ -43,6 +46,16 @@ export const WarehouseItemsPage = () => {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingItem(null);
+  };
+
+  const handleScan = (itemId: string) => {
+    const item = items.find((i) => i.id === itemId);
+    if (item) {
+      toast.success(`Товар найден: ${item.name}`);
+      handleEdit(itemId);
+    } else {
+      toast.error("Товар не найден");
+    }
   };
 
   if (isLoading) {
@@ -90,6 +103,15 @@ export const WarehouseItemsPage = () => {
           </SelectContent>
         </Select>
 
+        <Button
+          variant="outline"
+          onClick={() => setIsScannerOpen(true)}
+          className="whitespace-nowrap"
+        >
+          <ScanLine className="h-4 w-4 mr-2" />
+          Сканировать QR
+        </Button>
+
         <Button onClick={() => setIsDialogOpen(true)} className="whitespace-nowrap">
           <Plus className="h-4 w-4 mr-2" />
           Добавить товар
@@ -126,6 +148,13 @@ export const WarehouseItemsPage = () => {
         open={isDialogOpen}
         onOpenChange={handleCloseDialog}
         itemId={editingItem}
+      />
+
+      {/* Диалог сканирования QR-кода */}
+      <ItemQRScanner
+        open={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+        onScan={handleScan}
       />
     </div>
   );

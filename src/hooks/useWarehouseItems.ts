@@ -11,7 +11,7 @@ export interface WarehouseItem {
   photo_url: string | null;
   unit: string;
   min_stock: number;
-  purchase_price: number;
+  price: number;
   is_active: boolean;
   created_by: string | null;
   created_at: string;

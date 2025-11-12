@@ -28,7 +28,7 @@ export const WarehouseReportsPage = () => {
     (item.total_quantity || 0) < item.min_stock
   ).length;
   const totalValue = items.reduce((sum, item) => 
-    sum + (item.total_quantity || 0) * item.purchase_price, 0
+    sum + (item.total_quantity || 0) * item.price, 0
   );
   const issuedItemsCount = tasks.filter(t => 
     t.status === 'in_progress' && t.task_type === 'collection'

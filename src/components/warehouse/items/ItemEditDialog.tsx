@@ -42,7 +42,7 @@ const formSchema = z.object({
   photo_url: z.string().optional(),
   unit: z.string().min(1, "Единица измерения обязательна"),
   min_stock: z.coerce.number().min(0, "Минимум не может быть отрицательным"),
-  purchase_price: z.coerce.number().min(0, "Цена не может быть отрицательной"),
+  price: z.coerce.number().min(0, "Цена не может быть отрицательной"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -76,7 +76,7 @@ export const ItemEditDialog = ({
       photo_url: "",
       unit: "шт",
       min_stock: 10,
-      purchase_price: 0,
+      price: 0,
     },
   });
 
@@ -90,7 +90,7 @@ export const ItemEditDialog = ({
         photo_url: item.photo_url || "",
         unit: item.unit,
         min_stock: item.min_stock,
-        purchase_price: item.purchase_price,
+        price: item.price,
       });
       setSkuManuallyEdited(true); // В режиме редактирования не генерируем SKU автоматически
     } else if (!open) {
@@ -318,7 +318,7 @@ export const ItemEditDialog = ({
               {/* Цена закупки */}
               <FormField
                 control={form.control}
-                name="purchase_price"
+                name="price"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Цена закупки (₽)</FormLabel>
