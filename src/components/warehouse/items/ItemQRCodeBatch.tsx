@@ -10,11 +10,27 @@ import {
 import { Printer, Download, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ItemQRCodeBatchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   items: WarehouseItemWithStock[];
+}
+
+interface LocationStock {
+  location_name: string;
+  quantity: number;
+  floor: string | null;
+  rack: string | null;
+  shelf: string | null;
+  cell: string | null;
+}
+
+interface ItemWithLocations {
+  item: WarehouseItemWithStock;
+  dataUrl: string;
+  locations: LocationStock[];
 }
 
 export const ItemQRCodeBatch = ({
@@ -24,7 +40,7 @@ export const ItemQRCodeBatch = ({
 }: ItemQRCodeBatchProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [qrCodes, setQrCodes] = useState<{ item: WarehouseItemWithStock; dataUrl: string }[]>([]);
+  const [qrCodes, setQrCodes] = useState<ItemWithLocations[]>([]);
 
   useEffect(() => {
     if (open && items.length > 0) {
@@ -32,15 +48,58 @@ export const ItemQRCodeBatch = ({
     }
   }, [open, items]);
 
+  const loadItemLocations = async (itemId: string): Promise<LocationStock[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('warehouse_stock' as any)
+        .select(`
+          quantity,
+          warehouse_locations!inner(
+            name,
+            floor,
+            rack,
+            shelf,
+            cell
+          )
+        `)
+        .eq('item_id', itemId)
+        .gt('quantity', 0);
+
+      if (error) throw error;
+
+      return (data || []).map((stock: any) => ({
+        location_name: stock.warehouse_locations.name,
+        quantity: stock.quantity,
+        floor: stock.warehouse_locations.floor,
+        rack: stock.warehouse_locations.rack,
+        shelf: stock.warehouse_locations.shelf,
+        cell: stock.warehouse_locations.cell,
+      }));
+    } catch (error) {
+      console.error('Error loading locations for item:', itemId, error);
+      return [];
+    }
+  };
+
   const generateAllQRCodes = async () => {
     setIsGenerating(true);
     try {
       const codes = await Promise.all(
         items.map(async (item) => {
+          const locations = await loadItemLocations(item.id);
+          
           const qrData = JSON.stringify({
             id: item.id,
             sku: item.sku,
             name: item.name,
+            type: "warehouse_item",
+            locations: locations.map(loc => ({
+              location_name: loc.location_name,
+              quantity: loc.quantity,
+              placement: [loc.floor, loc.rack, loc.shelf, loc.cell]
+                .filter(Boolean)
+                .join(' / ') || null
+            }))
           });
 
           const dataUrl = await QRCode.toDataURL(qrData, {
@@ -49,7 +108,7 @@ export const ItemQRCodeBatch = ({
             errorCorrectionLevel: "M",
           });
 
-          return { item, dataUrl };
+          return { item, dataUrl, locations };
         })
       );
       setQrCodes(codes);
@@ -58,6 +117,19 @@ export const ItemQRCodeBatch = ({
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const formatLocation = (loc: LocationStock) => {
+    const placement = [
+      loc.floor && `Эт.${loc.floor}`,
+      loc.rack && `Ст.${loc.rack}`,
+      loc.shelf && `П.${loc.shelf}`,
+      loc.cell && `Яч.${loc.cell}`
+    ].filter(Boolean);
+    
+    return placement.length > 0 
+      ? `${loc.location_name} (${placement.join(', ')})`
+      : loc.location_name;
   };
 
   const handlePrint = () => {
@@ -101,16 +173,28 @@ export const ItemQRCodeBatch = ({
               display: block;
             }
             .qr-item h3 {
-              font-size: 14px;
+              font-size: 13px;
               font-weight: 600;
               margin: 0 0 2mm;
               color: #111827;
               line-height: 1.3;
             }
-            .qr-item p {
+            .qr-item .sku {
               font-size: 11px;
               color: #6b7280;
-              margin: 0;
+              margin: 0 0 3mm;
+              font-weight: 500;
+            }
+            .qr-item .locations {
+              font-size: 9px;
+              color: #9ca3af;
+              margin: 2mm 0 0;
+              text-align: left;
+              border-top: 1px solid #e5e7eb;
+              padding-top: 2mm;
+            }
+            .qr-item .location-line {
+              margin: 1mm 0;
             }
             @media print {
               .qr-grid {
@@ -123,11 +207,21 @@ export const ItemQRCodeBatch = ({
           <div class="qr-grid">
             ${qrCodes
               .map(
-                ({ item, dataUrl }) => `
+                ({ item, dataUrl, locations }) => `
               <div class="qr-item">
                 <img src="${dataUrl}" alt="QR Code" />
                 <h3>${item.name}</h3>
-                <p>SKU: ${item.sku}</p>
+                <div class="sku">SKU: ${item.sku}</div>
+                ${locations.length > 0 ? `
+                  <div class="locations">
+                    ${locations.slice(0, 2).map(loc => `
+                      <div class="location-line">
+                        ${formatLocation(loc)} • ${loc.quantity} шт
+                      </div>
+                    `).join('')}
+                    ${locations.length > 2 ? `<div class="location-line">+${locations.length - 2} ещё</div>` : ''}
+                  </div>
+                ` : ''}
               </div>
             `
               )
@@ -171,7 +265,7 @@ export const ItemQRCodeBatch = ({
     let currentY = padding;
     let col = 0;
 
-    qrCodes.forEach(({ item, dataUrl }, index) => {
+    qrCodes.forEach(({ item, dataUrl, locations }, index) => {
       const img = new Image();
       img.src = dataUrl;
 
@@ -180,20 +274,54 @@ export const ItemQRCodeBatch = ({
 
       // Draw text
       ctx.fillStyle = "#111827";
-      ctx.font = "bold 36px Arial";
+      ctx.font = "bold 32px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(item.name, currentX + qrSize / 2, currentY + qrSize + 50, qrSize);
+      
+      // Item name (with word wrap)
+      const maxWidth = qrSize;
+      const words = item.name.split(' ');
+      let line = '';
+      let textY = currentY + qrSize + 45;
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && i > 0) {
+          ctx.fillText(line, currentX + qrSize / 2, textY);
+          line = words[i] + ' ';
+          textY += 35;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, currentX + qrSize / 2, textY);
 
+      // SKU
       ctx.fillStyle = "#6b7280";
-      ctx.font = "28px Arial";
-      ctx.fillText(`SKU: ${item.sku}`, currentX + qrSize / 2, currentY + qrSize + 90, qrSize);
+      ctx.font = "24px Arial";
+      ctx.fillText(`SKU: ${item.sku}`, currentX + qrSize / 2, textY + 35);
+
+      // Locations (first 2)
+      if (locations.length > 0) {
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "20px Arial";
+        let locY = textY + 65;
+        locations.slice(0, 2).forEach(loc => {
+          const locText = `${formatLocation(loc)} • ${loc.quantity} шт`;
+          ctx.fillText(locText, currentX + qrSize / 2, locY, qrSize);
+          locY += 25;
+        });
+        if (locations.length > 2) {
+          ctx.fillText(`+${locations.length - 2} ещё`, currentX + qrSize / 2, locY, qrSize);
+        }
+      }
 
       // Move to next position
       col++;
       if (col >= cols) {
         col = 0;
         currentX = padding;
-        currentY += qrSize + gapY + 100; // Extra space for text
+        currentY += qrSize + gapY + 180; // Extra space for text and locations
       } else {
         currentX += qrSize + gapX;
       }
@@ -217,7 +345,7 @@ export const ItemQRCodeBatch = ({
         <DialogHeader>
           <DialogTitle>Массовая печать QR-кодов</DialogTitle>
           <DialogDescription>
-            QR-коды для {items.length} товаров
+            QR-коды для {items.length} товаров с информацией о размещении
           </DialogDescription>
         </DialogHeader>
 
@@ -225,7 +353,7 @@ export const ItemQRCodeBatch = ({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-3 text-muted-foreground">
-              Генерация QR-кодов...
+              Генерация QR-кодов с локациями...
             </span>
           </div>
         ) : (
@@ -234,7 +362,7 @@ export const ItemQRCodeBatch = ({
               ref={containerRef}
               className="grid grid-cols-3 gap-4 py-4"
             >
-              {qrCodes.map(({ item, dataUrl }) => (
+              {qrCodes.map(({ item, dataUrl, locations }) => (
                 <div
                   key={item.id}
                   className="border rounded-lg p-4 text-center space-y-2"
@@ -248,6 +376,18 @@ export const ItemQRCodeBatch = ({
                     {item.name}
                   </h4>
                   <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
+                  {locations.length > 0 && (
+                    <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                      {locations.slice(0, 2).map((loc, idx) => (
+                        <div key={idx}>
+                          {formatLocation(loc)} • {loc.quantity} шт
+                        </div>
+                      ))}
+                      {locations.length > 2 && (
+                        <div className="font-medium">+{locations.length - 2} ещё</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

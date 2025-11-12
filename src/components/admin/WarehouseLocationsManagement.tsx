@@ -203,6 +203,7 @@ export const WarehouseLocationsManagement = () => {
                   <TableHead className="w-[60px]">Тип</TableHead>
                   <TableHead>Название</TableHead>
                   <TableHead>Адрес / Сотрудник</TableHead>
+                  <TableHead>Размещение</TableHead>
                   <TableHead className="w-[100px]">Порядок</TableHead>
                   <TableHead className="w-[120px] text-right">
                     Действия
@@ -238,6 +239,19 @@ export const WarehouseLocationsManagement = () => {
                         ) : (
                           location.address || '—'
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {location.type === 'warehouse' && (
+                          [
+                            (location as any).floor && `Эт.${(location as any).floor}`,
+                            (location as any).rack && `Ст.${(location as any).rack}`,
+                            (location as any).shelf && `П.${(location as any).shelf}`,
+                            (location as any).cell && `Яч.${(location as any).cell}`
+                          ]
+                            .filter(Boolean)
+                            .join(' • ') || '—'
+                        )}
+                        {location.type !== 'warehouse' && '—'}
                       </TableCell>
                       <TableCell>{location.display_order}</TableCell>
                       <TableCell className="text-right">
@@ -348,6 +362,65 @@ export const WarehouseLocationsManagement = () => {
                   }
                   placeholder="ул. Складская, 10"
                 />
+              </div>
+            )}
+
+            {/* Детальное размещение для складов */}
+            {formData.type === 'warehouse' && (
+              <div className="space-y-4 border-t pt-4">
+                <div className="text-sm font-semibold text-foreground">
+                  Детальное размещение
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="floor" className="text-xs">Этаж</Label>
+                    <Input
+                      id="floor"
+                      value={formData.floor}
+                      onChange={(e) =>
+                        setFormData({ ...formData, floor: e.target.value })
+                      }
+                      placeholder="Например: 2"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rack" className="text-xs">Стеллаж</Label>
+                    <Input
+                      id="rack"
+                      value={formData.rack}
+                      onChange={(e) =>
+                        setFormData({ ...formData, rack: e.target.value })
+                      }
+                      placeholder="Например: A-3"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="shelf" className="text-xs">Полка</Label>
+                    <Input
+                      id="shelf"
+                      value={formData.shelf}
+                      onChange={(e) =>
+                        setFormData({ ...formData, shelf: e.target.value })
+                      }
+                      placeholder="Например: 12"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cell" className="text-xs">Ячейка</Label>
+                    <Input
+                      id="cell"
+                      value={formData.cell}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cell: e.target.value })
+                      }
+                      placeholder="Например: B-5"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
