@@ -31,7 +31,8 @@ import {
 import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { ItemPhotoUpload } from "./ItemPhotoUpload";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { generateSKU } from "@/utils/skuGenerator";
 
 const formSchema = z.object({
   sku: z.string().min(1, "Артикул обязателен"),
@@ -60,6 +61,7 @@ export const ItemEditDialog = ({
   const { items, createItem, updateItem, uploadPhoto } = useWarehouseItems();
   const { categories } = useWarehouseCategories();
   const [isUploading, setIsUploading] = useState(false);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
   const item = itemId ? items.find((i) => i.id === itemId) : null;
   const isEditMode = !!itemId;
@@ -90,10 +92,31 @@ export const ItemEditDialog = ({
         min_stock: item.min_stock,
         purchase_price: item.purchase_price,
       });
+      setSkuManuallyEdited(true); // В режиме редактирования не генерируем SKU автоматически
     } else if (!open) {
       form.reset();
+      setSkuManuallyEdited(false);
     }
   }, [item, open, form]);
+
+  // Автоматическая генерация SKU при вводе названия
+  const handleNameChange = (name: string, onChange: (value: string) => void) => {
+    onChange(name);
+    
+    // Генерируем SKU только если пользователь еще не редактировал его вручную и это не режим редактирования
+    if (!skuManuallyEdited && !isEditMode && name.trim().length > 0) {
+      const newSku = generateSKU(name);
+      form.setValue("sku", newSku);
+    }
+  };
+
+  const handleSkuChange = (sku: string, onChange: (value: string) => void) => {
+    onChange(sku);
+    // Отмечаем, что пользователь вручную изменил SKU
+    if (sku.trim().length > 0) {
+      setSkuManuallyEdited(true);
+    }
+  };
 
   const handlePhotoUpload = async (file: File) => {
     setIsUploading(true);
@@ -159,22 +182,6 @@ export const ItemEditDialog = ({
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Артикул */}
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Артикул (SKU) *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="WH-001" />
-                    </FormControl>
-                    <FormDescription>Уникальный идентификатор</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Название */}
               <FormField
                 control={form.control}
@@ -183,8 +190,40 @@ export const ItemEditDialog = ({
                   <FormItem>
                     <FormLabel>Название *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Костюм пирата" />
+                      <Input
+                        {...field}
+                        placeholder="Костюм пирата"
+                        onChange={(e) => handleNameChange(e.target.value, field.onChange)}
+                      />
                     </FormControl>
+                    {!isEditMode && !skuManuallyEdited && (
+                      <FormDescription className="flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Артикул сгенерируется автоматически
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Артикул */}
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Артикул (SKU) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="WH-001"
+                        onChange={(e) => handleSkuChange(e.target.value, field.onChange)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {skuManuallyEdited || isEditMode ? "Уникальный идентификатор" : "Автоматически из названия"}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

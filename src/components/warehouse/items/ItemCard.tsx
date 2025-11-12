@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Package, AlertCircle } from "lucide-react";
+import { Edit, Package, AlertCircle, QrCode } from "lucide-react";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
 import { WarehouseCategoryIcon } from "./WarehouseCategoryIcon";
 import { useCategoryIcons } from "@/hooks/useCategoryIcons";
+import { ItemQRCode } from "./ItemQRCode";
 
 interface ItemCardProps {
   item: WarehouseItemWithStock;
@@ -12,6 +14,8 @@ interface ItemCardProps {
 
 export const ItemCard = ({ item, onEdit }: ItemCardProps) => {
   const { categoryIcons } = useCategoryIcons();
+  const [showQRCode, setShowQRCode] = useState(false);
+  
   const categoryIcon = categoryIcons.find(
     (icon) => icon.category_name === item.category_name
   );
@@ -100,17 +104,35 @@ export const ItemCard = ({ item, onEdit }: ItemCardProps) => {
         )}
       </CardContent>
 
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 gap-2">
         <Button
           variant="outline"
           size="sm"
-          className="w-full"
+          className="flex-1"
           onClick={() => onEdit(item.id)}
         >
           <Edit className="h-4 w-4 mr-2" />
           Редактировать
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowQRCode(true)}
+        >
+          <QrCode className="h-4 w-4" />
+        </Button>
       </CardFooter>
+
+      {/* QR-код диалог */}
+      <ItemQRCode
+        open={showQRCode}
+        onOpenChange={setShowQRCode}
+        item={{
+          id: item.id,
+          sku: item.sku,
+          name: item.name,
+        }}
+      />
     </Card>
   );
 };
