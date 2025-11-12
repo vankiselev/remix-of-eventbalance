@@ -1820,6 +1820,109 @@ export type Database = {
           },
         ]
       }
+      warehouse_inventories: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          notes: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      warehouse_inventory_items: {
+        Row: {
+          actual_quantity: number | null
+          created_at: string
+          difference: number | null
+          expected_quantity: number
+          id: string
+          inventory_id: string
+          item_id: string
+          location_id: string | null
+          notes: string | null
+          scanned_at: string | null
+          scanned_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_quantity?: number
+          id?: string
+          inventory_id: string
+          item_id: string
+          location_id?: string | null
+          notes?: string | null
+          scanned_at?: string | null
+          scanned_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_quantity?: number
+          id?: string
+          inventory_id?: string
+          item_id?: string
+          location_id?: string | null
+          notes?: string | null
+          scanned_at?: string | null
+          scanned_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_inventory_items_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_inventories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_inventory_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_inventory_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warehouse_items: {
         Row: {
           barcode: string | null
