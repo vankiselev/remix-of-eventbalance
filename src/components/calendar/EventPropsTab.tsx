@@ -48,22 +48,25 @@ export const EventPropsTab = ({ eventId, eventName, eventDate }: EventPropsTabPr
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('warehouse_tasks' as any)
+        .from('warehouse_tasks')
         .select(`
           *,
-          assigned_to_profile:profiles!warehouse_tasks_assigned_to_fkey(full_name),
+          assigned_to_profile:profiles!assigned_to_id(full_name),
           items:warehouse_task_items(
             id,
             quantity,
             collected_quantity,
             is_collected,
-            warehouse_items!warehouse_task_items_item_id_fkey(name)
+            warehouse_items!item_id(name)
           )
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading tasks:', error);
+        throw error;
+      }
       setTasks((data || []) as any);
     } catch (error) {
       console.error('Error loading tasks:', error);

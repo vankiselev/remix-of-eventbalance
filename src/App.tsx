@@ -31,6 +31,7 @@ import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import MessagesPage from "./pages/MessagesPage";
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
+import TasksPage from "./pages/TasksPage";
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -160,6 +161,7 @@ const App = () => {
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
             <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
             
             {/* Admin-only routes */}
             <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
