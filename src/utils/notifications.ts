@@ -4,7 +4,7 @@ interface SendNotificationParams {
   userId: string;
   title: string;
   message: string;
-  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system';
+  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system' | 'task';
   data?: any;
 }
 
@@ -37,7 +37,7 @@ export const sendNotification = async ({
 export const sendNotificationToAdmins = async (
   title: string,
   message: string,
-  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system',
+  type: 'report' | 'salary' | 'event' | 'vacation' | 'transaction' | 'system' | 'task',
   data?: any
 ) => {
   try {

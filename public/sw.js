@@ -108,6 +108,9 @@ self.addEventListener('notificationclick', function(event) {
       case 'report':
         targetUrl = '/reports';
         break;
+      case 'task':
+        targetUrl = '/tasks';
+        break;
       case 'system':
         targetUrl = '/';
         break;
