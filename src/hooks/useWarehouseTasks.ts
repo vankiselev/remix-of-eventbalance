@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendNotification } from "@/utils/notifications";
 
 export interface WarehouseTask {
   id: string;
@@ -126,9 +127,40 @@ export const useWarehouseTasks = () => {
       
       return newTask;
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
       toast.success('Задача создана');
+      
+      // Send notification to assigned employee
+      if (variables.assigned_to && data) {
+        try {
+          // Get event name for notification
+          let eventName = 'Мероприятие';
+          if ((data as any).event_id) {
+            const { data: event } = await supabase
+              .from('events')
+              .select('name')
+              .eq('id', (data as any).event_id)
+              .single();
+            if (event) eventName = event.name;
+          }
+
+          await sendNotification({
+            userId: variables.assigned_to,
+            title: '📦 Новая задача на складе',
+            message: `Вам назначена задача${eventName !== 'Мероприятие' ? ` для мероприятия "${eventName}"` : ''}`,
+            type: 'task',
+            data: {
+              task_id: (data as any).id,
+              event_id: (data as any).event_id,
+              task_type: (data as any).task_type,
+              due_date: (data as any).due_date,
+            },
+          });
+        } catch (error) {
+          console.error('Error sending task notification:', error);
+        }
+      }
     },
     onError: (error) => {
       console.error('Error creating task:', error);

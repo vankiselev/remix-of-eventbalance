@@ -15,6 +15,7 @@ import { format, addDays } from "date-fns";
 import { Plus, Trash2, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
+import { sendNotification } from "@/utils/notifications";
 
 interface CreatePropsTaskDialogProps {
   open: boolean;
@@ -197,6 +198,20 @@ export const CreatePropsTaskDialog = ({
         .insert(returnTaskItems);
 
       if (returnItemsError) throw returnItemsError;
+
+      // Send push notification to assigned employee
+      await sendNotification({
+        userId: formData.assigned_to,
+        title: '📦 Новая задача на сбор реквизита',
+        message: `Вам назначена задача для мероприятия "${eventName}"`,
+        type: 'task',
+        data: {
+          task_id: (task as any).id,
+          event_id: eventId,
+          task_type: 'collection',
+          due_date: formData.due_date,
+        },
+      });
 
       toast({
         title: "Успешно!",
