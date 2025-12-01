@@ -109,9 +109,18 @@ serve(async (req) => {
       if (!projectOwner) return null;
       const s = String(projectOwner).toLowerCase().trim();
       
-      if (s === 'наличка настя' || s === 'настя') return 'наличка настя';
-      if (s === 'наличка лера' || s === 'лера') return 'наличка лера';
-      if (s === 'наличка ваня' || s === 'ваня') return 'наличка ваня';
+      // Гибкое сопоставление для наличных касс
+      if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
+      if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
+      if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
+      
+      // Если начинается с "наличка" - попробуем распознать
+      if (s.startsWith('наличка')) {
+        const name = s.replace('наличка', '').trim();
+        if (name) {
+          return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
+        }
+      }
       
       return null;
     };
@@ -135,26 +144,58 @@ serve(async (req) => {
           throw new Error("Не указана сумма операции");
         }
 
-        if (!row.description) {
-          throw new Error("Отсутствует описание");
-        }
+        // Описание по умолчанию если не указано
+        const description = row.description || (expenseAmount > 0 ? 'Расход' : 'Приход');
 
         const cashType = mapCashType(row.project_owner || '');
+        const projectOwner = cashType || row.project_owner || 'Без кассы';
 
-        validRows.push({
-          created_by: user_id,
-          operation_date: operationDate,
-          static_project_name: row.project_name || null,
-          project_owner: row.project_owner || null,
-          description: row.description,
-          category: row.category || 'Разное',
-          cash_type: cashType,
-          expense_amount: expenseAmount || null,
-          income_amount: incomeAmount || null,
-          notes: row.notes || null,
-          verification_status: 'pending',
-          requires_verification: true
-        });
+        // Если есть и доход и расход - создаём две транзакции
+        if (expenseAmount > 0 && incomeAmount > 0) {
+          validRows.push({
+            created_by: user_id,
+            operation_date: operationDate,
+            static_project_name: row.project_name || null,
+            project_owner: projectOwner,
+            description: description,
+            category: row.category || 'Разное',
+            cash_type: cashType,
+            expense_amount: expenseAmount,
+            income_amount: null,
+            notes: row.notes || null,
+            verification_status: 'pending',
+            requires_verification: true
+          });
+          validRows.push({
+            created_by: user_id,
+            operation_date: operationDate,
+            static_project_name: row.project_name || null,
+            project_owner: projectOwner,
+            description: description,
+            category: row.category || 'Разное',
+            cash_type: cashType,
+            expense_amount: null,
+            income_amount: incomeAmount,
+            notes: row.notes || null,
+            verification_status: 'pending',
+            requires_verification: true
+          });
+        } else {
+          validRows.push({
+            created_by: user_id,
+            operation_date: operationDate,
+            static_project_name: row.project_name || null,
+            project_owner: projectOwner,
+            description: description,
+            category: row.category || 'Разное',
+            cash_type: cashType,
+            expense_amount: expenseAmount || null,
+            income_amount: incomeAmount || null,
+            notes: row.notes || null,
+            verification_status: 'pending',
+            requires_verification: true
+          });
+        }
       } catch (error: any) {
         result.failed++;
         result.errors.push({
