@@ -252,8 +252,9 @@ async function processImport(
         throw new Error("Некорректная дата");
       }
 
-      const expenseAmount = row.expense_amount || 0;
-      const incomeAmount = row.income_amount || 0;
+      // Округляем до целых рублей - копейки не учитываем
+      const expenseAmount = Math.round(row.expense_amount || 0);
+      const incomeAmount = Math.round(row.income_amount || 0);
 
       if (expenseAmount === 0 && incomeAmount === 0) {
         throw new Error("Не указана сумма операции");
