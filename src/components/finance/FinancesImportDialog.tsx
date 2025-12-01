@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Pause, Play, AlertTriangle, CheckCircle2, XCircle, CloudUpload, Loader2 } from "lucide-react";
+import { Pause, Play, AlertTriangle, CheckCircle2, XCircle, CloudUpload, Loader2, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from 'xlsx';
@@ -424,26 +424,56 @@ const FinancesImportDialog = ({
     return Math.abs(num); // Всегда положительное число
   };
 
+  // Полный список типов кошельков
+  const WALLET_TYPES = [
+    'Наличка Настя',
+    'Наличка Лера', 
+    'Наличка Ваня',
+    'Корп. карта Настя',
+    'Корп. карта Лера',
+    'ИП Настя',
+    'ИП Лера',
+    'Оплатил(а) клиент',
+    'Оплатила Настя',
+    'Оплатила Лера',
+    'Получила Лера',
+    'Получила Настя'
+  ];
+
   const mapCashType = (projectOwner: string): string | null => {
     if (!projectOwner) return null;
-    const s = String(projectOwner).toLowerCase().trim();
+    const input = String(projectOwner).trim();
+    const inputLower = input.toLowerCase();
     
-    // Гибкое сопоставление для наличных касс
-    if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
-    if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
-    if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
+    // 1. Точное совпадение
+    const exactMatch = WALLET_TYPES.find(w => w.toLowerCase() === inputLower);
+    if (exactMatch) return exactMatch;
     
-    // Если начинается с "наличка" - попробуем распознать
-    if (s.startsWith('наличка')) {
-      const name = s.replace('наличка', '').trim();
-      if (name) {
-        // Капитализируем
-        return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
-      }
-    }
+    // 2. Частичное совпадение (input содержится в названии или наоборот)
+    const partialMatch = WALLET_TYPES.find(w => 
+      w.toLowerCase().includes(inputLower) || 
+      inputLower.includes(w.toLowerCase())
+    );
+    if (partialMatch) return partialMatch;
     
-    // Если не совпало - это не касса, возвращаем null
-    return null;
+    // 3. Синонимы и сокращения
+    if (inputLower.includes('корп') && inputLower.includes('настя')) return 'Корп. карта Настя';
+    if (inputLower.includes('корп') && inputLower.includes('лера')) return 'Корп. карта Лера';
+    if (inputLower.includes('карта') && inputLower.includes('настя')) return 'Корп. карта Настя';
+    if (inputLower.includes('карта') && inputLower.includes('лера')) return 'Корп. карта Лера';
+    if (inputLower.includes('ип') && inputLower.includes('настя')) return 'ИП Настя';
+    if (inputLower.includes('ип') && inputLower.includes('лера')) return 'ИП Лера';
+    if (inputLower.includes('клиент')) return 'Оплатил(а) клиент';
+    if (inputLower.includes('оплатил') && inputLower.includes('настя')) return 'Оплатила Настя';
+    if (inputLower.includes('оплатил') && inputLower.includes('лера')) return 'Оплатила Лера';
+    if (inputLower.includes('получил') && inputLower.includes('настя')) return 'Получила Настя';
+    if (inputLower.includes('получил') && inputLower.includes('лера')) return 'Получила Лера';
+    if (inputLower.includes('наличк') && inputLower.includes('настя')) return 'Наличка Настя';
+    if (inputLower.includes('наличк') && inputLower.includes('лера')) return 'Наличка Лера';
+    if (inputLower.includes('наличк') && inputLower.includes('ваня')) return 'Наличка Ваня';
+    
+    // 4. Если ничего не подошло - возвращаем как есть
+    return input;
   };
 
   // Fuzzy matching для категорий
@@ -665,6 +695,38 @@ const FinancesImportDialog = ({
       errorsByType,
     };
   }, [parsedData, columnMapping, validateAllRows]);
+
+  // Статистика уникальных кошельков для предпросмотра маппинга
+  const walletMappingStats = useMemo(() => {
+    const mappings = new Map<string, { 
+      source: string; 
+      target: string | null; 
+      count: number; 
+      isValid: boolean;
+    }>();
+    
+    parsedData.forEach((row) => {
+      const mappedRow = mapRow(row);
+      const source = String(mappedRow.project_owner || '').trim();
+      if (!source) return;
+      
+      const existing = mappings.get(source);
+      if (existing) {
+        existing.count++;
+      } else {
+        const target = mapCashType(source);
+        mappings.set(source, {
+          source,
+          target,
+          count: 1,
+          isValid: target !== null && WALLET_TYPES.includes(target)
+        });
+      }
+    });
+    
+    return Array.from(mappings.values())
+      .sort((a, b) => b.count - a.count);
+  }, [parsedData, columnMapping]);
 
   const validateData = () => {
     const errorCount = validateAllRows.filter(v => v.status === 'error').length;
@@ -1278,6 +1340,54 @@ const FinancesImportDialog = ({
               </Card>
             )}
 
+            {/* Предпросмотр маппинга кошельков */}
+            {walletMappingStats.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Предпросмотр кошельков ({walletMappingStats.length} уникальных)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-48 overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-background">
+                        <tr className="border-b">
+                          <th className="text-left py-1 px-2">В файле</th>
+                          <th className="text-center py-1 px-1">→</th>
+                          <th className="text-left py-1 px-2">В системе</th>
+                          <th className="text-right py-1 px-2">Кол-во</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {walletMappingStats.map((item, index) => (
+                          <tr 
+                            key={index} 
+                            className={!item.isValid ? 'bg-yellow-500/10' : ''}
+                          >
+                            <td className="py-1 px-2 text-muted-foreground">{item.source}</td>
+                            <td className="py-1 px-1 text-center text-muted-foreground">→</td>
+                            <td className="py-1 px-2 font-medium">
+                              {item.target || <span className="text-muted-foreground">(без кассы)</span>}
+                              {item.isValid && <CheckCircle2 className="inline w-3 h-3 text-green-500 ml-1" />}
+                              {!item.isValid && item.target && <AlertTriangle className="inline w-3 h-3 text-yellow-500 ml-1" />}
+                            </td>
+                            <td className="text-right py-1 px-2">{item.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {walletMappingStats.some(w => !w.isValid) && (
+                    <p className="text-xs text-yellow-600 mt-2">
+                      ⚠️ Некоторые кошельки не распознаны и будут сохранены как есть
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Детализация ошибок */}
             {importStats.errorCount > 0 && (
               <Card className="border-destructive/50 bg-destructive/5">
@@ -1375,7 +1485,19 @@ const FinancesImportDialog = ({
                             <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
                               <div><span className="text-muted-foreground">Дата:</span> {mappedRow.operation_date || '-'}</div>
                               <div><span className="text-muted-foreground">Проект:</span> {mappedRow.project_name || '-'}</div>
-                              <div><span className="text-muted-foreground">Касса:</span> {mappedRow.project_owner || '-'}</div>
+                              <div>
+                                <span className="text-muted-foreground">Касса:</span>{' '}
+                                {mappedRow.project_owner ? (
+                                  <>
+                                    <span className="text-muted-foreground text-xs line-through mr-1">
+                                      {mappedRow.project_owner}
+                                    </span>
+                                    <span className="font-medium">
+                                      {mapCashType(mappedRow.project_owner) || '(без кассы)'}
+                                    </span>
+                                  </>
+                                ) : '-'}
+                              </div>
                               <div><span className="text-muted-foreground">Категория:</span> {mappedRow.category || '-'}</div>
                               <div><span className="text-muted-foreground">Расход:</span> {mappedRow.expense_amount ? formatCurrency(parseAmount(mappedRow.expense_amount)) : '-'}</div>
                               <div><span className="text-muted-foreground">Доход:</span> {mappedRow.income_amount ? formatCurrency(parseAmount(mappedRow.income_amount)) : '-'}</div>
