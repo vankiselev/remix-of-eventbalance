@@ -32,6 +32,7 @@ import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow"
 import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
 import { FinancialAuditLog } from "@/components/finance/FinancialAuditLog";
 import { TransactionVerificationDialog } from "@/components/finance/TransactionVerificationDialog";
+import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface CashSummary {
@@ -377,6 +378,7 @@ const Finances = () => {
           isLoading={false} 
         />
         <ImportProgressWindow />
+        <BackgroundImportStatus />
       </div>
 
       <MoneyTransferRequests />
@@ -449,6 +451,7 @@ const Finances = () => {
         />
         
         <ImportProgressWindow />
+        <BackgroundImportStatus />
       </div>
 
       <MoneyTransferRequests />

@@ -21,6 +21,7 @@ export interface ImportJob {
 
 export const useImportJobs = () => {
   const [activeJobs, setActiveJobs] = useState<ImportJob[]>([]);
+  const [recentCompletedJobs, setRecentCompletedJobs] = useState<ImportJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
@@ -38,6 +39,27 @@ export const useImportJobs = () => {
       setActiveJobs(data as unknown as ImportJob[]);
     }
     setIsLoading(false);
+  };
+
+  const fetchRecentCompletedJobs = async () => {
+    if (!user?.id) return;
+
+    // Fetch jobs completed in the last 24 hours
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const { data, error } = await supabase
+      .from('import_jobs')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('status', ['completed', 'failed'])
+      .gte('completed_at', twentyFourHoursAgo.toISOString())
+      .order('completed_at', { ascending: false })
+      .limit(5);
+
+    if (!error && data) {
+      setRecentCompletedJobs(data as unknown as ImportJob[]);
+    }
   };
 
   const fetchRecentJobs = async (limit = 10): Promise<ImportJob[]> => {
@@ -101,6 +123,7 @@ export const useImportJobs = () => {
       .delete()
       .eq('id', jobId);
     fetchActiveJobs();
+    fetchRecentCompletedJobs();
   };
 
   // Подписка на изменения в реальном времени
@@ -108,6 +131,7 @@ export const useImportJobs = () => {
     if (!user?.id) return;
 
     fetchActiveJobs();
+    fetchRecentCompletedJobs();
 
     const channel = supabase
       .channel('import_jobs_changes')
@@ -121,6 +145,7 @@ export const useImportJobs = () => {
         },
         () => {
           fetchActiveJobs();
+          fetchRecentCompletedJobs();
         }
       )
       .subscribe();
@@ -132,6 +157,7 @@ export const useImportJobs = () => {
 
   return {
     activeJobs,
+    recentCompletedJobs,
     isLoading,
     createJob,
     getJobStatus,
