@@ -463,6 +463,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
+        verification_status: 'pending',
+        requires_verification: true,
         // Money transfer fields
         transfer_to_user_id: isMoneyTransfer ? transferToUserId : null,
         transfer_status: isMoneyTransfer ? 'pending' : null,

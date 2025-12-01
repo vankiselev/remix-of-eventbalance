@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface ImportRow {
+  target_user_id?: string;
   creator_name?: string;
   operation_date: string;
   project_name?: string;
@@ -59,6 +60,7 @@ async function processImport(
   supabase: any,
   rows: ImportRow[],
   user_id: string,
+  target_user_id: string,
   job_id: string | null,
   resume_from_row: number = 0
 ): Promise<ImportResult> {
@@ -267,7 +269,7 @@ async function processImport(
 
       if (expenseAmount > 0 && incomeAmount > 0) {
         validRows.push({
-          created_by: user_id,
+          created_by: target_user_id,
           operation_date: operationDate,
           static_project_name: row.project_name || null,
           project_owner: projectOwner,
@@ -277,12 +279,12 @@ async function processImport(
           expense_amount: expenseAmount,
           income_amount: null,
           notes: row.notes || null,
-          verification_status: 'pending',
-          requires_verification: true,
+          verification_status: 'approved',
+          requires_verification: false,
           import_row_order: i + 1  // Preserve row order from Excel
         });
         validRows.push({
-          created_by: user_id,
+          created_by: target_user_id,
           operation_date: operationDate,
           static_project_name: row.project_name || null,
           project_owner: projectOwner,
@@ -292,13 +294,13 @@ async function processImport(
           expense_amount: null,
           income_amount: incomeAmount,
           notes: row.notes || null,
-          verification_status: 'pending',
-          requires_verification: true,
+          verification_status: 'approved',
+          requires_verification: false,
           import_row_order: i + 1  // Preserve row order from Excel
         });
       } else {
         validRows.push({
-          created_by: user_id,
+          created_by: target_user_id,
           operation_date: operationDate,
           static_project_name: row.project_name || null,
           project_owner: projectOwner,
@@ -308,8 +310,8 @@ async function processImport(
           expense_amount: expenseAmount || null,
           income_amount: incomeAmount || null,
           notes: row.notes || null,
-          verification_status: 'pending',
-          requires_verification: true,
+          verification_status: 'approved',
+          requires_verification: false,
           import_row_order: i + 1  // Preserve row order from Excel
         });
       }
@@ -448,7 +450,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { rows, user_id, background_mode, job_id, resume_from_row } = await req.json();
+    const { rows, user_id, target_user_id, background_mode, job_id, resume_from_row } = await req.json();
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(
@@ -475,7 +477,7 @@ serve(async (req) => {
       EdgeRuntime.waitUntil((async () => {
         try {
           console.log(`[Background] Starting import job ${job_id}, resume_from_row: ${resume_from_row || 0}`);
-          const result = await processImport(supabase, rows, user_id, job_id, resume_from_row || 0);
+          const result = await processImport(supabase, rows, user_id, target_user_id || user_id, job_id, resume_from_row || 0);
           
           // Обновляем финальный статус и очищаем import_data
           await supabase
@@ -523,7 +525,7 @@ serve(async (req) => {
     }
 
     // Синхронный режим - ждём завершения
-    const result = await processImport(supabase, rows, user_id, job_id, resume_from_row || 0);
+    const result = await processImport(supabase, rows, user_id, target_user_id || user_id, job_id, resume_from_row || 0);
     console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(
