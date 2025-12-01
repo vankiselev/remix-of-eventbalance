@@ -117,6 +117,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           events:project_id(name)
         `)
         .order('operation_date', { ascending: false })
+        .order('import_row_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (userId) {

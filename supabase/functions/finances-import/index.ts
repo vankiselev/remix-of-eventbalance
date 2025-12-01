@@ -278,7 +278,8 @@ async function processImport(
           income_amount: null,
           notes: row.notes || null,
           verification_status: 'pending',
-          requires_verification: true
+          requires_verification: true,
+          import_row_order: i + 1  // Preserve row order from Excel
         });
         validRows.push({
           created_by: user_id,
@@ -292,7 +293,8 @@ async function processImport(
           income_amount: incomeAmount,
           notes: row.notes || null,
           verification_status: 'pending',
-          requires_verification: true
+          requires_verification: true,
+          import_row_order: i + 1  // Preserve row order from Excel
         });
       } else {
         validRows.push({
@@ -307,7 +309,8 @@ async function processImport(
           income_amount: incomeAmount || null,
           notes: row.notes || null,
           verification_status: 'pending',
-          requires_verification: true
+          requires_verification: true,
+          import_row_order: i + 1  // Preserve row order from Excel
         });
       }
     } catch (error: any) {

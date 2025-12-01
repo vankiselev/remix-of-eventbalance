@@ -335,7 +335,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           events:project_id(name),
           attachments_count:financial_attachments(count)
         `)
-        .order("created_at", { ascending: true });
+        .order("operation_date", { ascending: false })
+        .order("import_row_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false });
 
       // If not admin or specific userId provided, filter by user
       if (!isAdmin || userId) {
