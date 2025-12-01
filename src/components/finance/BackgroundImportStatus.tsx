@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { X, CheckCircle, AlertCircle } from "lucide-react";
+import { X, CheckCircle, AlertCircle, PlayCircle, StopCircle, Trash2 } from "lucide-react";
 import { useImportJobs } from "@/hooks/useImportJobs";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 
 export const BackgroundImportStatus = () => {
-  const { activeJobs, recentCompletedJobs, deleteJob } = useImportJobs();
+  const { activeJobs, recentCompletedJobs, cancelJob, resumeJob, deleteJob } = useImportJobs();
 
   // Don't render if no active or recent completed jobs
   if (activeJobs.length === 0 && recentCompletedJobs.length === 0) {
@@ -20,6 +20,11 @@ export const BackgroundImportStatus = () => {
       {activeJobs.map((job) => {
         const progress = job.total_rows ? (job.processed_rows / job.total_rows) * 100 : 0;
         const isProcessing = job.status === 'processing';
+        
+        // Определяем "застрявший" импорт (не обновлялся больше 5 минут)
+        const isStuck = isProcessing && 
+          job.updated_at && 
+          (Date.now() - new Date(job.updated_at).getTime()) > 5 * 60 * 1000;
 
         return (
           <Card key={job.id} className="border-primary/20 bg-primary/5">
@@ -40,6 +45,12 @@ export const BackgroundImportStatus = () => {
                   </Button>
                 )}
               </div>
+              {isStuck && (
+                <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-2">
+                  <AlertCircle className="h-3 w-3" />
+                  Импорт не обновлялся {formatDistanceToNow(new Date(job.updated_at!), { locale: ru })}
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
@@ -74,9 +85,42 @@ export const BackgroundImportStatus = () => {
                 </div>
               </div>
 
-              {isProcessing && (
+              {isProcessing && !isStuck && (
                 <div className="text-xs text-muted-foreground pt-2">
                   Началось {job.started_at ? formatDistanceToNow(new Date(job.started_at), { addSuffix: true, locale: ru }) : 'недавно'}
+                </div>
+              )}
+
+              {/* Кнопки управления для активных импортов */}
+              {isProcessing && (
+                <div className="flex gap-2 pt-3 border-t">
+                  {isStuck && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => resumeJob(job.id)}
+                    >
+                      <PlayCircle className="h-4 w-4 mr-1" />
+                      Продолжить импорт
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cancelJob(job.id)}
+                    className="text-destructive"
+                  >
+                    <StopCircle className="h-4 w-4 mr-1" />
+                    Отменить
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteJob(job.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Удалить
+                  </Button>
                 </div>
               )}
             </CardContent>

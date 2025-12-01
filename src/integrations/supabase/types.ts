@@ -799,7 +799,9 @@ export type Database = {
           errors: Json | null
           failed_rows: number | null
           id: string
+          import_data: Json | null
           inserted_rows: number | null
+          paused_at: string | null
           processed_rows: number | null
           skipped_rows: number | null
           started_at: string | null
@@ -815,7 +817,9 @@ export type Database = {
           errors?: Json | null
           failed_rows?: number | null
           id?: string
+          import_data?: Json | null
           inserted_rows?: number | null
+          paused_at?: string | null
           processed_rows?: number | null
           skipped_rows?: number | null
           started_at?: string | null
@@ -831,7 +835,9 @@ export type Database = {
           errors?: Json | null
           failed_rows?: number | null
           id?: string
+          import_data?: Json | null
           inserted_rows?: number | null
+          paused_at?: string | null
           processed_rows?: number | null
           skipped_rows?: number | null
           started_at?: string | null

@@ -59,7 +59,8 @@ async function processImport(
   supabase: any,
   rows: ImportRow[],
   user_id: string,
-  job_id: string | null
+  job_id: string | null,
+  resume_from_row: number = 0
 ): Promise<ImportResult> {
   const result: ImportResult = {
     total: rows.length,
@@ -204,7 +205,11 @@ async function processImport(
   // Подготовка данных
   const validRows: any[] = [];
   
-  for (let i = 0; i < rows.length; i++) {
+  // Если это продолжение импорта - начинаем с нужной строки
+  const startIndex = resume_from_row > 0 ? resume_from_row : 0;
+  console.log(`Processing rows from index ${startIndex} to ${rows.length}`);
+  
+  for (let i = startIndex; i < rows.length; i++) {
     const row: ImportRow = rows[i];
     
     try {
@@ -289,7 +294,7 @@ async function processImport(
   const BATCH_SIZE = 100; // Увеличено с 25
   const MAX_RETRIES = 3;
   const PARALLEL_BATCHES = 2; // Параллельная обработка 2 батчей
-  let processedRows = 0;
+  let processedRows = resume_from_row; // Начинаем с места остановки
   let batchNumber = 0;
   
   // Функция обработки одного батча
@@ -361,12 +366,12 @@ async function processImport(
       }
     });
 
-    processedRows = Math.min(i + BATCH_SIZE * PARALLEL_BATCHES, validRows.length);
+    processedRows = resume_from_row + Math.min(i + BATCH_SIZE * PARALLEL_BATCHES, validRows.length);
     
     // Обновляем прогресс реже (каждые 10 батчей)
-    if (batchNumber % 10 === 0 || processedRows >= validRows.length) {
+    if (batchNumber % 10 === 0 || processedRows >= rows.length) {
       await updateJobProgress(processedRows, result.inserted, result.failed, result.skipped);
-      console.log(`Progress: batch ${batchNumber}, inserted ${result.inserted}/${validRows.length} rows`);
+      console.log(`Progress: batch ${batchNumber}, inserted ${result.inserted}/${validRows.length} rows, total processed ${processedRows}/${rows.length}`);
     }
 
     // Минимальная пауза между группами батчей (уменьшено с 100ms)
@@ -388,7 +393,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { rows, user_id, background_mode, job_id } = await req.json();
+    const { rows, user_id, background_mode, job_id, resume_from_row } = await req.json();
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(
@@ -414,10 +419,10 @@ serve(async (req) => {
       // Запускаем обработку в фоне
       EdgeRuntime.waitUntil((async () => {
         try {
-          console.log(`[Background] Starting import job ${job_id}`);
-          const result = await processImport(supabase, rows, user_id, job_id);
+          console.log(`[Background] Starting import job ${job_id}, resume_from_row: ${resume_from_row || 0}`);
+          const result = await processImport(supabase, rows, user_id, job_id, resume_from_row || 0);
           
-          // Обновляем финальный статус
+          // Обновляем финальный статус и очищаем import_data
           await supabase
             .from('import_jobs')
             .update({
@@ -428,6 +433,7 @@ serve(async (req) => {
               failed_rows: result.failed,
               skipped_rows: result.skipped,
               errors: result.errors.slice(0, 100), // Ограничиваем количество ошибок
+              import_data: null, // Очищаем данные после успешного завершения
               updated_at: new Date().toISOString()
             })
             .eq('id', job_id);
@@ -462,7 +468,7 @@ serve(async (req) => {
     }
 
     // Синхронный режим - ждём завершения
-    const result = await processImport(supabase, rows, user_id, job_id);
+    const result = await processImport(supabase, rows, user_id, job_id, resume_from_row || 0);
     console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(

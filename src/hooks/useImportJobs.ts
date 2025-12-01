@@ -117,6 +117,58 @@ export const useImportJobs = () => {
     return null;
   };
 
+  const cancelJob = async (jobId: string) => {
+    await supabase
+      .from('import_jobs')
+      .update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        errors: [{ row: 0, reason: 'Отменено пользователем' }]
+      })
+      .eq('id', jobId);
+    fetchActiveJobs();
+    fetchRecentCompletedJobs();
+  };
+
+  const resumeJob = async (jobId: string) => {
+    if (!user?.id) return;
+
+    // Получить job с import_data
+    const { data: job, error } = await supabase
+      .from('import_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .single();
+
+    if (error || !job || !job.import_data) {
+      console.error('Failed to fetch job or no import_data:', error);
+      return;
+    }
+
+    // Обновить статус на processing
+    await supabase
+      .from('import_jobs')
+      .update({
+        status: 'processing',
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobId);
+
+    // Вызвать Edge Function с resume_from_row
+    await supabase.functions.invoke('finances-import', {
+      body: {
+        rows: job.import_data,
+        user_id: user.id,
+        background_mode: true,
+        job_id: jobId,
+        resume_from_row: job.processed_rows || 0
+      }
+    });
+
+    fetchActiveJobs();
+  };
+
   const deleteJob = async (jobId: string) => {
     await supabase
       .from('import_jobs')
@@ -161,6 +213,8 @@ export const useImportJobs = () => {
     isLoading,
     createJob,
     getJobStatus,
+    cancelJob,
+    resumeJob,
     deleteJob,
     fetchRecentJobs,
     refetch: fetchActiveJobs
