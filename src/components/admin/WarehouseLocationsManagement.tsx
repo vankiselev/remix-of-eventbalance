@@ -343,7 +343,7 @@ export const WarehouseLocationsManagement = () => {
                     <SelectValue placeholder="Выберите сотрудника" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profiles.map((profile) => (
+                    {profiles.filter(p => p.employment_status === 'active').map((profile) => (
                       <SelectItem key={profile.id} value={profile.id}>
                         {profile.first_name} {profile.last_name}
                       </SelectItem>

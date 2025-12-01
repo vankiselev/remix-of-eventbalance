@@ -96,7 +96,7 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
-                {profiles?.map((profile) => (
+                {profiles?.filter(p => p.employment_status === 'active').map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     {profile.full_name}
                   </SelectItem>
