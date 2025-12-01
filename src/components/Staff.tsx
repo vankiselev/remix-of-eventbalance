@@ -362,7 +362,7 @@ const Staff = () => {
                       <SelectValue placeholder="Выберите пользователя" />
                     </SelectTrigger>
                     <SelectContent>
-                      {profiles.map((profile) => (
+                      {profiles.filter(p => p.employment_status === 'active').map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.full_name} ({profile.email})
                         </SelectItem>
