@@ -130,8 +130,8 @@ export const useImportJobs = () => {
     fetchRecentCompletedJobs();
   };
 
-  const resumeJob = async (jobId: string) => {
-    if (!user?.id) return;
+  const resumeJob = async (jobId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user?.id) return { success: false, error: 'Не авторизован' };
 
     // Получить job с import_data
     const { data: job, error } = await supabase
@@ -140,9 +140,17 @@ export const useImportJobs = () => {
       .eq('id', jobId)
       .single();
 
-    if (error || !job || !job.import_data) {
-      console.error('Failed to fetch job or no import_data:', error);
-      return;
+    if (error) {
+      console.error('Failed to fetch job:', error);
+      return { success: false, error: 'Не удалось получить данные импорта' };
+    }
+
+    if (!job || !job.import_data) {
+      console.error('No import_data available');
+      return { 
+        success: false, 
+        error: 'Данные для продолжения импорта недоступны. Этот импорт был создан до добавления функции возобновления. Отмените его и запустите новый импорт.' 
+      };
     }
 
     // Обновить статус на processing
@@ -167,6 +175,7 @@ export const useImportJobs = () => {
     });
 
     fetchActiveJobs();
+    return { success: true };
   };
 
   const deleteJob = async (jobId: string) => {
