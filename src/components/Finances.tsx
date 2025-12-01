@@ -34,6 +34,7 @@ import { FinancialAuditLog } from "@/components/finance/FinancialAuditLog";
 import { TransactionVerificationDialog } from "@/components/finance/TransactionVerificationDialog";
 import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
 
 interface CashSummary {
   total_cash: number;
@@ -373,10 +374,13 @@ const Finances = () => {
       )}
 
       <div className="sticky top-0 z-10 bg-background pb-2 space-y-4 w-full">
-        <FinanceSummaryCards 
-          summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
-          isLoading={false} 
-        />
+        <div className="grid gap-4 md:grid-cols-2 w-full">
+          <AdvancesSummaryCard />
+          <FinanceSummaryCards 
+            summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
+            isLoading={false} 
+          />
+        </div>
         <ImportProgressWindow />
         <BackgroundImportStatus />
       </div>
@@ -444,11 +448,14 @@ const Finances = () => {
           )}
         </div>
 
-        {/* Show user summary for "my-transactions", company summary for "all-transactions" */}
-        <FinanceSummaryCards 
-          summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
-          isLoading={false} 
-        />
+        {/* Summary cards with advances */}
+        <div className="grid gap-4 md:grid-cols-2 w-full">
+          <AdvancesSummaryCard />
+          <FinanceSummaryCards 
+            summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
+            isLoading={false} 
+          />
+        </div>
         
         <ImportProgressWindow />
         <BackgroundImportStatus />

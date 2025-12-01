@@ -10,6 +10,7 @@ import MyEventsCard from "@/components/dashboard/MyEventsCard";
 import { EventActionRequestsCard } from "@/components/dashboard/EventActionRequestsCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { AdvancesDashboardCard } from "@/components/dashboard/AdvancesDashboardCard";
 
 interface DashboardData {
   totalEvents: number;
@@ -112,6 +113,7 @@ const Dashboard = () => {
         <TodayEventsCard />
         <TodayBirthdaysCard />
         <TodayVacationsCard />
+        <AdvancesDashboardCard />
       </div>
 
       {/* My Events */}

@@ -1264,6 +1264,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          advance_balance: number | null
           avatar_url: string | null
           birth_date: string | null
           cash_lera: number | null
@@ -1291,6 +1292,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          advance_balance?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           cash_lera?: number | null
@@ -1318,6 +1320,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          advance_balance?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           cash_lera?: number | null
