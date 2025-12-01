@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, AlertCircle, Check } from "lucide-react";
+import { CalendarIcon, Loader2, AlertCircle, Check, Sparkles, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './FileUpload';
@@ -20,6 +20,7 @@ import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
+import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
 import {
   Dialog,
   DialogContent,
@@ -204,6 +205,38 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     correctedText,
     errors,
   } = useDescriptionChecker(watchDescription, watchCategory);
+
+  // AI-powered transaction suggestions
+  const {
+    suggestions: aiSuggestions,
+    isAnalyzing,
+    confidence: aiConfidence,
+    applySuggestions: applyAISuggestions,
+    dismissSuggestions,
+  } = useTransactionSuggestions(watchDescription, (suggestions) => {
+    // Apply AI suggestions to form
+    if (suggestions.category) {
+      form.setValue('category', suggestions.category);
+      
+      // Handle special categories
+      if (suggestions.category === 'Передано или получено от сотрудника') {
+        setIsMoneyTransfer(true);
+        form.setValue('no_receipt', true);
+        form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+        form.setValue('income_amount', undefined);
+      }
+    }
+    
+    if (suggestions.project) {
+      form.setValue('project_id', suggestions.project);
+    }
+
+    toast({
+      title: "Применены предложения AI",
+      description: "Категория и проект заполнены автоматически",
+      duration: 3000,
+    });
+  });
 
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
@@ -1232,6 +1265,59 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     />
                   </FormControl>
                   <FormMessage />
+                  
+                  {/* AI Transaction Suggestions */}
+                  {isAnalyzing && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Анализ описания...</span>
+                    </div>
+                  )}
+
+                  {aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                            AI предлагает:
+                          </p>
+                          <div className="space-y-1">
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                              <span className="font-medium">Категория:</span> {aiSuggestions.category}
+                            </p>
+                            {aiSuggestions.project && (
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
+                                <span className="font-medium">Проект:</span> {aiSuggestions.project}
+                              </p>
+                            )}
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              Уверенность: {Math.round(aiConfidence * 100)}%
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            onClick={applyAISuggestions}
+                            className="h-8 text-xs"
+                          >
+                            Применить
+                          </Button>
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={dismissSuggestions}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* AI Grammar Check Feedback */}
                   {isChecking && (
