@@ -545,6 +545,63 @@ const FinancesImportDialog = ({
     return validations;
   }, [parsedData, columnMapping, categoryNames]);
 
+  // Статистика форматов дат для диагностики
+  const dateFormatStats = useMemo(() => {
+    const stats = {
+      total: 0,
+      parsed: 0,
+      unparsed: 0,
+      excelSerial: 0,
+      ddmmyyyy: 0,
+      iso: 0,
+      other: 0,
+      examples: {
+        unparsed: [] as string[],
+        parsed: [] as { raw: string; result: string }[]
+      }
+    };
+
+    parsedData.forEach((row) => {
+      const mappedRow = mapRow(row);
+      const dateValue = String(mappedRow.operation_date || '').trim();
+      
+      if (!dateValue) {
+        stats.unparsed++;
+        if (stats.examples.unparsed.length < 5) {
+          stats.examples.unparsed.push('(пусто)');
+        }
+        return;
+      }
+      
+      stats.total++;
+      const parsed = parseDate(dateValue);
+      
+      if (parsed) {
+        stats.parsed++;
+        // Определяем формат
+        if (/^\d+(\.\d+)?$/.test(dateValue)) {
+          stats.excelSerial++;
+        } else if (/^\d{1,2}[\.\/-]\d{1,2}[\.\/-]\d{2,4}$/.test(dateValue)) {
+          stats.ddmmyyyy++;
+        } else if (/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+          stats.iso++;
+        } else {
+          stats.other++;
+        }
+        if (stats.examples.parsed.length < 3) {
+          stats.examples.parsed.push({ raw: dateValue, result: parsed });
+        }
+      } else {
+        stats.unparsed++;
+        if (stats.examples.unparsed.length < 5) {
+          stats.examples.unparsed.push(dateValue.substring(0, 30));
+        }
+      }
+    });
+
+    return stats;
+  }, [parsedData, columnMapping]);
+
   // Статистика импорта
   const importStats = useMemo(() => {
     let totalExpense = 0;
@@ -553,6 +610,13 @@ const FinancesImportDialog = ({
     let incomeCount = 0;
     let minDate: string | null = null;
     let maxDate: string | null = null;
+    
+    // Группировка ошибок по типу
+    const errorsByType = {
+      invalidDate: 0,
+      zeroAmount: 0,
+      emptyDescription: 0
+    };
     
     parsedData.forEach((row) => {
       const mappedRow = mapRow(row);
@@ -571,6 +635,12 @@ const FinancesImportDialog = ({
       if (date) {
         if (!minDate || date < minDate) minDate = date;
         if (!maxDate || date > maxDate) maxDate = date;
+      } else {
+        errorsByType.invalidDate++;
+      }
+      
+      if (expense === 0 && income === 0) {
+        errorsByType.zeroAmount++;
       }
     });
     
@@ -588,6 +658,7 @@ const FinancesImportDialog = ({
       validCount,
       warningCount,
       errorCount,
+      errorsByType,
     };
   }, [parsedData, columnMapping, validateAllRows]);
 
@@ -619,11 +690,48 @@ const FinancesImportDialog = ({
     return true;
   };
 
+  // Проверка дубликатов в БД
+  const checkDuplicates = async (transactions: any[]): Promise<Set<string>> => {
+    const duplicateKeys = new Set<string>();
+    
+    // Создаём ключи для проверки: дата + описание + сумма
+    const keysToCheck = transactions.map(t => ({
+      date: t.operation_date,
+      description: t.description,
+      expense: t.expense_amount || 0,
+      income: t.income_amount || 0
+    }));
+
+    // Получаем уникальные даты для фильтрации
+    const uniqueDates = [...new Set(keysToCheck.map(k => k.date))];
+    
+    if (uniqueDates.length === 0) return duplicateKeys;
+
+    try {
+      const { data: existingTx } = await supabase
+        .from('financial_transactions')
+        .select('operation_date, description, expense_amount, income_amount')
+        .in('operation_date', uniqueDates);
+
+      if (existingTx) {
+        existingTx.forEach(tx => {
+          const key = `${tx.operation_date}|${tx.description || ''}|${tx.expense_amount || 0}|${tx.income_amount || 0}`;
+          duplicateKeys.add(key);
+        });
+      }
+    } catch (error) {
+      console.warn('[FinancesImport] Ошибка проверки дубликатов:', error);
+    }
+
+    return duplicateKeys;
+  };
+
   const handleImport = async () => {
     console.log('[FinancesImport] === НАЧАЛО ИМПОРТА ===');
     console.log('[FinancesImport] Всего строк для импорта:', parsedData.length);
     console.log('[FinancesImport] Маппинг колонок:', columnMapping);
     console.log('[FinancesImport] Пользователь:', user?.id);
+    console.log('[FinancesImport] Статистика дат:', dateFormatStats);
 
     if (!validateData()) {
       console.log('[FinancesImport] Валидация не пройдена, импорт отменён');
@@ -639,210 +747,230 @@ const FinancesImportDialog = ({
     abortRef.current = false;
     startImport(parsedData.length);
 
-    const result: ImportResult = {
+    const result: ImportResult & { skipped: number } = {
       total: parsedData.length,
       inserted: 0,
       updated: 0,
       failed: 0,
-      errors: []
+      errors: [],
+      skipped: 0
     };
 
     try {
+      // Сначала подготовим все транзакции для проверки дубликатов
+      const allPreparedTransactions: any[] = [];
+      const rowToTransactionMap: Map<number, number[]> = new Map(); // rowNum -> [txIndex, ...]
+      
+      console.log('[FinancesImport] Подготовка транзакций...');
+      
+      for (let i = 0; i < parsedData.length; i++) {
+        const row = parsedData[i];
+        const rowNum = i + 1;
+        const mappedRow = mapRow(row);
+        
+        try {
+          const operationDate = parseDate(mappedRow.operation_date);
+          const expenseAmount = parseAmount(mappedRow.expense_amount);
+          const incomeAmount = parseAmount(mappedRow.income_amount);
+          const projectOwner = mappedRow.project_owner || null;
+          const cashType = mapCashType(projectOwner);
+          const category = findMatchingCategory(mappedRow.category);
+
+          if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
+            result.failed++;
+            result.errors.push({
+              row: rowNum,
+              reason: `Некорректные данные: дата=${mappedRow.operation_date}→${operationDate}, расход=${expenseAmount}, приход=${incomeAmount}`,
+              data: mappedRow
+            });
+            continue;
+          }
+
+          const txIndices: number[] = [];
+          
+          if (expenseAmount > 0 && incomeAmount > 0) {
+            txIndices.push(allPreparedTransactions.length);
+            allPreparedTransactions.push({
+              created_by: user?.id,
+              operation_date: operationDate,
+              static_project_name: mappedRow.project_name || null,
+              project_owner: cashType || projectOwner || 'Без кассы',
+              description: mappedRow.description || 'Расход',
+              category: category,
+              cash_type: cashType,
+              expense_amount: expenseAmount,
+              income_amount: null,
+              notes: mappedRow.notes || null,
+              verification_status: 'pending',
+              requires_verification: true,
+              _rowNum: rowNum
+            });
+            
+            txIndices.push(allPreparedTransactions.length);
+            allPreparedTransactions.push({
+              created_by: user?.id,
+              operation_date: operationDate,
+              static_project_name: mappedRow.project_name || null,
+              project_owner: cashType || projectOwner || 'Без кассы',
+              description: mappedRow.description || 'Приход',
+              category: category,
+              cash_type: cashType,
+              expense_amount: null,
+              income_amount: incomeAmount,
+              notes: mappedRow.notes || null,
+              verification_status: 'pending',
+              requires_verification: true,
+              _rowNum: rowNum
+            });
+          } else {
+            txIndices.push(allPreparedTransactions.length);
+            allPreparedTransactions.push({
+              created_by: user?.id,
+              operation_date: operationDate,
+              static_project_name: mappedRow.project_name || null,
+              project_owner: cashType || projectOwner || 'Без кассы',
+              description: mappedRow.description || (expenseAmount > 0 ? 'Расход' : 'Приход'),
+              category: category,
+              cash_type: cashType,
+              expense_amount: expenseAmount || null,
+              income_amount: incomeAmount || null,
+              notes: mappedRow.notes || null,
+              verification_status: 'pending',
+              requires_verification: true,
+              _rowNum: rowNum
+            });
+          }
+          
+          rowToTransactionMap.set(rowNum, txIndices);
+        } catch (error: any) {
+          result.failed++;
+          result.errors.push({
+            row: rowNum,
+            reason: error.message || 'Ошибка обработки',
+            data: mappedRow
+          });
+        }
+      }
+
+      console.log(`[FinancesImport] Подготовлено ${allPreparedTransactions.length} транзакций из ${parsedData.length} строк`);
+      console.log(`[FinancesImport] Ошибок при подготовке: ${result.failed}`);
+
+      // Проверяем дубликаты
+      console.log('[FinancesImport] Проверка дубликатов в БД...');
+      const duplicateKeys = await checkDuplicates(allPreparedTransactions);
+      console.log(`[FinancesImport] Найдено ${duplicateKeys.size} существующих записей в БД`);
+
+      // Фильтруем дубликаты
+      const transactionsToInsert = allPreparedTransactions.filter(tx => {
+        const key = `${tx.operation_date}|${tx.description || ''}|${tx.expense_amount || 0}|${tx.income_amount || 0}`;
+        if (duplicateKeys.has(key)) {
+          console.log(`[FinancesImport] Строка ${tx._rowNum}: ДУБЛИКАТ - пропускаем`);
+          result.skipped++;
+          return false;
+        }
+        return true;
+      });
+
+      console.log(`[FinancesImport] После фильтрации дубликатов: ${transactionsToInsert.length} транзакций для вставки`);
+
+      if (transactionsToInsert.length === 0) {
+        toast({
+          title: "Нет новых данных",
+          description: `Все ${allPreparedTransactions.length} записей уже существуют в базе данных`,
+        });
+        setImporting(false);
+        result.total = parsedData.length;
+        setImportResult(result as ImportResult);
+        finishImport(result);
+        setStep(4);
+        return;
+      }
+
+      // Батч-импорт с продолжением при ошибках
       const BATCH_SIZE = 10;
-      const totalBatches = Math.ceil(parsedData.length / BATCH_SIZE);
+      const totalBatches = Math.ceil(transactionsToInsert.length / BATCH_SIZE);
+      let processedCount = 0;
+
       console.log('[FinancesImport] Размер батча:', BATCH_SIZE, '| Всего батчей:', totalBatches);
       
-      for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
+      for (let batchStart = 0; batchStart < transactionsToInsert.length; batchStart += BATCH_SIZE) {
         const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
         
-        // Проверяем, не отменён ли импорт
         if (abortRef.current) {
           console.log('[FinancesImport] Импорт прерван пользователем на батче', batchNum);
           break;
         }
 
-        // Проверяем, не приостановлен ли импорт (используем ref для актуального значения)
-        if (isPausedRef.current) {
-          console.log('[FinancesImport] Импорт на паузе, ожидаем...');
-        }
         while (isPausedRef.current && !abortRef.current) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        if (abortRef.current) {
-          console.log('[FinancesImport] Импорт прерван во время паузы');
-          break;
-        }
+        if (abortRef.current) break;
 
-        const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedData.length);
-        const batch = parsedData.slice(batchStart, batchEnd);
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, transactionsToInsert.length);
+        const batch = transactionsToInsert.slice(batchStart, batchEnd);
         
-        console.log(`[FinancesImport] Батч ${batchNum}/${totalBatches}: строки ${batchStart + 1}-${batchEnd}`);
+        // Убираем служебное поле _rowNum перед вставкой
+        const cleanBatch = batch.map(({ _rowNum, ...tx }) => tx);
         
-        // Подготовка batch для вставки
-        const transactionsToInsert = [];
-        
-        for (let i = 0; i < batch.length; i++) {
-          const row = batch[i];
-          const rowNum = batchStart + i + 1;
-          const mappedRow = mapRow(row);
-          
-          console.log(`[FinancesImport] Строка ${rowNum}: исходные данные:`, row);
-          console.log(`[FinancesImport] Строка ${rowNum}: после маппинга:`, mappedRow);
-          
-          try {
-            const operationDate = parseDate(mappedRow.operation_date);
-            const expenseAmount = parseAmount(mappedRow.expense_amount);
-            const incomeAmount = parseAmount(mappedRow.income_amount);
-            const projectOwner = mappedRow.project_owner || null;
-            const cashType = mapCashType(projectOwner);
-            const category = findMatchingCategory(mappedRow.category);
+        console.log(`[FinancesImport] Батч ${batchNum}/${totalBatches}: вставляем ${cleanBatch.length} транзакций`);
 
-            console.log(`[FinancesImport] Строка ${rowNum}: парсинг результатов:`, {
-              operationDate,
-              expenseAmount,
-              incomeAmount,
-              projectOwner,
-              cashType,
-              category
-            });
+        let retries = 3;
+        let success = false;
+        
+        while (retries > 0 && !success) {
+          const { error } = await supabase
+            .from('financial_transactions')
+            .insert(cleanBatch);
 
-            if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
-              console.warn(`[FinancesImport] Строка ${rowNum}: ПРОПУЩЕНА - некорректные данные (дата: ${operationDate}, расход: ${expenseAmount}, приход: ${incomeAmount})`);
-              result.failed++;
+          if (!error) {
+            console.log(`[FinancesImport] Батч ${batchNum}: УСПЕХ - вставлено ${cleanBatch.length} записей`);
+            result.inserted += cleanBatch.length;
+            success = true;
+          } else if (error.message.includes('timeout') || error.message.includes('canceling statement')) {
+            retries--;
+            console.warn(`[FinancesImport] Батч ${batchNum}: ТАЙМАУТ, осталось попыток: ${retries}`);
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } else {
+            console.error(`[FinancesImport] Батч ${batchNum}: ОШИБКА БД:`, error);
+            // НЕ ОСТАНАВЛИВАЕМ импорт - продолжаем со следующим батчем
+            result.failed += cleanBatch.length;
+            batch.forEach(tx => {
               result.errors.push({
-                row: rowNum,
-                reason: `Некорректные данные: дата=${operationDate}, расход=${expenseAmount}, приход=${incomeAmount}`,
-                data: mappedRow
+                row: tx._rowNum,
+                reason: error.message || 'Ошибка вставки в БД'
               });
-              continue;
-            }
-
-            // Если есть и доход и расход - создаём две транзакции
-            if (expenseAmount > 0 && incomeAmount > 0) {
-              console.log(`[FinancesImport] Строка ${rowNum}: создаём 2 транзакции (и расход, и приход)`);
-              // Транзакция расхода
-              transactionsToInsert.push({
-                created_by: user?.id,
-                operation_date: operationDate,
-                static_project_name: mappedRow.project_name || null,
-                project_owner: cashType || projectOwner || 'Без кассы',
-                description: mappedRow.description || 'Расход',
-                category: category,
-                cash_type: cashType,
-                expense_amount: expenseAmount,
-                income_amount: null,
-                notes: mappedRow.notes || null,
-                verification_status: 'pending',
-                requires_verification: true
-              });
-              // Транзакция дохода
-              transactionsToInsert.push({
-                created_by: user?.id,
-                operation_date: operationDate,
-                static_project_name: mappedRow.project_name || null,
-                project_owner: cashType || projectOwner || 'Без кассы',
-                description: mappedRow.description || 'Приход',
-                category: category,
-                cash_type: cashType,
-                expense_amount: null,
-                income_amount: incomeAmount,
-                notes: mappedRow.notes || null,
-                verification_status: 'pending',
-                requires_verification: true
-              });
-            } else {
-              const txType = expenseAmount > 0 ? 'расход' : 'приход';
-              console.log(`[FinancesImport] Строка ${rowNum}: создаём 1 транзакцию (${txType})`);
-              transactionsToInsert.push({
-                created_by: user?.id,
-                operation_date: operationDate,
-                static_project_name: mappedRow.project_name || null,
-                project_owner: cashType || projectOwner || 'Без кассы',
-                description: mappedRow.description || (expenseAmount > 0 ? 'Расход' : 'Приход'),
-                category: category,
-                cash_type: cashType,
-                expense_amount: expenseAmount || null,
-                income_amount: incomeAmount || null,
-                notes: mappedRow.notes || null,
-                verification_status: 'pending',
-                requires_verification: true
-              });
-            }
-          } catch (error: any) {
-            console.error(`[FinancesImport] Строка ${rowNum}: ОШИБКА обработки:`, error);
-            result.failed++;
+            });
+            break;
+          }
+        }
+        
+        // Если все попытки исчерпаны
+        if (retries === 0 && !success) {
+          console.error(`[FinancesImport] Батч ${batchNum}: все попытки исчерпаны, продолжаем...`);
+          result.failed += cleanBatch.length;
+          batch.forEach(tx => {
             result.errors.push({
-              row: rowNum,
-              reason: error.message || 'Ошибка обработки',
-              data: mappedRow
+              row: tx._rowNum,
+              reason: 'Таймаут после 3 попыток'
             });
-          }
+          });
         }
 
-        // Batch-вставка в БД с повторными попытками при таймаутах
-        if (transactionsToInsert.length > 0) {
-          console.log(`[FinancesImport] Батч ${batchNum}: вставляем ${transactionsToInsert.length} транзакций в БД`);
-          console.log(`[FinancesImport] Батч ${batchNum}: данные для вставки:`, transactionsToInsert);
-          
-          let retries = 3;
-          let lastError = null;
-          
-          while (retries > 0) {
-            console.log(`[FinancesImport] Батч ${batchNum}: попытка вставки (осталось попыток: ${retries})`);
-            
-            const { error } = await supabase
-              .from('financial_transactions')
-              .insert(transactionsToInsert);
-
-            if (!error) {
-              console.log(`[FinancesImport] Батч ${batchNum}: УСПЕХ - вставлено ${transactionsToInsert.length} записей`);
-              result.inserted += transactionsToInsert.length;
-              lastError = null;
-              break;
-            } else if (error.message.includes('timeout') || error.message.includes('canceling statement')) {
-              retries--;
-              lastError = error;
-              console.warn(`[FinancesImport] Батч ${batchNum}: ТАЙМАУТ - ${error.message}, осталось попыток: ${retries}`);
-              if (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              }
-            } else {
-              console.error(`[FinancesImport] Батч ${batchNum}: ОШИБКА БД:`, error);
-              lastError = error;
-              break;
-            }
-          }
-
-          if (lastError) {
-            console.error(`[FinancesImport] Батч ${batchNum}: ФИНАЛЬНАЯ ОШИБКА после всех попыток:`, lastError);
-            result.failed += transactionsToInsert.length;
-            for (let i = 0; i < transactionsToInsert.length; i++) {
-              result.errors.push({
-                row: batchStart + i + 1,
-                reason: lastError.message || 'Ошибка вставки'
-              });
-            }
-          }
-        } else {
-          console.log(`[FinancesImport] Батч ${batchNum}: нет данных для вставки (все строки пропущены)`);
-        }
-
-        // Обновляем прогресс
-        const currentProgress = batchEnd;
-        const progressPercent = Math.round((currentProgress / parsedData.length) * 100);
-        console.log(`[FinancesImport] Прогресс: ${progressPercent}% (${currentProgress}/${parsedData.length})`);
+        processedCount = batchEnd;
+        const progressPercent = Math.round((processedCount / transactionsToInsert.length) * 100);
         setImportProgress(progressPercent);
-        updateProgress(currentProgress, parsedData.length);
+        updateProgress(processedCount, transactionsToInsert.length);
         
-        // Добавляем задержку между батчами для предотвращения перегрузки БД
         await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       console.log('[FinancesImport] === ИМПОРТ ЗАВЕРШЁН ===');
       console.log('[FinancesImport] Результат:', result);
 
-      setImportResult(result);
+      setImportResult(result as ImportResult);
       finishImport(result);
       setStep(4);
 
@@ -852,7 +980,7 @@ const FinancesImportDialog = ({
 
       toast({
         title: "Импорт завершен",
-        description: `Успешно импортировано: ${result.inserted} из ${result.total} записей`,
+        description: `Добавлено: ${result.inserted}, пропущено дубликатов: ${result.skipped}, ошибок: ${result.failed}`,
       });
 
     } catch (error: any) {
@@ -1025,8 +1153,72 @@ const FinancesImportDialog = ({
               </CardContent>
             </Card>
 
+            {/* Диагностика форматов дат */}
+            {dateFormatStats.unparsed > 0 && (
+              <Card className="border-yellow-500/50 bg-yellow-500/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    Диагностика дат ({dateFormatStats.parsed} из {dateFormatStats.total} распознано)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {dateFormatStats.excelSerial > 0 && (
+                      <Badge variant="outline">Excel serial: {dateFormatStats.excelSerial}</Badge>
+                    )}
+                    {dateFormatStats.ddmmyyyy > 0 && (
+                      <Badge variant="outline">ДД.ММ.ГГГГ: {dateFormatStats.ddmmyyyy}</Badge>
+                    )}
+                    {dateFormatStats.iso > 0 && (
+                      <Badge variant="outline">ISO: {dateFormatStats.iso}</Badge>
+                    )}
+                    {dateFormatStats.unparsed > 0 && (
+                      <Badge variant="destructive">Не распознано: {dateFormatStats.unparsed}</Badge>
+                    )}
+                  </div>
+                  {dateFormatStats.examples.unparsed.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-muted-foreground text-xs mb-1">Примеры нераспознанных дат:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {dateFormatStats.examples.unparsed.map((ex, i) => (
+                          <code key={i} className="text-xs bg-destructive/10 px-1 rounded">{ex}</code>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Детализация ошибок */}
+            {importStats.errorCount > 0 && (
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-destructive" />
+                    Причины ошибок
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <div className="flex flex-wrap gap-2">
+                    {importStats.errorsByType.invalidDate > 0 && (
+                      <Badge variant="outline" className="border-destructive/50">
+                        Некорректная дата: {importStats.errorsByType.invalidDate}
+                      </Badge>
+                    )}
+                    {importStats.errorsByType.zeroAmount > 0 && (
+                      <Badge variant="outline" className="border-destructive/50">
+                        Нулевая сумма: {importStats.errorsByType.zeroAmount}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Статус валидации */}
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center flex-wrap">
               <Badge variant="outline" className="gap-1">
                 <CheckCircle2 className="w-3 h-3 text-green-500" />
                 {importStats.validCount} валидных
@@ -1040,7 +1232,7 @@ const FinancesImportDialog = ({
               {importStats.errorCount > 0 && (
                 <Badge variant="destructive" className="gap-1">
                   <XCircle className="w-3 h-3" />
-                  {importStats.errorCount} ошибок
+                  {importStats.errorCount} ошибок (будут пропущены)
                 </Badge>
               )}
             </div>
@@ -1135,12 +1327,27 @@ const FinancesImportDialog = ({
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold mb-4">Результат импорта</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p><strong>Всего записей:</strong> {importResult.total}</p>
-                  <p><strong>Успешно импортировано:</strong> {importResult.inserted}</p>
-                  <p><strong>Ошибок:</strong> {importResult.failed}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-muted-foreground text-sm">Всего записей</p>
+                  <p className="font-semibold text-lg">{importResult.total}</p>
                 </div>
+                <div className="p-3 rounded-lg bg-green-500/10">
+                  <p className="text-muted-foreground text-sm">Импортировано</p>
+                  <p className="font-semibold text-lg text-green-600">{importResult.inserted}</p>
+                </div>
+                {'skipped' in importResult && (importResult as any).skipped > 0 && (
+                  <div className="p-3 rounded-lg bg-yellow-500/10">
+                    <p className="text-muted-foreground text-sm">Дубликатов</p>
+                    <p className="font-semibold text-lg text-yellow-600">{(importResult as any).skipped}</p>
+                  </div>
+                )}
+                {importResult.failed > 0 && (
+                  <div className="p-3 rounded-lg bg-destructive/10">
+                    <p className="text-muted-foreground text-sm">Ошибок</p>
+                    <p className="font-semibold text-lg text-destructive">{importResult.failed}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1151,22 +1358,29 @@ const FinancesImportDialog = ({
                 </CardHeader>
                 <CardContent>
                   <div className="max-h-48 overflow-auto space-y-2">
-                    {importResult.errors.slice(0, 10).map((error, index) => (
-                      <div key={index} className="text-sm">
+                    {importResult.errors.slice(0, 20).map((error, index) => (
+                      <div key={index} className="text-sm border-b border-border/50 pb-1">
                         <strong>Строка {error.row}:</strong> {error.reason}
                       </div>
                     ))}
-                    {importResult.errors.length > 10 && (
-                      <p className="text-muted-foreground">...и еще {importResult.errors.length - 10} ошибок</p>
+                    {importResult.errors.length > 20 && (
+                      <p className="text-muted-foreground">...и еще {importResult.errors.length - 20} ошибок</p>
                     )}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            <Button onClick={handleClose}>
-              Закрыть
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleClose}>
+                Закрыть
+              </Button>
+              {importResult.failed > 0 && (
+                <Button variant="outline" onClick={() => { setStep(3); setImportResult(null); }}>
+                  Повторить импорт
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
