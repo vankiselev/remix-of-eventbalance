@@ -33,7 +33,7 @@ export function useDescriptionChecker(
   const [checkError, setCheckError] = useState<string | null>(null);
 
   // Debounce the description to avoid too many API calls
-  const debouncedDescription = useDebounce(description, 1500);
+  const debouncedDescription = useDebounce(description, 300);
 
   useEffect(() => {
     // Reset state if description is empty or too short
