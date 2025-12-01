@@ -384,9 +384,9 @@ const FinancesImportDialog = ({
   const parseAmount = (amountStr: string | number | null | undefined): number => {
     if (amountStr === null || amountStr === undefined || amountStr === '') return 0;
     
-    // Если это уже число - сразу округляем и возвращаем
+    // Если это уже число - сразу округляем и возвращаем (сохраняя знак)
     if (typeof amountStr === 'number') {
-      return Math.abs(Math.round(amountStr));
+      return Math.round(amountStr);
     }
     
     const s = String(amountStr).trim();
@@ -398,9 +398,9 @@ const FinancesImportDialog = ({
     // Убираем пробелы (разделители тысяч)
     cleaned = cleaned.replace(/\s/g, '');
     
-    // Если это целое число без разделителей - возвращаем
+    // Если это целое число без разделителей - возвращаем (сохраняя знак)
     if (/^-?\d+$/.test(cleaned)) {
-      return Math.abs(parseInt(cleaned));
+      return parseInt(cleaned);
     }
     
     // Определяем формат по последнему разделителю
@@ -444,8 +444,8 @@ const FinancesImportDialog = ({
     
     const num = parseFloat(cleaned) || 0;
     
-    // ВСЕГДА округляем до целых рублей
-    return Math.abs(Math.round(num));
+    // ВСЕГДА округляем до целых рублей (сохраняя знак)
+    return Math.round(num);
   };
 
   // Полный список типов кошельков
