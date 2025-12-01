@@ -5,9 +5,27 @@ import { X, CheckCircle, AlertCircle, PlayCircle, StopCircle, Trash2 } from "luc
 import { useImportJobs } from "@/hooks/useImportJobs";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 export const BackgroundImportStatus = () => {
   const { activeJobs, recentCompletedJobs, cancelJob, resumeJob, deleteJob } = useImportJobs();
+  const { toast } = useToast();
+
+  const handleResumeJob = async (jobId: string) => {
+    const result = await resumeJob(jobId);
+    if (!result.success) {
+      toast({
+        variant: "destructive",
+        title: "Не удалось продолжить импорт",
+        description: result.error,
+      });
+    } else {
+      toast({
+        title: "Импорт возобновлен",
+        description: "Фоновый импорт продолжается",
+      });
+    }
+  };
 
   // Don't render if no active or recent completed jobs
   if (activeJobs.length === 0 && recentCompletedJobs.length === 0) {
@@ -95,14 +113,14 @@ export const BackgroundImportStatus = () => {
               {isProcessing && (
                 <div className="flex gap-2 pt-3 border-t">
                   {isStuck && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => resumeJob(job.id)}
-                    >
-                      <PlayCircle className="h-4 w-4 mr-1" />
-                      Продолжить импорт
-                    </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleResumeJob(job.id)}
+                  >
+                    <PlayCircle className="h-4 w-4 mr-1" />
+                    Продолжить импорт
+                  </Button>
                   )}
                   <Button
                     variant="outline"
