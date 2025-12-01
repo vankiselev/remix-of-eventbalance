@@ -380,48 +380,72 @@ const FinancesImportDialog = ({
     return null;
   };
 
-  // Интеллектуальный парсинг суммы с определением формата (RU/US)
+  // Интеллектуальный парсинг суммы с округлением до целых рублей
   const parseAmount = (amountStr: string | number | null | undefined): number => {
     if (amountStr === null || amountStr === undefined || amountStr === '') return 0;
+    
+    // Если это уже число - сразу округляем и возвращаем
+    if (typeof amountStr === 'number') {
+      return Math.abs(Math.round(amountStr));
+    }
     
     const s = String(amountStr).trim();
     if (!s) return 0;
     
-    // Убираем валютные символы и пробелы
-    let cleaned = s.replace(/[₽$€£руб\.rub\s]/gi, '');
+    // Убираем валютные символы
+    let cleaned = s.replace(/[₽$€£руб\.rub]/gi, '');
     
-    // Если это уже число - возвращаем
+    // Убираем пробелы (разделители тысяч)
+    cleaned = cleaned.replace(/\s/g, '');
+    
+    // Если это целое число без разделителей - возвращаем
     if (/^-?\d+$/.test(cleaned)) {
       return Math.abs(parseInt(cleaned));
     }
     
     // Определяем формат по последнему разделителю
-    // "1.234,56" → последний разделитель запятая = RU (результат: 1234.56)
-    // "1,234.56" → последний разделитель точка = US (результат: 1234.56)
-    // "1234.56" → только точка = десятичная
-    // "1234,56" → только запятая = десятичная (RU)
-    
     const lastCommaIdx = cleaned.lastIndexOf(',');
     const lastDotIdx = cleaned.lastIndexOf('.');
     
+    // Проверяем количество цифр после последнего разделителя
+    // Если 1-2 цифры после разделителя - это копейки (дробная часть)
+    // Если 3+ цифры - это разделитель тысяч
+    
     if (lastCommaIdx > lastDotIdx) {
-      // Запятая последняя → это десятичный разделитель (RU формат)
-      // Убираем точки (разделители тысяч), запятую меняем на точку
-      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      // Запятая последняя
+      const afterComma = cleaned.substring(lastCommaIdx + 1);
+      if (afterComma.length <= 2) {
+        // Это копейки (дробная часть) - убираем точки как разделители тысяч
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Это разделитель тысяч - просто убираем запятую
+        cleaned = cleaned.replace(/,/g, '');
+      }
     } else if (lastDotIdx > lastCommaIdx) {
-      // Точка последняя → это десятичный разделитель (US формат)
-      // Убираем запятые (разделители тысяч)
-      cleaned = cleaned.replace(/,/g, '');
-    } else if (lastCommaIdx === -1 && lastDotIdx === -1) {
-      // Нет разделителей - целое число
-    } else if (lastCommaIdx !== -1 && lastDotIdx === -1) {
-      // Только запятая - это десятичный разделитель (RU)
-      cleaned = cleaned.replace(',', '.');
+      // Точка последняя
+      const afterDot = cleaned.substring(lastDotIdx + 1);
+      if (afterDot.length <= 2) {
+        // Это десятичная часть - убираем запятые как разделители тысяч
+        cleaned = cleaned.replace(/,/g, '');
+      } else {
+        // Это разделитель тысяч - убираем точку
+        cleaned = cleaned.replace(/\./g, '');
+      }
+    } else if (lastCommaIdx !== -1) {
+      // Только запятая
+      const afterComma = cleaned.substring(lastCommaIdx + 1);
+      if (afterComma.length <= 2) {
+        cleaned = cleaned.replace(',', '.');
+      } else {
+        cleaned = cleaned.replace(',', '');
+      }
     }
     // Если только точка - оставляем как есть
     
     const num = parseFloat(cleaned) || 0;
-    return Math.abs(num); // Всегда положительное число
+    
+    // ВСЕГДА округляем до целых рублей
+    return Math.abs(Math.round(num));
   };
 
   // Полный список типов кошельков
@@ -682,6 +706,17 @@ const FinancesImportDialog = ({
     const warningCount = validateAllRows.filter(v => v.status === 'warning').length;
     const errorCount = validateAllRows.filter(v => v.status === 'error').length;
     
+    // Подсчёт подозрительно больших сумм (> 500 000 ₽)
+    let largeSumsCount = 0;
+    parsedData.forEach(row => {
+      const mappedRow = mapRow(row);
+      const expense = parseAmount(mappedRow.expense_amount);
+      const income = parseAmount(mappedRow.income_amount);
+      if (expense > 500000 || income > 500000) {
+        largeSumsCount++;
+      }
+    });
+    
     return {
       totalExpense,
       totalIncome,
@@ -693,6 +728,7 @@ const FinancesImportDialog = ({
       warningCount,
       errorCount,
       errorsByType,
+      largeSumsCount,
     };
   }, [parsedData, columnMapping, validateAllRows]);
 
@@ -1384,6 +1420,24 @@ const FinancesImportDialog = ({
                       ⚠️ Некоторые кошельки не распознаны и будут сохранены как есть
                     </p>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Предупреждение о подозрительно больших суммах */}
+            {importStats.largeSumsCount > 0 && (
+              <Card className="border-yellow-500 bg-yellow-500/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-yellow-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    Внимание: {importStats.largeSumsCount} транзакций с суммой &gt; 500 тыс ₽
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Проверьте эти суммы - возможно числа неправильно распознались из Excel.
+                    Например, "26 246,37" могло быть прочитано как "26 246 367".
+                  </p>
                 </CardContent>
               </Card>
             )}
