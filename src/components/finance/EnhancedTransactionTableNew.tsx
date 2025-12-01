@@ -212,16 +212,13 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
   const fetchTransactions = async () => {
     try {
-      // Optimized: Use JOIN to get user profiles in single query
+      // Fetch transactions without complex JOINs that may fail
       let query = supabase
         .from("financial_transactions")
         .select(`
           *,
           events:project_id(name),
-          attachments_count:financial_attachments(count),
-          profiles!financial_transactions_created_by_fkey(full_name, email),
-          transfer_to_profile:profiles!financial_transactions_transfer_to_user_id_fkey(full_name, email),
-          transfer_from_profile:profiles!financial_transactions_transfer_from_user_id_fkey(full_name, email)
+          attachments_count:financial_attachments(count)
         `)
         .order("created_at", { ascending: true });
 
@@ -234,22 +231,37 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
       if (error) throw error;
 
-      // Transform data with user names and attachment counts from JOINs
+      // Collect unique user IDs
+      const userIds = new Set<string>();
+      (data || []).forEach(t => {
+        if (t.created_by) userIds.add(t.created_by);
+        if (t.transfer_to_user_id) userIds.add(t.transfer_to_user_id);
+        if (t.transfer_from_user_id) userIds.add(t.transfer_from_user_id);
+      });
+
+      // Fetch profiles separately
+      let profilesMap = new Map<string, { full_name: string; email: string }>();
+      if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', Array.from(userIds));
+        
+        if (profiles) {
+          profiles.forEach(p => profilesMap.set(p.id, p));
+        }
+      }
+
+      // Transform data with user names and attachment counts
       const transactions = (data || []).map(transaction => ({
         ...transaction,
-        user_name: (transaction.profiles as any)?.full_name,
+        user_name: profilesMap.get(transaction.created_by)?.full_name,
         attachments_count: transaction.attachments_count?.[0]?.count || 0,
-        transfer_to_user: transaction.transfer_to_profile 
-          ? {
-              full_name: (transaction.transfer_to_profile as any)?.full_name,
-              email: (transaction.transfer_to_profile as any)?.email
-            }
+        transfer_to_user: transaction.transfer_to_user_id 
+          ? profilesMap.get(transaction.transfer_to_user_id) || null
           : null,
-        transfer_from_user: transaction.transfer_from_profile
-          ? {
-              full_name: (transaction.transfer_from_profile as any)?.full_name,
-              email: (transaction.transfer_from_profile as any)?.email
-            }
+        transfer_from_user: transaction.transfer_from_user_id
+          ? profilesMap.get(transaction.transfer_from_user_id) || null
           : null,
       }));
 
