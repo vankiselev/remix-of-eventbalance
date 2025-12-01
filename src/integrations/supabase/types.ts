@@ -694,6 +694,7 @@ export type Database = {
           description: string
           expense_amount: number | null
           id: string
+          import_row_order: number | null
           income_amount: number | null
           linked_transaction_id: string | null
           no_receipt: boolean | null
@@ -724,6 +725,7 @@ export type Database = {
           description: string
           expense_amount?: number | null
           id?: string
+          import_row_order?: number | null
           income_amount?: number | null
           linked_transaction_id?: string | null
           no_receipt?: boolean | null
@@ -754,6 +756,7 @@ export type Database = {
           description?: string
           expense_amount?: number | null
           id?: string
+          import_row_order?: number | null
           income_amount?: number | null
           linked_transaction_id?: string | null
           no_receipt?: boolean | null
