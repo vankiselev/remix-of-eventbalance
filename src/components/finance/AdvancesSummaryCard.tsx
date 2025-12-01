@@ -24,11 +24,6 @@ export const AdvancesSummaryCard = () => {
     return null;
   }
 
-  // Don't render for admin if no advances exist
-  if (isAdmin && !isLoadingAll && (!allAdvances || allAdvances.total === 0)) {
-    return null;
-  }
-
   const handleAddNew = () => {
     setEditingEmployeeId(undefined);
     setEditingAmount(0);
@@ -82,7 +77,7 @@ export const AdvancesSummaryCard = () => {
               {formatCurrency(allAdvances.total)}
             </div>
             
-            {allAdvances.employees.length > 0 && (
+            {allAdvances.employees.length > 0 ? (
               <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
                 <CollapsibleTrigger asChild>
                   <Button
@@ -120,6 +115,10 @@ export const AdvancesSummaryCard = () => {
                   ))}
                 </CollapsibleContent>
               </Collapsible>
+            ) : (
+              <p className="text-xs text-orange-700 dark:text-orange-300 mt-2">
+                Нет выданных авансов. Нажмите "+" чтобы добавить первый.
+              </p>
             )}
           </CardContent>
         </Card>
