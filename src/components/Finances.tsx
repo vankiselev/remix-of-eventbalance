@@ -375,11 +375,11 @@ const Finances = () => {
 
       <div className="sticky top-0 z-10 bg-background pb-2 space-y-4 w-full">
         <div className="grid gap-4 md:grid-cols-2 w-full">
-          <AdvancesSummaryCard />
           <FinanceSummaryCards 
             summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
             isLoading={false} 
           />
+          <AdvancesSummaryCard />
         </div>
         <ImportProgressWindow />
         <BackgroundImportStatus />
@@ -450,11 +450,11 @@ const Finances = () => {
 
         {/* Summary cards with advances */}
         <div className="grid gap-4 md:grid-cols-2 w-full">
-          <AdvancesSummaryCard />
           <FinanceSummaryCards 
             summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
             isLoading={false} 
           />
+          <AdvancesSummaryCard />
         </div>
         
         <ImportProgressWindow />
