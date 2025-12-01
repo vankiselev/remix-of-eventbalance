@@ -183,23 +183,57 @@ async function processImport(
     return null;
   };
 
+  // Полный список типов кошельков
+  const WALLET_TYPES = [
+    'Наличка Настя',
+    'Наличка Лера', 
+    'Наличка Ваня',
+    'Корп. карта Настя',
+    'Корп. карта Лера',
+    'ИП Настя',
+    'ИП Лера',
+    'Оплатил(а) клиент',
+    'Оплатила Настя',
+    'Оплатила Лера',
+    'Получила Лера',
+    'Получила Настя'
+  ];
+
   // Функция маппинга cash_type
   const mapCashType = (projectOwner: string): string | null => {
     if (!projectOwner) return null;
-    const s = String(projectOwner).toLowerCase().trim();
+    const input = String(projectOwner).trim();
+    const inputLower = input.toLowerCase();
     
-    if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
-    if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
-    if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
+    // 1. Точное совпадение
+    const exactMatch = WALLET_TYPES.find(w => w.toLowerCase() === inputLower);
+    if (exactMatch) return exactMatch;
     
-    if (s.startsWith('наличка')) {
-      const name = s.replace('наличка', '').trim();
-      if (name) {
-        return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
-      }
-    }
+    // 2. Частичное совпадение (input содержится в названии или наоборот)
+    const partialMatch = WALLET_TYPES.find(w => 
+      w.toLowerCase().includes(inputLower) || 
+      inputLower.includes(w.toLowerCase())
+    );
+    if (partialMatch) return partialMatch;
     
-    return null;
+    // 3. Синонимы и сокращения
+    if (inputLower.includes('корп') && inputLower.includes('настя')) return 'Корп. карта Настя';
+    if (inputLower.includes('корп') && inputLower.includes('лера')) return 'Корп. карта Лера';
+    if (inputLower.includes('карта') && inputLower.includes('настя')) return 'Корп. карта Настя';
+    if (inputLower.includes('карта') && inputLower.includes('лера')) return 'Корп. карта Лера';
+    if (inputLower.includes('ип') && inputLower.includes('настя')) return 'ИП Настя';
+    if (inputLower.includes('ип') && inputLower.includes('лера')) return 'ИП Лера';
+    if (inputLower.includes('клиент')) return 'Оплатил(а) клиент';
+    if (inputLower.includes('оплатил') && inputLower.includes('настя')) return 'Оплатила Настя';
+    if (inputLower.includes('оплатил') && inputLower.includes('лера')) return 'Оплатила Лера';
+    if (inputLower.includes('получил') && inputLower.includes('настя')) return 'Получила Настя';
+    if (inputLower.includes('получил') && inputLower.includes('лера')) return 'Получила Лера';
+    if (inputLower.includes('наличк') && inputLower.includes('настя')) return 'Наличка Настя';
+    if (inputLower.includes('наличк') && inputLower.includes('лера')) return 'Наличка Лера';
+    if (inputLower.includes('наличк') && inputLower.includes('ваня')) return 'Наличка Ваня';
+    
+    // 4. Если ничего не подошло - возвращаем как есть
+    return input;
   };
 
   // Подготовка данных
