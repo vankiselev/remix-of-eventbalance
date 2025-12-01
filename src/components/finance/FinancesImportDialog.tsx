@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +95,22 @@ const FinancesImportDialog = ({
   const { toast } = useToast();
   const { startImport, updateProgress, finishImport } = useImportProgress();
   const { categories } = useTransactionCategories();
+
+  // Refs для предотвращения stale closure в async функциях
+  const isPausedRef = useRef(false);
+  const abortRef = useRef(false);
+
+  // Синхронизируем ref с состоянием
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  // Сбрасываем abort при открытии диалога
+  useEffect(() => {
+    if (open) {
+      abortRef.current = false;
+    }
+  }, [open]);
 
   const fieldOptions = [
     { value: 'skip', label: 'Не импортировать' },
@@ -609,6 +625,8 @@ const FinancesImportDialog = ({
     setImporting(true);
     setImportProgress(0);
     setIsPaused(false);
+    isPausedRef.current = false;
+    abortRef.current = false;
     startImport(parsedData.length);
 
     const result: ImportResult = {
@@ -623,10 +641,18 @@ const FinancesImportDialog = ({
       const BATCH_SIZE = 10;
       
       for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
-        // Проверяем, не приостановлен ли импорт
-        while (isPaused) {
+        // Проверяем, не отменён ли импорт
+        if (abortRef.current) {
+          console.log('Import aborted by user');
+          break;
+        }
+
+        // Проверяем, не приостановлен ли импорт (используем ref для актуального значения)
+        while (isPausedRef.current && !abortRef.current) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
+
+        if (abortRef.current) break;
 
         const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedData.length);
         const batch = parsedData.slice(batchStart, batchEnd);
@@ -806,6 +832,10 @@ const FinancesImportDialog = ({
   };
 
   const handleClose = () => {
+    // Прерываем импорт если он выполняется
+    if (importing) {
+      abortRef.current = true;
+    }
     resetDialog();
     onOpenChange(false);
   };
