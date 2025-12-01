@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { format, isToday, isYesterday, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { TransactionCard } from "./TransactionCard";
@@ -64,12 +65,16 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showExpensesBreakdown, setShowExpensesBreakdown] = useState(false);
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
+  const [shouldRefetch, setShouldRefetch] = useState(0);
+  const debouncedRefetch = useDebounce(shouldRefetch, 2000); // 2 seconds debounce
 
-  // Fetch transactions
+  // Fetch transactions on mount and filter changes
   useEffect(() => {
     fetchTransactions();
-    
-    // Realtime subscription
+  }, [userId, isAdmin, selectedPeriod, selectedWallet]);
+
+  // Realtime subscription with debounce
+  useEffect(() => {
     const channel = supabase
       .channel('financial_transactions_cards')
       .on(
@@ -80,7 +85,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           table: 'financial_transactions'
         },
         () => {
-          fetchTransactions();
+          setShouldRefetch(prev => prev + 1);
         }
       )
       .subscribe();
@@ -88,7 +93,14 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, isAdmin, selectedPeriod, selectedWallet]);
+  }, []);
+
+  // Debounced refetch
+  useEffect(() => {
+    if (debouncedRefetch > 0) {
+      fetchTransactions();
+    }
+  }, [debouncedRefetch]);
 
   const fetchTransactions = async () => {
     try {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +84,8 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
+  const [shouldRefetchOnInsert, setShouldRefetchOnInsert] = useState(0);
+  const debouncedInsertRefetch = useDebounce(shouldRefetchOnInsert, 2000); // 2 seconds debounce for bulk inserts
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -103,7 +106,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     fetchTransactions();
   }, [userId]);
 
-  // Optimized realtime subscription - update only changed records
+  // Optimized realtime subscription with debounce for bulk inserts
   useEffect(() => {
     const channel = supabase
       .channel('transactions-table-changes')
@@ -114,27 +117,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           schema: 'public',
           table: 'financial_transactions'
         },
-        async (payload) => {
-          console.log('Transaction inserted:', payload.new);
-          // Fetch only the new transaction with full details
-          const { data: newTx } = await supabase
-            .from("financial_transactions")
-            .select(`
-              *,
-              events:project_id(name),
-              attachments_count:financial_attachments(count),
-              profiles!financial_transactions_created_by_fkey(full_name, email)
-            `)
-            .eq('id', payload.new.id)
-            .single();
-          
-          if (newTx) {
-            setTransactions(prev => [{
-              ...newTx,
-              attachments_count: newTx.attachments_count?.[0]?.count || 0,
-              user_name: (newTx.profiles as any)?.full_name
-            }, ...prev]);
-          }
+        () => {
+          // During bulk imports, debounce the refetch to avoid query storm
+          setShouldRefetchOnInsert(prev => prev + 1);
         }
       )
       .on(
@@ -172,6 +157,13 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  // Debounced refetch on bulk inserts
+  useEffect(() => {
+    if (debouncedInsertRefetch > 0) {
+      fetchTransactions();
+    }
+  }, [debouncedInsertRefetch]);
 
   // Debounce search for better performance
   useEffect(() => {
