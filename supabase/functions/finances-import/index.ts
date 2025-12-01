@@ -295,8 +295,10 @@ async function processImport(
   const MAX_RETRIES = 3;
   const BASE_RETRY_DELAY = 500; // Базовая задержка для exponential backoff
   const DELAY_BETWEEN_BATCHES = 150; // Увеличено для предотвращения перегрузки
+  const PROGRESS_UPDATE_INTERVAL = 1000; // Минимум 1 секунда между обновлениями прогресса
   let processedRows = resume_from_row; // Начинаем с места остановки
   let batchNumber = 0;
+  let lastProgressUpdate = 0; // Timestamp последнего обновления прогресса
   
   // Функция обработки одного батча с exponential backoff
   const processBatch = async (batch: any[], batchIdx: number) => {
@@ -357,9 +359,15 @@ async function processImport(
 
     processedRows = resume_from_row + Math.min(i + BATCH_SIZE, validRows.length);
     
-    // Обновляем прогресс реже (каждые 10 батчей)
-    if (batchNumber % 10 === 0 || processedRows >= rows.length) {
+    // Обновляем прогресс каждые 2 батча или если прошла 1+ секунда с последнего обновления
+    const now = Date.now();
+    const isLastBatch = processedRows >= rows.length;
+    const shouldUpdate = isLastBatch || 
+                        (batchNumber % 2 === 0 && now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL);
+    
+    if (shouldUpdate) {
       await updateJobProgress(processedRows, result.inserted, result.failed, result.skipped);
+      lastProgressUpdate = now;
       console.log(`Progress: batch ${batchNumber}, inserted ${result.inserted}/${validRows.length} rows, total processed ${processedRows}/${rows.length}`);
     }
 
