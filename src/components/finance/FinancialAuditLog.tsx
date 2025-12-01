@@ -3,9 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { FileText, Trash2, Edit, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AuditLogEntry {
   id: string;
@@ -22,6 +25,9 @@ interface AuditLogEntry {
 export const FinancialAuditLog = () => {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -113,6 +119,45 @@ export const FinancialAuditLog = () => {
     return `${type} ${Number(amount).toLocaleString('ru-RU')} ₽${category ? ` (${category})` : ''}`;
   };
 
+  const handleDeleteOne = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('financial_audit_log')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Запись удалена');
+      fetchAuditLogs();
+    } catch (error) {
+      console.error('Error deleting log entry:', error);
+      toast.error('Ошибка при удалении записи');
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    try {
+      const { error } = await supabase
+        .from('financial_audit_log')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (error) throw error;
+
+      toast.success('Журнал очищен');
+      fetchAuditLogs();
+    } catch (error) {
+      console.error('Error clearing log:', error);
+      toast.error('Ошибка при очистке журнала');
+    } finally {
+      setDeleteAllDialogOpen(false);
+    }
+  };
+
   // Group logs by date
   const groupedLogs = logs.reduce((acc, log) => {
     const date = format(parseISO(log.changed_at), 'yyyy-MM-dd');
@@ -144,9 +189,20 @@ export const FinancialAuditLog = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Журнал финансовых операций</h2>
-        <p className="text-muted-foreground">История всех изменений транзакций</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Журнал финансовых операций</h2>
+          <p className="text-muted-foreground">История всех изменений транзакций</p>
+        </div>
+        {logs.length > 0 && (
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteAllDialogOpen(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Очистить журнал
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -165,7 +221,7 @@ export const FinancialAuditLog = () => {
                   {dayLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                     >
                       <div className="mt-1">{getActionIcon(log.action)}</div>
                       <div className="flex-1 min-w-0">
@@ -184,8 +240,21 @@ export const FinancialAuditLog = () => {
                           </p>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(parseISO(log.changed_at), 'HH:mm')}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(parseISO(log.changed_at), 'HH:mm')}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setDeletingId(log.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -195,6 +264,48 @@ export const FinancialAuditLog = () => {
           </div>
         </ScrollArea>
       </Card>
+
+      {/* Delete one entry confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить запись?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Запись будет удалена из журнала навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingId && handleDeleteOne(deletingId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete all entries confirmation */}
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Очистить весь журнал?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Все записи журнала будут удалены навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Очистить журнал
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

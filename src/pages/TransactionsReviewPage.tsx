@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TransactionVerificationDialog } from "@/components/finance/TransactionVerificationDialog";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatFullName, getInitials } from "@/utils/formatName";
 import { format } from "date-fns";
 import { Search, Filter, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,21 +47,51 @@ export default function TransactionsReviewPage() {
   const { data: stats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .select('verification_status')
-        .limit(100000);
-      
-      if (error) throw error;
+      const [pendingResult, approvedResult, rejectedResult, totalResult] = await Promise.all([
+        supabase
+          .from('financial_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('verification_status', 'pending'),
+        supabase
+          .from('financial_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('verification_status', 'approved'),
+        supabase
+          .from('financial_transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('verification_status', 'rejected'),
+        supabase
+          .from('financial_transactions')
+          .select('*', { count: 'exact', head: true }),
+      ]);
 
-      const pending = data.filter(t => t.verification_status === 'pending').length;
-      const approved = data.filter(t => t.verification_status === 'approved').length;
-      const rejected = data.filter(t => t.verification_status === 'rejected').length;
-
-      return { pending, approved, rejected, total: data.length };
+      return {
+        pending: pendingResult.count || 0,
+        approved: approvedResult.count || 0,
+        rejected: rejectedResult.count || 0,
+        total: totalResult.count || 0,
+      };
     },
     enabled: isFinancier,
   });
+
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles-for-review'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, full_name, avatar_url');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isFinancier,
+  });
+
+  const profilesMap = useMemo(() => {
+    const map = new Map();
+    profiles?.forEach(p => map.set(p.id, p));
+    return map;
+  }, [profiles]);
 
   if (permissionsLoading) {
     return (
@@ -213,9 +245,25 @@ export default function TransactionsReviewPage() {
                   return (
                     <div
                       key={transaction.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={() => handleTransactionClick(transaction)}
                     >
+                      {/* Автор транзакции */}
+                      <div className="flex flex-col items-center gap-1 shrink-0 w-20">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={profilesMap.get(transaction.created_by)?.avatar_url} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(profilesMap.get(transaction.created_by) || {})}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-center font-medium text-primary truncate w-full">
+                          {profilesMap.get(transaction.created_by)
+                            ? formatFullName(profilesMap.get(transaction.created_by))
+                            : 'Неизвестно'}
+                        </span>
+                      </div>
+
+                      {/* Информация о транзакции */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium truncate">{transaction.description}</p>
@@ -236,6 +284,8 @@ export default function TransactionsReviewPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Сумма */}
                       <div className="text-right shrink-0 ml-4">
                         <p className={`font-bold text-lg ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                           {isIncome ? '+' : '-'} {formatCurrency(amount)}
