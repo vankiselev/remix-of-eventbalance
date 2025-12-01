@@ -620,7 +620,17 @@ const FinancesImportDialog = ({
   };
 
   const handleImport = async () => {
-    if (!validateData()) return;
+    console.log('[FinancesImport] === НАЧАЛО ИМПОРТА ===');
+    console.log('[FinancesImport] Всего строк для импорта:', parsedData.length);
+    console.log('[FinancesImport] Маппинг колонок:', columnMapping);
+    console.log('[FinancesImport] Пользователь:', user?.id);
+
+    if (!validateData()) {
+      console.log('[FinancesImport] Валидация не пройдена, импорт отменён');
+      return;
+    }
+
+    console.log('[FinancesImport] Валидация пройдена, начинаем импорт...');
 
     setImporting(true);
     setImportProgress(0);
@@ -639,30 +649,46 @@ const FinancesImportDialog = ({
 
     try {
       const BATCH_SIZE = 10;
+      const totalBatches = Math.ceil(parsedData.length / BATCH_SIZE);
+      console.log('[FinancesImport] Размер батча:', BATCH_SIZE, '| Всего батчей:', totalBatches);
       
       for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
+        const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+        
         // Проверяем, не отменён ли импорт
         if (abortRef.current) {
-          console.log('Import aborted by user');
+          console.log('[FinancesImport] Импорт прерван пользователем на батче', batchNum);
           break;
         }
 
         // Проверяем, не приостановлен ли импорт (используем ref для актуального значения)
+        if (isPausedRef.current) {
+          console.log('[FinancesImport] Импорт на паузе, ожидаем...');
+        }
         while (isPausedRef.current && !abortRef.current) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        if (abortRef.current) break;
+        if (abortRef.current) {
+          console.log('[FinancesImport] Импорт прерван во время паузы');
+          break;
+        }
 
         const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedData.length);
         const batch = parsedData.slice(batchStart, batchEnd);
+        
+        console.log(`[FinancesImport] Батч ${batchNum}/${totalBatches}: строки ${batchStart + 1}-${batchEnd}`);
         
         // Подготовка batch для вставки
         const transactionsToInsert = [];
         
         for (let i = 0; i < batch.length; i++) {
           const row = batch[i];
+          const rowNum = batchStart + i + 1;
           const mappedRow = mapRow(row);
+          
+          console.log(`[FinancesImport] Строка ${rowNum}: исходные данные:`, row);
+          console.log(`[FinancesImport] Строка ${rowNum}: после маппинга:`, mappedRow);
           
           try {
             const operationDate = parseDate(mappedRow.operation_date);
@@ -672,11 +698,21 @@ const FinancesImportDialog = ({
             const cashType = mapCashType(projectOwner);
             const category = findMatchingCategory(mappedRow.category);
 
+            console.log(`[FinancesImport] Строка ${rowNum}: парсинг результатов:`, {
+              operationDate,
+              expenseAmount,
+              incomeAmount,
+              projectOwner,
+              cashType,
+              category
+            });
+
             if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
+              console.warn(`[FinancesImport] Строка ${rowNum}: ПРОПУЩЕНА - некорректные данные (дата: ${operationDate}, расход: ${expenseAmount}, приход: ${incomeAmount})`);
               result.failed++;
               result.errors.push({
-                row: batchStart + i + 1,
-                reason: 'Некорректные данные',
+                row: rowNum,
+                reason: `Некорректные данные: дата=${operationDate}, расход=${expenseAmount}, приход=${incomeAmount}`,
                 data: mappedRow
               });
               continue;
@@ -684,6 +720,7 @@ const FinancesImportDialog = ({
 
             // Если есть и доход и расход - создаём две транзакции
             if (expenseAmount > 0 && incomeAmount > 0) {
+              console.log(`[FinancesImport] Строка ${rowNum}: создаём 2 транзакции (и расход, и приход)`);
               // Транзакция расхода
               transactionsToInsert.push({
                 created_by: user?.id,
@@ -715,6 +752,8 @@ const FinancesImportDialog = ({
                 requires_verification: true
               });
             } else {
+              const txType = expenseAmount > 0 ? 'расход' : 'приход';
+              console.log(`[FinancesImport] Строка ${rowNum}: создаём 1 транзакцию (${txType})`);
               transactionsToInsert.push({
                 created_by: user?.id,
                 operation_date: operationDate,
@@ -731,9 +770,10 @@ const FinancesImportDialog = ({
               });
             }
           } catch (error: any) {
+            console.error(`[FinancesImport] Строка ${rowNum}: ОШИБКА обработки:`, error);
             result.failed++;
             result.errors.push({
-              row: batchStart + i + 1,
+              row: rowNum,
               reason: error.message || 'Ошибка обработки',
               data: mappedRow
             });
@@ -742,33 +782,40 @@ const FinancesImportDialog = ({
 
         // Batch-вставка в БД с повторными попытками при таймаутах
         if (transactionsToInsert.length > 0) {
+          console.log(`[FinancesImport] Батч ${batchNum}: вставляем ${transactionsToInsert.length} транзакций в БД`);
+          console.log(`[FinancesImport] Батч ${batchNum}: данные для вставки:`, transactionsToInsert);
+          
           let retries = 3;
           let lastError = null;
           
           while (retries > 0) {
+            console.log(`[FinancesImport] Батч ${batchNum}: попытка вставки (осталось попыток: ${retries})`);
+            
             const { error } = await supabase
               .from('financial_transactions')
               .insert(transactionsToInsert);
 
             if (!error) {
+              console.log(`[FinancesImport] Батч ${batchNum}: УСПЕХ - вставлено ${transactionsToInsert.length} записей`);
               result.inserted += transactionsToInsert.length;
               lastError = null;
               break;
             } else if (error.message.includes('timeout') || error.message.includes('canceling statement')) {
               retries--;
               lastError = error;
+              console.warn(`[FinancesImport] Батч ${batchNum}: ТАЙМАУТ - ${error.message}, осталось попыток: ${retries}`);
               if (retries > 0) {
-                console.log(`Таймаут при вставке батча, повторная попытка (осталось ${retries})...`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
               }
             } else {
+              console.error(`[FinancesImport] Батч ${batchNum}: ОШИБКА БД:`, error);
               lastError = error;
               break;
             }
           }
 
           if (lastError) {
-            console.error('Batch insert error:', lastError);
+            console.error(`[FinancesImport] Батч ${batchNum}: ФИНАЛЬНАЯ ОШИБКА после всех попыток:`, lastError);
             result.failed += transactionsToInsert.length;
             for (let i = 0; i < transactionsToInsert.length; i++) {
               result.errors.push({
@@ -777,16 +824,23 @@ const FinancesImportDialog = ({
               });
             }
           }
+        } else {
+          console.log(`[FinancesImport] Батч ${batchNum}: нет данных для вставки (все строки пропущены)`);
         }
 
         // Обновляем прогресс
         const currentProgress = batchEnd;
-        setImportProgress(Math.round((currentProgress / parsedData.length) * 100));
+        const progressPercent = Math.round((currentProgress / parsedData.length) * 100);
+        console.log(`[FinancesImport] Прогресс: ${progressPercent}% (${currentProgress}/${parsedData.length})`);
+        setImportProgress(progressPercent);
         updateProgress(currentProgress, parsedData.length);
         
         // Добавляем задержку между батчами для предотвращения перегрузки БД
         await new Promise(resolve => setTimeout(resolve, 200));
       }
+      
+      console.log('[FinancesImport] === ИМПОРТ ЗАВЕРШЁН ===');
+      console.log('[FinancesImport] Результат:', result);
 
       setImportResult(result);
       finishImport(result);
