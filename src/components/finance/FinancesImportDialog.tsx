@@ -286,10 +286,19 @@ const FinancesImportDialog = ({
     if (!projectOwner) return null;
     const s = String(projectOwner).toLowerCase().trim();
     
-    // Точное совпадение для наличных касс
-    if (s === 'наличка настя' || s === 'настя') return 'наличка настя';
-    if (s === 'наличка лера' || s === 'лера') return 'наличка лера';
-    if (s === 'наличка ваня' || s === 'ваня') return 'наличка ваня';
+    // Гибкое сопоставление для наличных касс
+    if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
+    if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
+    if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
+    
+    // Если начинается с "наличка" - попробуем распознать
+    if (s.startsWith('наличка')) {
+      const name = s.replace('наличка', '').trim();
+      if (name) {
+        // Капитализируем
+        return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
+      }
+    }
     
     // Если не совпало - это не касса, возвращаем null
     return null;
@@ -319,10 +328,11 @@ const FinancesImportDialog = ({
         return;
       }
       
-      if (!mappedRow.description) {
-        errors.push(`Строка ${index + 1}: Отсутствует описание операции`);
-        return;
-      }
+      // Описание может быть пустым - подставим значение по умолчанию
+      // if (!mappedRow.description) {
+      //   errors.push(`Строка ${index + 1}: Отсутствует описание операции`);
+      //   return;
+      // }
 
       const expenseAmount = parseAmount(mappedRow.expense_amount);
       const incomeAmount = parseAmount(mappedRow.income_amount);
@@ -332,32 +342,22 @@ const FinancesImportDialog = ({
         return;
       }
 
-      if (expenseAmount > 0 && incomeAmount > 0) {
-        errors.push(`Строка ${index + 1}: Указаны и доходы и расходы одновременно`);
-        return;
-      }
+      // Разрешаем строки где и доход и расход - создадим две транзакции
+      // if (expenseAmount > 0 && incomeAmount > 0) {
+      //   errors.push(`Строка ${index + 1}: Указаны и доходы и расходы одновременно`);
+      //   return;
+      // }
 
       validRows++;
     });
 
-    if (errors.length > 5) {
-      toast({
-        variant: "destructive",
-        title: "Обнаружены ошибки",
-        description: `Найдено ${errors.length} ошибок из ${parsedData.length} записей. Будут импортированы только валидные строки.`,
-      });
-      console.error("Validation errors:", errors.slice(0, 10));
-      // Не блокируем импорт, просто показываем предупреждение
-    }
-
     if (errors.length > 0) {
+      // Показываем предупреждение, но НЕ блокируем импорт если есть валидные строки
       toast({
-        variant: "destructive",
-        title: "Ошибки валидации",
-        description: errors.slice(0, 3).join('; '),
+        title: "Предупреждение",
+        description: `Найдено ${errors.length} строк с ошибками из ${parsedData.length}. Эти строки будут пропущены.`,
       });
-      console.error("Validation errors:", errors);
-      return false;
+      console.warn("Validation warnings:", errors.slice(0, 20));
     }
 
     if (validRows === 0) {
@@ -368,6 +368,11 @@ const FinancesImportDialog = ({
       });
       return false;
     }
+
+    toast({
+      title: "Валидация пройдена",
+      description: `Готово к импорту: ${validRows} из ${parsedData.length} записей`,
+    });
 
     return true;
   };
@@ -424,20 +429,54 @@ const FinancesImportDialog = ({
               continue;
             }
 
-            transactionsToInsert.push({
-              created_by: user?.id,
-              operation_date: operationDate,
-              static_project_name: mappedRow.project_name || null,
-              project_owner: projectOwner,
-              description: mappedRow.description || '',
-              category: mappedRow.category || 'Разное',
-              cash_type: cashType,
-              expense_amount: expenseAmount || null,
-              income_amount: incomeAmount || null,
-              notes: mappedRow.notes || null,
-              verification_status: 'pending',
-              requires_verification: true
-            });
+            // Если есть и доход и расход - создаём две транзакции
+            if (expenseAmount > 0 && incomeAmount > 0) {
+              // Транзакция расхода
+              transactionsToInsert.push({
+                created_by: user?.id,
+                operation_date: operationDate,
+                static_project_name: mappedRow.project_name || null,
+                project_owner: cashType || projectOwner || 'Без кассы',
+                description: mappedRow.description || 'Расход',
+                category: mappedRow.category || 'Разное',
+                cash_type: cashType,
+                expense_amount: expenseAmount,
+                income_amount: null,
+                notes: mappedRow.notes || null,
+                verification_status: 'pending',
+                requires_verification: true
+              });
+              // Транзакция дохода
+              transactionsToInsert.push({
+                created_by: user?.id,
+                operation_date: operationDate,
+                static_project_name: mappedRow.project_name || null,
+                project_owner: cashType || projectOwner || 'Без кассы',
+                description: mappedRow.description || 'Приход',
+                category: mappedRow.category || 'Разное',
+                cash_type: cashType,
+                expense_amount: null,
+                income_amount: incomeAmount,
+                notes: mappedRow.notes || null,
+                verification_status: 'pending',
+                requires_verification: true
+              });
+            } else {
+              transactionsToInsert.push({
+                created_by: user?.id,
+                operation_date: operationDate,
+                static_project_name: mappedRow.project_name || null,
+                project_owner: cashType || projectOwner || 'Без кассы',
+                description: mappedRow.description || (expenseAmount > 0 ? 'Расход' : 'Приход'),
+                category: mappedRow.category || 'Разное',
+                cash_type: cashType,
+                expense_amount: expenseAmount || null,
+                income_amount: incomeAmount || null,
+                notes: mappedRow.notes || null,
+                verification_status: 'pending',
+                requires_verification: true
+              });
+            }
           } catch (error: any) {
             result.failed++;
             result.errors.push({
