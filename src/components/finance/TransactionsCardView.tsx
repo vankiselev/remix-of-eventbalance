@@ -8,9 +8,7 @@ import { TransactionCard } from "./TransactionCard";
 import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
 import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
-import { TransactionFiltersPanel } from "./TransactionFiltersPanel";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { TransactionFilter } from "./TransactionFilter";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { toast } from "sonner";
 
@@ -59,29 +57,24 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // Все транзакции для определения доступных месяцев
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
-  const [selectedWallet, setSelectedWallet] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showExpensesBreakdown, setShowExpensesBreakdown] = useState(false);
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
   const [shouldRefetch, setShouldRefetch] = useState(0);
-  const debouncedRefetch = useDebounce(shouldRefetch, 2000); // 2 seconds debounce
+  const debouncedRefetch = useDebounce(shouldRefetch, 2000);
 
-  // Extended filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [expenseMin, setExpenseMin] = useState("");
-  const [expenseMax, setExpenseMax] = useState("");
-  const [incomeMin, setIncomeMin] = useState("");
-  const [incomeMax, setIncomeMax] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  // Compact filters
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const [selectedExpenses, setSelectedExpenses] = useState<string[]>([]);
+  const [selectedIncomes, setSelectedIncomes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  // Fetch transactions on mount and filter changes
+  // Fetch transactions on mount
   useEffect(() => {
     fetchTransactions();
-  }, [userId, isAdmin, selectedPeriod, selectedWallet]);
+  }, [userId, isAdmin]);
 
   // Realtime subscription with debounce
   useEffect(() => {
@@ -116,20 +109,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     try {
       setLoading(true);
       
-      // Сначала получаем все транзакции для определения доступных месяцев
-      let allQuery: any = supabase
-        .from('financial_transactions')
-        .select('operation_date')
-        .order('operation_date', { ascending: false });
-      
-      if (userId) {
-        allQuery = allQuery.eq('created_by', userId);
-      }
-      
-      const { data: allDates } = await allQuery;
-      setAllTransactions(allDates || []);
-      
-      // Теперь получаем транзакции с учетом фильтров
       let query: any = supabase
         .from('financial_transactions')
         .select(`
@@ -139,32 +118,8 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         .order('operation_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Filter by specific user if provided
       if (userId) {
         query = query.eq('created_by', userId);
-      }
-
-      // Filter by period
-      if (selectedPeriod !== "all" && selectedPeriod !== "current") {
-        // Формат: "2025-01" (год-месяц)
-        const [year, month] = selectedPeriod.split('-');
-        const start = new Date(parseInt(year), parseInt(month) - 1, 1);
-        const end = endOfMonth(start);
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-        query = query.gte('operation_date', startStr).lte('operation_date', endStr);
-      } else if (selectedPeriod === "current") {
-        const now = new Date();
-        const start = startOfMonth(now);
-        const end = endOfMonth(now);
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-        query = query.gte('operation_date', startStr).lte('operation_date', endStr);
-      }
-
-      // Filter by wallet
-      if (selectedWallet !== "all") {
-        query = query.eq('cash_type', selectedWallet);
       }
 
       const { data, error } = await query;
@@ -209,31 +164,53 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
   const cashWallets = useMemo(() => new Set(['наличка настя','наличка лера','наличка ваня']), []);
   
-  // Получаем список доступных месяцев из транзакций
-  const availableMonths = useMemo(() => {
+  // Unique dates (months)
+  const availableDates = useMemo(() => {
     const months = new Set<string>();
-    allTransactions.forEach(t => {
-      if (t.operation_date) {
-        const date = new Date(t.operation_date);
-        const monthKey = format(date, 'yyyy-MM');
-        months.add(monthKey);
-      }
+    transactions.forEach(t => {
+      const date = new Date(t.operation_date);
+      const key = format(date, 'yyyy-MM');
+      months.add(key);
     });
-    
-    // Сортируем по убыванию (новые первые)
-    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
-      const [year, month] = monthKey.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-      ];
-      return {
-        value: monthKey,
-        label: `${monthNames[date.getMonth()]} ${year}`
-      };
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(m => ({
+      value: m,
+      label: format(new Date(m + '-01'), 'LLLL yyyy', { locale: ru })
+    }));
+  }, [transactions]);
+
+  // Unique projects
+  const availableProjects = useMemo(() => {
+    const projects = new Set<string>();
+    transactions.forEach(t => {
+      if (t.static_project_name) projects.add(t.static_project_name);
+      if (t.events?.name) projects.add(t.events.name);
     });
-  }, [allTransactions]);
+    return Array.from(projects).sort().map(p => ({ value: p, label: p }));
+  }, [transactions]);
+
+  // Unique expense amounts
+  const uniqueExpenses = useMemo(() => {
+    const expenses = new Set<number>();
+    transactions.forEach(t => {
+      if (t.expense_amount > 0) expenses.add(t.expense_amount);
+    });
+    return Array.from(expenses).sort((a, b) => b - a).map(e => ({ 
+      value: String(e), 
+      label: formatCurrency(e) 
+    }));
+  }, [transactions]);
+
+  // Unique income amounts
+  const uniqueIncomes = useMemo(() => {
+    const incomes = new Set<number>();
+    transactions.forEach(t => {
+      if (t.income_amount > 0) incomes.add(t.income_amount);
+    });
+    return Array.from(incomes).sort((a, b) => b - a).map(i => ({ 
+      value: String(i), 
+      label: formatCurrency(i) 
+    }));
+  }, [transactions]);
 
   const transactionsForCashTotals = useMemo(() => (
     transactions.filter(t => t.cash_type != null && cashWallets.has(normalizeWallet(String(t.cash_type))))
@@ -285,17 +262,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     [transactionsForCashTotals]
   );
 
-  // Get unique wallet types from transactions
-  const availableWallets = useMemo(() => {
-    const wallets = new Set<string>();
-    transactions.forEach(t => {
-      if (t.cash_type) {
-        wallets.add(t.cash_type);
-      }
-    });
-    return Array.from(wallets).sort();
-  }, [transactions]);
-
   // All unique categories for filter
   const allCategories = useMemo(() => {
     const cats = new Set<string>();
@@ -312,51 +278,45 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return Array.from(ws).sort().map(w => ({ value: w, label: walletDisplay(w) }));
   }, [transactions]);
 
-  // Apply extended filters
+  // Apply compact filters
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      // Search term
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        const matches = 
-          t.description?.toLowerCase().includes(search) ||
-          t.notes?.toLowerCase().includes(search) ||
-          t.static_project_name?.toLowerCase().includes(search) ||
-          t.events?.name?.toLowerCase().includes(search);
-        if (!matches) return false;
+      // By date (month)
+      if (selectedDates.length > 0) {
+        const month = format(new Date(t.operation_date), 'yyyy-MM');
+        if (!selectedDates.includes(month)) return false;
       }
-
-      // Date range
-      if (dateFrom) {
-        const tDate = new Date(t.operation_date);
-        if (tDate < dateFrom) return false;
+      
+      // By project
+      if (selectedProjects.length > 0) {
+        const project = t.static_project_name || t.events?.name;
+        if (!project || !selectedProjects.includes(project)) return false;
       }
-      if (dateTo) {
-        const tDate = new Date(t.operation_date);
-        if (tDate > dateTo) return false;
+      
+      // By wallet (project owner)
+      if (selectedWallets.length > 0) {
+        if (!selectedWallets.includes(t.project_owner)) return false;
       }
-
-      // Expense amount range
-      if (expenseMin && t.expense_amount < parseFloat(expenseMin)) return false;
-      if (expenseMax && t.expense_amount > parseFloat(expenseMax)) return false;
-
-      // Income amount range
-      if (incomeMin && t.income_amount < parseFloat(incomeMin)) return false;
-      if (incomeMax && t.income_amount > parseFloat(incomeMax)) return false;
-
-      // Categories
-      if (selectedCategories.length > 0 && !selectedCategories.includes(t.category)) {
-        return false;
+      
+      // By expense amount
+      if (selectedExpenses.length > 0) {
+        if (!selectedExpenses.includes(String(t.expense_amount))) return false;
       }
-
-      // Wallets (project owners)
-      if (selectedWallets.length > 0 && !selectedWallets.includes(t.project_owner)) {
-        return false;
+      
+      // By income amount
+      if (selectedIncomes.length > 0) {
+        if (!selectedIncomes.includes(String(t.income_amount))) return false;
       }
-
+      
+      // By category
+      if (selectedCategories.length > 0) {
+        if (!selectedCategories.includes(t.category)) return false;
+      }
+      
       return true;
     });
-  }, [transactions, searchTerm, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
+  }, [transactions, selectedDates, selectedProjects, selectedWallets, 
+      selectedExpenses, selectedIncomes, selectedCategories]);
 
   // Group filtered transactions by date
   const groupedTransactions = useMemo(() => {
@@ -395,80 +355,63 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return <div className="flex items-center justify-center py-8">Загрузка...</div>;
   }
 
-  const handleResetAllFilters = () => {
-    setSearchTerm("");
-    setDateFrom(undefined);
-    setDateTo(undefined);
-    setExpenseMin("");
-    setExpenseMax("");
-    setIncomeMin("");
-    setIncomeMax("");
-    setSelectedCategories([]);
-    setSelectedWallets([]);
-  };
-
   return (
     <div className="space-y-4">
-      {/* Extended Filters Panel */}
-      <div className="pt-4">
-        <TransactionFiltersPanel
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={setSelectedPeriod}
-          availableMonths={availableMonths}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onDateFromChange={setDateFrom}
-          onDateToChange={setDateTo}
-          expenseMin={expenseMin}
-          expenseMax={expenseMax}
-          onExpenseMinChange={setExpenseMin}
-          onExpenseMaxChange={setExpenseMax}
-          incomeMin={incomeMin}
-          incomeMax={incomeMax}
-          onIncomeMinChange={setIncomeMin}
-          onIncomeMaxChange={setIncomeMax}
-          selectedCategories={selectedCategories}
-          onCategoriesChange={setSelectedCategories}
-          selectedWallets={selectedWallets}
-          onWalletsChange={setSelectedWallets}
-          categories={allCategories}
-          wallets={allWallets}
-          onResetAll={handleResetAllFilters}
+      {/* Compact Filter Buttons */}
+      <div className="flex flex-wrap gap-2 pt-4">
+        <TransactionFilter
+          column="date"
+          title={selectedDates.length > 0 ? `Дата: ${selectedDates.length}` : "Дата"}
+          options={availableDates}
+          selectedValues={selectedDates}
+          onFilterChange={setSelectedDates}
+          onReset={() => setSelectedDates([])}
         />
-      </div>
 
-      {/* Legacy Period/Wallet Filters - keeping for backward compatibility */}
-      <div className="flex gap-3">
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Период" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Текущий месяц</SelectItem>
-            <SelectItem value="all">Весь период</SelectItem>
-            {availableMonths.map(month => (
-              <SelectItem key={month.value} value={month.value}>
-                {month.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TransactionFilter
+          column="project"
+          title={selectedProjects.length > 0 ? `Проект: ${selectedProjects.length}` : "Проект"}
+          options={availableProjects}
+          selectedValues={selectedProjects}
+          onFilterChange={setSelectedProjects}
+          onReset={() => setSelectedProjects([])}
+        />
 
-        <Select value={selectedWallet} onValueChange={setSelectedWallet}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Кошелек" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все кошельки</SelectItem>
-            {availableWallets.map(wallet => (
-              <SelectItem key={wallet} value={wallet}>
-                {walletDisplay(wallet)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TransactionFilter
+          column="wallet"
+          title={selectedWallets.length > 0 ? `Кошельки: ${selectedWallets.length}` : "Кошельки"}
+          options={allWallets}
+          selectedValues={selectedWallets}
+          onFilterChange={setSelectedWallets}
+          onReset={() => setSelectedWallets([])}
+        />
+
+        <TransactionFilter
+          column="expense"
+          title={selectedExpenses.length > 0 ? `Трата: ${selectedExpenses.length}` : "Трата"}
+          options={uniqueExpenses}
+          selectedValues={selectedExpenses}
+          onFilterChange={setSelectedExpenses}
+          onReset={() => setSelectedExpenses([])}
+        />
+
+        <TransactionFilter
+          column="income"
+          title={selectedIncomes.length > 0 ? `Приход: ${selectedIncomes.length}` : "Приход"}
+          options={uniqueIncomes}
+          selectedValues={selectedIncomes}
+          onFilterChange={setSelectedIncomes}
+          onReset={() => setSelectedIncomes([])}
+        />
+
+        <TransactionFilter
+          column="category"
+          title={selectedCategories.length > 0 ? `Категория: ${selectedCategories.length}` : "Категория"}
+          options={allCategories}
+          selectedValues={selectedCategories}
+          onFilterChange={setSelectedCategories}
+          onReset={() => setSelectedCategories([])}
+        />
       </div>
 
       <div className="border-b"></div>

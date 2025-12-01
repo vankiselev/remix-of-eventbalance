@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TransactionFiltersPanel } from "./TransactionFiltersPanel";
+import { TransactionFilter } from "./TransactionFilter";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -11,7 +10,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
   SelectContent,
@@ -19,10 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   Edit, 
   Trash2, 
@@ -80,27 +80,23 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof Transaction>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
   const [shouldRefetchOnInsert, setShouldRefetchOnInsert] = useState(0);
-  const debouncedInsertRefetch = useDebounce(shouldRefetchOnInsert, 2000); // 2 seconds debounce for bulk inserts
+  const debouncedInsertRefetch = useDebounce(shouldRefetchOnInsert, 2000);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Extended filters
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [expenseMin, setExpenseMin] = useState("");
-  const [expenseMax, setExpenseMax] = useState("");
-  const [incomeMin, setIncomeMin] = useState("");
-  const [incomeMax, setIncomeMax] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  // Compact filters
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
+  const [selectedExpenses, setSelectedExpenses] = useState<string[]>([]);
+  const [selectedIncomes, setSelectedIncomes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // Load scale from localStorage on mount
   useEffect(() => {
@@ -178,6 +174,54 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }
   }, [debouncedInsertRefetch]);
 
+  // Unique dates (months)
+  const availableDates = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach(t => {
+      const date = new Date(t.operation_date);
+      const key = format(date, 'yyyy-MM');
+      months.add(key);
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(m => ({
+      value: m,
+      label: format(new Date(m + '-01'), 'LLLL yyyy', { locale: ru })
+    }));
+  }, [transactions]);
+
+  // Unique projects
+  const availableProjects = useMemo(() => {
+    const projects = new Set<string>();
+    transactions.forEach(t => {
+      if (t.static_project_name) projects.add(t.static_project_name);
+      if (t.events?.name) projects.add(t.events.name);
+    });
+    return Array.from(projects).sort().map(p => ({ value: p, label: p }));
+  }, [transactions]);
+
+  // Unique expense amounts
+  const uniqueExpenses = useMemo(() => {
+    const expenses = new Set<number>();
+    transactions.forEach(t => {
+      if ((t.expense_amount || 0) > 0) expenses.add(t.expense_amount || 0);
+    });
+    return Array.from(expenses).sort((a, b) => b - a).map(e => ({ 
+      value: String(e), 
+      label: formatCurrency(e) 
+    }));
+  }, [transactions]);
+
+  // Unique income amounts
+  const uniqueIncomes = useMemo(() => {
+    const incomes = new Set<number>();
+    transactions.forEach(t => {
+      if ((t.income_amount || 0) > 0) incomes.add(t.income_amount || 0);
+    });
+    return Array.from(incomes).sort((a, b) => b - a).map(i => ({ 
+      value: String(i), 
+      label: formatCurrency(i) 
+    }));
+  }, [transactions]);
+
   // All unique categories for filter
   const allCategories = useMemo(() => {
     const cats = new Set<string>();
@@ -194,75 +238,45 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     return Array.from(ws).sort().map(w => ({ value: w, label: w }));
   }, [transactions]);
 
-  // Debounce search and apply all filters
+  // Apply all filters
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       let filtered = [...transactions];
 
-      // Apply search filter
-      if (searchTerm) {
-        const lowerSearch = searchTerm.toLowerCase();
-        filtered = filtered.filter(transaction =>
-          transaction.description.toLowerCase().includes(lowerSearch) ||
-          transaction.project_owner.toLowerCase().includes(lowerSearch) ||
-          transaction.category.toLowerCase().includes(lowerSearch) ||
-          (transaction.notes || "").toLowerCase().includes(lowerSearch) ||
-          (transaction.static_project_name || "").toLowerCase().includes(lowerSearch) ||
-          (transaction.events?.name || "").toLowerCase().includes(lowerSearch)
-        );
-      }
-
-      // Period filter
-      if (selectedPeriod !== "all" && selectedPeriod !== "current") {
-        const [year, month] = selectedPeriod.split('-');
-        const start = new Date(parseInt(year), parseInt(month) - 1, 1);
-        const end = endOfMonth(start);
+      // By date (month)
+      if (selectedDates.length > 0) {
         filtered = filtered.filter(t => {
-          const tDate = new Date(t.operation_date);
-          return tDate >= start && tDate <= end;
-        });
-      } else if (selectedPeriod === "current") {
-        const now = new Date();
-        const start = startOfMonth(now);
-        const end = endOfMonth(now);
-        filtered = filtered.filter(t => {
-          const tDate = new Date(t.operation_date);
-          return tDate >= start && tDate <= end;
+          const month = format(new Date(t.operation_date), 'yyyy-MM');
+          return selectedDates.includes(month);
         });
       }
-
-      // Date range (overrides period if set)
-      if (dateFrom) {
-        filtered = filtered.filter(t => new Date(t.operation_date) >= dateFrom);
+      
+      // By project
+      if (selectedProjects.length > 0) {
+        filtered = filtered.filter(t => {
+          const project = t.static_project_name || t.events?.name;
+          return project && selectedProjects.includes(project);
+        });
       }
-      if (dateTo) {
-        filtered = filtered.filter(t => new Date(t.operation_date) <= dateTo);
-      }
-
-      // Expense amount range
-      if (expenseMin) {
-        filtered = filtered.filter(t => (t.expense_amount || 0) >= parseFloat(expenseMin));
-      }
-      if (expenseMax) {
-        filtered = filtered.filter(t => (t.expense_amount || 0) <= parseFloat(expenseMax));
-      }
-
-      // Income amount range
-      if (incomeMin) {
-        filtered = filtered.filter(t => (t.income_amount || 0) >= parseFloat(incomeMin));
-      }
-      if (incomeMax) {
-        filtered = filtered.filter(t => (t.income_amount || 0) <= parseFloat(incomeMax));
-      }
-
-      // Categories
-      if (selectedCategories.length > 0) {
-        filtered = filtered.filter(t => selectedCategories.includes(t.category));
-      }
-
-      // Wallets (project owners)
+      
+      // By wallet (project owner)
       if (selectedWallets.length > 0) {
         filtered = filtered.filter(t => selectedWallets.includes(t.project_owner));
+      }
+      
+      // By expense amount
+      if (selectedExpenses.length > 0) {
+        filtered = filtered.filter(t => selectedExpenses.includes(String(t.expense_amount)));
+      }
+      
+      // By income amount
+      if (selectedIncomes.length > 0) {
+        filtered = filtered.filter(t => selectedIncomes.includes(String(t.income_amount)));
+      }
+      
+      // By category
+      if (selectedCategories.length > 0) {
+        filtered = filtered.filter(t => selectedCategories.includes(t.category));
       }
 
       // Apply sorting unless default (created_at asc) to preserve import order
@@ -280,10 +294,11 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       }
 
       setFilteredTransactions(filtered);
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [transactions, searchTerm, sortField, sortDirection, selectedPeriod, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
+  }, [transactions, sortField, sortDirection, selectedDates, selectedProjects, 
+      selectedWallets, selectedExpenses, selectedIncomes, selectedCategories]);
 
   const fetchTransactions = async () => {
     try {
@@ -528,74 +543,64 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     );
   }
 
-  // Получаем список доступных месяцев из транзакций
-  const availableMonths = useMemo(() => {
-    const months = new Set<string>();
-    transactions.forEach(t => {
-      if (t.operation_date) {
-        const date = new Date(t.operation_date);
-        const monthKey = format(date, 'yyyy-MM');
-        months.add(monthKey);
-      }
-    });
-    
-    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
-      const [year, month] = monthKey.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-      ];
-      return {
-        value: monthKey,
-        label: `${monthNames[date.getMonth()]} ${year}`
-      };
-    });
-  }, [transactions]);
-
-  const handleResetAllFilters = () => {
-    setSearchTerm("");
-    setSelectedPeriod("all");
-    setSelectedPeriod("all");
-    setDateFrom(undefined);
-    setDateTo(undefined);
-    setExpenseMin("");
-    setExpenseMax("");
-    setIncomeMin("");
-    setIncomeMax("");
-    setSelectedCategories([]);
-    setSelectedWallets([]);
-  };
-
   return (
     <div className="space-y-4">
-      {/* Extended Filters Panel */}
-      <TransactionFiltersPanel
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedPeriod={selectedPeriod}
-        onPeriodChange={setSelectedPeriod}
-        availableMonths={availableMonths}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
-        expenseMin={expenseMin}
-        expenseMax={expenseMax}
-        onExpenseMinChange={setExpenseMin}
-        onExpenseMaxChange={setExpenseMax}
-        incomeMin={incomeMin}
-        incomeMax={incomeMax}
-        onIncomeMinChange={setIncomeMin}
-        onIncomeMaxChange={setIncomeMax}
-        selectedCategories={selectedCategories}
-        onCategoriesChange={setSelectedCategories}
-        selectedWallets={selectedWallets}
-        onWalletsChange={setSelectedWallets}
-        categories={allCategories}
-        wallets={allWallets}
-        onResetAll={handleResetAllFilters}
-      />
+      {/* Compact Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <TransactionFilter
+          column="date"
+          title={selectedDates.length > 0 ? `Дата: ${selectedDates.length}` : "Дата"}
+          options={availableDates}
+          selectedValues={selectedDates}
+          onFilterChange={setSelectedDates}
+          onReset={() => setSelectedDates([])}
+        />
+
+        <TransactionFilter
+          column="project"
+          title={selectedProjects.length > 0 ? `Проект: ${selectedProjects.length}` : "Проект"}
+          options={availableProjects}
+          selectedValues={selectedProjects}
+          onFilterChange={setSelectedProjects}
+          onReset={() => setSelectedProjects([])}
+        />
+
+        <TransactionFilter
+          column="wallet"
+          title={selectedWallets.length > 0 ? `Кошельки: ${selectedWallets.length}` : "Кошельки"}
+          options={allWallets}
+          selectedValues={selectedWallets}
+          onFilterChange={setSelectedWallets}
+          onReset={() => setSelectedWallets([])}
+        />
+
+        <TransactionFilter
+          column="expense"
+          title={selectedExpenses.length > 0 ? `Трата: ${selectedExpenses.length}` : "Трата"}
+          options={uniqueExpenses}
+          selectedValues={selectedExpenses}
+          onFilterChange={setSelectedExpenses}
+          onReset={() => setSelectedExpenses([])}
+        />
+
+        <TransactionFilter
+          column="income"
+          title={selectedIncomes.length > 0 ? `Приход: ${selectedIncomes.length}` : "Приход"}
+          options={uniqueIncomes}
+          selectedValues={selectedIncomes}
+          onFilterChange={setSelectedIncomes}
+          onReset={() => setSelectedIncomes([])}
+        />
+
+        <TransactionFilter
+          column="category"
+          title={selectedCategories.length > 0 ? `Категория: ${selectedCategories.length}` : "Категория"}
+          options={allCategories}
+          selectedValues={selectedCategories}
+          onFilterChange={setSelectedCategories}
+          onReset={() => setSelectedCategories([])}
+        />
+      </div>
 
       {/* Scale Control */}
       <div className="flex justify-end">
@@ -721,7 +726,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                       colSpan={!userId ? 13 : 12} 
                       className="border border-border p-12 text-center text-slate-500"
                     >
-                      {searchTerm ? "Транзакции не найдены" : "Нет транзакций"}
+                      {(selectedDates.length > 0 || selectedProjects.length > 0 || selectedWallets.length > 0 || 
+                        selectedExpenses.length > 0 || selectedIncomes.length > 0 || selectedCategories.length > 0) 
+                        ? "Транзакции не найдены" : "Нет транзакций"}
                     </td>
                   </tr>
                 ) : (
