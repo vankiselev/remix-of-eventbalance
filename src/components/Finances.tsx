@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { useCompanyCashSummary } from "@/hooks/useCompanyCashSummary";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatFullName, getInitials } from "@/utils/formatName";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
 import { EmployeeList } from "@/components/finance/EmployeeList";
@@ -102,24 +104,52 @@ const Finances = () => {
     enabled: isFinancier && activeTab === 'review',
   });
 
-  // Fetch verification stats
+  // Fetch verification stats with COUNT queries
   const { data: reviewStats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .select('verification_status');
+      const [pendingResult, approvedResult, rejectedResult, totalResult] = await Promise.all([
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'approved'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'rejected'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }),
+      ]);
       
-      if (error) throw error;
-
-      const pending = data.filter(t => t.verification_status === 'pending').length;
-      const approved = data.filter(t => t.verification_status === 'approved').length;
-      const rejected = data.filter(t => t.verification_status === 'rejected').length;
-
-      return { pending, approved, rejected, total: data.length };
+      return {
+        pending: pendingResult.count || 0,
+        approved: approvedResult.count || 0,
+        rejected: rejectedResult.count || 0,
+        total: totalResult.count || 0,
+      };
     },
     enabled: isFinancier && activeTab === 'review',
   });
+
+  // Fetch profiles for review tab
+  const { data: reviewProfiles } = useQuery({
+    queryKey: ['profiles-for-review'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, full_name, avatar_url')
+        .eq('employment_status', 'active');
+      
+      if (error) {
+        console.error('[Finances] Error fetching profiles:', error);
+        throw error;
+      }
+      
+      console.log('[Finances] Loaded profiles:', data?.length);
+      return data || [];
+    },
+    enabled: isFinancier && activeTab === 'review',
+  });
+
+  const profilesMap = useMemo(() => {
+    const map = new Map();
+    reviewProfiles?.forEach(p => map.set(p.id, p));
+    return map;
+  }, [reviewProfiles]);
 
   // Create stable functions with useCallback
   const handleExportClick = useCallback(async () => {
@@ -676,12 +706,28 @@ const Finances = () => {
                         return (
                           <div
                             key={transaction.id}
-                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                             onClick={() => {
                               setSelectedReviewTransaction(transaction);
                               setReviewDialogOpen(true);
                             }}
                           >
+                            {/* Автор транзакции */}
+                            <div className="flex flex-col items-center gap-1 shrink-0 w-20">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={profilesMap.get(transaction.created_by)?.avatar_url} />
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                  {getInitials(profilesMap.get(transaction.created_by) || {})}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs text-center font-medium text-primary truncate w-full">
+                                {profilesMap.get(transaction.created_by)
+                                  ? formatFullName(profilesMap.get(transaction.created_by))
+                                  : 'Неизвестно'}
+                              </span>
+                            </div>
+                            
+                            {/* Информация о транзакции */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="font-medium truncate">{transaction.description}</p>
@@ -702,6 +748,8 @@ const Finances = () => {
                                 )}
                               </div>
                             </div>
+                            
+                            {/* Сумма транзакции */}
                             <div className="text-right shrink-0 ml-4">
                               <p className={`font-bold text-lg ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                                 {isIncome ? '+' : '-'} {formatCurrency(amount)}
