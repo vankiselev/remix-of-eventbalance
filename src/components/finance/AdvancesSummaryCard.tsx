@@ -60,17 +60,14 @@ export const AdvancesSummaryCard = () => {
             <CardTitle className="text-sm font-medium">
               Выданные авансы
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={handleAddNew}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Banknote className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-9 w-9 p-0"
+              onClick={handleAddNew}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -141,7 +138,6 @@ export const AdvancesSummaryCard = () => {
           <CardTitle className="text-sm font-medium">
             Мой аванс
           </CardTitle>
-          <Banknote className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
