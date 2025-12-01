@@ -18,15 +18,16 @@ export function TransactionFormPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
+    <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
+      <div className="mb-4 sm:mb-6">
         <Button
           variant="ghost"
           onClick={() => navigate('/finances')}
           className="mb-4 min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center"
         >
           <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
-          <span>Назад к финансам</span>
+          <span className="hidden sm:inline">Назад к финансам</span>
+          <span className="sm:hidden">Назад</span>
         </Button>
         
         <Card>
