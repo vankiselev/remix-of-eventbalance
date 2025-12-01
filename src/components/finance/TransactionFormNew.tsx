@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2, AlertCircle, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './FileUpload';
@@ -19,6 +19,7 @@ import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
 import {
   Dialog,
   DialogContent,
@@ -194,6 +195,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchNoReceipt = form.watch("no_receipt");
   const watchProjectId = form.watch("project_id");
   const watchCategory = form.watch("category");
+  const watchDescription = form.watch("description");
+
+  // AI-powered description checker
+  const {
+    isChecking,
+    hasErrors,
+    correctedText,
+    errors,
+  } = useDescriptionChecker(watchDescription, watchCategory);
 
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
@@ -1222,6 +1232,46 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     />
                   </FormControl>
                   <FormMessage />
+                  
+                  {/* AI Grammar Check Feedback */}
+                  {isChecking && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Проверка текста...</span>
+                    </div>
+                  )}
+
+                  {hasErrors && correctedText && !isChecking && (
+                    <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            Найдены ошибки в описании
+                          </p>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                            Исправленный вариант: <strong>{correctedText}</strong>
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          form.setValue("description", correctedText);
+                          toast({
+                            title: "Исправление применено",
+                            description: "Описание обновлено",
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Применить исправление
+                      </Button>
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
