@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/utils/formatCurrency";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Clock } from "lucide-react";
 
 const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
 const walletDisplay = (s?: string | null) => {
@@ -26,15 +26,19 @@ interface TransactionCardProps {
     events?: { name: string } | null;
     transfer_status?: string | null;
     transfer_rejection_reason?: string | null;
+    verification_status?: string | null;
+    requires_verification?: boolean | null;
   };
   onClick: () => void;
+  verification_status?: string | null;
 }
 
-export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) => {
+export const TransactionCard = ({ transaction, onClick, verification_status }: TransactionCardProps) => {
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
   const isRejectedTransfer = isMoneyTransfer && transaction.transfer_status === 'rejected';
+  const isPending = verification_status === 'pending' || transaction.verification_status === 'pending';
   
   // После категории всегда показываем проект
   const projectName = transaction.static_project_name || transaction.events?.name;
@@ -42,15 +46,25 @@ export const TransactionCard = ({ transaction, onClick }: TransactionCardProps) 
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 p-3 md:p-4 bg-card hover:bg-accent/50 rounded-lg border border-border cursor-pointer transition-colors"
+      className={`flex items-center gap-3 p-3 md:p-4 hover:bg-accent/50 rounded-lg border cursor-pointer transition-colors ${
+        isPending ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-card border-border'
+      }`}
     >
       {/* Icon */}
       <CategoryIcon category={transaction.category} isIncome={isIncome} />
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm md:text-base truncate">
-          {transaction.description}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-sm md:text-base truncate">
+            {transaction.description}
+          </span>
+          {isPending && (
+            <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-1 text-[10px] px-1.5 py-0">
+              <Clock className="h-2.5 w-2.5" />
+              На проверке
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
           {projectName && (

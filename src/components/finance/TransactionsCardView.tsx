@@ -44,6 +44,8 @@ interface Transaction {
   transfer_from_user_id?: string | null;
   transfer_to_user?: { full_name: string; email: string } | null;
   transfer_from_user?: { full_name: string; email: string } | null;
+  verification_status?: string | null;
+  requires_verification?: boolean | null;
 }
 
 interface TransactionsCardViewProps {
@@ -478,6 +480,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
                     key={transaction.id}
                     transaction={transaction}
                     onClick={() => setSelectedTransaction(transaction)}
+                    verification_status={transaction.verification_status}
                   />
                 ))}
               </div>

@@ -17,6 +17,7 @@ import { useImportProgress } from "@/contexts/ImportProgressContext";
 import { Badge } from "@/components/ui/badge";
 import { useTransactionCategories } from "@/hooks/useTransactionCategories";
 import { useImportJobs } from "@/hooks/useImportJobs";
+import { useProfiles } from "@/hooks/useProfiles";
 
 interface FinancesImportDialogProps {
   open: boolean;
@@ -99,6 +100,8 @@ const FinancesImportDialog = ({
   const { startImport, updateProgress, finishImport } = useImportProgress();
   const { createJob } = useImportJobs();
   const { categories } = useTransactionCategories();
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const { data: profiles } = useProfiles();
 
   // Refs для предотвращения stale closure в async функциях
   const isPausedRef = useRef(false);
@@ -893,7 +896,7 @@ const FinancesImportDialog = ({
           if (expenseAmount > 0 && incomeAmount > 0) {
             txIndices.push(allPreparedTransactions.length);
             allPreparedTransactions.push({
-              created_by: user?.id,
+              created_by: selectedEmployeeId || user?.id,
               operation_date: operationDate,
               static_project_name: mappedRow.project_name || null,
               project_owner: cashType || projectOwner || 'Без кассы',
@@ -903,14 +906,14 @@ const FinancesImportDialog = ({
               expense_amount: expenseAmount,
               income_amount: null,
               notes: mappedRow.notes || null,
-              verification_status: 'pending',
-              requires_verification: true,
+              verification_status: 'approved',
+              requires_verification: false,
               _rowNum: rowNum
             });
             
             txIndices.push(allPreparedTransactions.length);
             allPreparedTransactions.push({
-              created_by: user?.id,
+              created_by: selectedEmployeeId || user?.id,
               operation_date: operationDate,
               static_project_name: mappedRow.project_name || null,
               project_owner: cashType || projectOwner || 'Без кассы',
@@ -920,14 +923,14 @@ const FinancesImportDialog = ({
               expense_amount: null,
               income_amount: incomeAmount,
               notes: mappedRow.notes || null,
-              verification_status: 'pending',
-              requires_verification: true,
+              verification_status: 'approved',
+              requires_verification: false,
               _rowNum: rowNum
             });
           } else {
             txIndices.push(allPreparedTransactions.length);
             allPreparedTransactions.push({
-              created_by: user?.id,
+              created_by: selectedEmployeeId || user?.id,
               operation_date: operationDate,
               static_project_name: mappedRow.project_name || null,
               project_owner: cashType || projectOwner || 'Без кассы',
@@ -937,8 +940,8 @@ const FinancesImportDialog = ({
               expense_amount: expenseAmount || null,
               income_amount: incomeAmount || null,
               notes: mappedRow.notes || null,
-              verification_status: 'pending',
-              requires_verification: true,
+              verification_status: 'approved',
+              requires_verification: false,
               _rowNum: rowNum
             });
           }
@@ -1152,6 +1155,7 @@ const FinancesImportDialog = ({
         body: {
           rows: rowsToSend,
           user_id: user?.id,
+          target_user_id: selectedEmployeeId || user?.id,
           background_mode: true,
           job_id: jobId
         }
@@ -1514,6 +1518,30 @@ const FinancesImportDialog = ({
                   {importStats.errorCount} ошибок (будут пропущены)
                 </Badge>
               )}
+            </div>
+
+            {/* Выбор сотрудника для импорта */}
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm font-medium">Импортировать транзакции для сотрудника</Label>
+              <Select
+                value={selectedEmployeeId || 'me'}
+                onValueChange={(value) => setSelectedEmployeeId(value === 'me' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите сотрудника" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">Для себя ({user?.email})</SelectItem>
+                  {profiles?.filter(p => p.employment_status === 'active').map((profile: any) => (
+                    <SelectItem key={profile.id} value={profile.id}>
+                      {profile.full_name} ({profile.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Все импортированные транзакции будут созданы от имени выбранного сотрудника и автоматически проверены
+              </p>
             </div>
 
             <div>
