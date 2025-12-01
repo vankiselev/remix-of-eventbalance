@@ -91,7 +91,6 @@ const FinancesImportDialog = ({
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [rowValidations, setRowValidations] = useState<RowValidation[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const { startImport, updateProgress, finishImport } = useImportProgress();
@@ -527,7 +526,6 @@ const FinancesImportDialog = ({
       validations.push({ rowIndex: index, status, issues });
     });
     
-    setRowValidations(validations);
     return validations;
   }, [parsedData, columnMapping, categoryNames]);
 
@@ -805,7 +803,6 @@ const FinancesImportDialog = ({
     setImporting(false);
     setImportProgress(0);
     setImportResult(null);
-    setRowValidations([]);
   };
 
   const handleClose = () => {
