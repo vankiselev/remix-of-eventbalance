@@ -2654,6 +2654,11 @@ export type Database = {
         Args: { p_employee_user_id: string }
         Returns: boolean
       }
+      disable_balances_trigger_for_import: { Args: never; Returns: undefined }
+      enable_balances_trigger_and_recalculate: {
+        Args: never
+        Returns: undefined
+      }
       format_phone_display: { Args: { phone_e164: string }; Returns: string }
       generate_user_api_key: { Args: never; Returns: string }
       get_admin_employee_data: {
