@@ -1037,6 +1037,18 @@ const FinancesImportDialog = ({
 
       console.log('[FinancesImport] Создана задача:', jobId);
 
+      // Сохраняем данные для возможности продолжения импорта
+      const { error: updateError } = await supabase
+        .from('import_jobs')
+        .update({ 
+          import_data: rowsToSend // Сохраняем исходные данные
+        })
+        .eq('id', jobId);
+
+      if (updateError) {
+        console.warn('[FinancesImport] Не удалось сохранить import_data:', updateError);
+      }
+
       // Отправляем на edge function
       const { data, error } = await supabase.functions.invoke('finances-import', {
         body: {
