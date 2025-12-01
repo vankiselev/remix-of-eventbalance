@@ -65,6 +65,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
   // Compact filters
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [selectedExpenses, setSelectedExpenses] = useState<string[]>([]);
@@ -164,18 +165,34 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
 
   const cashWallets = useMemo(() => new Set(['наличка настя','наличка лера','наличка ваня']), []);
   
-  // Unique dates (months)
+  // Уникальные даты (конкретные дни)
   const availableDates = useMemo(() => {
+    const dates = new Set<string>();
+    transactions.forEach(t => {
+      const dateStr = t.operation_date.split('T')[0];
+      dates.add(dateStr);
+    });
+    return Array.from(dates).sort((a, b) => b.localeCompare(a)).map(d => ({
+      value: d,
+      label: format(new Date(d), 'dd.MM.yyyy')
+    }));
+  }, [transactions]);
+
+  // Уникальные периоды (месяцы)
+  const availablePeriods = useMemo(() => {
     const months = new Set<string>();
     transactions.forEach(t => {
       const date = new Date(t.operation_date);
       const key = format(date, 'yyyy-MM');
       months.add(key);
     });
-    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(m => ({
-      value: m,
-      label: format(new Date(m + '-01'), 'LLLL yyyy', { locale: ru })
-    }));
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(m => {
+      const label = format(new Date(m + '-01'), 'LLLL yyyy', { locale: ru });
+      return {
+        value: m,
+        label: label.charAt(0).toUpperCase() + label.slice(1)
+      };
+    });
   }, [transactions]);
 
   // Unique projects
@@ -281,10 +298,16 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   // Apply compact filters
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      // By date (month)
+      // По конкретной дате
       if (selectedDates.length > 0) {
+        const dateStr = t.operation_date.split('T')[0];
+        if (!selectedDates.includes(dateStr)) return false;
+      }
+
+      // По периоду (месяцу)
+      if (selectedPeriods.length > 0) {
         const month = format(new Date(t.operation_date), 'yyyy-MM');
-        if (!selectedDates.includes(month)) return false;
+        if (!selectedPeriods.includes(month)) return false;
       }
       
       // By project
@@ -315,7 +338,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       
       return true;
     });
-  }, [transactions, selectedDates, selectedProjects, selectedWallets, 
+  }, [transactions, selectedDates, selectedPeriods, selectedProjects, selectedWallets, 
       selectedExpenses, selectedIncomes, selectedCategories]);
 
   // Group filtered transactions by date
@@ -358,7 +381,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   return (
     <div className="space-y-4">
       {/* Compact Filter Buttons */}
-      <div className="flex flex-wrap gap-2 pt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pt-4">
         <TransactionFilter
           column="date"
           title={selectedDates.length > 0 ? `Дата: ${selectedDates.length}` : "Дата"}
@@ -411,6 +434,15 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
           selectedValues={selectedCategories}
           onFilterChange={setSelectedCategories}
           onReset={() => setSelectedCategories([])}
+        />
+
+        <TransactionFilter
+          column="period"
+          title={selectedPeriods.length > 0 ? `Период: ${selectedPeriods.length}` : "Период"}
+          options={availablePeriods}
+          selectedValues={selectedPeriods}
+          onFilterChange={setSelectedPeriods}
+          onReset={() => setSelectedPeriods([])}
         />
       </div>
 
