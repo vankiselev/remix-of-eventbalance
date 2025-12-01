@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from 'xlsx';
@@ -14,6 +14,8 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useImportProgress } from "@/contexts/ImportProgressContext";
+import { Badge } from "@/components/ui/badge";
+import { useTransactionCategories } from "@/hooks/useTransactionCategories";
 
 interface FinancesImportDialogProps {
   open: boolean;
@@ -37,6 +39,40 @@ interface ImportResult {
   errors: Array<{ row: number; reason: string; data?: any }>;
 }
 
+interface RowValidation {
+  rowIndex: number;
+  status: 'valid' | 'warning' | 'error';
+  issues: string[];
+}
+
+// Словарь синонимов для категорий
+const categoryAliases: { [key: string]: string[] } = {
+  'зп': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'зарплата': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'оклад': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'премия': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'еда': ['Еда / Напитки для проекта', 'Еда'],
+  'напитки': ['Еда / Напитки для проекта', 'Еда'],
+  'доставка': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'трансфер': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'транспорт': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'такси': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'реквизит': ['Реквизит / Расходники / Материалы', 'Реквизит'],
+  'материалы': ['Реквизит / Расходники / Материалы', 'Материалы'],
+  'расходники': ['Реквизит / Расходники / Материалы', 'Расходники'],
+  'аренда': ['Аренда', 'Аренда оборудования'],
+  'оборудование': ['Оборудование', 'Аренда оборудования'],
+  'реклама': ['Реклама / Маркетинг', 'Реклама'],
+  'маркетинг': ['Реклама / Маркетинг', 'Маркетинг'],
+  'связь': ['Связь / Интернет / Телефон', 'Связь'],
+  'интернет': ['Связь / Интернет / Телефон', 'Интернет'],
+  'телефон': ['Связь / Интернет / Телефон', 'Телефон'],
+  'услуги': ['Услуги сторонних организаций', 'Услуги'],
+  'подрядчик': ['Услуги сторонних организаций', 'Подрядчики'],
+  'разное': ['Разное', 'Прочее'],
+  'прочее': ['Разное', 'Прочее'],
+};
+
 const FinancesImportDialog = ({ 
   open, 
   onOpenChange, 
@@ -55,21 +91,29 @@ const FinancesImportDialog = ({
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [rowValidations, setRowValidations] = useState<RowValidation[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const { startImport, updateProgress, finishImport } = useImportProgress();
+  const { categories } = useTransactionCategories();
 
   const fieldOptions = [
     { value: 'skip', label: 'Не импортировать' },
     { value: 'creator_name', label: 'Имя создателя' },
     { value: 'operation_date', label: 'Дата операции' },
     { value: 'project_name', label: 'Проект' },
-    { value: 'cash_type', label: 'Тип кассы (Чей проект)' },
+    { value: 'project_owner', label: 'Чей проект / Касса' },
     { value: 'description', label: 'Подробное описание' },
     { value: 'expense_amount', label: 'Траты' },
     { value: 'income_amount', label: 'Приход' },
     { value: 'category', label: 'Статья прихода/расхода' },
+    { value: 'notes', label: 'Примечания' },
   ];
+
+  // Получаем список категорий из БД
+  const categoryNames = useMemo(() => {
+    return categories?.map(c => c.name) || [];
+  }, [categories]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -86,6 +130,16 @@ const FinancesImportDialog = ({
           const workbookData = XLSX.read(event.target?.result, { type: 'binary' });
           setWorkbook(workbookData);
           setAvailableSheets(workbookData.SheetNames);
+          
+          // Автоопределение диапазона
+          if (workbookData.SheetNames.length > 0) {
+            const firstSheet = workbookData.SheetNames[0];
+            const autoRange = detectDataRange(workbookData, firstSheet);
+            if (autoRange) {
+              setRange(autoRange);
+            }
+          }
+          
           if (workbookData.SheetNames.length === 1) {
             setSelectedSheet(workbookData.SheetNames[0]);
             setStep(2);
@@ -109,6 +163,33 @@ const FinancesImportDialog = ({
     } else {
       reader.readAsBinaryString(uploadedFile);
     }
+  };
+
+  // Автоопределение диапазона данных в Excel
+  const detectDataRange = (wb: XLSX.WorkBook, sheetName: string): string | null => {
+    const worksheet = wb.Sheets[sheetName];
+    if (!worksheet['!ref']) return null;
+    
+    const fullRange = XLSX.utils.decode_range(worksheet['!ref']);
+    
+    // Ищем строку с заголовками (обычно содержит "Дата" или "Date")
+    for (let row = fullRange.s.r; row <= Math.min(fullRange.s.r + 10, fullRange.e.r); row++) {
+      for (let col = fullRange.s.c; col <= fullRange.e.c; col++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: row, c: col });
+        const cell = worksheet[cellAddr];
+        if (cell && typeof cell.v === 'string') {
+          const val = cell.v.toLowerCase();
+          if (val.includes('дата') || val.includes('date') || val.includes('операц')) {
+            // Нашли заголовки, диапазон начинается с этой строки
+            const startCol = XLSX.utils.encode_col(fullRange.s.c);
+            const endCol = XLSX.utils.encode_col(fullRange.e.c);
+            return `${startCol}${row + 1}:${endCol}`;
+          }
+        }
+      }
+    }
+    
+    return null;
   };
 
   const processCSVFile = (csvText: string) => {
@@ -202,6 +283,8 @@ const FinancesImportDialog = ({
     if (fileHeaders[6]) autoMapping['income_amount'] = fileHeaders[6];     // 7. Приход
     // fileHeaders[7] - Остаток - ПРОПУСКАЕМ
     if (fileHeaders[8]) autoMapping['category'] = fileHeaders[8];          // 9. Статья прихода/расхода
+    // Если есть 10-й столбец - это notes
+    if (fileHeaders[9]) autoMapping['notes'] = fileHeaders[9];             // 10. Примечания
     
     console.log('Column mapping by position:');
     console.log('1. Имя:', fileHeaders[0], '→ creator_name');
@@ -213,6 +296,7 @@ const FinancesImportDialog = ({
     console.log('7. Приход:', fileHeaders[6], '→ income_amount');
     console.log('8. Остаток:', fileHeaders[7], '→ ПРОПУСК');
     console.log('9. Статья:', fileHeaders[8], '→ category');
+    console.log('10. Примечания:', fileHeaders[9], '→ notes');
     console.log('Auto-mapped columns:', autoMapping);
     
     setColumnMapping(autoMapping);
@@ -241,30 +325,35 @@ const FinancesImportDialog = ({
       }
     }
     
-    // Standard date formats
+    // Extended date formats
     const formats = [
-      /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, // dd.mm.yyyy
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, // dd/mm/yyyy
-      /^(\d{1,2})-(\d{1,2})-(\d{4})$/, // dd-mm-yyyy
-      /^(\d{4})-(\d{1,2})-(\d{1,2})$/, // yyyy-mm-dd
+      { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, order: 'dmy' },           // dd.mm.yyyy
+      { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{2})$/, order: 'dmy_short' },     // dd.mm.yy
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: 'dmy' },           // dd/mm/yyyy
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, order: 'dmy_short' },     // dd/mm/yy
+      { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: 'dmy' },             // dd-mm-yyyy
+      { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})/, order: 'ymd' },              // yyyy-mm-dd (ISO, может быть с временем)
+      { regex: /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/, order: 'ymd' },           // yyyy.mm.dd
+      { regex: /^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/, order: 'dmy' },         // dd mm yyyy
     ];
 
-    for (let i = 0; i < formats.length; i++) {
-      const format = formats[i];
-      const match = s.match(format);
+    for (const { regex, order } of formats) {
+      const match = s.match(regex);
       if (match) {
-        let year, month, day;
-        if (i === 3) { // yyyy-mm-dd
-          [, year, month, day] = match;
-        } else { // dd.mm.yyyy, dd/mm/yyyy, dd-mm-yyyy
-          [, day, month, year] = match;
+        let year: number, month: number, day: number;
+        
+        if (order === 'ymd') {
+          [, year, month, day] = match.map(Number);
+        } else if (order === 'dmy_short') {
+          [, day, month, year] = match.map(Number);
+          // Преобразуем двузначный год
+          year = year < 50 ? 2000 + year : 1900 + year;
+        } else { // dmy
+          [, day, month, year] = match.map(Number);
         }
         
-        const y = parseInt(year);
-        const m = parseInt(month);
-        const d = parseInt(day);
-        if (y > 1900 && y < 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-          return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (year > 1900 && year < 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         }
       }
     }
@@ -272,12 +361,46 @@ const FinancesImportDialog = ({
     return null;
   };
 
-  const parseAmount = (amountStr: string): number => {
-    if (!amountStr) return 0;
+  // Интеллектуальный парсинг суммы с определением формата (RU/US)
+  const parseAmount = (amountStr: string | number | null | undefined): number => {
+    if (amountStr === null || amountStr === undefined || amountStr === '') return 0;
     
     const s = String(amountStr).trim();
-    // Убираем валютные символы, пробелы и точки как разделители тысяч
-    const cleaned = s.replace(/[₽\s]/g, '').replace(/\./g, '').replace(',', '.');
+    if (!s) return 0;
+    
+    // Убираем валютные символы и пробелы
+    let cleaned = s.replace(/[₽$€£руб\.rub\s]/gi, '');
+    
+    // Если это уже число - возвращаем
+    if (/^-?\d+$/.test(cleaned)) {
+      return Math.abs(parseInt(cleaned));
+    }
+    
+    // Определяем формат по последнему разделителю
+    // "1.234,56" → последний разделитель запятая = RU (результат: 1234.56)
+    // "1,234.56" → последний разделитель точка = US (результат: 1234.56)
+    // "1234.56" → только точка = десятичная
+    // "1234,56" → только запятая = десятичная (RU)
+    
+    const lastCommaIdx = cleaned.lastIndexOf(',');
+    const lastDotIdx = cleaned.lastIndexOf('.');
+    
+    if (lastCommaIdx > lastDotIdx) {
+      // Запятая последняя → это десятичный разделитель (RU формат)
+      // Убираем точки (разделители тысяч), запятую меняем на точку
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (lastDotIdx > lastCommaIdx) {
+      // Точка последняя → это десятичный разделитель (US формат)
+      // Убираем запятые (разделители тысяч)
+      cleaned = cleaned.replace(/,/g, '');
+    } else if (lastCommaIdx === -1 && lastDotIdx === -1) {
+      // Нет разделителей - целое число
+    } else if (lastCommaIdx !== -1 && lastDotIdx === -1) {
+      // Только запятая - это десятичный разделитель (RU)
+      cleaned = cleaned.replace(',', '.');
+    }
+    // Если только точка - оставляем как есть
+    
     const num = parseFloat(cleaned) || 0;
     return Math.abs(num); // Всегда положительное число
   };
@@ -304,6 +427,49 @@ const FinancesImportDialog = ({
     return null;
   };
 
+  // Fuzzy matching для категорий
+  const findMatchingCategory = (input: string): string => {
+    if (!input) return 'Разное';
+    
+    const s = String(input).trim();
+    const sLower = s.toLowerCase();
+    
+    // 1. Точное совпадение
+    const exactMatch = categoryNames.find(cat => cat.toLowerCase() === sLower);
+    if (exactMatch) return exactMatch;
+    
+    // 2. Поиск по синонимам
+    for (const [alias, targets] of Object.entries(categoryAliases)) {
+      if (sLower.includes(alias) || alias.includes(sLower)) {
+        // Ищем первую подходящую категорию из targets в списке категорий БД
+        for (const target of targets) {
+          const match = categoryNames.find(cat => 
+            cat.toLowerCase().includes(target.toLowerCase()) ||
+            target.toLowerCase().includes(cat.toLowerCase())
+          );
+          if (match) return match;
+        }
+      }
+    }
+    
+    // 3. Поиск по подстроке
+    const substringMatch = categoryNames.find(cat => 
+      cat.toLowerCase().includes(sLower) || sLower.includes(cat.toLowerCase())
+    );
+    if (substringMatch) return substringMatch;
+    
+    // 4. Поиск по первым буквам / аббревиатуре
+    const abbrevMatch = categoryNames.find(cat => {
+      const words = cat.split(/\s+/);
+      const abbrev = words.map(w => w[0]?.toLowerCase()).join('');
+      return abbrev === sLower || sLower === abbrev;
+    });
+    if (abbrevMatch) return abbrevMatch;
+    
+    // 5. Fallback
+    return s || 'Разное';
+  };
+
   const mapRow = (row: ParsedRow) => {
     // Теперь маппинг: поле БД -> заголовок файла
     const mapped: any = {};
@@ -315,52 +481,114 @@ const FinancesImportDialog = ({
     return mapped;
   };
 
-  const validateData = () => {
-    const errors: string[] = [];
-    let validRows = 0;
-
+  // Предварительная валидация всех строк с подсветкой проблем
+  const validateAllRows = useMemo(() => {
+    const validations: RowValidation[] = [];
+    
     parsedData.forEach((row, index) => {
       const mappedRow = mapRow(row);
+      const issues: string[] = [];
+      let status: 'valid' | 'warning' | 'error' = 'valid';
       
-      // Проверяем обязательные поля
-      if (!mappedRow.operation_date || !parseDate(mappedRow.operation_date)) {
-        errors.push(`Строка ${index + 1}: Некорректная дата операции`);
-        return;
+      // Проверяем дату
+      const dateValue = mappedRow.operation_date;
+      const parsedDate = parseDate(dateValue);
+      if (!dateValue || !parsedDate) {
+        issues.push('Некорректная дата');
+        status = 'error';
       }
       
-      // Описание может быть пустым - подставим значение по умолчанию
-      // if (!mappedRow.description) {
-      //   errors.push(`Строка ${index + 1}: Отсутствует описание операции`);
-      //   return;
-      // }
-
+      // Проверяем суммы
       const expenseAmount = parseAmount(mappedRow.expense_amount);
       const incomeAmount = parseAmount(mappedRow.income_amount);
       
       if (expenseAmount === 0 && incomeAmount === 0) {
-        errors.push(`Строка ${index + 1}: Не указана сумма операции`);
-        return;
+        issues.push('Не указана сумма');
+        status = 'error';
       }
-
-      // Разрешаем строки где и доход и расход - создадим две транзакции
-      // if (expenseAmount > 0 && incomeAmount > 0) {
-      //   errors.push(`Строка ${index + 1}: Указаны и доходы и расходы одновременно`);
-      //   return;
-      // }
-
-      validRows++;
+      
+      // Проверяем описание (предупреждение)
+      if (!mappedRow.description) {
+        issues.push('Пустое описание');
+        if (status !== 'error') status = 'warning';
+      }
+      
+      // Проверяем категорию
+      const category = mappedRow.category;
+      const matchedCategory = findMatchingCategory(category);
+      if (category && matchedCategory !== category && matchedCategory !== 'Разное') {
+        issues.push(`Категория "${category}" → "${matchedCategory}"`);
+        if (status !== 'error') status = 'warning';
+      } else if (!category) {
+        issues.push('Категория не указана (будет "Разное")');
+        if (status !== 'error') status = 'warning';
+      }
+      
+      validations.push({ rowIndex: index, status, issues });
     });
+    
+    setRowValidations(validations);
+    return validations;
+  }, [parsedData, columnMapping, categoryNames]);
 
-    if (errors.length > 0) {
-      // Показываем предупреждение, но НЕ блокируем импорт если есть валидные строки
+  // Статистика импорта
+  const importStats = useMemo(() => {
+    let totalExpense = 0;
+    let totalIncome = 0;
+    let expenseCount = 0;
+    let incomeCount = 0;
+    let minDate: string | null = null;
+    let maxDate: string | null = null;
+    
+    parsedData.forEach((row) => {
+      const mappedRow = mapRow(row);
+      const expense = parseAmount(mappedRow.expense_amount);
+      const income = parseAmount(mappedRow.income_amount);
+      const date = parseDate(mappedRow.operation_date);
+      
+      if (expense > 0) {
+        totalExpense += expense;
+        expenseCount++;
+      }
+      if (income > 0) {
+        totalIncome += income;
+        incomeCount++;
+      }
+      if (date) {
+        if (!minDate || date < minDate) minDate = date;
+        if (!maxDate || date > maxDate) maxDate = date;
+      }
+    });
+    
+    const validCount = validateAllRows.filter(v => v.status !== 'error').length;
+    const warningCount = validateAllRows.filter(v => v.status === 'warning').length;
+    const errorCount = validateAllRows.filter(v => v.status === 'error').length;
+    
+    return {
+      totalExpense,
+      totalIncome,
+      expenseCount,
+      incomeCount,
+      minDate,
+      maxDate,
+      validCount,
+      warningCount,
+      errorCount,
+    };
+  }, [parsedData, columnMapping, validateAllRows]);
+
+  const validateData = () => {
+    const errorCount = validateAllRows.filter(v => v.status === 'error').length;
+    const validCount = validateAllRows.filter(v => v.status !== 'error').length;
+
+    if (errorCount > 0) {
       toast({
         title: "Предупреждение",
-        description: `Найдено ${errors.length} строк с ошибками из ${parsedData.length}. Эти строки будут пропущены.`,
+        description: `${errorCount} строк с ошибками будут пропущены. Импорт: ${validCount} записей.`,
       });
-      console.warn("Validation warnings:", errors.slice(0, 20));
     }
 
-    if (validRows === 0) {
+    if (validCount === 0) {
       toast({
         variant: "destructive",
         title: "Нет данных для импорта",
@@ -371,7 +599,7 @@ const FinancesImportDialog = ({
 
     toast({
       title: "Валидация пройдена",
-      description: `Готово к импорту: ${validRows} из ${parsedData.length} записей`,
+      description: `Готово к импорту: ${validCount} из ${parsedData.length} записей`,
     });
 
     return true;
@@ -394,7 +622,7 @@ const FinancesImportDialog = ({
     };
 
     try {
-      const BATCH_SIZE = 10; // Уменьшаем размер батча для предотвращения таймаутов
+      const BATCH_SIZE = 10;
       
       for (let batchStart = 0; batchStart < parsedData.length; batchStart += BATCH_SIZE) {
         // Проверяем, не приостановлен ли импорт
@@ -418,6 +646,7 @@ const FinancesImportDialog = ({
             const incomeAmount = parseAmount(mappedRow.income_amount);
             const projectOwner = mappedRow.project_owner || null;
             const cashType = mapCashType(projectOwner);
+            const category = findMatchingCategory(mappedRow.category);
 
             if (!operationDate || (expenseAmount === 0 && incomeAmount === 0)) {
               result.failed++;
@@ -438,7 +667,7 @@ const FinancesImportDialog = ({
                 static_project_name: mappedRow.project_name || null,
                 project_owner: cashType || projectOwner || 'Без кассы',
                 description: mappedRow.description || 'Расход',
-                category: mappedRow.category || 'Разное',
+                category: category,
                 cash_type: cashType,
                 expense_amount: expenseAmount,
                 income_amount: null,
@@ -453,7 +682,7 @@ const FinancesImportDialog = ({
                 static_project_name: mappedRow.project_name || null,
                 project_owner: cashType || projectOwner || 'Без кассы',
                 description: mappedRow.description || 'Приход',
-                category: mappedRow.category || 'Разное',
+                category: category,
                 cash_type: cashType,
                 expense_amount: null,
                 income_amount: incomeAmount,
@@ -468,7 +697,7 @@ const FinancesImportDialog = ({
                 static_project_name: mappedRow.project_name || null,
                 project_owner: cashType || projectOwner || 'Без кассы',
                 description: mappedRow.description || (expenseAmount > 0 ? 'Расход' : 'Приход'),
-                category: mappedRow.category || 'Разное',
+                category: category,
                 cash_type: cashType,
                 expense_amount: expenseAmount || null,
                 income_amount: incomeAmount || null,
@@ -576,11 +805,20 @@ const FinancesImportDialog = ({
     setImporting(false);
     setImportProgress(0);
     setImportResult(null);
+    setRowValidations([]);
   };
 
   const handleClose = () => {
     resetDialog();
     onOpenChange(false);
+  };
+
+  const getStatusIcon = (status: 'valid' | 'warning' | 'error') => {
+    switch (status) {
+      case 'valid': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'error': return <XCircle className="w-4 h-4 text-red-500" />;
+    }
   };
 
   return (
@@ -661,7 +899,7 @@ const FinancesImportDialog = ({
                 className="mt-2"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Укажите диапазон колонок, начиная со строки с заголовками
+                Укажите диапазон колонок, начиная со строки с заголовками. Диапазон определён автоматически.
               </p>
             </div>
 
@@ -678,9 +916,57 @@ const FinancesImportDialog = ({
 
         {step === 3 && (
           <div className="space-y-4">
+            {/* Статистика до импорта */}
+            <Card className="bg-muted/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Статистика данных</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Всего записей</p>
+                  <p className="font-semibold text-lg">{parsedData.length}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Расходы</p>
+                  <p className="font-semibold text-lg text-red-500">{formatCurrency(importStats.totalExpense)}</p>
+                  <p className="text-xs text-muted-foreground">{importStats.expenseCount} записей</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Доходы</p>
+                  <p className="font-semibold text-lg text-green-500">{formatCurrency(importStats.totalIncome)}</p>
+                  <p className="text-xs text-muted-foreground">{importStats.incomeCount} записей</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Период</p>
+                  <p className="font-semibold">{importStats.minDate || '-'}</p>
+                  <p className="text-xs text-muted-foreground">до {importStats.maxDate || '-'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Статус валидации */}
+            <div className="flex gap-4 items-center">
+              <Badge variant="outline" className="gap-1">
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                {importStats.validCount} валидных
+              </Badge>
+              {importStats.warningCount > 0 && (
+                <Badge variant="outline" className="gap-1">
+                  <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                  {importStats.warningCount} предупреждений
+                </Badge>
+              )}
+              {importStats.errorCount > 0 && (
+                <Badge variant="destructive" className="gap-1">
+                  <XCircle className="w-3 h-3" />
+                  {importStats.errorCount} ошибок
+                </Badge>
+              )}
+            </div>
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Настройка соответствия колонок</h3>
-              <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4 max-h-64 overflow-y-auto">
                 {fieldOptions.filter(f => f.value !== 'skip').map(field => (
                   <div key={field.value} className="space-y-2">
                     <Label className="text-sm font-medium">{field.label}</Label>
@@ -708,25 +994,45 @@ const FinancesImportDialog = ({
             {parsedData.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Предпросмотр данных ({parsedData.length} записей)</CardTitle>
+                  <CardTitle className="text-base">Предпросмотр данных</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="max-h-48 overflow-auto">
-                    {parsedData.slice(0, 5).map((row, index) => {
+                  <div className="max-h-64 overflow-auto space-y-2">
+                    {parsedData.slice(0, 10).map((row, index) => {
                       const mappedRow = mapRow(row);
+                      const validation = validateAllRows[index];
+                      
                       return (
-                        <div key={index} className="border-b pb-2 mb-2 text-sm">
-                          <div><strong>Дата:</strong> {mappedRow.operation_date}</div>
-                          <div><strong>Проект:</strong> {mappedRow.project_name || '-'}</div>
-                          <div><strong>Чей проект:</strong> {mappedRow.project_owner || '-'}</div>
-                          <div><strong>Описание:</strong> {mappedRow.description}</div>
-                          <div><strong>Расход:</strong> {mappedRow.expense_amount ? formatCurrency(parseAmount(mappedRow.expense_amount)) : '-'}</div>
-                          <div><strong>Доход:</strong> {mappedRow.income_amount ? formatCurrency(parseAmount(mappedRow.income_amount)) : '-'}</div>
+                        <div 
+                          key={index} 
+                          className={`border rounded-lg p-3 text-sm ${
+                            validation?.status === 'error' ? 'border-red-500/50 bg-red-500/5' :
+                            validation?.status === 'warning' ? 'border-yellow-500/50 bg-yellow-500/5' :
+                            'border-border'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
+                              <div><span className="text-muted-foreground">Дата:</span> {mappedRow.operation_date || '-'}</div>
+                              <div><span className="text-muted-foreground">Проект:</span> {mappedRow.project_name || '-'}</div>
+                              <div><span className="text-muted-foreground">Касса:</span> {mappedRow.project_owner || '-'}</div>
+                              <div><span className="text-muted-foreground">Категория:</span> {mappedRow.category || '-'}</div>
+                              <div><span className="text-muted-foreground">Расход:</span> {mappedRow.expense_amount ? formatCurrency(parseAmount(mappedRow.expense_amount)) : '-'}</div>
+                              <div><span className="text-muted-foreground">Доход:</span> {mappedRow.income_amount ? formatCurrency(parseAmount(mappedRow.income_amount)) : '-'}</div>
+                              <div className="col-span-2"><span className="text-muted-foreground">Описание:</span> {mappedRow.description || '-'}</div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              {getStatusIcon(validation?.status || 'valid')}
+                              {validation?.issues.map((issue, i) => (
+                                <span key={i} className="text-xs text-muted-foreground">{issue}</span>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
-                    {parsedData.length > 5 && (
-                      <p className="text-muted-foreground">...и еще {parsedData.length - 5} записей</p>
+                    {parsedData.length > 10 && (
+                      <p className="text-muted-foreground text-center py-2">...и еще {parsedData.length - 10} записей</p>
                     )}
                   </div>
                 </CardContent>
@@ -734,8 +1040,8 @@ const FinancesImportDialog = ({
             )}
 
             <div className="flex gap-2">
-              <Button onClick={handleImport} disabled={parsedData.length === 0}>
-                Импортировать {parsedData.length} записей
+              <Button onClick={handleImport} disabled={parsedData.length === 0 || importStats.validCount === 0}>
+                Импортировать {importStats.validCount} записей
               </Button>
               <Button variant="outline" onClick={() => setStep(2)}>
                 Назад

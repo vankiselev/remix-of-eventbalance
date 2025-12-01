@@ -25,6 +25,34 @@ interface ImportResult {
   errors: Array<{ row: number; reason: string }>;
 }
 
+// Словарь синонимов для категорий
+const categoryAliases: { [key: string]: string[] } = {
+  'зп': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'зарплата': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'оклад': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'премия': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
+  'еда': ['Еда / Напитки для проекта', 'Еда'],
+  'напитки': ['Еда / Напитки для проекта', 'Еда'],
+  'доставка': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'трансфер': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'транспорт': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'такси': ['Доставка / Трансфер / Транспорт / Перевозки', 'Доставка'],
+  'реквизит': ['Реквизит / Расходники / Материалы', 'Реквизит'],
+  'материалы': ['Реквизит / Расходники / Материалы', 'Материалы'],
+  'расходники': ['Реквизит / Расходники / Материалы', 'Расходники'],
+  'аренда': ['Аренда', 'Аренда оборудования'],
+  'оборудование': ['Оборудование', 'Аренда оборудования'],
+  'реклама': ['Реклама / Маркетинг', 'Реклама'],
+  'маркетинг': ['Реклама / Маркетинг', 'Маркетинг'],
+  'связь': ['Связь / Интернет / Телефон', 'Связь'],
+  'интернет': ['Связь / Интернет / Телефон', 'Интернет'],
+  'телефон': ['Связь / Интернет / Телефон', 'Телефон'],
+  'услуги': ['Услуги сторонних организаций', 'Услуги'],
+  'подрядчик': ['Услуги сторонних организаций', 'Подрядчики'],
+  'разное': ['Разное', 'Прочее'],
+  'прочее': ['Разное', 'Прочее'],
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -44,11 +72,56 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Starting import: ${rows.length} rows for user ${user_id}`);
+
     const result: ImportResult = {
       total: rows.length,
       inserted: 0,
       failed: 0,
       errors: []
+    };
+
+    // Получаем список категорий из БД для fuzzy matching
+    const { data: categoriesData } = await supabase
+      .from('transaction_categories')
+      .select('name')
+      .eq('is_active', true);
+    
+    const categoryNames = categoriesData?.map(c => c.name) || [];
+    console.log(`Loaded ${categoryNames.length} categories from DB`);
+
+    // Функция fuzzy matching для категорий
+    const findMatchingCategory = (input: string): string => {
+      if (!input) return 'Разное';
+      
+      const s = String(input).trim();
+      const sLower = s.toLowerCase();
+      
+      // 1. Точное совпадение
+      const exactMatch = categoryNames.find(cat => cat.toLowerCase() === sLower);
+      if (exactMatch) return exactMatch;
+      
+      // 2. Поиск по синонимам
+      for (const [alias, targets] of Object.entries(categoryAliases)) {
+        if (sLower.includes(alias) || alias.includes(sLower)) {
+          for (const target of targets) {
+            const match = categoryNames.find(cat => 
+              cat.toLowerCase().includes(target.toLowerCase()) ||
+              target.toLowerCase().includes(cat.toLowerCase())
+            );
+            if (match) return match;
+          }
+        }
+      }
+      
+      // 3. Поиск по подстроке
+      const substringMatch = categoryNames.find(cat => 
+        cat.toLowerCase().includes(sLower) || sLower.includes(cat.toLowerCase())
+      );
+      if (substringMatch) return substringMatch;
+      
+      // 4. Fallback - возвращаем оригинал или "Разное"
+      return s || 'Разное';
     };
 
     // Функция парсинга даты
@@ -74,29 +147,33 @@ serve(async (req) => {
         }
       }
 
-      // Standard date formats
+      // Extended date formats
       const formats = [
-        /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, // dd.mm.yyyy
-        /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, // dd/mm/yyyy
-        /^(\d{1,2})-(\d{1,2})-(\d{4})$/, // dd-mm-yyyy
-        /^(\d{4})-(\d{1,2})-(\d{1,2})$/, // yyyy-mm-dd
+        { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, order: 'dmy' },
+        { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{2})$/, order: 'dmy_short' },
+        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: 'dmy' },
+        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, order: 'dmy_short' },
+        { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: 'dmy' },
+        { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})/, order: 'ymd' },
+        { regex: /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/, order: 'ymd' },
       ];
 
-      for (let i = 0; i < formats.length; i++) {
-        const match = s.match(formats[i]);
+      for (const { regex, order } of formats) {
+        const match = s.match(regex);
         if (match) {
-          let year, month, day;
-          if (i === 3) {
-            [, year, month, day] = match;
+          let year: number, month: number, day: number;
+          
+          if (order === 'ymd') {
+            [, year, month, day] = match.map(Number);
+          } else if (order === 'dmy_short') {
+            [, day, month, year] = match.map(Number);
+            year = year < 50 ? 2000 + year : 1900 + year;
           } else {
-            [, day, month, year] = match;
+            [, day, month, year] = match.map(Number);
           }
           
-          const y = parseInt(year);
-          const m = parseInt(month);
-          const d = parseInt(day);
-          if (y > 1900 && y < 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-            return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          if (year > 1900 && year < 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
           }
         }
       }
@@ -109,12 +186,10 @@ serve(async (req) => {
       if (!projectOwner) return null;
       const s = String(projectOwner).toLowerCase().trim();
       
-      // Гибкое сопоставление для наличных касс
       if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
       if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
       if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
       
-      // Если начинается с "наличка" - попробуем распознать
       if (s.startsWith('наличка')) {
         const name = s.replace('наличка', '').trim();
         if (name) {
@@ -149,6 +224,7 @@ serve(async (req) => {
 
         const cashType = mapCashType(row.project_owner || '');
         const projectOwner = cashType || row.project_owner || 'Без кассы';
+        const category = findMatchingCategory(row.category || '');
 
         // Если есть и доход и расход - создаём две транзакции
         if (expenseAmount > 0 && incomeAmount > 0) {
@@ -158,7 +234,7 @@ serve(async (req) => {
             static_project_name: row.project_name || null,
             project_owner: projectOwner,
             description: description,
-            category: row.category || 'Разное',
+            category: category,
             cash_type: cashType,
             expense_amount: expenseAmount,
             income_amount: null,
@@ -172,7 +248,7 @@ serve(async (req) => {
             static_project_name: row.project_name || null,
             project_owner: projectOwner,
             description: description,
-            category: row.category || 'Разное',
+            category: category,
             cash_type: cashType,
             expense_amount: null,
             income_amount: incomeAmount,
@@ -187,7 +263,7 @@ serve(async (req) => {
             static_project_name: row.project_name || null,
             project_owner: projectOwner,
             description: description,
-            category: row.category || 'Разное',
+            category: category,
             cash_type: cashType,
             expense_amount: expenseAmount || null,
             income_amount: incomeAmount || null,
@@ -202,8 +278,11 @@ serve(async (req) => {
           row: i + 1,
           reason: error.message || 'Ошибка валидации'
         });
+        console.warn(`Row ${i + 1} failed:`, error.message, row);
       }
     }
+
+    console.log(`Prepared ${validRows.length} valid rows for insertion`);
 
     // Batch вставка (по 500 строк за раз для надежности)
     const BATCH_SIZE = 500;
@@ -226,8 +305,11 @@ serve(async (req) => {
         }
       } else {
         result.inserted += batch.length;
+        console.log(`Inserted batch ${Math.floor(i/BATCH_SIZE) + 1}: ${batch.length} rows`);
       }
     }
+
+    console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(
       JSON.stringify(result),
