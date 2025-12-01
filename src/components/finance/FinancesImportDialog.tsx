@@ -1060,7 +1060,7 @@ const FinancesImportDialog = ({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="skip">Не импортировать</SelectItem>
-                        {headers.map(header => (
+                        {headers.filter(h => h && h.trim() !== '').map(header => (
                           <SelectItem key={header} value={header}>
                             {header}
                           </SelectItem>
