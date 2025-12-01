@@ -724,7 +724,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
   const formContent = (
     <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
@@ -1296,12 +1296,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <Button 
                             type="button"
                             size="sm" 
                             onClick={applyAISuggestions}
-                            className="h-8 text-xs"
+                            className="h-10 min-h-[44px] text-xs"
                           >
                             Применить
                           </Button>
@@ -1310,7 +1310,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             size="sm" 
                             variant="ghost" 
                             onClick={dismissSuggestions}
-                            className="h-8 w-8 p-0"
+                            className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -1351,7 +1351,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             description: "Описание обновлено",
                           });
                         }}
-                        className="mt-2"
+                        className="mt-2 h-10 min-h-[44px]"
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Применить исправление
@@ -1362,7 +1362,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <FormField
                 control={form.control}
                 name="expense_amount"
@@ -1521,7 +1521,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editTransaction ? "Редактировать транзакцию" : "Внести трату/приход"}
