@@ -55,25 +55,25 @@ export const AdvancesSummaryCard = () => {
   if (isAdmin && allAdvances) {
     return (
       <>
-        <Card className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-orange-200 dark:border-orange-800">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
+            <CardTitle className="text-sm font-medium">
               Выданные авансы
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 text-orange-700 hover:text-orange-900 hover:bg-orange-100 dark:text-orange-300 dark:hover:text-orange-100"
+                className="h-8 w-8 p-0"
                 onClick={handleAddNew}
               >
                 <Plus className="h-4 w-4" />
               </Button>
-              <Banknote className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              <Banknote className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+            <div className="text-2xl font-bold">
               {formatCurrency(allAdvances.total)}
             </div>
             
@@ -83,7 +83,7 @@ export const AdvancesSummaryCard = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-between mt-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100 dark:text-orange-300"
+                    className="w-full justify-between mt-2 text-xs"
                   >
                     <span>{allAdvances.employees.length} сотрудник(ов)</span>
                     {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -93,13 +93,13 @@ export const AdvancesSummaryCard = () => {
                   {allAdvances.employees.map((employee) => (
                     <div
                       key={employee.id}
-                      className="flex items-center justify-between text-sm p-2 rounded hover:bg-orange-100/50 dark:hover:bg-orange-900/20 group"
+                      className="flex items-center justify-between text-sm p-2 rounded hover:bg-accent group"
                     >
-                      <span className="text-orange-800 dark:text-orange-200">
+                      <span className="text-foreground">
                         {employee.full_name}
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-orange-900 dark:text-orange-100">
+                        <span className="font-medium">
                           {formatCurrency(employee.advance_balance)}
                         </span>
                         <Button
@@ -116,7 +116,7 @@ export const AdvancesSummaryCard = () => {
                 </CollapsibleContent>
               </Collapsible>
             ) : (
-              <p className="text-xs text-orange-700 dark:text-orange-300 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Нет выданных авансов. Нажмите "+" чтобы добавить первый.
               </p>
             )}
@@ -136,18 +136,18 @@ export const AdvancesSummaryCard = () => {
   // Employee view
   if (myAdvance && myAdvance > 0) {
     return (
-      <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200 dark:border-amber-800">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
+          <CardTitle className="text-sm font-medium">
             Мой аванс
           </CardTitle>
-          <Banknote className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <Banknote className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+          <div className="text-2xl font-bold">
             {formatCurrency(myAdvance)}
           </div>
-          <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Выдано администратором
           </p>
         </CardContent>
