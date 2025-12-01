@@ -11,6 +11,7 @@ import { TransactionDetailDialog } from "./TransactionDetailDialog";
 import { TransactionFilter } from "./TransactionFilter";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
 const walletDisplay = (s?: string | null) => {
@@ -52,9 +53,10 @@ interface TransactionsCardViewProps {
   userId?: string;
   isAdmin: boolean;
   onEdit?: (transaction: any) => void;
+  showOwner?: boolean;
 }
 
-export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCardViewProps) => {
+export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: TransactionsCardViewProps) => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // Все транзакции для определения доступных месяцев
@@ -107,6 +109,28 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       fetchTransactions();
     }
   }, [debouncedRefetch]);
+
+  // Fetch profiles for transaction owners (only if showOwner is true)
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles-for-transactions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, full_name, avatar_url')
+        .eq('employment_status', 'active');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: showOwner === true,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const profilesMap = useMemo(() => {
+    const map = new Map();
+    profiles?.forEach(p => map.set(p.id, p));
+    return map;
+  }, [profiles]);
 
   const fetchTransactions = async () => {
     try {
@@ -481,6 +505,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
                     transaction={transaction}
                     onClick={() => setSelectedTransaction(transaction)}
                     verification_status={transaction.verification_status}
+                    ownerProfile={showOwner ? profilesMap.get(transaction.created_by) : undefined}
                   />
                 ))}
               </div>

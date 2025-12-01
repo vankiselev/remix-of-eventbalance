@@ -570,6 +570,7 @@ const Finances = () => {
                 <TransactionsCardView
                   isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
+                  showOwner={true}
                 />
               ) : (
                 <EnhancedTransactionTable

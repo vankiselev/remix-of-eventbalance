@@ -2,6 +2,8 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Clock } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatFullName, getInitials } from "@/utils/formatName";
 
 const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
 const walletDisplay = (s?: string | null) => {
@@ -31,9 +33,16 @@ interface TransactionCardProps {
   };
   onClick: () => void;
   verification_status?: string | null;
+  ownerProfile?: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+    avatar_url?: string | null;
+  };
 }
 
-export const TransactionCard = ({ transaction, onClick, verification_status }: TransactionCardProps) => {
+export const TransactionCard = ({ transaction, onClick, verification_status, ownerProfile }: TransactionCardProps) => {
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
@@ -50,6 +59,21 @@ export const TransactionCard = ({ transaction, onClick, verification_status }: T
         isPending ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-card border-border'
       }`}
     >
+      {/* Owner Avatar and Name */}
+      {ownerProfile && (
+        <div className="flex flex-col items-center gap-1 shrink-0 w-14 md:w-16">
+          <Avatar className="h-8 w-8 md:h-10 md:w-10">
+            <AvatarImage src={ownerProfile.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {getInitials(ownerProfile)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-[10px] md:text-xs text-center font-medium text-muted-foreground truncate w-full leading-tight">
+            {formatFullName(ownerProfile).split(' ')[0]}
+          </span>
+        </div>
+      )}
+
       {/* Icon */}
       <CategoryIcon category={transaction.category} isIncome={isIncome} />
 
