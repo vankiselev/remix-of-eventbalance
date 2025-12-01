@@ -8,6 +8,7 @@ import { TransactionCard } from "./TransactionCard";
 import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
 import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
+import { TransactionFiltersPanel } from "./TransactionFiltersPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -65,6 +66,17 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
   const [shouldRefetch, setShouldRefetch] = useState(0);
   const debouncedRefetch = useDebounce(shouldRefetch, 2000); // 2 seconds debounce
+
+  // Extended filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [expenseMin, setExpenseMin] = useState("");
+  const [expenseMax, setExpenseMax] = useState("");
+  const [incomeMin, setIncomeMin] = useState("");
+  const [incomeMax, setIncomeMax] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
 
   // Fetch transactions on mount and filter changes
   useEffect(() => {
@@ -284,11 +296,73 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return Array.from(wallets).sort();
   }, [transactions]);
 
-  // Group transactions by date
+  // All unique categories for filter
+  const allCategories = useMemo(() => {
+    const cats = new Set<string>();
+    transactions.forEach(t => cats.add(t.category));
+    return Array.from(cats).sort().map(c => ({ value: c, label: c }));
+  }, [transactions]);
+
+  // All unique project owners (wallets) for filter
+  const allWallets = useMemo(() => {
+    const ws = new Set<string>();
+    transactions.forEach(t => {
+      if (t.project_owner) ws.add(t.project_owner);
+    });
+    return Array.from(ws).sort().map(w => ({ value: w, label: walletDisplay(w) }));
+  }, [transactions]);
+
+  // Apply extended filters
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      // Search term
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matches = 
+          t.description?.toLowerCase().includes(search) ||
+          t.notes?.toLowerCase().includes(search) ||
+          t.static_project_name?.toLowerCase().includes(search) ||
+          t.events?.name?.toLowerCase().includes(search);
+        if (!matches) return false;
+      }
+
+      // Date range
+      if (dateFrom) {
+        const tDate = new Date(t.operation_date);
+        if (tDate < dateFrom) return false;
+      }
+      if (dateTo) {
+        const tDate = new Date(t.operation_date);
+        if (tDate > dateTo) return false;
+      }
+
+      // Expense amount range
+      if (expenseMin && t.expense_amount < parseFloat(expenseMin)) return false;
+      if (expenseMax && t.expense_amount > parseFloat(expenseMax)) return false;
+
+      // Income amount range
+      if (incomeMin && t.income_amount < parseFloat(incomeMin)) return false;
+      if (incomeMax && t.income_amount > parseFloat(incomeMax)) return false;
+
+      // Categories
+      if (selectedCategories.length > 0 && !selectedCategories.includes(t.category)) {
+        return false;
+      }
+
+      // Wallets (project owners)
+      if (selectedWallets.length > 0 && !selectedWallets.includes(t.project_owner)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [transactions, searchTerm, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
+
+  // Group filtered transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
 
-    transactions.forEach(t => {
+    filteredTransactions.forEach(t => {
       const date = new Date(t.operation_date);
       let label: string;
 
@@ -307,7 +381,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     });
 
     return groups;
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   // Calculate daily totals
   const getDailyTotal = (transactions: Transaction[]) => {
@@ -321,10 +395,49 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
     return <div className="flex items-center justify-center py-8">Загрузка...</div>;
   }
 
+  const handleResetAllFilters = () => {
+    setSearchTerm("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setExpenseMin("");
+    setExpenseMax("");
+    setIncomeMin("");
+    setIncomeMax("");
+    setSelectedCategories([]);
+    setSelectedWallets([]);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex gap-3 pt-4">
+      {/* Extended Filters Panel */}
+      <div className="pt-4">
+        <TransactionFiltersPanel
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onDateFromChange={setDateFrom}
+          onDateToChange={setDateTo}
+          expenseMin={expenseMin}
+          expenseMax={expenseMax}
+          onExpenseMinChange={setExpenseMin}
+          onExpenseMaxChange={setExpenseMax}
+          incomeMin={incomeMin}
+          incomeMax={incomeMax}
+          onIncomeMinChange={setIncomeMin}
+          onIncomeMaxChange={setIncomeMax}
+          selectedCategories={selectedCategories}
+          onCategoriesChange={setSelectedCategories}
+          selectedWallets={selectedWallets}
+          onWalletsChange={setSelectedWallets}
+          categories={allCategories}
+          wallets={allWallets}
+          onResetAll={handleResetAllFilters}
+        />
+      </div>
+
+      {/* Legacy Period/Wallet Filters - keeping for backward compatibility */}
+      <div className="flex gap-3">
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Период" />

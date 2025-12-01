@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TransactionFiltersPanel } from "./TransactionFiltersPanel";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -89,6 +90,16 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Extended filters
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [expenseMin, setExpenseMin] = useState("");
+  const [expenseMax, setExpenseMax] = useState("");
+  const [incomeMin, setIncomeMin] = useState("");
+  const [incomeMax, setIncomeMax] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+
   // Load scale from localStorage on mount
   useEffect(() => {
     const savedScale = localStorage.getItem('transaction-table-scale');
@@ -165,7 +176,23 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }
   }, [debouncedInsertRefetch]);
 
-  // Debounce search for better performance
+  // All unique categories for filter
+  const allCategories = useMemo(() => {
+    const cats = new Set<string>();
+    transactions.forEach(t => cats.add(t.category));
+    return Array.from(cats).sort().map(c => ({ value: c, label: c }));
+  }, [transactions]);
+
+  // All unique project owners (wallets) for filter
+  const allWallets = useMemo(() => {
+    const ws = new Set<string>();
+    transactions.forEach(t => {
+      if (t.project_owner) ws.add(t.project_owner);
+    });
+    return Array.from(ws).sort().map(w => ({ value: w, label: w }));
+  }, [transactions]);
+
+  // Debounce search and apply all filters
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       let filtered = [...transactions];
@@ -177,9 +204,44 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
           transaction.description.toLowerCase().includes(lowerSearch) ||
           transaction.project_owner.toLowerCase().includes(lowerSearch) ||
           transaction.category.toLowerCase().includes(lowerSearch) ||
+          (transaction.notes || "").toLowerCase().includes(lowerSearch) ||
           (transaction.static_project_name || "").toLowerCase().includes(lowerSearch) ||
           (transaction.events?.name || "").toLowerCase().includes(lowerSearch)
         );
+      }
+
+      // Date range
+      if (dateFrom) {
+        filtered = filtered.filter(t => new Date(t.operation_date) >= dateFrom);
+      }
+      if (dateTo) {
+        filtered = filtered.filter(t => new Date(t.operation_date) <= dateTo);
+      }
+
+      // Expense amount range
+      if (expenseMin) {
+        filtered = filtered.filter(t => (t.expense_amount || 0) >= parseFloat(expenseMin));
+      }
+      if (expenseMax) {
+        filtered = filtered.filter(t => (t.expense_amount || 0) <= parseFloat(expenseMax));
+      }
+
+      // Income amount range
+      if (incomeMin) {
+        filtered = filtered.filter(t => (t.income_amount || 0) >= parseFloat(incomeMin));
+      }
+      if (incomeMax) {
+        filtered = filtered.filter(t => (t.income_amount || 0) <= parseFloat(incomeMax));
+      }
+
+      // Categories
+      if (selectedCategories.length > 0) {
+        filtered = filtered.filter(t => selectedCategories.includes(t.category));
+      }
+
+      // Wallets (project owners)
+      if (selectedWallets.length > 0) {
+        filtered = filtered.filter(t => selectedWallets.includes(t.project_owner));
       }
 
       // Apply sorting unless default (created_at asc) to preserve import order
@@ -200,7 +262,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [transactions, searchTerm, sortField, sortDirection]);
+  }, [transactions, searchTerm, sortField, sortDirection, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
 
   const fetchTransactions = async () => {
     try {
@@ -445,22 +507,49 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     );
   }
 
+  const handleResetAllFilters = () => {
+    setSearchTerm("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setExpenseMin("");
+    setExpenseMax("");
+    setIncomeMin("");
+    setIncomeMax("");
+    setSelectedCategories([]);
+    setSelectedWallets([]);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Search and Scale */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Поиск по описанию, проекту, категории..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 border-slate-200 focus:border-indigo-300 focus:ring-indigo-200"
-          />
-        </div>
+      {/* Extended Filters Panel */}
+      <TransactionFiltersPanel
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        expenseMin={expenseMin}
+        expenseMax={expenseMax}
+        onExpenseMinChange={setExpenseMin}
+        onExpenseMaxChange={setExpenseMax}
+        incomeMin={incomeMin}
+        incomeMax={incomeMax}
+        onIncomeMinChange={setIncomeMin}
+        onIncomeMaxChange={setIncomeMax}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setSelectedCategories}
+        selectedWallets={selectedWallets}
+        onWalletsChange={setSelectedWallets}
+        categories={allCategories}
+        wallets={allWallets}
+        onResetAll={handleResetAllFilters}
+      />
 
+      {/* Scale Control */}
+      <div className="flex justify-end">
         <Select value={tableScale} onValueChange={setTableScale}>
-          <SelectTrigger className="w-full sm:w-[120px]">
+          <SelectTrigger className="w-[120px]">
             <ZoomIn className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Масштаб" />
           </SelectTrigger>
