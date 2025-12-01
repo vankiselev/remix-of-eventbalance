@@ -32,6 +32,7 @@ import MessagesPage from "./pages/MessagesPage";
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
 import TasksPage from "./pages/TasksPage";
+import CRMTasksPage from "./pages/CRMTasksPage";
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -104,6 +105,15 @@ const RealtimeSync = () => {
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_tasks' }, () => {
         queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
       })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'tasks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'task_checklists' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['task-checklists'] });
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'task_comments' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['task-comments'] });
+      })
       .subscribe();
 
     return () => {
@@ -161,7 +171,8 @@ const App = () => {
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
             <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
-            <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
+            <Route path="/warehouse-tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
             
             {/* Admin-only routes */}
             <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
