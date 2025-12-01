@@ -792,6 +792,57 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          errors: Json | null
+          failed_rows: number | null
+          id: string
+          inserted_rows: number | null
+          processed_rows: number | null
+          skipped_rows: number | null
+          started_at: string | null
+          status: string
+          total_rows: number | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json | null
+          failed_rows?: number | null
+          id?: string
+          inserted_rows?: number | null
+          processed_rows?: number | null
+          skipped_rows?: number | null
+          started_at?: string | null
+          status?: string
+          total_rows?: number | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json | null
+          failed_rows?: number | null
+          id?: string
+          inserted_rows?: number | null
+          processed_rows?: number | null
+          skipped_rows?: number | null
+          started_at?: string | null
+          status?: string
+          total_rows?: number | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       incomes: {
         Row: {
           amount: number

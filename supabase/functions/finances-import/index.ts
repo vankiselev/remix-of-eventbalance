@@ -22,6 +22,7 @@ interface ImportResult {
   total: number;
   inserted: number;
   failed: number;
+  skipped: number;
   errors: Array<{ row: number; reason: string }>;
 }
 
@@ -53,6 +54,266 @@ const categoryAliases: { [key: string]: string[] } = {
   'прочее': ['Разное', 'Прочее'],
 };
 
+// Основная функция импорта
+async function processImport(
+  supabase: any,
+  rows: ImportRow[],
+  user_id: string,
+  job_id: string | null
+): Promise<ImportResult> {
+  const result: ImportResult = {
+    total: rows.length,
+    inserted: 0,
+    failed: 0,
+    skipped: 0,
+    errors: []
+  };
+
+  // Обновляем статус job если есть
+  const updateJobProgress = async (processed: number, inserted: number, failed: number, skipped: number) => {
+    if (!job_id) return;
+    try {
+      await supabase
+        .from('import_jobs')
+        .update({
+          processed_rows: processed,
+          inserted_rows: inserted,
+          failed_rows: failed,
+          skipped_rows: skipped,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', job_id);
+    } catch (e) {
+      console.warn('Failed to update job progress:', e);
+    }
+  };
+
+  // Получаем список категорий из БД для fuzzy matching
+  const { data: categoriesData } = await supabase
+    .from('transaction_categories')
+    .select('name')
+    .eq('is_active', true);
+  
+  const categoryNames = categoriesData?.map((c: any) => c.name) || [];
+  console.log(`Loaded ${categoryNames.length} categories from DB`);
+
+  // Функция fuzzy matching для категорий
+  const findMatchingCategory = (input: string): string => {
+    if (!input) return 'Разное';
+    
+    const s = String(input).trim();
+    const sLower = s.toLowerCase();
+    
+    const exactMatch = categoryNames.find((cat: string) => cat.toLowerCase() === sLower);
+    if (exactMatch) return exactMatch;
+    
+    for (const [alias, targets] of Object.entries(categoryAliases)) {
+      if (sLower.includes(alias) || alias.includes(sLower)) {
+        for (const target of targets) {
+          const match = categoryNames.find((cat: string) => 
+            cat.toLowerCase().includes(target.toLowerCase()) ||
+            target.toLowerCase().includes(cat.toLowerCase())
+          );
+          if (match) return match;
+        }
+      }
+    }
+    
+    const substringMatch = categoryNames.find((cat: string) => 
+      cat.toLowerCase().includes(sLower) || sLower.includes(cat.toLowerCase())
+    );
+    if (substringMatch) return substringMatch;
+    
+    return s || 'Разное';
+  };
+
+  // Функция парсинга даты
+  const parseDate = (dateStr: string): string | null => {
+    if (!dateStr) return null;
+    const s = String(dateStr).trim();
+    if (!s) return null;
+
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      const num = parseFloat(s);
+      if (num > 1 && num < 100000) {
+        try {
+          const excelEpochUTC = Date.UTC(1899, 11, 30);
+          const dt = new Date(excelEpochUTC + num * 86400000);
+          const y = dt.getUTCFullYear();
+          const m = dt.getUTCMonth() + 1;
+          const d = dt.getUTCDate();
+          return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        } catch (error) {
+          console.warn('Error parsing Excel serial date:', s, error);
+        }
+      }
+    }
+
+    const formats = [
+      { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, order: 'dmy' },
+      { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{2})$/, order: 'dmy_short' },
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: 'dmy' },
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, order: 'dmy_short' },
+      { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: 'dmy' },
+      { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})/, order: 'ymd' },
+      { regex: /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/, order: 'ymd' },
+    ];
+
+    for (const { regex, order } of formats) {
+      const match = s.match(regex);
+      if (match) {
+        let year: number, month: number, day: number;
+        
+        if (order === 'ymd') {
+          [, year, month, day] = match.map(Number);
+        } else if (order === 'dmy_short') {
+          [, day, month, year] = match.map(Number);
+          year = year < 50 ? 2000 + year : 1900 + year;
+        } else {
+          [, day, month, year] = match.map(Number);
+        }
+        
+        if (year > 1900 && year < 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // Функция маппинга cash_type
+  const mapCashType = (projectOwner: string): string | null => {
+    if (!projectOwner) return null;
+    const s = String(projectOwner).toLowerCase().trim();
+    
+    if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
+    if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
+    if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
+    
+    if (s.startsWith('наличка')) {
+      const name = s.replace('наличка', '').trim();
+      if (name) {
+        return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
+      }
+    }
+    
+    return null;
+  };
+
+  // Подготовка данных
+  const validRows: any[] = [];
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row: ImportRow = rows[i];
+    
+    try {
+      const operationDate = parseDate(row.operation_date);
+      if (!operationDate) {
+        throw new Error("Некорректная дата");
+      }
+
+      const expenseAmount = row.expense_amount || 0;
+      const incomeAmount = row.income_amount || 0;
+
+      if (expenseAmount === 0 && incomeAmount === 0) {
+        throw new Error("Не указана сумма операции");
+      }
+
+      const description = row.description || (expenseAmount > 0 ? 'Расход' : 'Приход');
+      const cashType = mapCashType(row.project_owner || '');
+      const projectOwner = cashType || row.project_owner || 'Без кассы';
+      const category = findMatchingCategory(row.category || '');
+
+      if (expenseAmount > 0 && incomeAmount > 0) {
+        validRows.push({
+          created_by: user_id,
+          operation_date: operationDate,
+          static_project_name: row.project_name || null,
+          project_owner: projectOwner,
+          description: description,
+          category: category,
+          cash_type: cashType,
+          expense_amount: expenseAmount,
+          income_amount: null,
+          notes: row.notes || null,
+          verification_status: 'pending',
+          requires_verification: true
+        });
+        validRows.push({
+          created_by: user_id,
+          operation_date: operationDate,
+          static_project_name: row.project_name || null,
+          project_owner: projectOwner,
+          description: description,
+          category: category,
+          cash_type: cashType,
+          expense_amount: null,
+          income_amount: incomeAmount,
+          notes: row.notes || null,
+          verification_status: 'pending',
+          requires_verification: true
+        });
+      } else {
+        validRows.push({
+          created_by: user_id,
+          operation_date: operationDate,
+          static_project_name: row.project_name || null,
+          project_owner: projectOwner,
+          description: description,
+          category: category,
+          cash_type: cashType,
+          expense_amount: expenseAmount || null,
+          income_amount: incomeAmount || null,
+          notes: row.notes || null,
+          verification_status: 'pending',
+          requires_verification: true
+        });
+      }
+    } catch (error: any) {
+      result.failed++;
+      result.errors.push({
+        row: i + 1,
+        reason: error.message || 'Ошибка валидации'
+      });
+      console.warn(`Row ${i + 1} failed:`, error.message, row);
+    }
+  }
+
+  console.log(`Prepared ${validRows.length} valid rows for insertion`);
+
+  // Batch вставка
+  const BATCH_SIZE = 500;
+  let processedRows = 0;
+  
+  for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+    const batch = validRows.slice(i, i + BATCH_SIZE);
+    
+    const { error } = await supabase
+      .from('financial_transactions')
+      .insert(batch);
+
+    if (error) {
+      console.error('Batch insert error:', error);
+      for (let j = 0; j < batch.length; j++) {
+        result.failed++;
+        result.errors.push({
+          row: i + j + 1,
+          reason: error.message || 'Ошибка вставки'
+        });
+      }
+    } else {
+      result.inserted += batch.length;
+      console.log(`Inserted batch ${Math.floor(i/BATCH_SIZE) + 1}: ${batch.length} rows`);
+    }
+    
+    processedRows = Math.min(i + BATCH_SIZE, validRows.length);
+    await updateJobProgress(processedRows, result.inserted, result.failed, result.skipped);
+  }
+
+  return result;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -63,7 +324,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { rows, user_id } = await req.json();
+    const { rows, user_id, background_mode, job_id } = await req.json();
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(
@@ -72,243 +333,72 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Starting import: ${rows.length} rows for user ${user_id}`);
+    console.log(`Starting import: ${rows.length} rows for user ${user_id}, background: ${background_mode}, job_id: ${job_id}`);
 
-    const result: ImportResult = {
-      total: rows.length,
-      inserted: 0,
-      failed: 0,
-      errors: []
-    };
+    // Если фоновый режим - запускаем в waitUntil и сразу возвращаем ответ
+    if (background_mode && job_id) {
+      // Обновляем статус на processing
+      await supabase
+        .from('import_jobs')
+        .update({
+          status: 'processing',
+          started_at: new Date().toISOString(),
+          total_rows: rows.length
+        })
+        .eq('id', job_id);
 
-    // Получаем список категорий из БД для fuzzy matching
-    const { data: categoriesData } = await supabase
-      .from('transaction_categories')
-      .select('name')
-      .eq('is_active', true);
-    
-    const categoryNames = categoriesData?.map(c => c.name) || [];
-    console.log(`Loaded ${categoryNames.length} categories from DB`);
-
-    // Функция fuzzy matching для категорий
-    const findMatchingCategory = (input: string): string => {
-      if (!input) return 'Разное';
-      
-      const s = String(input).trim();
-      const sLower = s.toLowerCase();
-      
-      // 1. Точное совпадение
-      const exactMatch = categoryNames.find(cat => cat.toLowerCase() === sLower);
-      if (exactMatch) return exactMatch;
-      
-      // 2. Поиск по синонимам
-      for (const [alias, targets] of Object.entries(categoryAliases)) {
-        if (sLower.includes(alias) || alias.includes(sLower)) {
-          for (const target of targets) {
-            const match = categoryNames.find(cat => 
-              cat.toLowerCase().includes(target.toLowerCase()) ||
-              target.toLowerCase().includes(cat.toLowerCase())
-            );
-            if (match) return match;
-          }
+      // Запускаем обработку в фоне
+      EdgeRuntime.waitUntil((async () => {
+        try {
+          console.log(`[Background] Starting import job ${job_id}`);
+          const result = await processImport(supabase, rows, user_id, job_id);
+          
+          // Обновляем финальный статус
+          await supabase
+            .from('import_jobs')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              processed_rows: result.total,
+              inserted_rows: result.inserted,
+              failed_rows: result.failed,
+              skipped_rows: result.skipped,
+              errors: result.errors.slice(0, 100), // Ограничиваем количество ошибок
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job_id);
+          
+          console.log(`[Background] Import job ${job_id} completed: ${result.inserted} inserted, ${result.failed} failed`);
+        } catch (error: any) {
+          console.error(`[Background] Import job ${job_id} failed:`, error);
+          await supabase
+            .from('import_jobs')
+            .update({
+              status: 'failed',
+              completed_at: new Date().toISOString(),
+              errors: [{ row: 0, reason: error.message || 'Unknown error' }],
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job_id);
         }
-      }
-      
-      // 3. Поиск по подстроке
-      const substringMatch = categoryNames.find(cat => 
-        cat.toLowerCase().includes(sLower) || sLower.includes(cat.toLowerCase())
+      })());
+
+      // Сразу возвращаем ответ
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          job_id: job_id,
+          message: 'Import started in background' 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
-      if (substringMatch) return substringMatch;
-      
-      // 4. Fallback - возвращаем оригинал или "Разное"
-      return s || 'Разное';
-    };
-
-    // Функция парсинга даты
-    const parseDate = (dateStr: string): string | null => {
-      if (!dateStr) return null;
-      const s = String(dateStr).trim();
-      if (!s) return null;
-
-      // Excel serial numbers
-      if (/^\d+(\.\d+)?$/.test(s)) {
-        const num = parseFloat(s);
-        if (num > 1 && num < 100000) {
-          try {
-            const excelEpochUTC = Date.UTC(1899, 11, 30);
-            const dt = new Date(excelEpochUTC + num * 86400000);
-            const y = dt.getUTCFullYear();
-            const m = dt.getUTCMonth() + 1;
-            const d = dt.getUTCDate();
-            return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          } catch (error) {
-            console.warn('Error parsing Excel serial date:', s, error);
-          }
-        }
-      }
-
-      // Extended date formats
-      const formats = [
-        { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, order: 'dmy' },
-        { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{2})$/, order: 'dmy_short' },
-        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: 'dmy' },
-        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/, order: 'dmy_short' },
-        { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: 'dmy' },
-        { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})/, order: 'ymd' },
-        { regex: /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/, order: 'ymd' },
-      ];
-
-      for (const { regex, order } of formats) {
-        const match = s.match(regex);
-        if (match) {
-          let year: number, month: number, day: number;
-          
-          if (order === 'ymd') {
-            [, year, month, day] = match.map(Number);
-          } else if (order === 'dmy_short') {
-            [, day, month, year] = match.map(Number);
-            year = year < 50 ? 2000 + year : 1900 + year;
-          } else {
-            [, day, month, year] = match.map(Number);
-          }
-          
-          if (year > 1900 && year < 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-            return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          }
-        }
-      }
-
-      return null;
-    };
-
-    // Функция маппинга cash_type
-    const mapCashType = (projectOwner: string): string | null => {
-      if (!projectOwner) return null;
-      const s = String(projectOwner).toLowerCase().trim();
-      
-      if (s.includes('настя') || s === 'наличка настя') return 'Наличка Настя';
-      if (s.includes('лера') || s === 'наличка лера') return 'Наличка Лера';
-      if (s.includes('ваня') || s === 'наличка ваня') return 'Наличка Ваня';
-      
-      if (s.startsWith('наличка')) {
-        const name = s.replace('наличка', '').trim();
-        if (name) {
-          return 'Наличка ' + name.charAt(0).toUpperCase() + name.slice(1);
-        }
-      }
-      
-      return null;
-    };
-
-    // Подготовка данных для batch-вставки
-    const validRows: any[] = [];
-    
-    for (let i = 0; i < rows.length; i++) {
-      const row: ImportRow = rows[i];
-      
-      try {
-        const operationDate = parseDate(row.operation_date);
-        if (!operationDate) {
-          throw new Error("Некорректная дата");
-        }
-
-        const expenseAmount = row.expense_amount || 0;
-        const incomeAmount = row.income_amount || 0;
-
-        if (expenseAmount === 0 && incomeAmount === 0) {
-          throw new Error("Не указана сумма операции");
-        }
-
-        // Описание по умолчанию если не указано
-        const description = row.description || (expenseAmount > 0 ? 'Расход' : 'Приход');
-
-        const cashType = mapCashType(row.project_owner || '');
-        const projectOwner = cashType || row.project_owner || 'Без кассы';
-        const category = findMatchingCategory(row.category || '');
-
-        // Если есть и доход и расход - создаём две транзакции
-        if (expenseAmount > 0 && incomeAmount > 0) {
-          validRows.push({
-            created_by: user_id,
-            operation_date: operationDate,
-            static_project_name: row.project_name || null,
-            project_owner: projectOwner,
-            description: description,
-            category: category,
-            cash_type: cashType,
-            expense_amount: expenseAmount,
-            income_amount: null,
-            notes: row.notes || null,
-            verification_status: 'pending',
-            requires_verification: true
-          });
-          validRows.push({
-            created_by: user_id,
-            operation_date: operationDate,
-            static_project_name: row.project_name || null,
-            project_owner: projectOwner,
-            description: description,
-            category: category,
-            cash_type: cashType,
-            expense_amount: null,
-            income_amount: incomeAmount,
-            notes: row.notes || null,
-            verification_status: 'pending',
-            requires_verification: true
-          });
-        } else {
-          validRows.push({
-            created_by: user_id,
-            operation_date: operationDate,
-            static_project_name: row.project_name || null,
-            project_owner: projectOwner,
-            description: description,
-            category: category,
-            cash_type: cashType,
-            expense_amount: expenseAmount || null,
-            income_amount: incomeAmount || null,
-            notes: row.notes || null,
-            verification_status: 'pending',
-            requires_verification: true
-          });
-        }
-      } catch (error: any) {
-        result.failed++;
-        result.errors.push({
-          row: i + 1,
-          reason: error.message || 'Ошибка валидации'
-        });
-        console.warn(`Row ${i + 1} failed:`, error.message, row);
-      }
     }
 
-    console.log(`Prepared ${validRows.length} valid rows for insertion`);
-
-    // Batch вставка (по 500 строк за раз для надежности)
-    const BATCH_SIZE = 500;
-    for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
-      const batch = validRows.slice(i, i + BATCH_SIZE);
-      
-      const { error } = await supabase
-        .from('financial_transactions')
-        .insert(batch);
-
-      if (error) {
-        console.error('Batch insert error:', error);
-        // Добавляем все строки из батча в ошибки
-        for (let j = 0; j < batch.length; j++) {
-          result.failed++;
-          result.errors.push({
-            row: i + j + 1,
-            reason: error.message || 'Ошибка вставки'
-          });
-        }
-      } else {
-        result.inserted += batch.length;
-        console.log(`Inserted batch ${Math.floor(i/BATCH_SIZE) + 1}: ${batch.length} rows`);
-      }
-    }
-
+    // Синхронный режим - ждём завершения
+    const result = await processImport(supabase, rows, user_id, job_id);
     console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(

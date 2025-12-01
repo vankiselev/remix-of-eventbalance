@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Pause, Play, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { Pause, Play, AlertTriangle, CheckCircle2, XCircle, CloudUpload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from 'xlsx';
@@ -16,6 +16,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { useImportProgress } from "@/contexts/ImportProgressContext";
 import { Badge } from "@/components/ui/badge";
 import { useTransactionCategories } from "@/hooks/useTransactionCategories";
+import { useImportJobs } from "@/hooks/useImportJobs";
 
 interface FinancesImportDialogProps {
   open: boolean;
@@ -91,9 +92,12 @@ const FinancesImportDialog = ({
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [backgroundImportStarted, setBackgroundImportStarted] = useState(false);
+  const [startingBackgroundImport, setStartingBackgroundImport] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { startImport, updateProgress, finishImport } = useImportProgress();
+  const { createJob } = useImportJobs();
   const { categories } = useTransactionCategories();
 
   // Refs для предотвращения stale closure в async функциях
@@ -998,6 +1002,75 @@ const FinancesImportDialog = ({
     }
   };
 
+  // Фоновый импорт - отправка данных на сервер
+  const handleBackgroundImport = async () => {
+    console.log('[FinancesImport] === ФОНОВЫЙ ИМПОРТ ===');
+    
+    if (!validateData()) {
+      console.log('[FinancesImport] Валидация не пройдена');
+      return;
+    }
+
+    setStartingBackgroundImport(true);
+
+    try {
+      // Подготавливаем данные для отправки
+      const rowsToSend = parsedData.map(row => {
+        const mappedRow = mapRow(row);
+        return {
+          operation_date: mappedRow.operation_date,
+          project_name: mappedRow.project_name || null,
+          project_owner: mappedRow.project_owner || null,
+          description: mappedRow.description || null,
+          expense_amount: parseAmount(mappedRow.expense_amount),
+          income_amount: parseAmount(mappedRow.income_amount),
+          category: mappedRow.category || null,
+          notes: mappedRow.notes || null,
+        };
+      });
+
+      // Создаём job для отслеживания
+      const jobId = await createJob('finances', rowsToSend.length);
+      if (!jobId) {
+        throw new Error('Не удалось создать задачу импорта');
+      }
+
+      console.log('[FinancesImport] Создана задача:', jobId);
+
+      // Отправляем на edge function
+      const { data, error } = await supabase.functions.invoke('finances-import', {
+        body: {
+          rows: rowsToSend,
+          user_id: user?.id,
+          background_mode: true,
+          job_id: jobId
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('[FinancesImport] Ответ от сервера:', data);
+
+      setBackgroundImportStarted(true);
+      setStep(5); // Новый шаг - "импорт запущен"
+      
+      toast({
+        title: "Импорт запущен",
+        description: "Вы можете закрыть это окно. Импорт продолжится в фоновом режиме.",
+      });
+
+    } catch (error: any) {
+      console.error('[FinancesImport] Ошибка запуска фонового импорта:', error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось запустить фоновый импорт",
+      });
+    } finally {
+      setStartingBackgroundImport(false);
+    }
+  };
+
   const resetDialog = () => {
     setStep(1);
     setFile(null);
@@ -1011,6 +1084,8 @@ const FinancesImportDialog = ({
     setImporting(false);
     setImportProgress(0);
     setImportResult(null);
+    setBackgroundImportStarted(false);
+    setStartingBackgroundImport(false);
   };
 
   const handleClose = () => {
@@ -1312,14 +1387,34 @@ const FinancesImportDialog = ({
               </Card>
             )}
 
-            <div className="flex gap-2">
-              <Button onClick={handleImport} disabled={parsedData.length === 0 || importStats.validCount === 0}>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleImport} disabled={parsedData.length === 0 || importStats.validCount === 0 || importing}>
                 Импортировать {importStats.validCount} записей
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={handleBackgroundImport} 
+                disabled={parsedData.length === 0 || importStats.validCount === 0 || startingBackgroundImport}
+              >
+                {startingBackgroundImport ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Запуск...
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload className="w-4 h-4 mr-2" />
+                    Импорт в фоне
+                  </>
+                )}
               </Button>
               <Button variant="outline" onClick={() => setStep(2)}>
                 Назад
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              "Импорт в фоне" позволяет закрыть окно — импорт продолжится на сервере
+            </p>
           </div>
         )}
 
@@ -1380,6 +1475,49 @@ const FinancesImportDialog = ({
                   Повторить импорт
                 </Button>
               )}
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-6 py-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                <CloudUpload className="w-8 h-8 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Импорт запущен!</h3>
+              <p className="text-muted-foreground max-w-md">
+                Данные отправлены на сервер и обрабатываются в фоновом режиме. 
+                Вы можете закрыть это окно — импорт продолжится автоматически.
+              </p>
+            </div>
+            
+            <Card className="bg-muted/50">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Записей для импорта</p>
+                    <p className="font-semibold text-lg">{parsedData.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Статус</p>
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="font-medium">Обработка...</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <p className="text-sm text-muted-foreground text-center">
+              Результаты импорта будут видны при следующем открытии страницы финансов
+            </p>
+
+            <div className="flex justify-center">
+              <Button onClick={handleClose}>
+                Закрыть
+              </Button>
             </div>
           </div>
         )}
