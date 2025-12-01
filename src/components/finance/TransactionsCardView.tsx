@@ -5,8 +5,6 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { format, isToday, isYesterday, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { TransactionCard } from "./TransactionCard";
-import { ExpensesSummaryCard } from "./ExpensesSummaryCard";
-import { IncomesSummaryCard } from "./IncomesSummaryCard";
 import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
 import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
@@ -358,20 +356,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
       </div>
 
       <div className="border-b"></div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-2 md:gap-4">
-        <ExpensesSummaryCard
-          totalExpenses={totalExpenses}
-          breakdown={expensesBreakdown}
-          onClick={() => setShowExpensesBreakdown(true)}
-        />
-        <IncomesSummaryCard
-          totalIncomes={totalIncomes}
-          breakdown={incomesBreakdown}
-          onClick={() => setShowIncomesBreakdown(true)}
-        />
-      </div>
 
       {/* Grouped Transactions */}
       <div className="space-y-6">
