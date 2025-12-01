@@ -36,12 +36,23 @@ export const TransactionFilter = ({
   useEffect(() => {
     if (searchTerm) {
       const normalizedSearch = normalizeForSearch(searchTerm);
+      // Если поиск состоит только из цифр — ищем с начала строки
+      const isNumericSearch = /^\d+$/.test(normalizedSearch);
+      
       setFilteredOptions(
         options.filter(option => {
           const normalizedLabel = normalizeForSearch(option.label);
           const normalizedValue = normalizeForSearch(option.value);
-          return normalizedLabel.includes(normalizedSearch) || 
-                 normalizedValue.includes(normalizedSearch);
+          
+          if (isNumericSearch) {
+            // Для чисел — только совпадение с начала
+            return normalizedLabel.startsWith(normalizedSearch) || 
+                   normalizedValue.startsWith(normalizedSearch);
+          } else {
+            // Для текста — поиск в любом месте
+            return normalizedLabel.includes(normalizedSearch) || 
+                   normalizedValue.includes(normalizedSearch);
+          }
         })
       );
     } else {
