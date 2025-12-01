@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const SettingsPage = () => {
   return (
     <Layout>
-      <div className="container max-w-4xl py-6">
+      <div className="container max-w-4xl py-4 sm:py-6 px-4 sm:px-0">
         <Card>
           <CardHeader>
             <CardTitle>Настройки</CardTitle>

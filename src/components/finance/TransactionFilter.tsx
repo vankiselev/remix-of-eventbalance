@@ -103,7 +103,7 @@ export const TransactionFilter = ({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[500px] p-0" align="start" side="bottom">
+      <PopoverContent className="w-[90vw] sm:w-[500px] max-w-[500px] p-0" align="start" side="bottom">
         <div className="border-b p-3">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -121,7 +121,7 @@ export const TransactionFilter = ({
             variant="outline"
             size="sm"
             onClick={handleSelectAll}
-            className="flex-1"
+            className="flex-1 min-h-[44px]"
           >
             Выбрать все
           </Button>
@@ -129,7 +129,7 @@ export const TransactionFilter = ({
             variant="outline"
             size="sm"
             onClick={handleDeselectAll}
-            className="flex-1"
+            className="flex-1 min-h-[44px]"
           >
             Сбросить
           </Button>
@@ -137,7 +137,7 @@ export const TransactionFilter = ({
             variant="outline"
             size="sm"
             onClick={onReset}
-            className="px-2"
+            className="px-2 min-h-[44px] min-w-[44px]"
           >
             <X className="h-4 w-4" />
           </Button>

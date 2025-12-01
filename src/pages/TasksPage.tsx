@@ -119,9 +119,9 @@ const TasksPage = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-6 overflow-x-hidden">
         <div>
-          <h1 className="text-3xl font-bold">Мои задачи</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Мои задачи</h1>
           <p className="text-muted-foreground">
             Задачи на сбор и возврат реквизита для мероприятий
           </p>
