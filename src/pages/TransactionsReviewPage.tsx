@@ -28,7 +28,8 @@ export default function TransactionsReviewPage() {
       let query = supabase
         .from('financial_transactions')
         .select('*')
-        .order('operation_date', { ascending: false });
+        .order('operation_date', { ascending: false })
+        .limit(100000);
 
       if (statusFilter !== 'all') {
         query = query.eq('verification_status', statusFilter);
@@ -46,7 +47,8 @@ export default function TransactionsReviewPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('financial_transactions')
-        .select('verification_status');
+        .select('verification_status')
+        .limit(100000);
       
       if (error) throw error;
 
