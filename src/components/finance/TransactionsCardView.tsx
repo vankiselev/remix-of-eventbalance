@@ -414,6 +414,9 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit }: TransactionsCa
         <TransactionFiltersPanel
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+          availableMonths={availableMonths}
           dateFrom={dateFrom}
           dateTo={dateTo}
           onDateFromChange={setDateFrom}

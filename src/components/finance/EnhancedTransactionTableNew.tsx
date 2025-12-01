@@ -22,6 +22,7 @@ import {
 import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { 
   Edit, 
   Trash2, 
@@ -99,6 +100,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const [incomeMax, setIncomeMax] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
 
   // Load scale from localStorage on mount
   useEffect(() => {
@@ -210,7 +212,26 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         );
       }
 
-      // Date range
+      // Period filter
+      if (selectedPeriod !== "all" && selectedPeriod !== "current") {
+        const [year, month] = selectedPeriod.split('-');
+        const start = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const end = endOfMonth(start);
+        filtered = filtered.filter(t => {
+          const tDate = new Date(t.operation_date);
+          return tDate >= start && tDate <= end;
+        });
+      } else if (selectedPeriod === "current") {
+        const now = new Date();
+        const start = startOfMonth(now);
+        const end = endOfMonth(now);
+        filtered = filtered.filter(t => {
+          const tDate = new Date(t.operation_date);
+          return tDate >= start && tDate <= end;
+        });
+      }
+
+      // Date range (overrides period if set)
       if (dateFrom) {
         filtered = filtered.filter(t => new Date(t.operation_date) >= dateFrom);
       }
@@ -262,7 +283,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [transactions, searchTerm, sortField, sortDirection, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
+  }, [transactions, searchTerm, sortField, sortDirection, selectedPeriod, dateFrom, dateTo, expenseMin, expenseMax, incomeMin, incomeMax, selectedCategories, selectedWallets]);
 
   const fetchTransactions = async () => {
     try {
@@ -507,8 +528,35 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     );
   }
 
+  // Получаем список доступных месяцев из транзакций
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach(t => {
+      if (t.operation_date) {
+        const date = new Date(t.operation_date);
+        const monthKey = format(date, 'yyyy-MM');
+        months.add(monthKey);
+      }
+    });
+    
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      return {
+        value: monthKey,
+        label: `${monthNames[date.getMonth()]} ${year}`
+      };
+    });
+  }, [transactions]);
+
   const handleResetAllFilters = () => {
     setSearchTerm("");
+    setSelectedPeriod("all");
+    setSelectedPeriod("all");
     setDateFrom(undefined);
     setDateTo(undefined);
     setExpenseMin("");
@@ -525,6 +573,9 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
       <TransactionFiltersPanel
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
+        availableMonths={availableMonths}
         dateFrom={dateFrom}
         dateTo={dateTo}
         onDateFromChange={setDateFrom}

@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TransactionFilter } from "./TransactionFilter";
 import { Search, X, CalendarIcon, ChevronDown, Filter } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,9 @@ interface FilterOption {
 interface TransactionFiltersPanelProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  selectedPeriod: string;
+  onPeriodChange: (value: string) => void;
+  availableMonths: { value: string; label: string }[];
   dateFrom: Date | undefined;
   dateTo: Date | undefined;
   onDateFromChange: (date: Date | undefined) => void;
@@ -44,6 +48,9 @@ interface TransactionFiltersPanelProps {
 export const TransactionFiltersPanel = ({
   searchTerm,
   onSearchChange,
+  selectedPeriod,
+  onPeriodChange,
+  availableMonths,
   dateFrom,
   dateTo,
   onDateFromChange,
@@ -68,6 +75,7 @@ export const TransactionFiltersPanel = ({
 
   const activeFiltersCount = [
     searchTerm,
+    selectedPeriod !== "all",
     dateFrom,
     dateTo,
     expenseMin,
@@ -115,6 +123,25 @@ export const TransactionFiltersPanel = ({
       {/* Extended Filters Panel */}
       {isExpanded && (
         <div className="p-4 border rounded-lg bg-muted/30 space-y-4 animate-in fade-in slide-in-from-top-2">
+          {/* Period Selector */}
+          <div>
+            <Label className="text-xs mb-1.5 block">Период</Label>
+            <Select value={selectedPeriod} onValueChange={onPeriodChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите период" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                <SelectItem value="all">Весь период</SelectItem>
+                <SelectItem value="current">Текущий месяц</SelectItem>
+                {availableMonths.map(month => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-3">
             <div>
