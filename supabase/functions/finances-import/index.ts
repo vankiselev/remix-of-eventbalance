@@ -282,33 +282,76 @@ async function processImport(
 
   console.log(`Prepared ${validRows.length} valid rows for insertion`);
 
-  // Batch вставка
-  const BATCH_SIZE = 500;
+  // Sleep функция для паузы между батчами
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Batch вставка с retry логикой
+  const BATCH_SIZE = 25;
+  const MAX_RETRIES = 3;
   let processedRows = 0;
+  let batchNumber = 0;
   
   for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
     const batch = validRows.slice(i, i + BATCH_SIZE);
-    
-    const { error } = await supabase
-      .from('financial_transactions')
-      .insert(batch);
+    batchNumber++;
+    let success = false;
+    let lastError: any = null;
 
-    if (error) {
-      console.error('Batch insert error:', error);
+    // Retry логика для текущего батча
+    for (let attempt = 1; attempt <= MAX_RETRIES && !success; attempt++) {
+      try {
+        const { error } = await supabase
+          .from('financial_transactions')
+          .insert(batch);
+
+        if (error) {
+          lastError = error;
+          // Если таймаут - ждём перед повторной попыткой
+          if (error.code === '57014' && attempt < MAX_RETRIES) {
+            console.warn(`Batch ${batchNumber} timeout on attempt ${attempt}, retrying...`);
+            await sleep(1000 * attempt); // Увеличиваем паузу с каждой попыткой
+            continue;
+          }
+          throw error;
+        }
+
+        result.inserted += batch.length;
+        success = true;
+
+        // Логируем каждые 10 батчей
+        if (batchNumber % 10 === 0 || i + BATCH_SIZE >= validRows.length) {
+          console.log(`Progress: batch ${batchNumber}, inserted ${result.inserted}/${validRows.length} rows`);
+        }
+      } catch (err: any) {
+        lastError = err;
+        if (attempt === MAX_RETRIES) {
+          console.error(`Batch ${batchNumber} failed after ${MAX_RETRIES} attempts:`, err);
+        }
+      }
+    }
+
+    // Если все попытки неудачны - записываем ошибки
+    if (!success && lastError) {
       for (let j = 0; j < batch.length; j++) {
         result.failed++;
         result.errors.push({
           row: i + j + 1,
-          reason: error.message || 'Ошибка вставки'
+          reason: lastError.message || 'Ошибка вставки'
         });
       }
-    } else {
-      result.inserted += batch.length;
-      console.log(`Inserted batch ${Math.floor(i/BATCH_SIZE) + 1}: ${batch.length} rows`);
     }
     
     processedRows = Math.min(i + BATCH_SIZE, validRows.length);
-    await updateJobProgress(processedRows, result.inserted, result.failed, result.skipped);
+    
+    // Обновляем прогресс чаще
+    if (batchNumber % 5 === 0 || i + BATCH_SIZE >= validRows.length) {
+      await updateJobProgress(processedRows, result.inserted, result.failed, result.skipped);
+    }
+
+    // Пауза между батчами для предотвращения перегрузки БД
+    if (i + BATCH_SIZE < validRows.length) {
+      await sleep(100);
+    }
   }
 
   return result;
