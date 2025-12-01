@@ -1433,11 +1433,39 @@ const FinancesImportDialog = ({
                     Внимание: {importStats.largeSumsCount} транзакций с суммой &gt; 500 тыс ₽
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     Проверьте эти суммы - возможно числа неправильно распознались из Excel.
                     Например, "26 246,37" могло быть прочитано как "26 246 367".
                   </p>
+                  <div className="max-h-[300px] overflow-y-auto space-y-1">
+                    {parsedData.map((row, idx) => {
+                      const mappedRow = mapRow(row);
+                      const expense = parseAmount(mappedRow.expense_amount);
+                      const income = parseAmount(mappedRow.income_amount);
+                      
+                      if (expense <= 500000 && income <= 500000) return null;
+                      
+                      return (
+                        <div key={idx} className="flex items-start justify-between gap-2 p-2 bg-background/50 rounded border border-yellow-500/20 text-sm">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{mappedRow.description || '—'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {mappedRow.operation_date} • {mappedRow.cash_type || '—'}
+                            </div>
+                          </div>
+                          <div className="text-right font-mono whitespace-nowrap">
+                            {expense > 0 && (
+                              <div className="text-red-600">−{formatCurrency(expense)}</div>
+                            )}
+                            {income > 0 && (
+                              <div className="text-green-600">+{formatCurrency(income)}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             )}
