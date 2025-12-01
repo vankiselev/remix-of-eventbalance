@@ -5,11 +5,16 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Search, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatFullName, getInitials } from "@/utils/formatName";
 
 interface Employee {
   id: string;
   full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
+  avatar_url?: string | null;
   total_cash: number;
   cash_nastya: number;
   cash_lera: number;
@@ -127,18 +132,27 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
           filteredEmployees.map((employee) => (
             <div
               key={employee.id}
-              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+              className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
               onClick={() => onEmployeeSelect(employee.id, employee.full_name)}
             >
-              <div className="flex-1">
-                <h3 className="font-medium">{employee.full_name}</h3>
-                <p className="text-sm text-muted-foreground">{employee.email}</p>
+              <Avatar className="h-10 w-10 shrink-0">
+                <AvatarImage src={employee.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {getInitials(employee)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium truncate">{employee.full_name}</h3>
+                <p className="text-sm text-muted-foreground truncate">{employee.email}</p>
               </div>
-              <div className="text-right mr-2">
+              
+              <div className="text-right mr-2 shrink-0">
                 <p className="font-semibold">{formatCurrency(employee.total_cash)}</p>
                 <p className="text-xs text-muted-foreground">на руках</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             </div>
           ))
         )}
