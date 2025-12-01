@@ -35,10 +35,14 @@ export const TransactionFilter = ({
 
   useEffect(() => {
     if (searchTerm) {
+      const normalizedSearch = normalizeForSearch(searchTerm);
       setFilteredOptions(
-        options.filter(option =>
-          option.label.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        options.filter(option => {
+          const normalizedLabel = normalizeForSearch(option.label);
+          const normalizedValue = normalizeForSearch(option.value);
+          return normalizedLabel.includes(normalizedSearch) || 
+                 normalizedValue.includes(normalizedSearch);
+        })
       );
     } else {
       setFilteredOptions(options);
@@ -61,16 +65,20 @@ export const TransactionFilter = ({
     }
   };
 
+  const normalizeForSearch = (str: string) => {
+    return str.replace(/\s/g, '').replace(/₽/g, '').replace(/,/g, '').toLowerCase();
+  };
+
   const hasActiveFilters = selectedValues.length > 0 && selectedValues.length < options.length;
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className={`justify-between text-xs font-medium p-1 h-8 ${
-            hasActiveFilters ? 'text-primary bg-primary/10' : 'hover:bg-muted/50'
+          className={`flex-1 justify-between text-xs font-medium h-9 ${
+            hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : ''
           }`}
         >
           <span className="truncate">{title}</span>
@@ -124,7 +132,7 @@ export const TransactionFilter = ({
           </Button>
         </div>
 
-        <ScrollArea className="max-h-60">
+        <ScrollArea className="h-60" style={{ overscrollBehavior: 'contain' }}>
           <div className="p-2 space-y-1">
             {filteredOptions.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-4">
