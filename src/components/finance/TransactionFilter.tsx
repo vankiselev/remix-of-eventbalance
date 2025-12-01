@@ -84,7 +84,7 @@ export const TransactionFilter = ({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start" side="bottom">
+      <PopoverContent className="w-[500px] p-0" align="start" side="bottom">
         <div className="border-b p-3">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
