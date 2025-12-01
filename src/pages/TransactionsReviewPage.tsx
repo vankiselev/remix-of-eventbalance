@@ -80,9 +80,16 @@ export default function TransactionsReviewPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, full_name, avatar_url');
-      if (error) throw error;
-      return data;
+        .select('id, first_name, last_name, full_name, avatar_url')
+        .eq('employment_status', 'active');
+      
+      if (error) {
+        console.error('[TransactionsReviewPage] Error fetching profiles:', error);
+        throw error;
+      }
+      
+      console.log('[TransactionsReviewPage] Loaded profiles:', data?.length);
+      return data || [];
     },
     enabled: isFinancier,
   });
