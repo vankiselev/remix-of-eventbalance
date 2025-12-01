@@ -287,15 +287,6 @@ async function processImport(
 
   console.log(`Prepared ${validRows.length} valid rows for insertion`);
 
-  // Отключаем триггер пересчёта балансов перед импортом для ускорения
-  console.log('Disabling balance recalculation trigger...');
-  const { error: disableError } = await supabase.rpc('disable_balances_trigger_for_import');
-  if (disableError) {
-    console.error('Failed to disable trigger:', disableError);
-    throw new Error(`Failed to disable balance trigger: ${disableError.message}`);
-  }
-  console.log('Balance trigger disabled successfully');
-
   // Sleep функция для паузы между батчами
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -384,17 +375,6 @@ async function processImport(
     if (i + BATCH_SIZE < validRows.length) {
       await sleep(DELAY_BETWEEN_BATCHES);
     }
-  }
-
-  // Включаем триггер обратно и пересчитываем все балансы
-  console.log('Enabling balance recalculation trigger and recalculating balances...');
-  const { error: enableError } = await supabase.rpc('enable_balances_trigger_and_recalculate');
-  if (enableError) {
-    console.error('Failed to enable trigger and recalculate:', enableError);
-    // Не бросаем ошибку, так как импорт уже завершён успешно
-    console.warn('Import succeeded but balance recalculation failed - please recalculate manually');
-  } else {
-    console.log('Balance trigger enabled and all balances recalculated successfully');
   }
 
   return result;
