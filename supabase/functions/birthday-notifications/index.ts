@@ -52,7 +52,7 @@ serve(async (req) => {
 
     if (todayBirthdays.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'No birthdays today', sent: 0 }),
+        JSON.stringify({ success: true, message: 'Сегодня нет дней рождения', sent: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
@@ -103,7 +103,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Sent ${successCount} birthday notifications`,
+        message: `Отправлено ${successCount} уведомлений о днях рождения`,
         sent: successCount,
         failed: failCount,
         birthdays_count: todayBirthdays.length,

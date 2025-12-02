@@ -108,7 +108,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, message: 'Notification sent' }),
+        JSON.stringify({ success: true, message: 'Уведомление отправлено' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -189,7 +189,7 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, message: 'Transfer accepted' }),
+        JSON.stringify({ success: true, message: 'Перевод принят' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -239,7 +239,7 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, message: 'Transfer rejected' }),
+        JSON.stringify({ success: true, message: 'Перевод отклонён' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
