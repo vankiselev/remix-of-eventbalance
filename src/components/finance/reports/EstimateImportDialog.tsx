@@ -255,12 +255,12 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
 
               <div className="space-y-2">
                 <Label>Описание</Label>
-                <Select value={mapping.description} onValueChange={(v) => setMapping(m => ({ ...m, description: v }))}>
+                <Select value={mapping.description || "__none__"} onValueChange={(v) => setMapping(m => ({ ...m, description: v === "__none__" ? "" : v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Выберите колонку" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Не использовать</SelectItem>
+                    <SelectItem value="__none__">Не использовать</SelectItem>
                     {columns.map(col => (
                       <SelectItem key={col} value={col}>{col}</SelectItem>
                     ))}
@@ -270,12 +270,12 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
 
               <div className="space-y-2">
                 <Label>Доходы</Label>
-                <Select value={mapping.income} onValueChange={(v) => setMapping(m => ({ ...m, income: v }))}>
+                <Select value={mapping.income || "__none__"} onValueChange={(v) => setMapping(m => ({ ...m, income: v === "__none__" ? "" : v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Выберите колонку" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Не использовать</SelectItem>
+                    <SelectItem value="__none__">Не использовать</SelectItem>
                     {columns.map(col => (
                       <SelectItem key={col} value={col}>{col}</SelectItem>
                     ))}
@@ -285,12 +285,12 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
 
               <div className="space-y-2">
                 <Label>Расходы</Label>
-                <Select value={mapping.expense} onValueChange={(v) => setMapping(m => ({ ...m, expense: v }))}>
+                <Select value={mapping.expense || "__none__"} onValueChange={(v) => setMapping(m => ({ ...m, expense: v === "__none__" ? "" : v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Выберите колонку" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Не использовать</SelectItem>
+                    <SelectItem value="__none__">Не использовать</SelectItem>
                     {columns.map(col => (
                       <SelectItem key={col} value={col}>{col}</SelectItem>
                     ))}
