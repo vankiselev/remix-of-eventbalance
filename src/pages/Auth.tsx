@@ -96,7 +96,7 @@ const Auth = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder="ваш@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -197,7 +197,7 @@ const ForgotPasswordDialog = ({ open, onOpenChange }: { open: boolean, onOpenCha
             <Input
               id="reset-email"
               type="email"
-              placeholder="your@email.com"
+              placeholder="ваш@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

@@ -201,7 +201,7 @@ const AuthPage = () => {
                   <Input
                     id="signin-email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="ваш@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -252,7 +252,7 @@ const AuthPage = () => {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="ваш@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -286,7 +286,7 @@ const AuthPage = () => {
                   <Input
                     id="reset-email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="ваш@email.com"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
