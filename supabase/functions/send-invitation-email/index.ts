@@ -47,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
+        JSON.stringify({ error: 'Требуется авторизация' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,7 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
+        JSON.stringify({ error: 'Требуется авторизация' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!profile || profile.role !== 'admin') {
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
+        JSON.stringify({ error: 'Требуются права администратора' }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -95,14 +95,14 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate inputs
     if (!isValidEmail(email)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
+        JSON.stringify({ error: 'Некорректный формат email' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!isValidUUID(token)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid token format' }),
+        JSON.stringify({ error: 'Некорректный формат токена' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate role is not empty
     if (!role || role.trim() === '') {
       return new Response(
-        JSON.stringify({ error: 'Invalid role' }),
+        JSON.stringify({ error: 'Некорректная роль' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -192,7 +192,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Return GENERIC error to client
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to send invitation email. Please try again later.'
+        error: 'Не удалось отправить приглашение. Попробуйте позже.'
       }),
       {
         status: 500,

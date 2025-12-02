@@ -48,7 +48,7 @@ serve(async (req) => {
     if (!email || !isValidEmail(email)) {
       // Return success to avoid email enumeration
       return new Response(
-        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+        JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
         { 
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -68,7 +68,7 @@ serve(async (req) => {
       console.error('Error creating reset token:', resetError)
       // Still return success to not leak email existence
       return new Response(
-        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+        JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
         { 
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -85,7 +85,7 @@ serve(async (req) => {
       console.log('User not found or error:', userError);
       // User doesn't exist, but don't reveal this
       return new Response(
-        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+        JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
         { 
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -109,7 +109,7 @@ serve(async (req) => {
       console.error('Error retrieving token:', tokenError)
       // Still return success to not leak email existence
       return new Response(
-        JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+        JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
         { 
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -161,7 +161,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: 'If the email exists, a reset link has been sent' }),
+      JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
       { 
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -177,7 +177,7 @@ serve(async (req) => {
     });
     
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Внутренняя ошибка сервера' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
