@@ -37,6 +37,7 @@ import { TransactionVerificationDialog } from "@/components/finance/TransactionV
 import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
+import { FinancialReportsTab } from "@/components/finance/reports/FinancialReportsTab";
 
 interface CashSummary {
   total_cash: number;
@@ -519,6 +520,11 @@ const Finances = () => {
                   )}
                 </TabsTrigger>
               )}
+              {(isAdmin || isFinancier) && (
+                <TabsTrigger value="fin-reports" className="whitespace-nowrap">
+                  Финотчёты
+                </TabsTrigger>
+              )}
               <TabsTrigger value="audit-log" className="whitespace-nowrap">
                 Журнал
               </TabsTrigger>
@@ -764,6 +770,14 @@ const Finances = () => {
                       })}
                     </div>
                   )}
+                </div>
+              </TabsContent>
+            )}
+
+            {(isAdmin || isFinancier) && (
+              <TabsContent value="fin-reports" className="mt-0 w-full">
+                <div className="pt-4 w-full">
+                  <FinancialReportsTab />
                 </div>
               </TabsContent>
             )}
