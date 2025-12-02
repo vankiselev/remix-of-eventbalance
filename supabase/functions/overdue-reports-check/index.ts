@@ -47,7 +47,7 @@ serve(async (req) => {
 
     if (!events || events.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'No overdue events', sent: 0 }),
+        JSON.stringify({ success: true, message: 'Нет просроченных событий', sent: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
@@ -118,7 +118,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Sent ${totalNotificationsSent} overdue report notifications`,
+        message: `Отправлено ${totalNotificationsSent} уведомлений о просроченных отчётах`,
         sent: totalNotificationsSent,
         events_checked: events.length,
       }),
