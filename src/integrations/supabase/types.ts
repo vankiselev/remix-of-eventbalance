@@ -684,6 +684,115 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_report_items: {
+        Row: {
+          actual_amount: number | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_matched: boolean | null
+          item_type: string
+          matched_transaction_ids: string[] | null
+          planned_amount: number | null
+          report_id: string
+          sort_order: number | null
+        }
+        Insert: {
+          actual_amount?: number | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_matched?: boolean | null
+          item_type: string
+          matched_transaction_ids?: string[] | null
+          planned_amount?: number | null
+          report_id: string
+          sort_order?: number | null
+        }
+        Update: {
+          actual_amount?: number | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_matched?: boolean | null
+          item_type?: string
+          matched_transaction_ids?: string[] | null
+          planned_amount?: number | null
+          report_id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_report_items_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "financial_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_reports: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_date: string | null
+          event_id: string | null
+          id: string
+          name: string
+          notes: string | null
+          profit: number | null
+          status: string
+          total_actual_expense: number | null
+          total_actual_income: number | null
+          total_planned_expense: number | null
+          total_planned_income: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_date?: string | null
+          event_id?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          profit?: number | null
+          status?: string
+          total_actual_expense?: number | null
+          total_actual_income?: number | null
+          total_planned_expense?: number | null
+          total_planned_income?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_date?: string | null
+          event_id?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          profit?: number | null
+          status?: string
+          total_actual_expense?: number | null
+          total_actual_income?: number | null
+          total_planned_expense?: number | null
+          total_planned_income?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_reports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           balance_after: number | null
