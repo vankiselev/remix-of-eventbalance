@@ -2807,6 +2807,7 @@ export type Database = {
       get_user_basic_profile: {
         Args: never
         Returns: {
+          role: string
           user_avatar_url: string
           user_birth_date: string
           user_email: string
