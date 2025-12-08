@@ -1402,6 +1402,7 @@ export type Database = {
           phone: string | null
           phone_e164: string | null
           role: Database["public"]["Enums"]["user_role"]
+          temp_password: string | null
           termination_date: string | null
           termination_reason: string | null
           total_cash_on_hand: number | null
@@ -1431,6 +1432,7 @@ export type Database = {
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          temp_password?: string | null
           termination_date?: string | null
           termination_reason?: string | null
           total_cash_on_hand?: number | null
@@ -1460,6 +1462,7 @@ export type Database = {
           phone?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          temp_password?: string | null
           termination_date?: string | null
           termination_reason?: string | null
           total_cash_on_hand?: number | null
