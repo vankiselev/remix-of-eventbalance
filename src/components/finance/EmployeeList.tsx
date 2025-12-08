@@ -22,7 +22,7 @@ interface Employee {
 }
 
 interface EmployeeListProps {
-  onEmployeeSelect: (employeeId: string, employeeName: string) => void;
+  onEmployeeSelect: (employeeId: string, employeeName: string, avatarUrl?: string | null) => void;
 }
 
 export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
@@ -133,7 +133,7 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
             <div
               key={employee.id}
               className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-              onClick={() => onEmployeeSelect(employee.id, employee.full_name)}
+              onClick={() => onEmployeeSelect(employee.id, employee.full_name, employee.avatar_url)}
             >
               <Avatar className="h-10 w-10 shrink-0">
                 <AvatarImage src={employee.avatar_url || undefined} />
