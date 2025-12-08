@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TransactionFilter } from "./TransactionFilter";
@@ -21,54 +20,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   Edit, 
   Trash2, 
   MoreHorizontal, 
-  Search,
-  Paperclip,
   Eye,
-  ZoomIn,
-  ImageIcon,
-  FileIcon,
+  Paperclip,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  ZoomIn
 } from "lucide-react";
 import { TransactionDetailDialog } from './TransactionDetailDialog';
 import { ReceiptPreview } from './ReceiptPreview';
-
-interface Transaction {
-  id: string;
-  operation_date: string;
-  project_owner: string;
-  description: string;
-  expense_amount: number | null;
-  income_amount: number | null;
-  category: string;
-  cash_type: string | null;
-  notes: string | null;
-  created_by: string;
-  project_id: string | null;
-  no_receipt: boolean;
-  no_receipt_reason: string | null;
-  events?: { name: string } | null;
-  attachments_count?: number;
-  created_at: string;
-  user_name?: string;
-  static_project_name?: string;
-  verification_status?: string;
-  verified_by?: string | null;
-  verified_at?: string | null;
-  verification_comment?: string | null;
-  transfer_status?: string | null;
-  transfer_to_user_id?: string | null;
-  transfer_from_user_id?: string | null;
-  transfer_to_user?: { full_name: string; email: string } | null;
-  transfer_from_user?: { full_name: string; email: string } | null;
-}
+import { useTransactions, type Transaction } from "@/hooks/useTransactions";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TransactionTableProps {
   userId?: string;
@@ -77,18 +46,19 @@ interface TransactionTableProps {
 }
 
 export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: TransactionTableProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Use optimized hook with React Query caching
+  const { transactions, isLoading } = useTransactions({ userId, isAdmin });
+
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<keyof Transaction>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [tableScale, setTableScale] = useState<string>("100");
-  const [shouldRefetchOnInsert, setShouldRefetchOnInsert] = useState(0);
-  const debouncedInsertRefetch = useDebounce(shouldRefetchOnInsert, 2000);
-  const { toast } = useToast();
-  const { user } = useAuth();
 
   // Compact filters
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -111,69 +81,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   useEffect(() => {
     localStorage.setItem('transaction-table-scale', tableScale);
   }, [tableScale]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [userId]);
-
-  // Optimized realtime subscription with debounce for bulk inserts
-  useEffect(() => {
-    const channel = supabase
-      .channel('transactions-table-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        () => {
-          // During bulk imports, debounce the refetch to avoid query storm
-          setShouldRefetchOnInsert(prev => prev + 1);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          console.log('Transaction updated:', payload.new);
-          setTransactions(prev => 
-            prev.map(tx => tx.id === payload.new.id 
-              ? { ...tx, ...payload.new } 
-              : tx
-            )
-          );
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          console.log('Transaction deleted:', payload.old);
-          setTransactions(prev => prev.filter(tx => tx.id !== payload.old.id));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
-
-  // Debounced refetch on bulk inserts
-  useEffect(() => {
-    if (debouncedInsertRefetch > 0) {
-      fetchTransactions();
-    }
-  }, [debouncedInsertRefetch]);
 
   // Уникальные даты (конкретные дни)
   const availableDates = useMemo(() => {
@@ -325,75 +232,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   }, [transactions, sortField, sortDirection, selectedDates, selectedPeriods, selectedProjects, 
       selectedWallets, selectedExpenses, selectedIncomes, selectedCategories]);
 
-  const fetchTransactions = async () => {
-    try {
-      // Fetch transactions without complex JOINs that may fail
-      let query = supabase
-        .from("financial_transactions")
-        .select(`
-          *,
-          events:project_id(name),
-          attachments_count:financial_attachments(count)
-        `)
-        .order("operation_date", { ascending: false })
-        .order("import_row_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: false });
-
-      // If not admin or specific userId provided, filter by user
-      if (!isAdmin || userId) {
-        query = query.eq("created_by", userId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Collect unique user IDs
-      const userIds = new Set<string>();
-      (data || []).forEach(t => {
-        if (t.created_by) userIds.add(t.created_by);
-        if (t.transfer_to_user_id) userIds.add(t.transfer_to_user_id);
-        if (t.transfer_from_user_id) userIds.add(t.transfer_from_user_id);
-      });
-
-      // Fetch profiles separately
-      let profilesMap = new Map<string, { full_name: string; email: string }>();
-      if (userIds.size > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', Array.from(userIds));
-        
-        if (profiles) {
-          profiles.forEach(p => profilesMap.set(p.id, p));
-        }
-      }
-
-      // Transform data with user names and attachment counts
-      const transactions = (data || []).map(transaction => ({
-        ...transaction,
-        user_name: profilesMap.get(transaction.created_by)?.full_name,
-        attachments_count: transaction.attachments_count?.[0]?.count || 0,
-        transfer_to_user: transaction.transfer_to_user_id 
-          ? profilesMap.get(transaction.transfer_to_user_id) || null
-          : null,
-        transfer_from_user: transaction.transfer_from_user_id
-          ? profilesMap.get(transaction.transfer_from_user_id) || null
-          : null,
-      }));
-
-      setTransactions(transactions);
-    } catch (error: any) {
-      console.error("Error fetching transactions:", error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Не удалось загрузить транзакции",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // fetchTransactions is now handled by useTransactions hook
 
   const handleDelete = async (transactionId: string, createdBy: string) => {
     // Allow admins to delete any transaction, or users to delete their own
@@ -412,7 +251,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
         description: "Транзакция удалена",
       });
 
-      fetchTransactions();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error: any) {
       console.error("Error deleting transaction:", error);
       toast({
@@ -557,13 +396,19 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     );
   };
 
-  if (loading) {
+  // Show skeleton while loading initially (no cached data)
+  if (isLoading && transactions.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          <div className="bg-muted h-10 w-full rounded mb-4"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-muted h-16 w-full rounded mb-2"></div>
+      <div className="space-y-4 pt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <Skeleton className="h-10 w-full mb-2" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full mb-1" />
           ))}
         </div>
       </div>
