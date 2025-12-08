@@ -409,13 +409,16 @@ const Finances = () => {
                     <AlertDialogAction
                       onClick={async () => {
                         try {
-                          const { error } = await supabase.rpc("delete_user_transactions", {
-                            target_user_id: selectedEmployee.id,
-                          });
+                          const { error } = await supabase
+                            .from('financial_transactions')
+                            .delete()
+                            .eq('created_by', selectedEmployee.id);
                           if (error) throw error;
                           toast({ title: "Транзакции удалены" });
                           queryClient.invalidateQueries({ queryKey: ['transactions'] });
                           queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+                          queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+                          queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
                           // Refresh employee summary
                           handleEmployeeSelect(selectedEmployee.id, selectedEmployee.name, selectedEmployee.avatar_url);
                         } catch (error: any) {
