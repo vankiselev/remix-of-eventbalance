@@ -74,6 +74,7 @@ const Finances = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("my-transactions");
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Review tab state
   const [selectedReviewTransaction, setSelectedReviewTransaction] = useState<any>(null);
@@ -335,6 +336,8 @@ const Finances = () => {
     queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
     setEditTransaction(null);
+    // Trigger immediate refresh of transactions without page reload
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleEditTransaction = (transaction: any) => {
@@ -483,6 +486,7 @@ const Finances = () => {
               userId={currentUserId}
               isAdmin={isAdmin}
               onEdit={handleEditTransaction}
+              refreshTrigger={refreshTrigger}
             />
           ) : (
             <EnhancedTransactionTable
@@ -600,6 +604,7 @@ const Finances = () => {
                   userId={user?.id}
                   isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
+                  refreshTrigger={refreshTrigger}
                 />
               ) : (
                 <EnhancedTransactionTable
@@ -630,6 +635,7 @@ const Finances = () => {
                   isAdmin={isAdmin}
                   onEdit={handleEditTransaction}
                   showOwner={true}
+                  refreshTrigger={refreshTrigger}
                 />
               ) : (
                 <EnhancedTransactionTable

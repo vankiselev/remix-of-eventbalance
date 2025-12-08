@@ -54,9 +54,10 @@ interface TransactionsCardViewProps {
   isAdmin: boolean;
   onEdit?: (transaction: any) => void;
   showOwner?: boolean;
+  refreshTrigger?: number;
 }
 
-export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: TransactionsCardViewProps) => {
+export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner, refreshTrigger }: TransactionsCardViewProps) => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // Все транзакции для определения доступных месяцев
@@ -76,10 +77,10 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
   const [selectedIncomes, setSelectedIncomes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  // Fetch transactions on mount
+  // Fetch transactions on mount and when refreshTrigger changes
   useEffect(() => {
     fetchTransactions();
-  }, [userId, isAdmin]);
+  }, [userId, isAdmin, refreshTrigger]);
 
   // Realtime subscription with debounce
   useEffect(() => {
