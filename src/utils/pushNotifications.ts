@@ -181,9 +181,9 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       console.log('Subscription saved to database');
       return true;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error subscribing to push notifications:', error);
-    return false;
+    throw new Error(error?.message || error?.name || String(error));
   }
 };
 
