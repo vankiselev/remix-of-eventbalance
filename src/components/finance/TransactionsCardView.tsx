@@ -1,8 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDebounce } from "@/hooks/useDebounce";
-import { format, isToday, isYesterday, startOfMonth, endOfMonth } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { TransactionCard } from "./TransactionCard";
 import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
@@ -10,8 +8,10 @@ import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
 import { TransactionFilter } from "./TransactionFilter";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useTransactions, Transaction } from "@/hooks/useTransactions";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
 const walletDisplay = (s?: string | null) => {
@@ -22,51 +22,18 @@ const walletDisplay = (s?: string | null) => {
   return s || 'Не указан';
 };
 
-interface Transaction {
-  id: string;
-  operation_date: string;
-  created_at: string;
-  description: string;
-  category: string;
-  expense_amount: number;
-  income_amount: number;
-  project_owner: string;
-  cash_type: string | null;
-  project_id: string | null;
-  static_project_name?: string | null;
-  no_receipt: boolean;
-  no_receipt_reason: string | null;
-  notes: string | null;
-  created_by: string;
-  events?: { name: string } | null;
-  attachments_count?: number;
-  transfer_status?: string | null;
-  transfer_to_user_id?: string | null;
-  transfer_from_user_id?: string | null;
-  transfer_to_user?: { full_name: string; email: string } | null;
-  transfer_from_user?: { full_name: string; email: string } | null;
-  verification_status?: string | null;
-  requires_verification?: boolean | null;
-}
-
 interface TransactionsCardViewProps {
   userId?: string;
   isAdmin: boolean;
   onEdit?: (transaction: any) => void;
   showOwner?: boolean;
-  refreshTrigger?: number;
 }
 
-export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner, refreshTrigger }: TransactionsCardViewProps) => {
+export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: TransactionsCardViewProps) => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // Все транзакции для определения доступных месяцев
-  const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showExpensesBreakdown, setShowExpensesBreakdown] = useState(false);
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
-  const [shouldRefetch, setShouldRefetch] = useState(0);
-  const debouncedRefetch = useDebounce(shouldRefetch, 2000);
 
   // Compact filters
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -77,39 +44,11 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner, refre
   const [selectedIncomes, setSelectedIncomes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  // Fetch transactions on mount and when refreshTrigger changes
-  useEffect(() => {
-    fetchTransactions();
-  }, [userId, isAdmin, refreshTrigger]);
-
-  // Realtime subscription with debounce
-  useEffect(() => {
-    const channel = supabase
-      .channel('financial_transactions_cards')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        () => {
-          setShouldRefetch(prev => prev + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Debounced refetch
-  useEffect(() => {
-    if (debouncedRefetch > 0) {
-      fetchTransactions();
-    }
-  }, [debouncedRefetch]);
+  // Use optimized hook with React Query caching
+  const { transactions, isLoading } = useTransactions({
+    userId,
+    isAdmin,
+  });
 
   // Fetch profiles for transaction owners (only if showOwner is true)
   const { data: profiles } = useQuery({
@@ -132,64 +71,6 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner, refre
     profiles?.forEach(p => map.set(p.id, p));
     return map;
   }, [profiles]);
-
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true);
-      
-      let query: any = supabase
-        .from('financial_transactions')
-        .select(`
-          *,
-          events:project_id(name)
-        `)
-        .order('operation_date', { ascending: false })
-        .order('import_row_order', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: false });
-
-      if (userId) {
-        query = query.eq('created_by', userId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Get transfer user IDs and fetch their profiles
-      const transferUserIds = [
-        ...(data || []).filter(t => t.transfer_to_user_id).map(t => t.transfer_to_user_id),
-        ...(data || []).filter(t => t.transfer_from_user_id).map(t => t.transfer_from_user_id),
-      ].filter(Boolean) as string[];
-
-      if (transferUserIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", Array.from(new Set(transferUserIds)));
-
-        const userMap = new Map((profilesData || []).map(p => [p.id, p]));
-
-        const enrichedData = (data || []).map(transaction => ({
-          ...transaction,
-          transfer_to_user: transaction.transfer_to_user_id 
-            ? userMap.get(transaction.transfer_to_user_id) || null
-            : null,
-          transfer_from_user: transaction.transfer_from_user_id
-            ? userMap.get(transaction.transfer_from_user_id) || null
-            : null,
-        }));
-
-        setTransactions(enrichedData);
-      } else {
-        setTransactions(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      toast.error('Ошибка загрузки транзакций');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const cashWallets = useMemo(() => new Set(['наличка настя','наличка лера','наличка ваня']), []);
   
@@ -402,8 +283,28 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner, refre
     return total;
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center py-8">Загрузка...</div>;
+  // Show skeleton while loading initially (no cached data)
+  if (isLoading && transactions.length === 0) {
+    return (
+      <div className="space-y-4 pt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+        </div>
+        <div className="border-b" />
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, groupIndex) => (
+            <div key={groupIndex} className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              {Array.from({ length: 3 }).map((_, cardIndex) => (
+                <Skeleton key={cardIndex} className="h-20 w-full rounded-lg" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
