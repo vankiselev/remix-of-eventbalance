@@ -167,7 +167,7 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
         amount,
         description: description || undefined,
         included: !autoSkipped,
-        type: autoSkipped ? 'skip' : 'expense',
+        type: autoSkipped ? 'skip' : 'income',
         autoSkipped,
       });
     });
@@ -231,9 +231,9 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
     onOpenChange(open);
   };
 
-  const markAllAsExpense = () => {
+  const markAllAsIncome = () => {
     setPreviewRows(prev => prev.map(row => 
-      row.included ? { ...row, type: 'expense' } : row
+      row.included ? { ...row, type: 'income' } : row
     ));
   };
 
@@ -249,7 +249,7 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
           <DialogDescription>
             {step === 'upload' && "Загрузите Excel файл со сметой мероприятия"}
             {step === 'mapping' && "Укажите какие колонки содержат данные"}
-            {step === 'preview' && "Выберите тип для каждой строки: расход, доход или пропустить"}
+            {step === 'preview' && "Смета загружается как плановые доходы. При необходимости измените тип строки."}
           </DialogDescription>
         </DialogHeader>
 
@@ -337,8 +337,8 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsExpense}>
-                  Все как расходы
+                <Button variant="outline" size="sm" onClick={markAllAsIncome}>
+                  Все как доходы
                 </Button>
               </div>
               <div className="flex items-center gap-4">
