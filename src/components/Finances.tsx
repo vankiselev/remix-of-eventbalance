@@ -78,7 +78,7 @@ const Finances = () => {
   // Review tab state
   const [selectedReviewTransaction, setSelectedReviewTransaction] = useState<any>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   
   const { toast } = useToast();
