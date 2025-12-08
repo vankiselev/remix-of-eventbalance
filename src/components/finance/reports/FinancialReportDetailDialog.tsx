@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarDays, TrendingUp, TrendingDown, Link2, Unlink, Wand2, Check, Trash2 } from "lucide-react";
+import { CalendarDays, TrendingUp, TrendingDown, Link2, Unlink, Wand2, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -15,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { PlanFactTable } from "./PlanFactTable";
+import { TransactionMatchFilter, getDefaultFilters, type TransactionFilters } from "./TransactionMatchFilter";
 
 interface FinancialReportDetailDialogProps {
   report: FinancialReport | null;
@@ -38,10 +40,13 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'income' | 'expense'>('expense');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [filters, setFilters] = useState<TransactionFilters>(getDefaultFilters());
 
-  // Reset selection when report changes
+  // Reset selection and filters when report changes
   useEffect(() => {
     setSelectedItemId(null);
+    setFilters(getDefaultFilters());
   }, [report?.id]);
 
   // Get all matched transaction IDs
@@ -67,6 +72,42 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
   // Filter items by type
   const incomeItems = useMemo(() => items?.filter(i => i.item_type === 'income') || [], [items]);
   const expenseItems = useMemo(() => items?.filter(i => i.item_type === 'expense') || [], [items]);
+
+  // Apply filters to transactions
+  const filteredTransactions = useMemo(() => {
+    const baseTransactions = activeTab === 'income' ? incomeTransactions : expenseTransactions;
+    
+    return baseTransactions.filter(t => {
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSearch = 
+          t.description?.toLowerCase().includes(searchLower) ||
+          t.category?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+      
+      // Date filters
+      if (filters.dateFrom) {
+        const transactionDate = new Date(t.operation_date);
+        if (transactionDate < filters.dateFrom) return false;
+      }
+      if (filters.dateTo) {
+        const transactionDate = new Date(t.operation_date);
+        if (transactionDate > filters.dateTo) return false;
+      }
+      
+      // Amount filters
+      const amount = t.income_amount || t.expense_amount || 0;
+      if (filters.amountMin !== null && amount < filters.amountMin) return false;
+      if (filters.amountMax !== null && amount > filters.amountMax) return false;
+      
+      // Unmatched only
+      if (filters.unmatchedOnly && matchedTransactionIds.has(t.id)) return false;
+      
+      return true;
+    });
+  }, [activeTab, incomeTransactions, expenseTransactions, filters, matchedTransactionIds]);
 
   // Calculations
   const totals = useMemo(() => {
@@ -104,7 +145,6 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
       is_matched: true,
     });
 
-    // Update report totals
     await updateReportTotals();
     toast({ title: "Транзакция сопоставлена" });
   };
@@ -138,7 +178,6 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
     for (const item of items) {
       if (item.is_matched) continue;
 
-      // Try to find transaction with similar category
       const candidates = matchingTransactions.filter(t => {
         const isRightType = item.item_type === 'income' ? t.income_amount > 0 : t.expense_amount > 0;
         const notMatched = !matchedTransactionIds.has(t.id);
@@ -166,7 +205,6 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
   const updateReportTotals = async () => {
     if (!report) return;
 
-    // Recalculate totals from items
     const updatedItems = await queryClient.fetchQuery({
       queryKey: ['financial-report-items', report.id],
     }) as FinancialReportItem[];
@@ -203,11 +241,15 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
   if (!report) return null;
 
   const currentItems = activeTab === 'income' ? incomeItems : expenseItems;
-  const currentTransactions = activeTab === 'income' ? incomeTransactions : expenseTransactions;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className={cn(
+        "overflow-hidden flex flex-col transition-all duration-200",
+        isFullscreen 
+          ? "w-screen h-screen max-w-none max-h-none rounded-none" 
+          : "max-w-6xl max-h-[90vh]"
+      )}>
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
@@ -230,6 +272,14 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
                   ))}
                 </SelectContent>
               </Select>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                title={isFullscreen ? "Свернуть" : "Развернуть"}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
               {isAdmin && (
                 <Button variant="destructive" size="icon" onClick={handleDelete}>
                   <Trash2 className="h-4 w-4" />
@@ -302,76 +352,50 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
 
           <TabsContent value={activeTab} className="flex-1 overflow-hidden mt-4">
             <div className="grid grid-cols-2 gap-4 h-full">
-              {/* Plan (estimate items) */}
+              {/* Plan (estimate items) - Table view */}
               <Card className="flex flex-col overflow-hidden">
                 <CardHeader className="py-3 flex-shrink-0">
                   <CardTitle className="text-sm">План (смета)</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden p-0">
-                  <ScrollArea className="h-full max-h-[300px]">
-                    <div className="space-y-1 p-4">
-                      {currentItems.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">Нет статей</p>
-                      ) : (
-                        currentItems.map(item => (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              "p-3 rounded-lg border cursor-pointer transition-colors",
-                              selectedItemId === item.id ? "border-primary bg-primary/5" : "hover:bg-muted/50",
-                              item.is_matched && "border-green-500/50 bg-green-500/5"
-                            )}
-                            onClick={() => setSelectedItemId(selectedItemId === item.id ? null : item.id)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{item.category}</p>
-                                {item.description && (
-                                  <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                                )}
-                              </div>
-                              <div className="text-right ml-2">
-                                <p className="font-medium">{formatCurrency(item.planned_amount)}</p>
-                                {item.is_matched && (
-                                  <p className="text-xs text-green-600">Факт: {formatCurrency(item.actual_amount)}</p>
-                                )}
-                              </div>
-                            </div>
-                            {item.is_matched && (
-                              <div className="flex items-center gap-1 mt-2">
-                                <Check className="w-3 h-3 text-green-600" />
-                                <span className="text-xs text-green-600">
-                                  {item.matched_transaction_ids?.length} транзакций
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
+                  <ScrollArea className={cn("h-full", isFullscreen ? "max-h-[calc(100vh-380px)]" : "max-h-[300px]")}>
+                    <div className="px-2">
+                      <PlanFactTable
+                        items={currentItems}
+                        selectedItemId={selectedItemId}
+                        onSelectItem={setSelectedItemId}
+                        type={activeTab}
+                      />
                     </div>
                   </ScrollArea>
                 </CardContent>
               </Card>
 
-              {/* Actual (transactions) */}
+              {/* Actual (transactions) with filters */}
               <Card className="flex flex-col overflow-hidden">
-                <CardHeader className="py-3 flex-shrink-0">
-                  <CardTitle className="text-sm">
-                    Факт (транзакции)
+                <CardHeader className="py-3 flex-shrink-0 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">
+                      Факт (транзакции)
+                    </CardTitle>
                     {selectedItemId && (
-                      <Badge variant="outline" className="ml-2">Выберите для сопоставления</Badge>
+                      <Badge variant="outline" className="text-xs">Выберите для сопоставления</Badge>
                     )}
-                  </CardTitle>
+                  </div>
+                  <TransactionMatchFilter filters={filters} onChange={setFilters} />
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden p-0">
-                  <ScrollArea className="h-full max-h-[300px]">
+                  <ScrollArea className={cn("h-full", isFullscreen ? "max-h-[calc(100vh-450px)]" : "max-h-[250px]")}>
                     <div className="space-y-1 p-4">
-                      {currentTransactions.length === 0 ? (
+                      {filteredTransactions.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          Транзакции не найдены
+                          {filters.search || filters.unmatchedOnly || filters.dateFrom || filters.dateTo || filters.amountMin || filters.amountMax
+                            ? 'Нет транзакций по заданным фильтрам'
+                            : 'Транзакции не найдены'
+                          }
                         </p>
                       ) : (
-                        currentTransactions.map(transaction => {
+                        filteredTransactions.map(transaction => {
                           const isMatched = matchedTransactionIds.has(transaction.id);
                           const matchedItem = items?.find(i => i.matched_transaction_ids?.includes(transaction.id));
                           const amount = transaction.income_amount || transaction.expense_amount || 0;
