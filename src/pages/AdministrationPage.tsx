@@ -7,8 +7,9 @@ import { TransactionProjectsManagement } from "@/components/admin/TransactionPro
 import { WarehouseSettingsManagement } from "@/components/admin/WarehouseSettingsManagement";
 import { WarehouseCategoriesManagement } from "@/components/admin/WarehouseCategoriesManagement";
 import { WarehouseLocationsManagement } from "@/components/admin/WarehouseLocationsManagement";
+import { TestDataManagement } from "@/components/admin/TestDataManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -55,6 +56,10 @@ const AdministrationPage = () => {
               <Settings className="h-4 w-4" />
               Склад
             </TabsTrigger>
+            <TabsTrigger value="testing" className="flex items-center gap-2 whitespace-nowrap">
+              <FlaskConical className="h-4 w-4" />
+              Тестирование
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="roles" className="mt-6">
@@ -87,6 +92,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="warehouse" className="mt-6">
             <WarehouseSettingsManagement />
+          </TabsContent>
+
+          <TabsContent value="testing" className="mt-6">
+            <TestDataManagement />
           </TabsContent>
         </Tabs>
       </div>
