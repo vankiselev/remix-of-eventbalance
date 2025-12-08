@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Trash2, Pencil } from "lucide-react";
+import { Check, Plus, Trash2, Pencil, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import type { FinancialReportItem } from "@/hooks/useFinancialReports";
@@ -9,7 +9,6 @@ interface PlanFactTableProps {
   items: FinancialReportItem[];
   selectedItemId: string | null;
   onSelectItem: (id: string | null) => void;
-  type: 'income' | 'expense';
   onAddItem?: () => void;
   onEditItem?: (item: FinancialReportItem) => void;
   onDeleteItem?: (id: string) => void;
@@ -19,38 +18,40 @@ export const PlanFactTable = ({
   items, 
   selectedItemId, 
   onSelectItem, 
-  type,
   onAddItem,
   onEditItem,
   onDeleteItem 
 }: PlanFactTableProps) => {
+  // Calculate totals for combined actual
+  const getActualTotal = (item: FinancialReportItem): number => {
+    const income = (item as any).actual_income || 0;
+    const expense = (item as any).actual_expense || 0;
+    // Legacy support: use actual_amount if new fields are not set
+    if (income === 0 && expense === 0 && item.actual_amount > 0) {
+      return item.actual_amount;
+    }
+    return income + expense;
+  };
+
   const getPercentage = (planned: number, actual: number): number => {
     if (planned === 0) return actual > 0 ? 100 : 0;
     return Math.round((actual / planned) * 100);
   };
 
   const getDeviation = (planned: number, actual: number): number => {
-    return type === 'expense' ? planned - actual : actual - planned;
+    return actual - planned;
   };
 
-  const getDeviationColor = (deviation: number, type: 'income' | 'expense'): string => {
-    if (type === 'expense') {
-      return deviation >= 0 ? 'text-green-600' : 'text-red-600';
-    } else {
-      return deviation >= 0 ? 'text-green-600' : 'text-red-600';
-    }
+  const getDeviationColor = (deviation: number): string => {
+    if (deviation === 0) return 'text-muted-foreground';
+    return deviation > 0 ? 'text-red-600' : 'text-green-600';
   };
 
-  const getProgressColor = (percentage: number, type: 'income' | 'expense'): string => {
-    if (type === 'expense') {
-      if (percentage > 100) return 'bg-red-500';
-      if (percentage >= 90) return 'bg-yellow-500';
-      return 'bg-green-500';
-    } else {
-      if (percentage < 50) return 'bg-red-500';
-      if (percentage < 90) return 'bg-yellow-500';
-      return 'bg-green-500';
-    }
+  const getProgressColor = (percentage: number): string => {
+    if (percentage > 100) return 'bg-red-500';
+    if (percentage >= 90) return 'bg-yellow-500';
+    if (percentage >= 50) return 'bg-green-500';
+    return 'bg-primary';
   };
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -69,7 +70,7 @@ export const PlanFactTable = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[35%]">
+          <TableHead className="w-[30%]">
             <div className="flex items-center justify-between">
               <span>Статья</span>
               {onAddItem && (
@@ -84,26 +85,40 @@ export const PlanFactTable = ({
               )}
             </div>
           </TableHead>
-          <TableHead className="text-right w-[13%]">План</TableHead>
-          <TableHead className="text-right w-[13%]">Факт</TableHead>
-          <TableHead className="text-right w-[13%]">Откл.</TableHead>
-          <TableHead className="w-[13%]">%</TableHead>
+          <TableHead className="text-right w-[12%]">План</TableHead>
+          <TableHead className="text-right w-[10%]">
+            <div className="flex items-center justify-end gap-1">
+              <TrendingUp className="h-3 w-3 text-green-600" />
+              <span>Факт</span>
+            </div>
+          </TableHead>
+          <TableHead className="text-right w-[10%]">
+            <div className="flex items-center justify-end gap-1">
+              <TrendingDown className="h-3 w-3 text-red-600" />
+              <span>Факт</span>
+            </div>
+          </TableHead>
+          <TableHead className="text-right w-[12%]">Откл.</TableHead>
+          <TableHead className="w-[12%]">%</TableHead>
           {(onEditItem || onDeleteItem) && (
-            <TableHead className="w-[13%]"></TableHead>
+            <TableHead className="w-[14%]"></TableHead>
           )}
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={onEditItem || onDeleteItem ? 6 : 5} className="text-center py-8 text-muted-foreground">
-              Нет статей
+            <TableCell colSpan={onEditItem || onDeleteItem ? 7 : 6} className="text-center py-8 text-muted-foreground">
+              Нет статей. Импортируйте смету или добавьте вручную.
             </TableCell>
           </TableRow>
         ) : (
           items.map((item) => {
-            const percentage = getPercentage(item.planned_amount, item.actual_amount);
-            const deviation = getDeviation(item.planned_amount, item.actual_amount);
+            const actualIncome = (item as any).actual_income || 0;
+            const actualExpense = (item as any).actual_expense || 0;
+            const actualTotal = getActualTotal(item);
+            const percentage = getPercentage(item.planned_amount, actualTotal);
+            const deviation = getDeviation(item.planned_amount, actualTotal);
             const isSelected = selectedItemId === item.id;
 
             return (
@@ -132,11 +147,14 @@ export const PlanFactTable = ({
                 <TableCell className="text-right font-medium">
                   {formatCurrency(item.planned_amount)}
                 </TableCell>
-                <TableCell className="text-right font-medium">
-                  {item.actual_amount > 0 ? formatCurrency(item.actual_amount) : '—'}
+                <TableCell className="text-right font-medium text-green-600">
+                  {actualIncome > 0 ? formatCurrency(actualIncome) : '—'}
                 </TableCell>
-                <TableCell className={cn("text-right font-medium", getDeviationColor(deviation, type))}>
-                  {deviation > 0 ? '+' : ''}{formatCurrency(deviation)}
+                <TableCell className="text-right font-medium text-red-600">
+                  {actualExpense > 0 ? formatCurrency(actualExpense) : '—'}
+                </TableCell>
+                <TableCell className={cn("text-right font-medium", getDeviationColor(deviation))}>
+                  {deviation !== 0 ? (deviation > 0 ? '+' : '') + formatCurrency(deviation) : '—'}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -144,15 +162,14 @@ export const PlanFactTable = ({
                       <div
                         className={cn(
                           "h-full transition-all",
-                          getProgressColor(percentage, type)
+                          getProgressColor(percentage)
                         )}
                         style={{ width: `${Math.min(percentage, 100)}%` }}
                       />
                     </div>
                     <span className={cn(
                       "text-xs font-medium min-w-[3rem] text-right",
-                      percentage > 100 && type === 'expense' && "text-red-600",
-                      percentage < 50 && type === 'income' && "text-red-600"
+                      percentage > 100 && "text-red-600"
                     )}>
                       {percentage}%
                     </span>

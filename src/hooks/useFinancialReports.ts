@@ -22,11 +22,13 @@ export interface FinancialReport {
 export interface FinancialReportItem {
   id: string;
   report_id: string;
-  item_type: 'income' | 'expense';
+  item_type?: 'income' | 'expense' | null; // Now optional - type determined by matched transactions
   category: string;
   description?: string | null;
   planned_amount: number;
   actual_amount: number;
+  actual_income?: number; // New: tracks income from matched transactions
+  actual_expense?: number; // New: tracks expense from matched transactions
   is_matched: boolean;
   matched_transaction_ids: string[];
   sort_order: number;

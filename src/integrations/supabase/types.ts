@@ -687,12 +687,14 @@ export type Database = {
       financial_report_items: {
         Row: {
           actual_amount: number | null
+          actual_expense: number | null
+          actual_income: number | null
           category: string
           created_at: string
           description: string | null
           id: string
           is_matched: boolean | null
-          item_type: string
+          item_type: string | null
           matched_transaction_ids: string[] | null
           planned_amount: number | null
           report_id: string
@@ -700,12 +702,14 @@ export type Database = {
         }
         Insert: {
           actual_amount?: number | null
+          actual_expense?: number | null
+          actual_income?: number | null
           category: string
           created_at?: string
           description?: string | null
           id?: string
           is_matched?: boolean | null
-          item_type: string
+          item_type?: string | null
           matched_transaction_ids?: string[] | null
           planned_amount?: number | null
           report_id: string
@@ -713,12 +717,14 @@ export type Database = {
         }
         Update: {
           actual_amount?: number | null
+          actual_expense?: number | null
+          actual_income?: number | null
           category?: string
           created_at?: string
           description?: string | null
           id?: string
           is_matched?: boolean | null
-          item_type?: string
+          item_type?: string | null
           matched_transaction_ids?: string[] | null
           planned_amount?: number | null
           report_id?: string

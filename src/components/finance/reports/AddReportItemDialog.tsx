@@ -3,26 +3,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancialReportItems } from "@/hooks/useFinancialReports";
 
 interface AddReportItemDialogProps {
   reportId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultType: 'income' | 'expense';
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export const AddReportItemDialog = ({ 
   reportId, 
   open, 
   onOpenChange, 
-  defaultType,
   onSuccess 
 }: AddReportItemDialogProps) => {
   const { addItems } = useFinancialReportItems(reportId);
-  const [type, setType] = useState<'income' | 'expense'>(defaultType);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -35,18 +31,16 @@ export const AddReportItemDialog = ({
     try {
       await addItems.mutateAsync([{
         report_id: reportId,
-        item_type: type,
         category: category.trim(),
         description: description.trim() || undefined,
         planned_amount: Math.round(parseFloat(amount) || 0),
       }]);
       
-      // Reset form
       setCategory('');
       setDescription('');
       setAmount('');
       onOpenChange(false);
-      onSuccess();
+      onSuccess?.();
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +52,6 @@ export const AddReportItemDialog = ({
       setDescription('');
       setAmount('');
     }
-    setType(defaultType);
     onOpenChange(newOpen);
   };
 
@@ -71,24 +64,11 @@ export const AddReportItemDialog = ({
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Тип</Label>
-            <Select value={type} onValueChange={(v) => setType(v as 'income' | 'expense')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="income">Доход</SelectItem>
-                <SelectItem value="expense">Расход</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label>Название статьи *</Label>
             <Input
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="Например: Аренда площадки"
+              placeholder="Например: Аренда площадки, Аниматор"
             />
           </div>
 
