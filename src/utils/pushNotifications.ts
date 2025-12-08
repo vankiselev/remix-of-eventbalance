@@ -21,7 +21,7 @@ function urlBase64ToUint8Array(base64String: string) {
 // VAPID public key for web push
 // To generate new keys, run: npx tsx scripts/generate-vapid-keys.ts
 // Or use: https://www.stephane-quantin.com/en/tools/generators/vapid-keys
-const VAPID_PUBLIC_KEY = 'BODQ58L1hiBn6AtQyjxRDt2VUz0KCPAouU_0TcQkEAADUIyKfyP42D1eAi_OLD_gEhxMkATCIy77sFiuaGrC9jk';
+const VAPID_PUBLIC_KEY = 'B0DQ58L1hiBn6AtQyjxRDt2VUz0KCPAouU_0TcQkEAADUIyKfyP42D1eAi_OLD_gEhxMkATCIy77sFiuaGrC9jk';
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
