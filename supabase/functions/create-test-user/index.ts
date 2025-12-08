@@ -111,12 +111,12 @@ Deno.serve(async (req) => {
 
     console.log("User created:", newUser.user?.id);
 
-    // Mark as test user and store temp password in profiles
+    // Mark as test user (do NOT store password - security risk)
     const { error: updateError } = await supabaseAdmin
       .from("profiles")
       .update({ 
         is_test_user: true,
-        temp_password: password,
+        temp_password: null, // Never store plaintext passwords
         first_name: firstName || null,
         last_name: lastName || null,
         full_name: `${lastName || ""} ${firstName || ""}`.trim() || "Тестовый пользователь",
