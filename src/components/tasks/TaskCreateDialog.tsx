@@ -66,6 +66,37 @@ export const TaskCreateDialog = ({
   });
 
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [selectedHour, setSelectedHour] = useState<string>('12');
+  const [selectedMinute, setSelectedMinute] = useState<string>('00');
+
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
+  const updateDueDateTime = (date: Date | undefined, hour: string, minute: string) => {
+    if (!date) {
+      setFormData(prev => ({ ...prev, due_date: null }));
+      return;
+    }
+    const newDate = new Date(date);
+    newDate.setHours(parseInt(hour), parseInt(minute), 0, 0);
+    setFormData(prev => ({ ...prev, due_date: newDate.toISOString() }));
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    updateDueDateTime(date, selectedHour, selectedMinute);
+  };
+
+  const handleHourChange = (hour: string) => {
+    setSelectedHour(hour);
+    const currentDate = formData.due_date ? new Date(formData.due_date) : new Date();
+    updateDueDateTime(currentDate, hour, selectedMinute);
+  };
+
+  const handleMinuteChange = (minute: string) => {
+    setSelectedMinute(minute);
+    const currentDate = formData.due_date ? new Date(formData.due_date) : new Date();
+    updateDueDateTime(currentDate, selectedHour, minute);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,35 +232,55 @@ export const TaskCreateDialog = ({
             {/* Due Date */}
             <div className="space-y-2">
               <Label>Срок выполнения</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date
-                      ? format(new Date(formData.due_date), "PPP HH:mm", { locale: ru })
-                      : "Выберите дату"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date ? new Date(formData.due_date) : undefined}
-                    onSelect={(date) => setFormData(prev => ({ 
-                      ...prev, 
-                      due_date: date?.toISOString() || null 
-                    }))}
-                    locale={ru}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.due_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.due_date
+                        ? format(new Date(formData.due_date), "d MMM yyyy", { locale: ru })
+                        : "Выберите дату"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.due_date ? new Date(formData.due_date) : undefined}
+                      onSelect={handleDateSelect}
+                      locale={ru}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Select value={selectedHour} onValueChange={handleHourChange}>
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hours.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="flex items-center text-muted-foreground">:</span>
+                <Select value={selectedMinute} onValueChange={handleMinuteChange}>
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {minutes.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Client */}
