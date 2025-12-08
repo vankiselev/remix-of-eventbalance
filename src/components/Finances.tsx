@@ -867,6 +867,7 @@ const Finances = () => {
         open={showImportDialog}
         onOpenChange={setShowImportDialog}
         onImportComplete={handleTransactionSuccess}
+        defaultEmployeeId={selectedEmployee?.id}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
