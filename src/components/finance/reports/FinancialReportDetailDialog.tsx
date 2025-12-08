@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { PlanFactTable } from "./PlanFactTable";
 import { TransactionMatchFilter, getDefaultFilters, type TransactionFilters } from "./TransactionMatchFilter";
+import { AddReportItemDialog } from "./AddReportItemDialog";
+import { EditReportItemDialog } from "./EditReportItemDialog";
 
 interface FinancialReportDetailDialogProps {
   report: FinancialReport | null;
@@ -32,7 +34,7 @@ const statusOptions = [
 
 export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: FinancialReportDetailDialogProps) => {
   const { updateReport, deleteReport } = useFinancialReports();
-  const { items, updateItem } = useFinancialReportItems(report?.id || null);
+  const { items, updateItem, deleteItem } = useFinancialReportItems(report?.id || null);
   const { data: matchingTransactions } = useMatchingTransactions(report?.name || null);
   const { isAdmin } = useUserRbacRoles();
   const { toast } = useToast();
@@ -42,6 +44,8 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
   const [activeTab, setActiveTab] = useState<'income' | 'expense'>('expense');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filters, setFilters] = useState<TransactionFilters>(getDefaultFilters());
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<FinancialReportItem | null>(null);
 
   // Reset selection and filters when report changes
   useEffect(() => {
@@ -238,6 +242,38 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
     onOpenChange(false);
   };
 
+  const handleDeleteItem = async (itemId: string) => {
+    await deleteItem.mutateAsync(itemId);
+    await updatePlannedTotals();
+    toast({ title: "Статья удалена" });
+  };
+
+  const handleItemChanged = async () => {
+    await updatePlannedTotals();
+  };
+
+  const updatePlannedTotals = async () => {
+    if (!report) return;
+
+    const updatedItems = await queryClient.fetchQuery({
+      queryKey: ['financial-report-items', report.id],
+    }) as FinancialReportItem[];
+
+    const totalPlannedIncome = updatedItems
+      .filter(i => i.item_type === 'income')
+      .reduce((s, i) => s + i.planned_amount, 0);
+
+    const totalPlannedExpense = updatedItems
+      .filter(i => i.item_type === 'expense')
+      .reduce((s, i) => s + i.planned_amount, 0);
+
+    await updateReport.mutateAsync({
+      id: report.id,
+      total_planned_income: totalPlannedIncome,
+      total_planned_expense: totalPlannedExpense,
+    });
+  };
+
   if (!report) return null;
 
   const currentItems = activeTab === 'income' ? incomeItems : expenseItems;
@@ -365,6 +401,9 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
                         selectedItemId={selectedItemId}
                         onSelectItem={setSelectedItemId}
                         type={activeTab}
+                        onAddItem={() => setIsAddDialogOpen(true)}
+                        onEditItem={setEditingItem}
+                        onDeleteItem={handleDeleteItem}
                       />
                     </div>
                   </ScrollArea>
@@ -459,6 +498,23 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Add Item Dialog */}
+        <AddReportItemDialog
+          reportId={report.id}
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          defaultType={activeTab}
+          onSuccess={handleItemChanged}
+        />
+
+        {/* Edit Item Dialog */}
+        <EditReportItemDialog
+          item={editingItem}
+          open={!!editingItem}
+          onOpenChange={(open) => !open && setEditingItem(null)}
+          onSuccess={handleItemChanged}
+        />
       </DialogContent>
     </Dialog>
   );
