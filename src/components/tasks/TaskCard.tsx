@@ -105,7 +105,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
                   isDueToday && !isOverdue && "text-orange-500 font-medium"
                 )}>
                   <Calendar className="h-3 w-3" />
-                  {format(new Date(task.due_date), "d MMM", { locale: ru })}
+                  {format(new Date(task.due_date), "d MMM HH:mm", { locale: ru })}
                 </span>
               )}
 
