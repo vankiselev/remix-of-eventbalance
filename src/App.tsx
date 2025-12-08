@@ -33,6 +33,7 @@ import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
 import TasksPage from "./pages/TasksPage";
 import CRMTasksPage from "./pages/CRMTasksPage";
+import FinancialReportPage from "./pages/FinancialReportPage";
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -157,6 +158,7 @@ const App = () => {
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
+            <Route path="/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
             <Route path="/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
