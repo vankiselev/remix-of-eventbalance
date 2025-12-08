@@ -501,6 +501,13 @@ const Finances = () => {
         onSuccess={handleTransactionSuccess}
         editTransaction={editTransaction}
       />
+
+      <FinancesImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImportComplete={handleTransactionSuccess}
+        defaultEmployeeId={selectedEmployee?.id}
+      />
     </div>
   );
   }
