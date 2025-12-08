@@ -7,6 +7,7 @@ import { useChatUnread } from "@/hooks/useChatUnread";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
+import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 
 interface NavItem {
   path: string;
@@ -22,6 +23,7 @@ const MobileBottomNav = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const { totalUnread } = useChatUnread();
   const { pendingCount } = usePendingTransactionsCount();
+  const { pendingTasksCount } = usePendingTasksCount();
   const mainNavItems: NavItem[] = [
     { path: "/dashboard", label: "Главная", icon: "Home" },
     { path: "/finances", label: "Финансы", icon: "DollarSign" },
@@ -32,6 +34,7 @@ const MobileBottomNav = () => {
   const moreMenuItems = [
     ...(isAdmin ? [{ path: "/messages", label: "Сообщения", icon: "MessageSquare" }] : []),
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
+    { path: "/tasks", label: "Мои задачи", icon: "ListChecks" },
     { path: "/warehouse", label: "Склад", icon: "Package" },
     { path: "/staff", label: "Сотрудники", icon: "Users" },
     { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
@@ -115,8 +118,10 @@ const MobileBottomNav = () => {
                   {moreMenuItems.map((item) => {
                     const IconComponent = getIconComponent(item.icon);
                     const showBadge = (item.path === '/messages' && totalUnread > 0) || 
-                                      (item.path === '/transactions-review' && pendingCount > 0);
-                    const badgeCount = item.path === '/messages' ? totalUnread : pendingCount;
+                                      (item.path === '/transactions-review' && pendingCount > 0) ||
+                                      (item.path === '/tasks' && pendingTasksCount > 0);
+                    const badgeCount = item.path === '/messages' ? totalUnread : 
+                                       item.path === '/tasks' ? pendingTasksCount : pendingCount;
                     return (
                       <button
                         key={item.path}

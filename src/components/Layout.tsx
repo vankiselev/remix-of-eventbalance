@@ -20,6 +20,7 @@ import { useChatUnread } from "@/hooks/useChatUnread";
 import { cn } from "@/lib/utils";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
+import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { formatFullName, getInitials } from "@/utils/formatName";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
@@ -42,6 +43,7 @@ const Layout = ({ children }: LayoutProps) => {
   
   const { totalUnread } = useChatUnread();
   const { pendingCount } = usePendingTransactionsCount();
+  const { pendingTasksCount } = usePendingTasksCount();
   
   // Enable real-time updates globally
   useRealtimeUpdates();
@@ -151,7 +153,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
     { path: "/finances", label: t('finances'), icon: RussianRuble },
     { path: "/warehouse", label: "Склад", icon: Package },
-    { path: "/tasks", label: "Мои задачи", icon: ListChecks },
+    { path: "/tasks", label: "Мои задачи", icon: ListChecks, ...(pendingTasksCount > 0 && { badge: pendingTasksCount }) },
     { path: "/staff", label: t('staff'), icon: UsersRound },
     { path: "/birthdays", label: "Дни рождения", icon: Cake },
     { path: "/vacations", label: "График отпусков", icon: Plane },
