@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, ArrowLeft, Upload, Trash2, CheckCircle, XCircle, Clock, Search, Filter } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
@@ -386,6 +386,45 @@ const Finances = () => {
                 <Upload className="mr-2 h-4 w-4" />
                 Импорт
               </Button>
+              <AlertDialog>
+                <Button variant="outline" className="text-destructive hover:text-destructive" asChild>
+                  <AlertDialogTrigger>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить все
+                  </AlertDialogTrigger>
+                </Button>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Удалить транзакции сотрудника?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Все транзакции {selectedEmployee.name} будут удалены. Это действие необратимо!
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase.rpc("delete_user_transactions", {
+                            target_user_id: selectedEmployee.id,
+                          });
+                          if (error) throw error;
+                          toast({ title: "Транзакции удалены" });
+                          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+                          // Refresh employee summary
+                          handleEmployeeSelect(selectedEmployee.id, selectedEmployee.name);
+                        } catch (error: any) {
+                          toast({ variant: "destructive", title: "Ошибка", description: error.message });
+                        }
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Да, удалить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button onClick={() => setShowTransactionForm(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить транзакцию
