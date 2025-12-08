@@ -23,6 +23,7 @@ interface FinancesImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
+  defaultEmployeeId?: string | null;
 }
 
 interface ColumnMapping {
@@ -78,7 +79,8 @@ const categoryAliases: { [key: string]: string[] } = {
 const FinancesImportDialog = ({ 
   open, 
   onOpenChange, 
-  onImportComplete 
+  onImportComplete,
+  defaultEmployeeId
 }: FinancesImportDialogProps) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -112,12 +114,18 @@ const FinancesImportDialog = ({
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Сбрасываем abort при открытии диалога
+  // Сбрасываем abort и устанавливаем defaultEmployeeId при открытии диалога
   useEffect(() => {
     if (open) {
       abortRef.current = false;
+      if (defaultEmployeeId) {
+        setSelectedEmployeeId(defaultEmployeeId);
+      }
+    } else {
+      // Сбрасываем при закрытии
+      setSelectedEmployeeId(null);
     }
-  }, [open]);
+  }, [open, defaultEmployeeId]);
 
   const fieldOptions = [
     { value: 'skip', label: 'Не импортировать' },
