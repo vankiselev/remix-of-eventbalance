@@ -331,11 +331,32 @@ const Finances = () => {
     setSelectedEmployee(null);
   };
 
+  const refreshEmployeeSummary = async (employeeId: string) => {
+    try {
+      const { data: employeeSummaryData, error } = await supabase
+        .rpc("calculate_user_cash_totals", { user_uuid: employeeId });
+
+      if (error) throw error;
+
+      if (employeeSummaryData && employeeSummaryData.length > 0) {
+        setSelectedEmployeeSummary(employeeSummaryData[0]);
+      }
+    } catch (error: any) {
+      console.error("Error refreshing employee summary:", error);
+    }
+  };
+
   const handleTransactionSuccess = () => {
     // Invalidate caches to refetch data - React Query handles the rest
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+    
+    // Refresh selected employee summary if viewing employee details
+    if (selectedEmployee) {
+      refreshEmployeeSummary(selectedEmployee.id);
+    }
+    
     setEditTransaction(null);
   };
 
