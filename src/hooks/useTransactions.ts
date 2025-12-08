@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export interface Transaction {
   id: string;
@@ -117,6 +117,9 @@ export const useTransactions = (options: UseTransactionsOptions = {}) => {
     refetchOnWindowFocus: false,
   });
 
+  // Debounce ref for INSERT events during bulk imports
+  const insertDebounceRef = useRef<NodeJS.Timeout>();
+
   // Realtime subscription for updates
   useEffect(() => {
     if (!enabled) return;
@@ -130,9 +133,12 @@ export const useTransactions = (options: UseTransactionsOptions = {}) => {
           schema: 'public',
           table: 'financial_transactions'
         },
-        (payload) => {
-          // For inserts, invalidate to refetch (could be from import)
-          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        () => {
+          // Debounce INSERT events to prevent excessive refetches during bulk imports
+          clearTimeout(insertDebounceRef.current);
+          insertDebounceRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          }, 2000);
         }
       )
       .on(
@@ -168,6 +174,7 @@ export const useTransactions = (options: UseTransactionsOptions = {}) => {
       .subscribe();
 
     return () => {
+      clearTimeout(insertDebounceRef.current);
       supabase.removeChannel(channel);
     };
   }, [userId, enabled, queryClient, queryKey]);
