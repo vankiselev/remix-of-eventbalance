@@ -1,4 +1,4 @@
-// Service Worker for Push Notifications
+// Service Worker for Push Notifications (iOS Safari 16.4+ compatible)
 
 self.addEventListener('push', function(event) {
   console.log('Push notification received:', event);
@@ -6,8 +6,8 @@ self.addEventListener('push', function(event) {
   let notificationData = {
     title: 'Новое уведомление',
     body: 'У вас новое уведомление',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-72.png',
     data: {},
   };
 
@@ -28,7 +28,6 @@ self.addEventListener('push', function(event) {
         actions.push({
           action: 'open',
           title: 'Открыть',
-          icon: '/favicon.ico'
         });
       }
       notificationData.actions = actions;
@@ -50,14 +49,9 @@ self.addEventListener('push', function(event) {
     tag: notificationData.data?.notificationId || 'notification-' + Date.now(),
     requireInteraction: false,
     silent: false,
+    // iOS requires renotify to update existing notifications with same tag
+    renotify: true,
   };
-
-  // Try to add sound if supported (Safari/iOS)
-  try {
-    notificationOptions.sound = '/sounds/notification.mp3';
-  } catch (e) {
-    console.log('Sound not supported in notifications');
-  }
 
   event.waitUntil(
     self.registration.showNotification(notificationData.title, notificationOptions).then(() => {
@@ -140,6 +134,28 @@ self.addEventListener('notificationclick', function(event) {
           return clients.openWindow(targetUrl);
         }
       })
+  );
+});
+
+// Handle subscription changes (important for iOS)
+self.addEventListener('pushsubscriptionchange', function(event) {
+  console.log('Push subscription changed, resubscribing...');
+  
+  event.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: self.registration.pushManager.getSubscription()
+        .then(sub => sub?.options?.applicationServerKey)
+    }).then(function(subscription) {
+      // Send new subscription to server
+      return fetch('/api/update-push-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+    }).catch(function(error) {
+      console.error('Failed to resubscribe:', error);
+    })
   );
 });
 
