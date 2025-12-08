@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,16 +8,15 @@ import { Plus, Search, FileText } from "lucide-react";
 import { useFinancialReports } from "@/hooks/useFinancialReports";
 import { FinancialReportCard } from "./FinancialReportCard";
 import { FinancialReportCreateDialog } from "./FinancialReportCreateDialog";
-import { FinancialReportDetailDialog } from "./FinancialReportDetailDialog";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 
 export const FinancialReportsTab = () => {
+  const navigate = useNavigate();
   const { reports, isLoading } = useFinancialReports();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
   const filteredReports = useMemo(() => {
     if (!reports) return [];
@@ -45,10 +45,6 @@ export const FinancialReportsTab = () => {
 
     return groups;
   }, [filteredReports]);
-
-  const selectedReport = useMemo(() => {
-    return reports?.find(r => r.id === selectedReportId) || null;
-  }, [reports, selectedReportId]);
 
   if (isLoading) {
     return (
@@ -115,7 +111,7 @@ export const FinancialReportsTab = () => {
                 <FinancialReportCard
                   key={report.id}
                   report={report}
-                  onClick={() => setSelectedReportId(report.id)}
+                  onClick={() => navigate(`/finances/report/${report.id}`)}
                 />
               ))}
             </div>
@@ -126,12 +122,6 @@ export const FinancialReportsTab = () => {
       <FinancialReportCreateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-      />
-
-      <FinancialReportDetailDialog
-        report={selectedReport}
-        open={!!selectedReportId}
-        onOpenChange={(open) => !open && setSelectedReportId(null)}
       />
     </div>
   );
