@@ -8,14 +8,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, UserPlus, Database } from "lucide-react";
+import { Loader2, Plus, Trash2, UserPlus, Database, Copy, Check } from "lucide-react";
+
+interface CreatedUser {
+  email: string;
+  password: string;
+}
 
 export function TestDataManagement() {
   const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", password: "", firstName: "", lastName: "" });
+  const [newUser, setNewUser] = useState({ firstName: "", lastName: "" });
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [createdUser, setCreatedUser] = useState<CreatedUser | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Fetch test users
   const { data: testUsers, isLoading: loadingTestUsers } = useQuery({
@@ -23,7 +31,7 @@ export function TestDataManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, first_name, last_name, created_at")
+        .select("id, email, full_name, first_name, last_name, created_at, temp_password")
         .eq("is_test_user", true)
         .order("created_at", { ascending: false });
       
@@ -57,9 +65,10 @@ export function TestDataManagement() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Тестовый пользователь создан");
-      setNewUser({ email: "", password: "", firstName: "", lastName: "" });
+      setCreatedUser({ email: data.email, password: data.password });
+      setNewUser({ firstName: "", lastName: "" });
       setShowCreateForm(false);
       queryClient.invalidateQueries({ queryKey: ["test-users"] });
       queryClient.invalidateQueries({ queryKey: ["all-profiles-for-deletion"] });
@@ -123,15 +132,71 @@ export function TestDataManagement() {
   });
 
   const handleCreateUser = () => {
-    if (!newUser.email || !newUser.password) {
-      toast.error("Email и пароль обязательны");
-      return;
-    }
     createTestUser.mutate(newUser);
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const copyAllCredentials = async () => {
+    if (!createdUser) return;
+    const text = `Email: ${createdUser.email}\nПароль: ${createdUser.password}`;
+    await navigator.clipboard.writeText(text);
+    toast.success("Данные скопированы");
   };
 
   return (
     <div className="space-y-6">
+      {/* Created User Dialog */}
+      <Dialog open={!!createdUser} onOpenChange={() => setCreatedUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Check className="h-5 w-5" />
+              Пользователь создан!
+            </DialogTitle>
+            <DialogDescription>
+              Сохраните данные для входа — пароль нельзя будет восстановить
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Email</Label>
+              <div className="flex gap-2">
+                <Input value={createdUser?.email || ""} readOnly className="font-mono text-sm" />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => copyToClipboard(createdUser?.email || "", "email")}
+                >
+                  {copiedField === "email" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Пароль</Label>
+              <div className="flex gap-2">
+                <Input value={createdUser?.password || ""} readOnly className="font-mono text-sm" />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => copyToClipboard(createdUser?.password || "", "password")}
+                >
+                  {copiedField === "password" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <Button onClick={copyAllCredentials} className="w-full" variant="secondary">
+              <Copy className="h-4 w-4 mr-2" />
+              Скопировать всё
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Test Users Section */}
       <Card>
         <CardHeader>
@@ -156,9 +221,12 @@ export function TestDataManagement() {
           {showCreateForm && (
             <Card className="border-dashed">
               <CardContent className="pt-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Email и пароль будут сгенерированы автоматически
+                </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Имя</Label>
+                    <Label>Имя (опционально)</Label>
                     <Input
                       value={newUser.firstName}
                       onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
@@ -166,31 +234,11 @@ export function TestDataManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Фамилия</Label>
+                    <Label>Фамилия (опционально)</Label>
                     <Input
                       value={newUser.lastName}
                       onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                       placeholder="Иванов"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      placeholder="test@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Пароль *</Label>
-                    <Input
-                      type="password"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                      placeholder="••••••••"
                     />
                   </div>
                 </div>
@@ -221,6 +269,7 @@ export function TestDataManagement() {
                 <TableRow>
                   <TableHead>Имя</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Пароль</TableHead>
                   <TableHead>Создан</TableHead>
                   <TableHead className="w-[100px]">Действия</TableHead>
                 </TableRow>
@@ -229,7 +278,8 @@ export function TestDataManagement() {
                 {testUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>{user.full_name || `${user.last_name || ""} ${user.first_name || ""}`.trim() || "—"}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                    <TableCell className="font-mono text-sm">{user.temp_password || "—"}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString("ru-RU")}
                     </TableCell>
