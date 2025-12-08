@@ -222,16 +222,34 @@ export const NotificationSettings = () => {
         {!isSupported ? (
           <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
             <BellOff className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Push-уведомления недоступны</p>
-              {isIOS && !isStandalone ? (
-                <p className="text-xs text-muted-foreground">
-                  На iPhone push-уведомления работают только для установленных веб‑приложений. Добавьте приложение на экран Домой: Поделиться → На экран Домой, затем откройте его оттуда и включите уведомления.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Ваш браузер/среда не поддерживает Web Push. Попробуйте Chrome/Firefox/Edge на Android или установите как веб‑приложение.
-                </p>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium">Push-уведомления недоступны</p>
+                {isIOS && !isStandalone ? (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    На iPhone push-уведомления работают только для установленных веб‑приложений.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Ваш браузер/среда не поддерживает Web Push. Попробуйте Chrome/Firefox/Edge на Android или установите как веб‑приложение.
+                  </p>
+                )}
+              </div>
+              
+              {isIOS && !isStandalone && (
+                <div className="p-3 bg-background border rounded-lg">
+                  <p className="text-sm font-medium mb-2">Как установить приложение на iPhone:</p>
+                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                    <li>Нажмите кнопку <strong>«Поделиться»</strong> (квадрат со стрелкой ↑) внизу Safari</li>
+                    <li>Прокрутите вниз и выберите <strong>«На экран Домой»</strong></li>
+                    <li>Нажмите <strong>«Добавить»</strong> в правом верхнем углу</li>
+                    <li>Откройте приложение с экрана «Домой» (иконка EventBalance)</li>
+                    <li>Вернитесь в настройки и включите уведомления</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-3 italic">
+                    ⚠️ Требуется iOS 16.4 или новее
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -243,6 +261,16 @@ export const NotificationSettings = () => {
                 <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertDescription className="text-green-900 dark:text-green-100">
                   Web Push-уведомления активны. Вы будете получать уведомления даже при закрытой вкладке.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* iOS standalone prompt to enable */}
+            {isIOS && isStandalone && !isPushEnabled && (
+              <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
+                <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription className="text-blue-900 dark:text-blue-100">
+                  Приложение установлено! Теперь включите переключатель ниже, чтобы получать push-уведомления.
                 </AlertDescription>
               </Alert>
             )}
