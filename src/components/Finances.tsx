@@ -592,7 +592,10 @@ const Finances = () => {
                 <div className="space-y-4 pt-4">
                   {/* Статистика */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
+                    <Card 
+                      className={`cursor-pointer transition-colors hover:border-yellow-500 ${statusFilter === "pending" ? "border-2 border-yellow-500" : ""}`}
+                      onClick={() => setStatusFilter("pending")}
+                    >
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           На проверке
@@ -606,7 +609,10 @@ const Finances = () => {
                       </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card 
+                      className={`cursor-pointer transition-colors hover:border-green-500 ${statusFilter === "approved" ? "border-2 border-green-500" : ""}`}
+                      onClick={() => setStatusFilter("approved")}
+                    >
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Утверждено
@@ -620,7 +626,10 @@ const Finances = () => {
                       </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card 
+                      className={`cursor-pointer transition-colors hover:border-red-500 ${statusFilter === "rejected" ? "border-2 border-red-500" : ""}`}
+                      onClick={() => setStatusFilter("rejected")}
+                    >
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Отклонено
@@ -634,7 +643,10 @@ const Finances = () => {
                       </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card 
+                      className={`cursor-pointer transition-colors hover:border-blue-500 ${statusFilter === "all" ? "border-2 border-blue-500" : ""}`}
+                      onClick={() => setStatusFilter("all")}
+                    >
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Всего
