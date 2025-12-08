@@ -1395,6 +1395,7 @@ export type Database = {
           google_sheet_id: string | null
           google_sheet_url: string | null
           id: string
+          is_test_user: boolean | null
           last_name: string | null
           middle_name: string | null
           mobile_nav_settings: Json | null
@@ -1423,6 +1424,7 @@ export type Database = {
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id: string
+          is_test_user?: boolean | null
           last_name?: string | null
           middle_name?: string | null
           mobile_nav_settings?: Json | null
@@ -1451,6 +1453,7 @@ export type Database = {
           google_sheet_id?: string | null
           google_sheet_url?: string | null
           id?: string
+          is_test_user?: boolean | null
           last_name?: string | null
           middle_name?: string | null
           mobile_nav_settings?: Json | null
@@ -2771,9 +2774,14 @@ export type Database = {
         Args: { invitation_token: string }
         Returns: boolean
       }
+      delete_all_transactions: { Args: never; Returns: undefined }
       delete_employee_permanently: {
         Args: { p_employee_user_id: string }
         Returns: boolean
+      }
+      delete_user_transactions: {
+        Args: { target_user_id: string }
+        Returns: undefined
       }
       disable_balances_trigger_for_import: { Args: never; Returns: undefined }
       enable_balances_trigger_and_recalculate: {
