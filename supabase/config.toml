@@ -4,7 +4,7 @@ project_id = "wpxhmajdeunabximyfln"
 verify_jwt = true
 
 [functions.suggest-transaction-fields]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-password-reset]
 verify_jwt = false
