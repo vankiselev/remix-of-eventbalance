@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatFullName, getInitials } from "@/utils/formatName";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface Employee {
   id: string;
@@ -15,6 +16,7 @@ interface Employee {
   last_name?: string | null;
   email: string;
   avatar_url?: string | null;
+  employment_status?: string;
   total_cash: number;
   cash_nastya: number;
   cash_lera: number;
@@ -29,6 +31,7 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"active" | "terminated">("active");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -37,12 +40,16 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
   }, []);
 
   useEffect(() => {
-    const filtered = employees.filter(employee =>
-      employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = employees.filter(employee => {
+      const matchesSearch = employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "active" 
+        ? employee.employment_status === "active"
+        : employee.employment_status === "terminated";
+      return matchesSearch && matchesStatus;
+    });
     setFilteredEmployees(filtered);
-  }, [employees, searchTerm]);
+  }, [employees, searchTerm, statusFilter]);
 
   const fetchEmployees = async () => {
     try {
@@ -99,6 +106,9 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
     }
   };
 
+  const activeCount = employees.filter(e => e.employment_status === "active").length;
+  const terminatedCount = employees.filter(e => e.employment_status === "terminated").length;
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -113,6 +123,19 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
 
   return (
     <div className="space-y-4">
+      <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as "active" | "terminated")}>
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="active" className="gap-2">
+            Активные
+            <Badge variant="secondary" className="ml-1">{activeCount}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="terminated" className="gap-2">
+            Уволенные
+            <Badge variant="secondary" className="ml-1">{terminatedCount}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -126,7 +149,7 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
       <div className="space-y-2">
         {filteredEmployees.length === 0 ? (
           <p className="text-muted-foreground text-center py-4">
-            {searchTerm ? "Сотрудники не найдены" : "Нет сотрудников"}
+            {searchTerm ? "Сотрудники не найдены" : statusFilter === "active" ? "Нет активных сотрудников" : "Нет уволенных сотрудников"}
           </p>
         ) : (
           filteredEmployees.map((employee) => (
