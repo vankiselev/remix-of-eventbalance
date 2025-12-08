@@ -61,7 +61,7 @@ const Finances = () => {
   
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<{id: string, name: string} | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<{id: string, name: string, avatar_url?: string | null} | null>(null);
   const [selectedEmployeeSummary, setSelectedEmployeeSummary] = useState<CashSummary>({
     total_cash: 0,
     cash_nastya: 0,
@@ -303,8 +303,8 @@ const Finances = () => {
     }
   };
 
-  const handleEmployeeSelect = async (employeeId: string, employeeName: string) => {
-    setSelectedEmployee({ id: employeeId, name: employeeName });
+  const handleEmployeeSelect = async (employeeId: string, employeeName: string, avatarUrl?: string | null) => {
+    setSelectedEmployee({ id: employeeId, name: employeeName, avatar_url: avatarUrl });
     
     // Загружаем данные выбранного сотрудника
     try {
@@ -371,6 +371,10 @@ const Finances = () => {
               <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Назад</span>
             </Button>
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={selectedEmployee.avatar_url || undefined} alt={selectedEmployee.name} />
+              <AvatarFallback>{getInitials({ full_name: selectedEmployee.name })}</AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1">
               <h2 className="text-xl font-semibold truncate">
                 {selectedEmployee.name}
@@ -387,12 +391,12 @@ const Finances = () => {
                 Импорт
               </Button>
               <AlertDialog>
-                <Button variant="outline" className="text-destructive hover:text-destructive" asChild>
-                  <AlertDialogTrigger>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-destructive hover:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Удалить все
-                  </AlertDialogTrigger>
-                </Button>
+                  </Button>
+                </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Удалить транзакции сотрудника?</AlertDialogTitle>
@@ -413,7 +417,7 @@ const Finances = () => {
                           queryClient.invalidateQueries({ queryKey: ['transactions'] });
                           queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
                           // Refresh employee summary
-                          handleEmployeeSelect(selectedEmployee.id, selectedEmployee.name);
+                          handleEmployeeSelect(selectedEmployee.id, selectedEmployee.name, selectedEmployee.avatar_url);
                         } catch (error: any) {
                           toast({ variant: "destructive", title: "Ошибка", description: error.message });
                         }
