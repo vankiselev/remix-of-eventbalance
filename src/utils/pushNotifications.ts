@@ -127,21 +127,28 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       const swReg = await navigator.serviceWorker.ready;
       console.log('Service worker ready:', swReg);
 
-      // Reuse existing subscription if present
+      // First, unsubscribe from any existing subscription (might have old VAPID key)
       let subscription = await swReg.pushManager.getSubscription();
-      if (!subscription) {
+      if (subscription) {
+        console.log('Found existing subscription, unsubscribing first to use new VAPID key...');
         try {
-          subscription = await swReg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-          });
-          console.log('Created new push subscription:', subscription);
-        } catch (err) {
-          console.error('pushManager.subscribe failed:', err);
-          throw err;
+          await subscription.unsubscribe();
+          console.log('Unsubscribed from old subscription');
+        } catch (unsubErr) {
+          console.warn('Failed to unsubscribe from old subscription:', unsubErr);
         }
-      } else {
-        console.log('Existing push subscription found:', subscription);
+      }
+
+      // Create new subscription with current VAPID key
+      try {
+        subscription = await swReg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+        console.log('Created new push subscription:', subscription);
+      } catch (err: any) {
+        console.error('pushManager.subscribe failed:', err?.message, err?.name, err);
+        throw new Error(`Push subscription failed: ${err?.message || err}`);
       }
 
       // Save subscription to database

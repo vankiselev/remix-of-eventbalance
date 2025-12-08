@@ -117,20 +117,29 @@ export const NotificationSettings = () => {
         }
 
         // Subscribe to push notifications
-        const success = await subscribeToPushNotifications();
-        
-        if (success) {
-          setIsPushEnabled(true);
-          setNotificationPermission('granted');
+        try {
+          const success = await subscribeToPushNotifications();
+          
+          if (success) {
+            setIsPushEnabled(true);
+            setNotificationPermission('granted');
+            toast({
+              title: 'Push-уведомления включены',
+              description: 'Вы будете получать уведомления даже когда приложение закрыто',
+            });
+          } else {
+            setIsPushEnabled(await checkPushSubscription());
+            toast({
+              title: 'Не удалось включить',
+              description: 'Попробуйте ещё раз или проверьте настройки браузера.',
+              variant: 'destructive',
+            });
+          }
+        } catch (subscribeError: any) {
+          console.error('Subscribe error:', subscribeError);
           toast({
-            title: 'Push-уведомления включены',
-            description: 'Вы будете получать уведомления даже когда приложение закрыто',
-          });
-        } else {
-          setIsPushEnabled(await checkPushSubscription());
-          toast({
-            title: 'Не удалось включить',
-            description: 'Попробуйте ещё раз. Если не включается — откройте консоль (F12) → Console и пришлите ошибку.',
+            title: 'Ошибка подписки',
+            description: subscribeError?.message || 'Неизвестная ошибка при подписке на уведомления',
             variant: 'destructive',
           });
         }
