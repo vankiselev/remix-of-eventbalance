@@ -550,7 +550,7 @@ const Finances = () => {
       <MoneyTransferRequests />
 
       <Card className="w-full">
-        <Tabs defaultValue="my-transactions" className="w-full" onValueChange={setActiveTab}>
+        <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-4 border-b">
             <TabsList className="w-full overflow-x-auto scrollbar-hide">
               <TabsTrigger value="my-transactions" className="whitespace-nowrap">
