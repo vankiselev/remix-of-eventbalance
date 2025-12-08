@@ -364,30 +364,26 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
         </div>
 
         {/* Matching interface - Single view without tabs */}
-        <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1 overflow-hidden min-h-0">
           {/* Plan (estimate items) - Table view */}
-          <Card className="flex flex-col overflow-hidden">
+          <Card className="flex flex-col overflow-hidden lg:col-span-3">
             <CardHeader className="py-3 flex-shrink-0">
               <CardTitle className="text-sm">Статьи сметы</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <ScrollArea className={cn("h-full", isFullscreen ? "max-h-[calc(100vh-320px)]" : "max-h-[350px]")}>
-                <div className="px-2">
-                  <PlanFactTable
-                    items={items || []}
-                    selectedItemId={selectedItemId}
-                    onSelectItem={setSelectedItemId}
-                    onAddItem={() => setIsAddDialogOpen(true)}
-                    onEditItem={setEditingItem}
-                    onDeleteItem={handleDeleteItem}
-                  />
-                </div>
-              </ScrollArea>
+            <CardContent className="flex-1 overflow-auto p-0">
+              <PlanFactTable
+                items={items || []}
+                selectedItemId={selectedItemId}
+                onSelectItem={setSelectedItemId}
+                onAddItem={() => setIsAddDialogOpen(true)}
+                onEditItem={setEditingItem}
+                onDeleteItem={handleDeleteItem}
+              />
             </CardContent>
           </Card>
 
           {/* Actual (transactions) with filters */}
-          <Card className="flex flex-col overflow-hidden">
+          <Card className="flex flex-col overflow-hidden lg:col-span-2">
             <CardHeader className="py-3 flex-shrink-0 space-y-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">
@@ -399,9 +395,8 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
               </div>
               <TransactionMatchFilter filters={filters} onChange={setFilters} />
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <ScrollArea className={cn("h-full", isFullscreen ? "max-h-[calc(100vh-400px)]" : "max-h-[280px]")}>
-                <div className="space-y-2 p-4">
+            <CardContent className="flex-1 overflow-auto p-0">
+              <div className="space-y-2 p-4">
                   {filteredTransactions.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       Нет подходящих транзакций
@@ -477,7 +472,6 @@ export const FinancialReportDetailDialog = ({ report, open, onOpenChange }: Fina
                     })
                   )}
                 </div>
-              </ScrollArea>
             </CardContent>
           </Card>
         </div>

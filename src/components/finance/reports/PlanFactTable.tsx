@@ -67,10 +67,10 @@ export const PlanFactTable = ({
   };
 
   return (
-    <Table>
+    <Table className="text-sm">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[30%]">
+          <TableHead className="min-w-[180px]">
             <div className="flex items-center justify-between">
               <span>Статья</span>
               {onAddItem && (
@@ -85,23 +85,23 @@ export const PlanFactTable = ({
               )}
             </div>
           </TableHead>
-          <TableHead className="text-right w-[12%]">План</TableHead>
-          <TableHead className="text-right w-[10%]">
+          <TableHead className="text-right whitespace-nowrap">План</TableHead>
+          <TableHead className="text-right whitespace-nowrap">
             <div className="flex items-center justify-end gap-1">
               <TrendingUp className="h-3 w-3 text-green-600" />
-              <span>Факт</span>
+              <span>Доход</span>
             </div>
           </TableHead>
-          <TableHead className="text-right w-[10%]">
+          <TableHead className="text-right whitespace-nowrap">
             <div className="flex items-center justify-end gap-1">
               <TrendingDown className="h-3 w-3 text-red-600" />
-              <span>Факт</span>
+              <span>Расход</span>
             </div>
           </TableHead>
-          <TableHead className="text-right w-[12%]">Откл.</TableHead>
-          <TableHead className="w-[12%]">%</TableHead>
+          <TableHead className="text-right whitespace-nowrap">Откл.</TableHead>
+          <TableHead className="w-[100px]">%</TableHead>
           {(onEditItem || onDeleteItem) && (
-            <TableHead className="w-[14%]"></TableHead>
+            <TableHead className="w-[80px]"></TableHead>
           )}
         </TableRow>
       </TableHeader>
