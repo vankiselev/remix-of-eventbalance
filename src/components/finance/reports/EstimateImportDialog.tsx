@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, FileSpreadsheet, Check, AlertCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import * as XLSX from "xlsx";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -18,7 +18,6 @@ interface EstimateImportDialogProps {
 }
 
 export interface EstimateItem {
-  item_type: 'income' | 'expense';
   category: string;
   description?: string;
   planned_amount: number;
@@ -34,7 +33,6 @@ interface PreviewRow {
   amount: number;
   description?: string;
   included: boolean;
-  type: 'expense' | 'income' | 'skip';
   autoSkipped: boolean;
 }
 
@@ -51,7 +49,7 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
 
   const parseAmount = (value: any): number => {
-    if (typeof value === 'number') return Math.round(value);
+    if (typeof value === 'number') return Math.round(Math.abs(value));
     if (!value) return 0;
     
     const str = String(value).replace(/[^\d,.\-]/g, '');
@@ -69,7 +67,7 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
       normalized = str.replace(/,/g, '');
     }
 
-    return Math.round(parseFloat(normalized) || 0);
+    return Math.round(Math.abs(parseFloat(normalized) || 0));
   };
 
   const isSkipRow = (name: string): boolean => {
@@ -167,7 +165,6 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
         amount,
         description: description || undefined,
         included: !autoSkipped,
-        type: autoSkipped ? 'skip' : 'income',
         autoSkipped,
       });
     });
@@ -176,38 +173,25 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
     setStep('preview');
   };
 
-  const updateRowType = (index: number, type: 'expense' | 'income' | 'skip') => {
-    setPreviewRows(prev => prev.map((row, i) => 
-      i === index ? { ...row, type, included: type !== 'skip' } : row
-    ));
-  };
-
   const updateRowIncluded = (index: number, included: boolean) => {
     setPreviewRows(prev => prev.map((row, i) => 
-      i === index ? { ...row, included, type: included ? (row.type === 'skip' ? 'expense' : row.type) : 'skip' } : row
+      i === index ? { ...row, included } : row
     ));
   };
 
   const stats = useMemo(() => {
-    const included = previewRows.filter(r => r.included && r.type !== 'skip');
-    const expenses = included.filter(r => r.type === 'expense');
-    const incomes = included.filter(r => r.type === 'income');
-    const totalExpense = expenses.reduce((s, r) => s + r.amount, 0);
-    const totalIncome = incomes.reduce((s, r) => s + r.amount, 0);
+    const included = previewRows.filter(r => r.included);
+    const total = included.reduce((s, r) => s + r.amount, 0);
     return {
-      expenseCount: expenses.length,
-      incomeCount: incomes.length,
-      totalExpense,
-      totalIncome,
-      profit: totalIncome - totalExpense,
+      count: included.length,
+      total,
     };
   }, [previewRows]);
 
   const handleImport = () => {
     const items: EstimateItem[] = previewRows
-      .filter(r => r.included && r.type !== 'skip')
+      .filter(r => r.included)
       .map(r => ({
-        item_type: r.type as 'income' | 'expense',
         category: r.name,
         description: r.description,
         planned_amount: r.amount,
@@ -231,12 +215,6 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
     onOpenChange(open);
   };
 
-  const markAllAsIncome = () => {
-    setPreviewRows(prev => prev.map(row => 
-      row.included ? { ...row, type: 'income' } : row
-    ));
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -244,12 +222,12 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
           <DialogTitle>
             {step === 'upload' && "Загрузка сметы"}
             {step === 'mapping' && "Сопоставление колонок"}
-            {step === 'preview' && "Разметка строк"}
+            {step === 'preview' && "Предпросмотр статей"}
           </DialogTitle>
           <DialogDescription>
             {step === 'upload' && "Загрузите Excel файл со сметой мероприятия"}
             {step === 'mapping' && "Укажите какие колонки содержат данные"}
-            {step === 'preview' && "Смета загружается как плановые доходы. При необходимости измените тип строки."}
+            {step === 'preview' && "Проверьте статьи перед импортом. Тип (доход/расход) определится при сопоставлении с транзакциями."}
           </DialogDescription>
         </DialogHeader>
 
@@ -336,19 +314,9 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsIncome}>
-                  Все как доходы
-                </Button>
-              </div>
-              <div className="flex items-center gap-4">
-                <Badge variant="outline" className="text-red-600">
-                  Расходы: {stats.expenseCount}
-                </Badge>
-                <Badge variant="outline" className="text-green-600">
-                  Доходы: {stats.incomeCount}
-                </Badge>
-              </div>
+              <Badge variant="outline">
+                {stats.count} статей на сумму {formatCurrency(stats.total)}
+              </Badge>
             </div>
 
             <div className="border rounded-md max-h-96 overflow-y-auto">
@@ -360,14 +328,13 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
                         checked={previewRows.every(r => r.included || r.autoSkipped)}
                         onCheckedChange={(checked) => {
                           setPreviewRows(prev => prev.map(row => 
-                            row.autoSkipped ? row : { ...row, included: !!checked, type: checked ? (row.type === 'skip' ? 'expense' : row.type) : 'skip' }
+                            row.autoSkipped ? row : { ...row, included: !!checked }
                           ));
                         }}
                       />
                     </TableHead>
                     <TableHead>Наименование</TableHead>
-                    <TableHead className="text-right w-32">Сумма</TableHead>
-                    <TableHead className="w-36">Тип</TableHead>
+                    <TableHead className="text-right w-32">Плановая сумма</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -381,7 +348,7 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
                       </TableCell>
                       <TableCell>
                         <div>
-                          <span className={row.type === 'skip' ? 'text-muted-foreground line-through' : ''}>
+                          <span className={!row.included ? 'text-muted-foreground line-through' : ''}>
                             {row.name}
                           </span>
                           {row.description && (
@@ -389,26 +356,8 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        row.type === 'income' ? 'text-green-600' : 
-                        row.type === 'expense' ? 'text-red-600' : 'text-muted-foreground'
-                      }`}>
+                      <TableCell className="text-right font-medium">
                         {formatCurrency(row.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Select 
-                          value={row.type} 
-                          onValueChange={(v) => updateRowType(i, v as 'expense' | 'income' | 'skip')}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="expense">Расход</SelectItem>
-                            <SelectItem value="income">Доход</SelectItem>
-                            <SelectItem value="skip">Пропуск</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -416,21 +365,10 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
               </Table>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Расходы</p>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalExpense)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Доходы</p>
-                <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalIncome)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Прибыль</p>
-                <p className={`text-xl font-bold ${stats.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(stats.profit)}
-                </p>
-              </div>
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Итого: <span className="font-bold text-foreground">{formatCurrency(stats.total)}</span> ({stats.count} статей)
+              </p>
             </div>
           </div>
         )}
@@ -439,21 +377,23 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
           <Button variant="outline" onClick={() => {
             if (step === 'upload') handleClose(false);
             else if (step === 'mapping') setStep('upload');
-            else if (step === 'preview') setStep('mapping');
+            else setStep('mapping');
           }}>
             {step === 'upload' ? 'Отмена' : 'Назад'}
           </Button>
 
           {step === 'mapping' && (
-            <Button onClick={handleMappingNext} disabled={!mapping.name || !mapping.amount}>
+            <Button 
+              onClick={handleMappingNext}
+              disabled={!mapping.name || !mapping.amount}
+            >
               Далее
             </Button>
           )}
 
           {step === 'preview' && (
-            <Button onClick={handleImport} disabled={stats.expenseCount + stats.incomeCount === 0}>
-              <Check className="mr-2 h-4 w-4" />
-              Импортировать {stats.expenseCount + stats.incomeCount} статей
+            <Button onClick={handleImport} disabled={stats.count === 0}>
+              Импортировать {stats.count} статей
             </Button>
           )}
         </div>
