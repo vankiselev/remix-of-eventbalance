@@ -418,45 +418,49 @@ const Layout = ({ children }: LayoutProps) => {
       ) : (
         /* Mobile Layout */
         <div className="flex-1 flex flex-col overflow-x-hidden">
-          {/* Mobile Header */}
-          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-            <div className="flex h-14 items-center px-4 justify-between">
-              {/* Page Title */}
-              <h1 className="text-lg font-semibold text-foreground">
-                {getPageTitle()}
-              </h1>
-              
-              {/* Right Actions: Notifications & Profile */}
-              <div className="flex items-center gap-2">
-                <NotificationsMenu />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/profile')}
-                  className="h-9 w-9 p-0 rounded-full"
-                >
-                  <Avatar className="h-8 w-8">
-                    {avatarUrl && (
-                      <AvatarImage src={avatarUrl} alt={displayName} />
-                    )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
+          {/* Mobile Header - hidden when in messages with active chat */}
+          {location.pathname !== '/messages' && (
+            <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
+              <div className="flex h-14 items-center px-4 justify-between">
+                {/* Page Title */}
+                <h1 className="text-lg font-semibold text-foreground">
+                  {getPageTitle()}
+                </h1>
+                
+                {/* Right Actions: Notifications & Profile */}
+                <div className="flex items-center gap-2">
+                  <NotificationsMenu />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/profile')}
+                    className="h-9 w-9 p-0 rounded-full"
+                  >
+                    <Avatar className="h-8 w-8">
+                      {avatarUrl && (
+                        <AvatarImage src={avatarUrl} alt={displayName} />
+                      )}
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
 
           <main className={cn(
             "flex-1 w-full overflow-x-hidden",
             location.pathname === '/messages' 
-              ? "overflow-hidden flex flex-col min-h-0" 
+              ? "overflow-hidden flex flex-col min-h-0 h-[100dvh]" 
               : "overflow-auto px-4 py-6 pb-28"
           )}>
             {children}
           </main>
-          <MobileBottomNav />
+          
+          {/* Hide bottom nav on messages page */}
+          {location.pathname !== '/messages' && <MobileBottomNav />}
         </div>
       )}
       

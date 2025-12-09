@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Paperclip, X, Info, ArrowLeft } from "lucide-react";
+import { Send, Paperclip, X, Info, ArrowLeft, ArrowDown } from "lucide-react";
 import { useMessages, type Message } from "@/hooks/useMessages";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -23,8 +22,11 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
   const [messageText, setMessageText] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   
   const { messages, isLoading, sendMessage, isSending, markAsRead } = useMessages(chatRoomId);
@@ -59,22 +61,59 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
 
   const displayInfo = getChatDisplayInfo();
 
+  // Scroll to bottom
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  };
+
+  // Initial scroll and on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    scrollToBottom(false);
+  }, [messages.length]);
 
   useEffect(() => {
     markAsRead();
   }, [chatRoomId, markAsRead]);
 
-  const handleSend = () => {
+  // Handle scroll to show/hide scroll button
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollHeight, scrollTop, clientHeight } = scrollRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShowScrollButton(!isNearBottom);
+  };
+
+  // iOS keyboard handling
+  useEffect(() => {
+    if (!isMobile || typeof window === 'undefined' || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    
+    const handleResize = () => {
+      const offset = window.innerHeight - viewport.height;
+      setKeyboardHeight(offset > 50 ? offset : 0);
+    };
+
+    viewport.addEventListener('resize', handleResize);
+    viewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      viewport.removeEventListener('resize', handleResize);
+      viewport.removeEventListener('scroll', handleResize);
+    };
+  }, [isMobile]);
+
+  const handleSend = async () => {
     if ((!messageText.trim() && selectedFiles.length === 0) || isSending) return;
 
-    sendMessage({ content: messageText, files: selectedFiles });
-    setMessageText("");
-    setSelectedFiles([]);
+    try {
+      await sendMessage({ content: messageText, files: selectedFiles });
+      setMessageText("");
+      setSelectedFiles([]);
+      setTimeout(() => scrollToBottom(), 100);
+    } catch (error) {
+      console.error("Failed to send:", error);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,15 +127,25 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full">Загрузка...</div>;
+    return (
+      <div className="flex items-center justify-center h-full bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-full max-h-full bg-[hsl(var(--whatsapp-bg))]">
-      {/* WhatsApp-style header with actual chat info */}
-      <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between flex-shrink-0 h-16">
+    <div 
+      className="flex flex-col bg-background"
+      style={{ 
+        height: isMobile ? '100dvh' : '100%',
+        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined
+      }}
+    >
+      {/* Header */}
+      <div className="bg-card border-b px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          {isMobile && onBack && (
+          {onBack && (
             <Button 
               variant="ghost" 
               size="icon"
@@ -108,17 +157,17 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
           )}
           <Avatar className="w-10 h-10 shrink-0">
             <AvatarImage src={displayInfo.avatar || undefined} />
-            <AvatarFallback className="text-sm font-medium bg-muted">
+            <AvatarFallback className="text-sm font-medium bg-primary/10 text-primary">
               {displayInfo.initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
             <h3 className="font-semibold text-[15px] truncate">{displayInfo.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {chat?.is_group 
-                ? `${chat.participants?.length || 0} участников` 
-                : "онлайн"}
-            </p>
+            {chat?.is_group && (
+              <p className="text-xs text-muted-foreground">
+                {chat.participants?.length || 0} участников
+              </p>
+            )}
           </div>
         </div>
         <Button 
@@ -131,110 +180,130 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
         </Button>
       </div>
 
-      {/* Messages area with WhatsApp pattern background */}
+      {/* Messages area */}
       <div 
-        className="flex-1 h-0 overflow-y-auto overflow-x-hidden px-4 py-6" 
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 bg-muted/20 relative" 
         ref={scrollRef}
-        style={{
-          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px)`
-        }}
+        onScroll={handleScroll}
       >
-        <div className="space-y-2 max-w-5xl mx-auto">
-          {messages.map((message: Message) => {
-            const isOwn = message.sender_id === currentUserId;
-            
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-2 items-end",
-                  isOwn ? "flex-row-reverse" : "flex-row"
-                )}
-              >
-                {!isOwn && (
-                  <Avatar className="w-8 h-8 mb-1">
-                    <AvatarImage src={message.sender?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {message.sender?.full_name?.substring(0, 2).toUpperCase() || "??"}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-
-                {/* WhatsApp-style message bubble */}
+        <div className="space-y-2 max-w-3xl mx-auto min-h-full flex flex-col justify-end">
+          {messages.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-muted-foreground text-sm">Нет сообщений</p>
+            </div>
+          ) : (
+            messages.map((message: Message) => {
+              const isOwn = message.sender_id === currentUserId;
+              
+              return (
                 <div
+                  key={message.id}
                   className={cn(
-                    "max-w-[75%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
-                    isOwn 
-                      ? "bg-[hsl(var(--whatsapp-own-message))] rounded-br-none" 
-                      : "bg-white dark:bg-muted rounded-bl-none"
+                    "flex gap-2 items-end",
+                    isOwn ? "flex-row-reverse" : "flex-row"
                   )}
                 >
                   {!isOwn && (
-                    <p className="text-[13px] font-semibold mb-1 text-[hsl(var(--whatsapp-primary))]">
-                      {message.sender?.full_name}
-                    </p>
-                  )}
-                  
-                  {message.content && (
-                    <p className="text-[14.2px] text-foreground break-words leading-[19px]">
-                      {message.content}
-                    </p>
+                    <Avatar className="w-8 h-8 mb-1 shrink-0">
+                      <AvatarImage src={message.sender?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {message.sender?.full_name?.substring(0, 2).toUpperCase() || "??"}
+                      </AvatarFallback>
+                    </Avatar>
                   )}
 
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {message.attachments.map(att => (
-                        <a
-                          key={att.id}
-                          href={att.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-[13px] text-blue-600 hover:underline"
-                        >
-                          <Paperclip className="w-3.5 h-3.5" />
-                          {att.file_name}
-                        </a>
-                      ))}
-                    </div>
-                  )}
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-2xl px-4 py-2 shadow-sm",
+                      isOwn 
+                        ? "bg-primary text-primary-foreground rounded-br-md" 
+                        : "bg-card border rounded-bl-md"
+                    )}
+                  >
+                    {!isOwn && chat?.is_group && (
+                      <p className="text-xs font-semibold mb-1 text-primary">
+                        {message.sender?.full_name}
+                      </p>
+                    )}
+                    
+                    {message.content && (
+                      <p className="text-sm break-words whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    )}
 
-                  <div className="flex items-center justify-end gap-1 mt-1">
-                    <span className="text-[11px] text-muted-foreground">
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {message.attachments.map(att => (
+                          <a
+                            key={att.id}
+                            href={att.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "flex items-center gap-2 text-xs underline",
+                              isOwn ? "text-primary-foreground/80" : "text-primary"
+                            )}
+                          >
+                            <Paperclip className="w-3 h-3" />
+                            <span className="truncate">{att.file_name}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className={cn(
+                      "text-[10px] mt-1 text-right",
+                      isOwn ? "text-primary-foreground/60" : "text-muted-foreground"
+                    )}>
                       {format(new Date(message.created_at), "HH:mm", { locale: ru })}
-                    </span>
+                    </p>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute bottom-4 right-4 rounded-full shadow-lg h-10 w-10"
+            onClick={() => scrollToBottom()}
+          >
+            <ArrowDown className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
-      {/* WhatsApp-style input footer */}
-      <div className={cn(
-        "bg-[hsl(var(--whatsapp-hover))] border-t border-border/50 px-4 py-3 space-y-2 flex-shrink-0",
-        isMobile && "pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
-      )}>
-        {selectedFiles.length > 0 && (
+      {/* Selected files */}
+      {selectedFiles.length > 0 && (
+        <div className="px-4 py-2 bg-card border-t shrink-0">
           <div className="flex flex-wrap gap-2">
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 bg-white dark:bg-muted rounded-lg px-3 py-1.5 text-sm shadow-sm"
+                className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5 text-sm"
               >
                 <Paperclip className="w-4 h-4 text-muted-foreground" />
                 <span className="max-w-[150px] truncate">{file.name}</span>
                 <button
                   onClick={() => removeFile(index)}
-                  className="ml-1 hover:text-destructive"
+                  className="hover:text-destructive"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Input */}
+      <div className="bg-card border-t px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
@@ -248,7 +317,7 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
             variant="ghost"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 hover:bg-white/50"
+            className="shrink-0"
           >
             <Paperclip className="w-5 h-5" />
           </Button>
@@ -256,17 +325,17 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
           <Input
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            placeholder="Введите сообщение..."
+            placeholder="Сообщение..."
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             disabled={isSending}
-            className="bg-white dark:bg-muted border-none shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 rounded-lg"
+            className="flex-1 rounded-full bg-muted border-0"
           />
 
           <Button 
             onClick={handleSend} 
-            disabled={isSending}
+            disabled={isSending || (!messageText.trim() && selectedFiles.length === 0)}
             size="icon"
-            className="shrink-0 bg-[hsl(var(--whatsapp-primary))] hover:bg-[hsl(var(--whatsapp-primary-dark))] text-white rounded-full"
+            className="shrink-0 rounded-full"
           >
             <Send className="w-4 h-4" />
           </Button>
