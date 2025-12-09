@@ -10,14 +10,16 @@ import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ChatMediaPanel } from "./ChatMediaPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { ChatRoom } from "@/hooks/useChats";
 
 interface ChatWindowProps {
   chatRoomId: string;
+  chat?: ChatRoom;
   currentUserId: string;
   onBack?: () => void;
 }
 
-export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProps) => {
+export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWindowProps) => {
   const [messageText, setMessageText] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
@@ -26,6 +28,36 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
   const isMobile = useIsMobile();
   
   const { messages, isLoading, sendMessage, isSending, markAsRead } = useMessages(chatRoomId);
+
+  // Get chat name and avatar
+  const getChatDisplayInfo = () => {
+    if (!chat) {
+      return { name: "Чат", avatar: null, initials: "ЧТ" };
+    }
+
+    if (chat.is_group) {
+      return {
+        name: chat.name || "Групповой чат",
+        avatar: chat.avatar_url,
+        initials: (chat.name || "ГЧ").substring(0, 2).toUpperCase(),
+      };
+    }
+
+    // For 1-on-1 chats, show the other participant's name
+    const otherParticipant = chat.participants?.find(p => p.user_id !== currentUserId);
+    if (otherParticipant?.profiles) {
+      const name = otherParticipant.profiles.full_name;
+      return {
+        name,
+        avatar: otherParticipant.profiles.avatar_url,
+        initials: name?.substring(0, 2).toUpperCase() || "??",
+      };
+    }
+
+    return { name: "Чат", avatar: null, initials: "ЧТ" };
+  };
+
+  const displayInfo = getChatDisplayInfo();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -61,9 +93,9 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
 
   return (
     <div className="flex flex-col h-full max-h-full bg-[hsl(var(--whatsapp-bg))]">
-      {/* WhatsApp-style header */}
+      {/* WhatsApp-style header with actual chat info */}
       <div className="bg-[hsl(var(--whatsapp-hover))] border-b border-border/50 px-4 py-3 flex items-center justify-between flex-shrink-0 h-16">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {isMobile && onBack && (
             <Button 
               variant="ghost" 
@@ -74,14 +106,19 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          <Avatar className="w-10 h-10">
+          <Avatar className="w-10 h-10 shrink-0">
+            <AvatarImage src={displayInfo.avatar || undefined} />
             <AvatarFallback className="text-sm font-medium bg-muted">
-              ЧТ
+              {displayInfo.initials}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <h3 className="font-semibold text-[15px]">Чат</h3>
-            <p className="text-xs text-muted-foreground">онлайн</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-[15px] truncate">{displayInfo.name}</h3>
+            <p className="text-xs text-muted-foreground">
+              {chat?.is_group 
+                ? `${chat.participants?.length || 0} участников` 
+                : "онлайн"}
+            </p>
           </div>
         </div>
         <Button 
@@ -129,7 +166,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
                     "max-w-[75%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
                     isOwn 
                       ? "bg-[hsl(var(--whatsapp-own-message))] rounded-br-none" 
-                      : "bg-white rounded-bl-none"
+                      : "bg-white dark:bg-muted rounded-bl-none"
                   )}
                 >
                   {!isOwn && (
@@ -176,14 +213,14 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
       {/* WhatsApp-style input footer */}
       <div className={cn(
         "bg-[hsl(var(--whatsapp-hover))] border-t border-border/50 px-4 py-3 space-y-2 flex-shrink-0",
-        isMobile && "pb-safe"
+        isMobile && "pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
       )}>
         {selectedFiles.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 text-sm shadow-sm"
+                className="flex items-center gap-2 bg-white dark:bg-muted rounded-lg px-3 py-1.5 text-sm shadow-sm"
               >
                 <Paperclip className="w-4 h-4 text-muted-foreground" />
                 <span className="max-w-[150px] truncate">{file.name}</span>
@@ -222,7 +259,7 @@ export const ChatWindow = ({ chatRoomId, currentUserId, onBack }: ChatWindowProp
             placeholder="Введите сообщение..."
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             disabled={isSending}
-            className="bg-white border-none shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 rounded-lg"
+            className="bg-white dark:bg-muted border-none shadow-none focus-visible:ring-1 focus-visible:ring-offset-0 rounded-lg"
           />
 
           <Button 
