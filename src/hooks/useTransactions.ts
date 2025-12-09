@@ -32,6 +32,7 @@ export interface Transaction {
   verified_at?: string | null;
   verification_comment?: string | null;
   import_row_order?: number | null;
+  is_draft?: boolean | null;
 }
 
 interface UseTransactionsOptions {

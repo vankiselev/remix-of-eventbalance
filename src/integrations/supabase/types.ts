@@ -811,6 +811,7 @@ export type Database = {
           id: string
           import_row_order: number | null
           income_amount: number | null
+          is_draft: boolean | null
           linked_transaction_id: string | null
           no_receipt: boolean | null
           no_receipt_reason: string | null
@@ -842,6 +843,7 @@ export type Database = {
           id?: string
           import_row_order?: number | null
           income_amount?: number | null
+          is_draft?: boolean | null
           linked_transaction_id?: string | null
           no_receipt?: boolean | null
           no_receipt_reason?: string | null
@@ -873,6 +875,7 @@ export type Database = {
           id?: string
           import_row_order?: number | null
           income_amount?: number | null
+          is_draft?: boolean | null
           linked_transaction_id?: string | null
           no_receipt?: boolean | null
           no_receipt_reason?: string | null

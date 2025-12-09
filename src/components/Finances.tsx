@@ -86,13 +86,14 @@ const Finances = () => {
   const { setActions } = useFinancesActions();
   const queryClient = useQueryClient();
 
-  // Fetch transactions for review
+  // Fetch transactions for review (exclude drafts)
   const { data: reviewTransactions, isLoading: reviewLoading, refetch: refetchReview } = useQuery({
     queryKey: ['transactions-review', statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('financial_transactions')
         .select('*')
+        .eq('is_draft', false) // Исключаем черновики
         .order('operation_date', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -106,15 +107,15 @@ const Finances = () => {
     enabled: isFinancier && activeTab === 'review',
   });
 
-  // Fetch verification stats with COUNT queries
+  // Fetch verification stats with COUNT queries (exclude drafts)
   const { data: reviewStats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
       const [pendingResult, approvedResult, rejectedResult, totalResult] = await Promise.all([
-        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
-        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'approved'),
-        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('verification_status', 'rejected'),
-        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('is_draft', false).eq('verification_status', 'pending'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('is_draft', false).eq('verification_status', 'approved'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('is_draft', false).eq('verification_status', 'rejected'),
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }).eq('is_draft', false),
       ]);
       
       return {

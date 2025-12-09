@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/utils/formatCurrency";
 import { CategoryIcon } from "./CategoryIcon";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Clock } from "lucide-react";
+import { AlertCircle, Clock, Mic } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatFullName, getInitials } from "@/utils/formatName";
 
@@ -30,6 +30,8 @@ interface TransactionCardProps {
     transfer_rejection_reason?: string | null;
     verification_status?: string | null;
     requires_verification?: boolean | null;
+    is_draft?: boolean | null;
+    no_receipt_reason?: string | null;
   };
   onClick: () => void;
   verification_status?: string | null;
@@ -48,6 +50,8 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
   const isRejectedTransfer = isMoneyTransfer && transaction.transfer_status === 'rejected';
   const isPending = verification_status === 'pending' || transaction.verification_status === 'pending';
+  const isDraft = transaction.is_draft === true;
+  const isVoiceTransaction = transaction.no_receipt_reason?.includes('Siri') || false;
   
   // После категории всегда показываем проект
   const projectName = transaction.static_project_name || transaction.events?.name;
@@ -56,6 +60,7 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
     <div
       onClick={onClick}
       className={`flex items-center gap-3 p-3 md:p-4 hover:bg-accent/50 rounded-lg border cursor-pointer transition-colors ${
+        isDraft ? 'bg-blue-500/5 border-blue-500/30' :
         isPending ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-card border-border'
       }`}
     >
@@ -80,10 +85,19 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {isVoiceTransaction && (
+            <Mic className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          )}
           <span className="font-medium text-sm md:text-base truncate">
             {transaction.description}
           </span>
-          {isPending && (
+          {isDraft && (
+            <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400 gap-1 text-[10px] px-1.5 py-0">
+              <Mic className="h-2.5 w-2.5" />
+              Черновик
+            </Badge>
+          )}
+          {isPending && !isDraft && (
             <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-1 text-[10px] px-1.5 py-0">
               <Clock className="h-2.5 w-2.5" />
               На проверке
