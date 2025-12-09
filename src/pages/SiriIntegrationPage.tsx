@@ -279,7 +279,7 @@ export default function SiriIntegrationPage() {
                 
                 <Alert className="bg-blue-500/10 border-blue-500/30">
                   <AlertDescription className="text-sm">
-                    📱 <strong>iOS 26 (Liquid Glass):</strong> Интерфейс приложения «Команды» обновлён, но названия действий остались прежними. Ищите действия по английским названиям в скобках.
+                    📱 <strong>iOS 26 (Liquid Glass):</strong> Интерфейс обновлён. В новой версии данные добавляются прямо в Request Body внутри «Получить содержимое URL» — отдельный блок «Словарь» не нужен.
                   </AlertDescription>
                 </Alert>
                 
@@ -348,8 +348,8 @@ export default function SiriIntegrationPage() {
                   />
                 </InstructionSection>
 
-                {/* БЛОК B: ШАГ 1 */}
-                <InstructionSection icon={MessageSquare} title="Блок B: Спрашиваем описание транзакции" badge="10 шагов">
+                {/* БЛОК B: ШАГ 1 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
+                <InstructionSection icon={MessageSquare} title="Блок B: Спрашиваем описание транзакции" badge="8 шагов">
                   <InstructionStep
                     number={10}
                     icon={Plus}
@@ -365,51 +365,51 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={12}
                     icon={Plus}
-                    title="Нажмите «+» → найдите «Словарь» (Dictionary)"
-                    action="Выберите это действие"
-                  />
-                  <InstructionStep
-                    number={13}
-                    icon={FileJson}
-                    title="Добавьте 3 строки в словарь (нажмите «Добавить новый элемент» / Add new item):"
-                    description="Ключ: step → Значение (текст): 1"
-                  />
-                  <InstructionStep
-                    number={14}
-                    icon={FileJson}
-                    title="Вторая строка словаря:"
-                    description="Ключ: text → Нажмите на значение → Выберите «Полученный ввод» (Provided Input)"
-                    note="Это голубая переменная сверху"
-                  />
-                  <InstructionStep
-                    number={15}
-                    icon={FileJson}
-                    title="Третья строка словаря:"
-                    description="Ключ: apiKey → Нажмите на значение → Выберите переменную «apiKey»"
-                    note="Это переменная, которую вы создали в Блоке A"
-                  />
-                  <InstructionStep
-                    number={16}
-                    icon={Plus}
                     title="Нажмите «+» → найдите «Получить содержимое URL» (Get Contents of URL)"
                     action="Выберите это действие"
                   />
                   <InstructionStep
-                    number={17}
+                    number={13}
                     icon={Globe}
                     title="В поле URL вставьте:"
                     value={apiUrl}
                     note="Скопируйте URL выше"
                   />
                   <InstructionStep
-                    number={18}
+                    number={14}
                     icon={Globe}
                     title="Нажмите «Показать ещё» (Show More) под URL"
-                    action="Метод (Method): POST"
-                    description="Тело запроса (Request Body): JSON → выберите «Словарь» (Dictionary) из списка выше"
+                    action="Метод (Method): выберите POST"
+                    description="Тело запроса (Request Body): выберите JSON"
                   />
                   <InstructionStep
-                    number={19}
+                    number={15}
+                    icon={FileJson}
+                    title="Добавьте 3 поля в Request Body (нажимайте «Добавить новое поле» / Add new field):"
+                    description="Для каждого поля выбирайте тип Text"
+                  />
+                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">step</Badge>
+                      <span className="text-muted-foreground">→ значение:</span>
+                      <code className="bg-background px-2 py-0.5 rounded">1</code>
+                      <span className="text-xs text-muted-foreground">(тип: Text)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">text</Badge>
+                      <span className="text-muted-foreground">→ значение:</span>
+                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                      <span className="text-xs text-muted-foreground">(голубая переменная)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">apiKey</Badge>
+                      <span className="text-muted-foreground">→ значение:</span>
+                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                      <span className="text-xs text-muted-foreground">(переменная из Блока A)</span>
+                    </div>
+                  </div>
+                  <InstructionStep
+                    number={16}
                     icon={Plus}
                     title="Нажмите «+» → найдите «Получить значение из словаря» (Get Dictionary Value)"
                     action="Ключ (Key): message"
@@ -417,92 +417,116 @@ export default function SiriIntegrationPage() {
                   />
                 </InstructionSection>
 
-                {/* БЛОК C: ШАГ 2 */}
-                <InstructionSection icon={MessageSquare} title="Блок C: Спрашиваем проект" badge="7 шагов">
+                {/* БЛОК C: ШАГ 2 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
+                <InstructionSection icon={MessageSquare} title="Блок C: Спрашиваем проект" badge="6 шагов">
                   <InstructionStep
-                    number={20}
+                    number={17}
                     icon={Plus}
                     title="Нажмите «+» → «Показать результат» (Show Result)"
-                    action="Выберите «Значение словаря» (Dictionary Value) — это message из шага 19"
+                    action="Выберите «Значение словаря» (Dictionary Value) — это message из шага 16"
                     note="Siri озвучит: «Расход 500₽ — Такси. Какой проект?»"
                   />
                   <InstructionStep
-                    number={21}
+                    number={18}
                     icon={Plus}
                     title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
                     value="Скажите проект или «без проекта»"
                   />
                   <InstructionStep
-                    number={22}
-                    icon={Plus}
-                    title="Нажмите «+» → «Словарь» (Dictionary)"
-                    description="Создайте новый словарь для второго запроса"
-                  />
-                  <InstructionStep
-                    number={23}
-                    icon={FileJson}
-                    title="Добавьте 3 строки:"
-                    description="step = 2, text = Полученный ввод (Provided Input), apiKey = переменная apiKey"
-                  />
-                  <InstructionStep
-                    number={24}
+                    number={19}
                     icon={Plus}
                     title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
-                    description="URL: тот же. Метод (Method): POST. Тело (Request Body): JSON → Словарь (Dictionary)"
+                    description="URL: тот же. Method: POST. Request Body: JSON"
                   />
                   <InstructionStep
-                    number={25}
+                    number={20}
+                    icon={FileJson}
+                    title="Добавьте 3 поля в Request Body:"
+                  />
+                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">step</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <code className="bg-background px-2 py-0.5 rounded">2</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">text</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">apiKey</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                    </div>
+                  </div>
+                  <InstructionStep
+                    number={21}
                     icon={Plus}
                     title="Нажмите «+» → «Получить значение из словаря» (Get Dictionary Value)"
                     action="Ключ (Key): projectId"
-                    note="Сохраните в переменную если нужно"
+                    note="Сохраните в переменную «projectId» через Set Variable"
                   />
                   <InstructionStep
-                    number={26}
+                    number={22}
                     icon={Plus}
-                    title="Повторите для ключей: staticProjectName и message"
+                    title="Повторите: получите staticProjectName и message"
                     description="message покажите через «Показать результат» (Show Result)"
                   />
                 </InstructionSection>
 
-                {/* БЛОК D: ШАГ 3 */}
-                <InstructionSection icon={Wallet} title="Блок D: Спрашиваем кошелёк и создаём транзакцию" badge="6 шагов">
+                {/* БЛОК D: ШАГ 3 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
+                <InstructionSection icon={Wallet} title="Блок D: Спрашиваем кошелёк и создаём транзакцию" badge="5 шагов">
                   <InstructionStep
-                    number={27}
+                    number={23}
                     icon={Plus}
                     title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
                     value="Какой кошелёк?"
                   />
                   <InstructionStep
-                    number={28}
-                    icon={Plus}
-                    title="Нажмите «+» → «Словарь» (Dictionary)"
-                    description="Финальный словарь с данными транзакции"
-                  />
-                  <InstructionStep
-                    number={29}
-                    icon={FileJson}
-                    title="Добавьте строки:"
-                    description="step = 3, cashType = Полученный ввод (Provided Input), apiKey = apiKey, step1Data = данные из шага 1"
-                    note="Для step1Data нужно сохранить весь ответ первого запроса"
-                  />
-                  <InstructionStep
-                    number={30}
-                    icon={Plus}
-                    title="Также добавьте projectId и staticProjectName"
-                    description="Из шага 25-26"
-                  />
-                  <InstructionStep
-                    number={31}
+                    number={24}
                     icon={Plus}
                     title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
-                    description="URL: тот же. Метод (Method): POST. Тело (Request Body): JSON → Словарь (Dictionary)"
+                    description="URL: тот же. Method: POST. Request Body: JSON"
                   />
                   <InstructionStep
-                    number={32}
+                    number={25}
+                    icon={FileJson}
+                    title="Добавьте поля в Request Body:"
+                  />
+                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">step</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <code className="bg-background px-2 py-0.5 rounded">3</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">cashType</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">apiKey</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">projectId</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">projectId</Badge>
+                      <span className="text-xs text-muted-foreground">(из шага 21)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">staticProjectName</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="secondary" className="font-normal">staticProjectName</Badge>
+                    </div>
+                  </div>
+                  <InstructionStep
+                    number={26}
                     icon={Plus}
                     title="Нажмите «+» → «Показать результат» (Show Result)"
-                    action="Получите message из ответа"
+                    action="Получите message из ответа через «Получить значение из словаря»"
                     note="Siri скажет: «Готово! Черновик создан»"
                   />
                 </InstructionSection>
@@ -510,13 +534,13 @@ export default function SiriIntegrationPage() {
                 {/* ЗАВЕРШЕНИЕ */}
                 <InstructionSection icon={CheckCircle2} title="Завершение" badge="2 шага">
                   <InstructionStep
-                    number={33}
+                    number={27}
                     icon={Type}
                     title="Нажмите на «Новая команда» вверху экрана"
                     action="Переименуйте в «Добавь транзакцию»"
                   />
                   <InstructionStep
-                    number={34}
+                    number={28}
                     icon={CheckCircle2}
                     title="Нажмите «Готово» в правом верхнем углу"
                     description="Команда сохранена! Скажите «Привет Siri, добавь транзакцию»"
