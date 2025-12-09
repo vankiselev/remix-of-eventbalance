@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Copy, CheckCircle2, Key, Smartphone, MessageSquare, Mic, Wallet, ChevronRight, Search, Plus, Type, Variable, Globe, FileJson, Eye } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Copy, CheckCircle2, Key, Smartphone, MessageSquare, Mic, Wallet, ChevronRight, Search, Plus, Type, Variable, Globe, FileJson, Eye, AlertTriangle, ArrowRight, Save, Database, Zap, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -37,7 +38,8 @@ const InstructionStep = ({
   description, 
   action,
   value,
-  note
+  note,
+  important
 }: { 
   number: number;
   icon: React.ElementType;
@@ -46,15 +48,17 @@ const InstructionStep = ({
   action?: string;
   value?: string;
   note?: string;
+  important?: boolean;
 }) => (
-  <div className="flex gap-4 py-3">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+  <div className={`flex gap-4 py-3 ${important ? 'bg-amber-500/5 -mx-2 px-2 rounded-lg border border-amber-500/20' : ''}`}>
+    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${important ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'}`}>
       {number}
     </div>
     <div className="flex-1 space-y-2">
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <span className="font-medium">{title}</span>
+        {important && <Badge variant="destructive" className="text-xs">ВАЖНО</Badge>}
       </div>
       {description && (
         <p className="text-sm text-muted-foreground">{description}</p>
@@ -82,25 +86,169 @@ const InstructionSection = ({
   icon: Icon, 
   title, 
   badge,
+  variant = 'default',
   children 
 }: { 
   icon: React.ElementType;
   title: string;
   badge?: string;
+  variant?: 'default' | 'success' | 'warning';
   children: React.ReactNode;
-}) => (
-  <div className="border rounded-lg p-4 space-y-3">
-    <div className="flex items-center gap-2">
-      <div className="p-2 bg-primary/10 rounded-lg">
-        <Icon className="h-5 w-5 text-primary" />
+}) => {
+  const bgColor = variant === 'success' ? 'bg-green-500/10' : variant === 'warning' ? 'bg-amber-500/10' : 'bg-primary/10';
+  const textColor = variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-amber-600' : 'text-primary';
+  
+  return (
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className={`p-2 ${bgColor} rounded-lg`}>
+          <Icon className={`h-5 w-5 ${textColor}`} />
+        </div>
+        <h3 className="font-semibold text-lg">{title}</h3>
+        {badge && (
+          <Badge variant="secondary" className="ml-auto">{badge}</Badge>
+        )}
       </div>
-      <h3 className="font-semibold text-lg">{title}</h3>
-      {badge && (
-        <Badge variant="secondary" className="ml-auto">{badge}</Badge>
-      )}
+      <div className="divide-y">
+        {children}
+      </div>
     </div>
-    <div className="divide-y">
-      {children}
+  );
+};
+
+// Компонент для визуальной схемы потока данных
+const DataFlowDiagram = () => (
+  <div className="p-4 bg-muted/50 rounded-lg border">
+    <h4 className="font-semibold mb-4 flex items-center gap-2">
+      <Database className="h-4 w-4" />
+      Схема потока данных между шагами
+    </h4>
+    <div className="space-y-4">
+      {/* Step 1 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3 flex-1 min-w-[200px]">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="bg-blue-500">Шаг 1</Badge>
+            <span className="text-sm font-medium">Описание транзакции</span>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>📥 Ввод: <code>"Такси 500 рублей"</code></div>
+            <div>📤 Ответ: <code>step1Data</code> (amount, description, type, category)</div>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-2">
+          <div className="flex items-center gap-1">
+            <Save className="h-3 w-3" />
+            <span className="text-xs font-medium">Сохранить</span>
+          </div>
+          <code className="text-xs">step1Data</code>
+        </div>
+      </div>
+
+      {/* Step 2 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="bg-purple-500/20 border border-purple-500/30 rounded-lg p-3 flex-1 min-w-[200px]">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="bg-purple-500">Шаг 2</Badge>
+            <span className="text-sm font-medium">Выбор проекта</span>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>📥 Ввод: <code>"Саманта"</code></div>
+            <div>📤 Ответ: <code>projectId</code>, <code>staticProjectName</code></div>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-2">
+          <div className="flex items-center gap-1">
+            <Save className="h-3 w-3" />
+            <span className="text-xs font-medium">Сохранить</span>
+          </div>
+          <code className="text-xs block">projectId</code>
+          <code className="text-xs block">staticProjectName</code>
+        </div>
+      </div>
+
+      {/* Step 3 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="bg-orange-500/20 border border-orange-500/30 rounded-lg p-3 flex-1 min-w-[200px]">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="bg-orange-500">Шаг 3</Badge>
+            <span className="text-sm font-medium">Кошелёк + создание</span>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>📥 Нужно передать: <code>step1Data</code> + <code>projectId</code> + <code>staticProjectName</code> + <code>cashType</code></div>
+            <div>📤 Результат: Черновик транзакции создан ✅</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <Alert className="mt-4 bg-amber-500/10 border-amber-500/30">
+      <AlertTriangle className="h-4 w-4" />
+      <AlertDescription className="text-sm">
+        <strong>Ключевой момент:</strong> Каждый ответ сервера нужно сохранить в переменную через <code>Set Variable</code>, иначе данные потеряются и шаг 3 не сможет создать транзакцию!
+      </AlertDescription>
+    </Alert>
+  </div>
+);
+
+// Компонент для отображения ошибок и их решений
+const TroubleshootingSection = () => (
+  <div className="space-y-4">
+    <h4 className="font-semibold flex items-center gap-2">
+      <HelpCircle className="h-4 w-4" />
+      Частые ошибки и их решения
+    </h4>
+    
+    <div className="space-y-3">
+      <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+          <div>
+            <p className="font-medium text-sm">Invalid API key</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Проверьте: (1) переменная называется точно <code>apiKey</code>, (2) ключ скопирован полностью без пробелов, (3) в Request Body поле apiKey использует переменную, а не текст
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+          <div>
+            <p className="font-medium text-sm">step1Data and cashType are required for step 3</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Вы не сохранили <code>step1Data</code> в переменную после шага 1. Убедитесь, что после каждого "Get Contents of URL" вы используете "Get Dictionary Value" и "Set Variable" для сохранения данных.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+          <div>
+            <p className="font-medium text-sm">projectId required</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Не сохранён projectId после шага 2. Используйте "Get Dictionary Value" с ключом <code>projectId</code> и сохраните результат в переменную.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+        <div className="flex items-start gap-2">
+          <Zap className="h-4 w-4 text-amber-500 mt-0.5" />
+          <div>
+            <p className="font-medium text-sm">Siri говорит "Произошла ошибка"</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Обычно проблема с JSON в Request Body. Убедитесь, что: (1) выбран метод POST, (2) Request Body = JSON, (3) все поля имеют тип Text, (4) значения переменных вставлены корректно.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -264,298 +412,408 @@ export default function SiriIntegrationPage() {
 
         {apiKey && (
           <>
-            {/* Detailed Instructions */}
+            {/* Mode Selection */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5" />
-                  Шаг 2: Создайте команду в приложении "Команды"
+                  Шаг 2: Выберите режим настройки
                 </CardTitle>
                 <CardDescription>
-                  Следуйте инструкциям шаг за шагом. Каждый шаг = одно действие.
+                  Выберите способ настройки в зависимости от ваших предпочтений
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                
-                <Alert className="bg-blue-500/10 border-blue-500/30">
-                  <AlertDescription className="text-sm">
-                    📱 <strong>iOS 26 (Liquid Glass):</strong> Интерфейс обновлён. В новой версии данные добавляются прямо в Request Body внутри «Получить содержимое URL» — отдельный блок «Словарь» не нужен.
-                  </AlertDescription>
-                </Alert>
-                
-                {/* ПОДГОТОВКА */}
-                <InstructionSection icon={Smartphone} title="Подготовка" badge="3 шага">
-                  <InstructionStep
-                    number={1}
-                    icon={Smartphone}
-                    title="Откройте приложение «Команды» (Shortcuts) на iPhone"
-                    description="Это стандартное приложение Apple. Если его нет — скачайте из App Store."
-                  />
-                  <InstructionStep
-                    number={2}
-                    icon={Plus}
-                    title="Нажмите «+» в правом верхнем углу"
-                    description="Создаём новую команду (shortcut)"
-                  />
-                  <InstructionStep
-                    number={3}
-                    icon={Plus}
-                    title="Нажмите «Добавить действие» (Add Action)"
-                    description="Откроется каталог действий"
-                  />
-                </InstructionSection>
+              <CardContent>
+                <Tabs defaultValue="legacy" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="legacy" className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Простой (рекомендуется)
+                    </TabsTrigger>
+                    <TabsTrigger value="multistep" className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Многошаговый
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* БЛОК A: API КЛЮЧ */}
-                <InstructionSection icon={Key} title="Блок A: Сохраняем API ключ" badge="6 шагов">
-                  <InstructionStep
-                    number={4}
-                    icon={Search}
-                    title="В поиске введите «Текст» (Text)"
-                    action="Выберите действие «Текст» (Text) из результатов"
-                  />
-                  <InstructionStep
-                    number={5}
-                    icon={Type}
-                    title="Нажмите на слово «Текст» (Text) в добавленном блоке"
-                    action="Вставьте ваш API ключ (скопируйте выше)"
-                    value={apiKey.substring(0, 10) + "..."}
-                    note="Весь ключ целиком, без пробелов"
-                  />
-                  <InstructionStep
-                    number={6}
-                    icon={Plus}
-                    title="Нажмите синюю кнопку «+» под блоком «Текст» (Text)"
-                    description="Добавляем следующее действие"
-                  />
-                  <InstructionStep
-                    number={7}
-                    icon={Search}
-                    title="В поиске введите «Задать переменную» (Set Variable)"
-                    action="Выберите это действие"
-                  />
-                  <InstructionStep
-                    number={8}
-                    icon={Variable}
-                    title="В поле «Имя переменной» (Variable Name) напишите:"
-                    value="apiKey"
-                    note="Точно так, с маленькой буквы"
-                  />
-                  <InstructionStep
-                    number={9}
-                    icon={Eye}
-                    title="Убедитесь, что в строке «на:» (to:) стоит «Текст» (Text)"
-                    description="Это значит переменная apiKey = вашему ключу"
-                  />
-                </InstructionSection>
+                  {/* LEGACY MODE */}
+                  <TabsContent value="legacy" className="space-y-6 mt-6">
+                    <Alert className="bg-green-500/10 border-green-500/30">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Рекомендуем начать с этого режима!</strong> Простая настройка за 5 минут. Вы говорите всё в одной фразе.
+                      </AlertDescription>
+                    </Alert>
 
-                {/* БЛОК B: ШАГ 1 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
-                <InstructionSection icon={MessageSquare} title="Блок B: Спрашиваем описание транзакции" badge="8 шагов">
-                  <InstructionStep
-                    number={10}
-                    icon={Plus}
-                    title="Нажмите «+» → найдите «Запросить ввод» (Ask for Input)"
-                    action="Выберите это действие"
-                  />
-                  <InstructionStep
-                    number={11}
-                    icon={Type}
-                    title="В поле «Запрос» (Prompt) напишите:"
-                    value="Опишите трату или доход и сумму"
-                  />
-                  <InstructionStep
-                    number={12}
-                    icon={Plus}
-                    title="Нажмите «+» → найдите «Получить содержимое URL» (Get Contents of URL)"
-                    action="Выберите это действие"
-                  />
-                  <InstructionStep
-                    number={13}
-                    icon={Globe}
-                    title="В поле URL вставьте:"
-                    value={apiUrl}
-                    note="Скопируйте URL выше"
-                  />
-                  <InstructionStep
-                    number={14}
-                    icon={Globe}
-                    title="Нажмите «Показать ещё» (Show More) под URL"
-                    action="Метод (Method): выберите POST"
-                    description="Тело запроса (Request Body): выберите JSON"
-                  />
-                  <InstructionStep
-                    number={15}
-                    icon={FileJson}
-                    title="Добавьте 3 поля в Request Body (нажимайте «Добавить новое поле» / Add new field):"
-                    description="Для каждого поля выбирайте тип Text"
-                  />
-                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">step</Badge>
-                      <span className="text-muted-foreground">→ значение:</span>
-                      <code className="bg-background px-2 py-0.5 rounded">1</code>
-                      <span className="text-xs text-muted-foreground">(тип: Text)</span>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <h4 className="font-semibold mb-2">Пример голосовой команды:</h4>
+                      <p className="text-sm italic text-muted-foreground">
+                        «Такси пятьсот рублей, проект Саманта, наличка Настя»
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">text</Badge>
-                      <span className="text-muted-foreground">→ значение:</span>
-                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
-                      <span className="text-xs text-muted-foreground">(голубая переменная)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">apiKey</Badge>
-                      <span className="text-muted-foreground">→ значение:</span>
-                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
-                      <span className="text-xs text-muted-foreground">(переменная из Блока A)</span>
-                    </div>
-                  </div>
-                  <InstructionStep
-                    number={16}
-                    icon={Plus}
-                    title="Нажмите «+» → найдите «Получить значение из словаря» (Get Dictionary Value)"
-                    action="Ключ (Key): message"
-                    description="Это покажет ответ Siri с подтверждением"
-                  />
-                </InstructionSection>
 
-                {/* БЛОК C: ШАГ 2 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
-                <InstructionSection icon={MessageSquare} title="Блок C: Спрашиваем проект" badge="6 шагов">
-                  <InstructionStep
-                    number={17}
-                    icon={Plus}
-                    title="Нажмите «+» → «Показать результат» (Show Result)"
-                    action="Выберите «Значение словаря» (Dictionary Value) — это message из шага 16"
-                    note="Siri озвучит: «Расход 500₽ — Такси. Какой проект?»"
-                  />
-                  <InstructionStep
-                    number={18}
-                    icon={Plus}
-                    title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
-                    value="Скажите проект или «без проекта»"
-                  />
-                  <InstructionStep
-                    number={19}
-                    icon={Plus}
-                    title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
-                    description="URL: тот же. Method: POST. Request Body: JSON"
-                  />
-                  <InstructionStep
-                    number={20}
-                    icon={FileJson}
-                    title="Добавьте 3 поля в Request Body:"
-                  />
-                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">step</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <code className="bg-background px-2 py-0.5 rounded">2</code>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">text</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">apiKey</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
-                    </div>
-                  </div>
-                  <InstructionStep
-                    number={21}
-                    icon={Plus}
-                    title="Нажмите «+» → «Получить значение из словаря» (Get Dictionary Value)"
-                    action="Ключ (Key): projectId"
-                    note="Сохраните в переменную «projectId» через Set Variable"
-                  />
-                  <InstructionStep
-                    number={22}
-                    icon={Plus}
-                    title="Повторите: получите staticProjectName и message"
-                    description="message покажите через «Показать результат» (Show Result)"
-                  />
-                </InstructionSection>
+                    <InstructionSection icon={Smartphone} title="Быстрая настройка" badge="6 шагов" variant="success">
+                      <InstructionStep
+                        number={1}
+                        icon={Smartphone}
+                        title="Откройте приложение «Команды» (Shortcuts)"
+                        description="Нажмите «+» в правом верхнем углу → «Добавить действие»"
+                      />
+                      <InstructionStep
+                        number={2}
+                        icon={Search}
+                        title="Найдите «Текст» (Text)"
+                        action="Добавьте действие и вставьте ваш API ключ"
+                        value={apiKey.substring(0, 15) + "..."}
+                      />
+                      <InstructionStep
+                        number={3}
+                        icon={Variable}
+                        title="Нажмите «+» → найдите «Задать переменную» (Set Variable)"
+                        action="Имя переменной: apiKey"
+                        note="Убедитесь, что в поле 'на:' стоит 'Текст' из предыдущего шага"
+                      />
+                      <InstructionStep
+                        number={4}
+                        icon={Search}
+                        title="Нажмите «+» → найдите «Запросить ввод» (Ask for Input)"
+                        value="Скажите транзакцию (сумма, проект, кошелёк)"
+                      />
+                      <InstructionStep
+                        number={5}
+                        icon={Globe}
+                        title="Нажмите «+» → найдите «Получить содержимое URL» (Get Contents of URL)"
+                        description="Настройте как показано ниже"
+                      />
+                      <div className="ml-12 space-y-3 py-3 px-4 bg-muted/50 rounded-lg text-sm">
+                        <div>
+                          <span className="font-medium">URL:</span>
+                          <code className="ml-2 text-xs bg-background px-2 py-1 rounded block mt-1 break-all">{apiUrl}</code>
+                        </div>
+                        <div>
+                          <span className="font-medium">Метод (Method):</span>
+                          <code className="ml-2 bg-background px-2 py-1 rounded">POST</code>
+                        </div>
+                        <div>
+                          <span className="font-medium">Тело запроса (Request Body):</span>
+                          <code className="ml-2 bg-background px-2 py-1 rounded">JSON</code>
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="font-medium mb-2">Добавьте 2 поля (Add new field):</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">text</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">Полученный ввод (Provided Input)</Badge>
+                            <span className="text-xs text-muted-foreground">(голубая переменная)</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">apiKey</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                            <span className="text-xs text-muted-foreground">(переменная из шага 3)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <InstructionStep
+                        number={6}
+                        icon={Eye}
+                        title="Нажмите «+» → «Получить значение из словаря» → «Показать результат»"
+                        action="Ключ: message"
+                        description="Siri озвучит результат создания транзакции"
+                      />
+                    </InstructionSection>
 
-                {/* БЛОК D: ШАГ 3 - ОБНОВЛЁННЫЙ ДЛЯ iOS 26 */}
-                <InstructionSection icon={Wallet} title="Блок D: Спрашиваем кошелёк и создаём транзакцию" badge="5 шагов">
-                  <InstructionStep
-                    number={23}
-                    icon={Plus}
-                    title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
-                    value="Какой кошелёк?"
-                  />
-                  <InstructionStep
-                    number={24}
-                    icon={Plus}
-                    title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
-                    description="URL: тот же. Method: POST. Request Body: JSON"
-                  />
-                  <InstructionStep
-                    number={25}
-                    icon={FileJson}
-                    title="Добавьте поля в Request Body:"
-                  />
-                  <div className="ml-12 space-y-2 py-2 px-3 bg-muted/50 rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">step</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <code className="bg-background px-2 py-0.5 rounded">3</code>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">cashType</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">apiKey</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">apiKey</Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">projectId</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">projectId</Badge>
-                      <span className="text-xs text-muted-foreground">(из шага 21)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">staticProjectName</Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Badge variant="secondary" className="font-normal">staticProjectName</Badge>
-                    </div>
-                  </div>
-                  <InstructionStep
-                    number={26}
-                    icon={Plus}
-                    title="Нажмите «+» → «Показать результат» (Show Result)"
-                    action="Получите message из ответа через «Получить значение из словаря»"
-                    note="Siri скажет: «Готово! Черновик создан»"
-                  />
-                </InstructionSection>
+                    <InstructionSection icon={CheckCircle2} title="Завершение" badge="2 шага" variant="success">
+                      <InstructionStep
+                        number={7}
+                        icon={Type}
+                        title="Нажмите на название «Новая команда» вверху"
+                        action="Переименуйте в «Добавь транзакцию»"
+                      />
+                      <InstructionStep
+                        number={8}
+                        icon={CheckCircle2}
+                        title="Нажмите «Готово»"
+                        description="Скажите «Привет Siri, добавь транзакцию» и продиктуйте всё в одной фразе!"
+                      />
+                    </InstructionSection>
+                  </TabsContent>
 
-                {/* ЗАВЕРШЕНИЕ */}
-                <InstructionSection icon={CheckCircle2} title="Завершение" badge="2 шага">
-                  <InstructionStep
-                    number={27}
-                    icon={Type}
-                    title="Нажмите на «Новая команда» вверху экрана"
-                    action="Переименуйте в «Добавь транзакцию»"
-                  />
-                  <InstructionStep
-                    number={28}
-                    icon={CheckCircle2}
-                    title="Нажмите «Готово» в правом верхнем углу"
-                    description="Команда сохранена! Скажите «Привет Siri, добавь транзакцию»"
-                  />
-                </InstructionSection>
+                  {/* MULTISTEP MODE */}
+                  <TabsContent value="multistep" className="space-y-6 mt-6">
+                    <Alert className="bg-amber-500/10 border-amber-500/30">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Продвинутый режим.</strong> Siri задаёт 3 вопроса по очереди. Сложнее в настройке, но удобнее в использовании. Требует сохранения переменных между шагами.
+                      </AlertDescription>
+                    </Alert>
 
-                <Alert className="bg-amber-500/10 border-amber-500/30">
-                  <AlertDescription>
-                    <p className="font-semibold mb-2">⚠️ Это сложно?</p>
-                    <p className="text-sm">
-                      Пошаговый режим требует много настройки. Если хотите проще — используйте 
-                      <strong> Legacy режим</strong> ниже (одна команда вместо трёх шагов).
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                    {/* Data Flow Diagram */}
+                    <DataFlowDiagram />
+
+                    {/* ПОДГОТОВКА */}
+                    <InstructionSection icon={Smartphone} title="Подготовка" badge="3 шага">
+                      <InstructionStep
+                        number={1}
+                        icon={Smartphone}
+                        title="Откройте приложение «Команды» (Shortcuts) на iPhone"
+                        description="Это стандартное приложение Apple. Если его нет — скачайте из App Store."
+                      />
+                      <InstructionStep
+                        number={2}
+                        icon={Plus}
+                        title="Нажмите «+» в правом верхнем углу"
+                        description="Создаём новую команду (shortcut)"
+                      />
+                      <InstructionStep
+                        number={3}
+                        icon={Plus}
+                        title="Нажмите «Добавить действие» (Add Action)"
+                        description="Откроется каталог действий"
+                      />
+                    </InstructionSection>
+
+                    {/* БЛОК A: API КЛЮЧ */}
+                    <InstructionSection icon={Key} title="Блок A: Сохраняем API ключ" badge="4 шага">
+                      <InstructionStep
+                        number={4}
+                        icon={Search}
+                        title="В поиске введите «Текст» (Text)"
+                        action="Вставьте ваш API ключ целиком"
+                        value={apiKey.substring(0, 15) + "..."}
+                      />
+                      <InstructionStep
+                        number={5}
+                        icon={Plus}
+                        title="Нажмите «+» → найдите «Задать переменную» (Set Variable)"
+                        action="Имя переменной: apiKey"
+                        important
+                        note="Точно так, с маленькой буквы. Это критически важно!"
+                      />
+                    </InstructionSection>
+
+                    {/* БЛОК B: ШАГ 1 */}
+                    <InstructionSection icon={MessageSquare} title="Блок B: Шаг 1 — Описание транзакции" badge="6 шагов">
+                      <InstructionStep
+                        number={6}
+                        icon={Plus}
+                        title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
+                        value="Опишите трату или доход и сумму"
+                      />
+                      <InstructionStep
+                        number={7}
+                        icon={Globe}
+                        title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
+                        description="URL, Метод POST, Request Body JSON — как показано ниже"
+                      />
+                      <div className="ml-12 space-y-2 py-3 px-4 bg-muted/50 rounded-lg text-sm">
+                        <div className="font-medium mb-2">Request Body (3 поля):</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">step</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <code className="bg-background px-2 py-0.5 rounded">1</code>
+                            <span className="text-xs text-muted-foreground">(тип: Text)</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">text</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">apiKey</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                            <span className="text-xs text-muted-foreground">(переменная)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <InstructionStep
+                        number={8}
+                        icon={Variable}
+                        title="ВАЖНО: Сохраните ответ сервера!"
+                        important
+                        description="Нажмите «+» → «Задать переменную» (Set Variable)"
+                        action="Имя переменной: step1Response"
+                        note="В поле 'на:' должно быть 'Содержимое URL' (Contents of URL)"
+                      />
+                      <InstructionStep
+                        number={9}
+                        icon={FileJson}
+                        title="Извлеките step1Data из ответа"
+                        description="Нажмите «+» → «Получить значение из словаря» (Get Dictionary Value)"
+                        action="Словарь: step1Response, Ключ: step1Data"
+                      />
+                      <InstructionStep
+                        number={10}
+                        icon={Save}
+                        title="Сохраните step1Data в переменную"
+                        important
+                        description="Нажмите «+» → «Задать переменную» (Set Variable)"
+                        action="Имя переменной: step1Data"
+                        note="Без этого шаг 3 не сможет создать транзакцию!"
+                      />
+                      <InstructionStep
+                        number={11}
+                        icon={Eye}
+                        title="Покажите сообщение пользователю"
+                        description="«Получить значение из словаря» → Ключ: message → «Показать результат»"
+                      />
+                    </InstructionSection>
+
+                    {/* БЛОК C: ШАГ 2 */}
+                    <InstructionSection icon={Search} title="Блок C: Шаг 2 — Выбор проекта" badge="6 шагов">
+                      <InstructionStep
+                        number={12}
+                        icon={Plus}
+                        title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
+                        value="Скажите проект или «без проекта»"
+                      />
+                      <InstructionStep
+                        number={13}
+                        icon={Globe}
+                        title="Нажмите «+» → «Получить содержимое URL»"
+                        description="URL тот же, Method POST, Request Body JSON"
+                      />
+                      <div className="ml-12 space-y-2 py-3 px-4 bg-muted/50 rounded-lg text-sm">
+                        <div className="font-medium mb-2">Request Body (3 поля):</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">step</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <code className="bg-background px-2 py-0.5 rounded">2</code>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">text</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">apiKey</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <InstructionStep
+                        number={14}
+                        icon={Variable}
+                        title="Сохраните ответ → «Задать переменную»"
+                        action="Имя переменной: step2Response"
+                      />
+                      <InstructionStep
+                        number={15}
+                        icon={Save}
+                        title="Извлеките и сохраните projectId"
+                        important
+                        description="«Получить значение из словаря» → Ключ: projectId → «Задать переменную» → projectId"
+                      />
+                      <InstructionStep
+                        number={16}
+                        icon={Save}
+                        title="Извлеките и сохраните staticProjectName"
+                        important
+                        description="«Получить значение из словаря» (step2Response) → Ключ: staticProjectName → «Задать переменную» → staticProjectName"
+                      />
+                      <InstructionStep
+                        number={17}
+                        icon={Eye}
+                        title="Покажите message через «Показать результат»"
+                      />
+                    </InstructionSection>
+
+                    {/* БЛОК D: ШАГ 3 */}
+                    <InstructionSection icon={Wallet} title="Блок D: Шаг 3 — Кошелёк и создание транзакции" badge="4 шага" variant="warning">
+                      <InstructionStep
+                        number={18}
+                        icon={Plus}
+                        title="Нажмите «+» → «Запросить ввод»"
+                        value="Какой кошелёк?"
+                      />
+                      <InstructionStep
+                        number={19}
+                        icon={Globe}
+                        title="Нажмите «+» → «Получить содержимое URL»"
+                        description="URL тот же, Method POST, Request Body JSON"
+                      />
+                      <div className="ml-12 space-y-2 py-3 px-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm">
+                        <div className="font-medium mb-2 text-amber-600">⚠️ Request Body (6 полей — все обязательны!):</div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">step</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <code className="bg-background px-2 py-0.5 rounded">3</code>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">cashType</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">Полученный ввод</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="font-mono">apiKey</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal">apiKey</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap bg-amber-500/10 p-1 rounded">
+                            <Badge variant="outline" className="font-mono border-amber-500">step1Data</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal bg-amber-500/20">step1Data</Badge>
+                            <span className="text-xs text-amber-600 font-medium">(из шага 10!)</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap bg-amber-500/10 p-1 rounded">
+                            <Badge variant="outline" className="font-mono border-amber-500">projectId</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal bg-amber-500/20">projectId</Badge>
+                            <span className="text-xs text-amber-600 font-medium">(из шага 15!)</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap bg-amber-500/10 p-1 rounded">
+                            <Badge variant="outline" className="font-mono border-amber-500">staticProjectName</Badge>
+                            <span className="text-muted-foreground">→</span>
+                            <Badge variant="secondary" className="font-normal bg-amber-500/20">staticProjectName</Badge>
+                            <span className="text-xs text-amber-600 font-medium">(из шага 16!)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <InstructionStep
+                        number={20}
+                        icon={CheckCircle2}
+                        title="Покажите финальный результат"
+                        description="«Получить значение из словаря» → Ключ: message → «Показать результат»"
+                        note="Siri скажет: «✅ Черновик создан: Такси — 500₽, Наличка Настя, проект Саманта»"
+                      />
+                    </InstructionSection>
+
+                    {/* ЗАВЕРШЕНИЕ */}
+                    <InstructionSection icon={CheckCircle2} title="Завершение" badge="2 шага" variant="success">
+                      <InstructionStep
+                        number={21}
+                        icon={Type}
+                        title="Переименуйте команду"
+                        action="Нажмите на «Новая команда» → «Добавь транзакцию»"
+                      />
+                      <InstructionStep
+                        number={22}
+                        icon={CheckCircle2}
+                        title="Нажмите «Готово»"
+                        description="Команда сохранена! Скажите «Привет Siri, добавь транзакцию»"
+                      />
+                    </InstructionSection>
+
+                    {/* Troubleshooting */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <AlertTriangle className="h-5 w-5 text-amber-500" />
+                          Устранение ошибок
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <TroubleshootingSection />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -567,7 +825,7 @@ export default function SiriIntegrationPage() {
                   Справочник кошельков
                 </CardTitle>
                 <CardDescription>
-                  Как называть кошельки голосом (для шага 3)
+                  Как называть кошельки голосом
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -587,7 +845,7 @@ export default function SiriIntegrationPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mic className="h-5 w-5" />
-                  Пример готового диалога
+                  Пример готового диалога (многошаговый режим)
                 </CardTitle>
                 <CardDescription>
                   Так будет выглядеть общение после настройки
@@ -627,70 +885,6 @@ export default function SiriIntegrationPage() {
                     <Badge className="mt-0.5">Siri</Badge>
                     <span className="text-sm">«✅ Черновик создан: Такси до офиса — 500₽, Наличка Настя, проект Саманта»</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Legacy Mode */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Legacy режим (упрощённый)
-                </CardTitle>
-                <CardDescription>
-                  Всё в одной команде — быстрее настроить, но нужно говорить всё сразу
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert className="bg-primary/5 border-primary/20">
-                  <AlertDescription>
-                    <p className="font-semibold mb-2">💡 Как использовать:</p>
-                    <p className="text-sm">
-                      Скажите всё в одной фразе: «Такси 500 рублей, Саманта, наличка Настя»
-                    </p>
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-4">
-                  <InstructionSection icon={Smartphone} title="Быстрая настройка" badge="5 шагов">
-                    <InstructionStep
-                      number={1}
-                      icon={Smartphone}
-                      title="Откройте «Команды» → «+» → «Добавить действие»"
-                    />
-                    <InstructionStep
-                      number={2}
-                      icon={Search}
-                      title="Найдите «Запросить ввод»"
-                      value="Скажите транзакцию (сумма, проект, кошелёк)"
-                    />
-                    <InstructionStep
-                      number={3}
-                      icon={Plus}
-                      title="Добавьте «Получить содержимое URL»"
-                      description={`URL: ${apiUrl}`}
-                    />
-                    <InstructionStep
-                      number={4}
-                      icon={Globe}
-                      title="Настройте запрос:"
-                      description="Метод: POST, Тело: JSON с полями text (ввод), apiKey (ваш ключ)"
-                    />
-                    <InstructionStep
-                      number={5}
-                      icon={Eye}
-                      title="Добавьте «Показать результат»"
-                      description="Выберите message из ответа"
-                    />
-                  </InstructionSection>
-                </div>
-
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">Пример голосовой команды:</h4>
-                  <p className="text-sm text-muted-foreground italic">
-                    «Такси пятьсот рублей, проект Саманта, наличка Настя»
-                  </p>
                 </div>
               </CardContent>
             </Card>
