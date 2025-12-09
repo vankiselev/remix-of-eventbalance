@@ -135,15 +135,7 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
   }
 
   return (
-    <div 
-      className={cn(
-        "flex flex-col bg-background h-full",
-        isMobile && "fixed inset-0 z-50"
-      )}
-      style={{ 
-        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined
-      }}
-    >
+    <div className="flex flex-col bg-background h-full">
       {/* Header */}
       <div className="bg-card border-b px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 min-w-0">

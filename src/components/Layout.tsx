@@ -450,14 +450,13 @@ const Layout = ({ children }: LayoutProps) => {
           <main className={cn(
             "flex-1 w-full overflow-x-hidden",
             location.pathname === '/messages' 
-              ? "overflow-hidden flex flex-col min-h-0 h-[100dvh]" 
+              ? "overflow-hidden flex flex-col min-h-0 h-[calc(100dvh-80px)]" 
               : "overflow-auto px-4 py-6 pb-28"
           )}>
             {children}
           </main>
           
-          {/* Hide bottom nav on messages page */}
-          {location.pathname !== '/messages' && <MobileBottomNav />}
+          <MobileBottomNav />
         </div>
       )}
       
