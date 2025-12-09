@@ -282,19 +282,19 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={1}
                     icon={Smartphone}
-                    title="Откройте приложение «Команды» на iPhone"
+                    title="Откройте приложение «Команды» (Shortcuts) на iPhone"
                     description="Это стандартное приложение Apple. Если его нет — скачайте из App Store."
                   />
                   <InstructionStep
                     number={2}
                     icon={Plus}
                     title="Нажмите «+» в правом верхнем углу"
-                    description="Создаём новую команду"
+                    description="Создаём новую команду (shortcut)"
                   />
                   <InstructionStep
                     number={3}
                     icon={Plus}
-                    title="Нажмите «Добавить действие»"
+                    title="Нажмите «Добавить действие» (Add Action)"
                     description="Откроется каталог действий"
                   />
                 </InstructionSection>
@@ -304,13 +304,13 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={4}
                     icon={Search}
-                    title="В поиске введите «Текст»"
-                    action="Выберите действие «Текст» из результатов"
+                    title="В поиске введите «Текст» (Text)"
+                    action="Выберите действие «Текст» (Text) из результатов"
                   />
                   <InstructionStep
                     number={5}
                     icon={Type}
-                    title="Нажмите на слово «Текст» в добавленном блоке"
+                    title="Нажмите на слово «Текст» (Text) в добавленном блоке"
                     action="Вставьте ваш API ключ (скопируйте выше)"
                     value={apiKey.substring(0, 10) + "..."}
                     note="Весь ключ целиком, без пробелов"
@@ -318,26 +318,26 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={6}
                     icon={Plus}
-                    title="Нажмите синюю кнопку «+» под блоком «Текст»"
+                    title="Нажмите синюю кнопку «+» под блоком «Текст» (Text)"
                     description="Добавляем следующее действие"
                   />
                   <InstructionStep
                     number={7}
                     icon={Search}
-                    title="В поиске введите «Задать переменную»"
+                    title="В поиске введите «Задать переменную» (Set Variable)"
                     action="Выберите это действие"
                   />
                   <InstructionStep
                     number={8}
                     icon={Variable}
-                    title="В поле «Имя переменной» напишите:"
+                    title="В поле «Имя переменной» (Variable Name) напишите:"
                     value="apiKey"
                     note="Точно так, с маленькой буквы"
                   />
                   <InstructionStep
                     number={9}
                     icon={Eye}
-                    title="Убедитесь, что в строке «на:» стоит «Текст»"
+                    title="Убедитесь, что в строке «на:» (to:) стоит «Текст» (Text)"
                     description="Это значит переменная apiKey = вашему ключу"
                   />
                 </InstructionSection>
@@ -347,32 +347,32 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={10}
                     icon={Plus}
-                    title="Нажмите «+» → найдите «Запросить ввод»"
+                    title="Нажмите «+» → найдите «Запросить ввод» (Ask for Input)"
                     action="Выберите это действие"
                   />
                   <InstructionStep
                     number={11}
                     icon={Type}
-                    title="В поле «Запрос» напишите:"
+                    title="В поле «Запрос» (Prompt) напишите:"
                     value="Опишите трату или доход и сумму"
                   />
                   <InstructionStep
                     number={12}
                     icon={Plus}
-                    title="Нажмите «+» → найдите «Словарь»"
+                    title="Нажмите «+» → найдите «Словарь» (Dictionary)"
                     action="Выберите это действие"
                   />
                   <InstructionStep
                     number={13}
                     icon={FileJson}
-                    title="Добавьте 3 строки в словарь (нажмите «Добавить новый элемент»):"
+                    title="Добавьте 3 строки в словарь (нажмите «Добавить новый элемент» / Add new item):"
                     description="Ключ: step → Значение (текст): 1"
                   />
                   <InstructionStep
                     number={14}
                     icon={FileJson}
                     title="Вторая строка словаря:"
-                    description="Ключ: text → Нажмите на значение → Выберите «Полученный ввод»"
+                    description="Ключ: text → Нажмите на значение → Выберите «Полученный ввод» (Provided Input)"
                     note="Это голубая переменная сверху"
                   />
                   <InstructionStep
@@ -385,7 +385,7 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={16}
                     icon={Plus}
-                    title="Нажмите «+» → найдите «Получить содержимое URL»"
+                    title="Нажмите «+» → найдите «Получить содержимое URL» (Get Contents of URL)"
                     action="Выберите это действие"
                   />
                   <InstructionStep
@@ -398,15 +398,15 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={18}
                     icon={Globe}
-                    title="Нажмите «Показать ещё» под URL"
-                    action="Метод: POST"
-                    description="Тело запроса: JSON → выберите «Словарь» из списка выше"
+                    title="Нажмите «Показать ещё» (Show More) под URL"
+                    action="Метод (Method): POST"
+                    description="Тело запроса (Request Body): JSON → выберите «Словарь» (Dictionary) из списка выше"
                   />
                   <InstructionStep
                     number={19}
                     icon={Plus}
-                    title="Нажмите «+» → найдите «Получить значение из словаря»"
-                    action="Ключ: message"
+                    title="Нажмите «+» → найдите «Получить значение из словаря» (Get Dictionary Value)"
+                    action="Ключ (Key): message"
                     description="Это покажет ответ Siri с подтверждением"
                   />
                 </InstructionSection>
@@ -416,46 +416,46 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={20}
                     icon={Plus}
-                    title="Нажмите «+» → «Показать результат»"
-                    action="Выберите «Значение словаря» (это message из шага 19)"
+                    title="Нажмите «+» → «Показать результат» (Show Result)"
+                    action="Выберите «Значение словаря» (Dictionary Value) — это message из шага 19"
                     note="Siri озвучит: «Расход 500₽ — Такси. Какой проект?»"
                   />
                   <InstructionStep
                     number={21}
                     icon={Plus}
-                    title="Нажмите «+» → «Запросить ввод»"
+                    title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
                     value="Скажите проект или «без проекта»"
                   />
                   <InstructionStep
                     number={22}
                     icon={Plus}
-                    title="Нажмите «+» → «Словарь»"
+                    title="Нажмите «+» → «Словарь» (Dictionary)"
                     description="Создайте новый словарь для второго запроса"
                   />
                   <InstructionStep
                     number={23}
                     icon={FileJson}
                     title="Добавьте 3 строки:"
-                    description="step = 2, text = Полученный ввод, apiKey = переменная apiKey"
+                    description="step = 2, text = Полученный ввод (Provided Input), apiKey = переменная apiKey"
                   />
                   <InstructionStep
                     number={24}
                     icon={Plus}
-                    title="Нажмите «+» → «Получить содержимое URL»"
-                    description="URL: тот же. Метод: POST. Тело: JSON → Словарь"
+                    title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
+                    description="URL: тот же. Метод (Method): POST. Тело (Request Body): JSON → Словарь (Dictionary)"
                   />
                   <InstructionStep
                     number={25}
                     icon={Plus}
-                    title="Нажмите «+» → «Получить значение из словаря»"
-                    action="Ключ: projectId"
+                    title="Нажмите «+» → «Получить значение из словаря» (Get Dictionary Value)"
+                    action="Ключ (Key): projectId"
                     note="Сохраните в переменную если нужно"
                   />
                   <InstructionStep
                     number={26}
                     icon={Plus}
                     title="Повторите для ключей: staticProjectName и message"
-                    description="message покажите через «Показать результат»"
+                    description="message покажите через «Показать результат» (Show Result)"
                   />
                 </InstructionSection>
 
@@ -464,20 +464,20 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={27}
                     icon={Plus}
-                    title="Нажмите «+» → «Запросить ввод»"
+                    title="Нажмите «+» → «Запросить ввод» (Ask for Input)"
                     value="Какой кошелёк?"
                   />
                   <InstructionStep
                     number={28}
                     icon={Plus}
-                    title="Нажмите «+» → «Словарь»"
+                    title="Нажмите «+» → «Словарь» (Dictionary)"
                     description="Финальный словарь с данными транзакции"
                   />
                   <InstructionStep
                     number={29}
                     icon={FileJson}
                     title="Добавьте строки:"
-                    description="step = 3, cashType = Полученный ввод, apiKey = apiKey, step1Data = данные из шага 1"
+                    description="step = 3, cashType = Полученный ввод (Provided Input), apiKey = apiKey, step1Data = данные из шага 1"
                     note="Для step1Data нужно сохранить весь ответ первого запроса"
                   />
                   <InstructionStep
@@ -489,13 +489,13 @@ export default function SiriIntegrationPage() {
                   <InstructionStep
                     number={31}
                     icon={Plus}
-                    title="Нажмите «+» → «Получить содержимое URL»"
-                    description="URL: тот же. Метод: POST. Тело: JSON → Словарь"
+                    title="Нажмите «+» → «Получить содержимое URL» (Get Contents of URL)"
+                    description="URL: тот же. Метод (Method): POST. Тело (Request Body): JSON → Словарь (Dictionary)"
                   />
                   <InstructionStep
                     number={32}
                     icon={Plus}
-                    title="Нажмите «+» → «Показать результат»"
+                    title="Нажмите «+» → «Показать результат» (Show Result)"
                     action="Получите message из ответа"
                     note="Siri скажет: «Готово! Черновик создан»"
                   />
