@@ -277,6 +277,12 @@ export default function SiriIntegrationPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 
+                <Alert className="bg-blue-500/10 border-blue-500/30">
+                  <AlertDescription className="text-sm">
+                    📱 <strong>iOS 26 (Liquid Glass):</strong> Интерфейс приложения «Команды» обновлён, но названия действий остались прежними. Ищите действия по английским названиям в скобках.
+                  </AlertDescription>
+                </Alert>
+                
                 {/* ПОДГОТОВКА */}
                 <InstructionSection icon={Smartphone} title="Подготовка" badge="3 шага">
                   <InstructionStep
