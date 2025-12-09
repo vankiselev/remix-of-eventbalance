@@ -2885,8 +2885,8 @@ export type Database = {
         }[]
       }
       get_dashboard_stats:
-        | { Args: { user_uuid: string }; Returns: Json }
         | { Args: never; Returns: Json }
+        | { Args: { user_uuid: string }; Returns: Json }
       get_employee_basic_data: {
         Args: never
         Returns: {
@@ -3006,11 +3006,11 @@ export type Database = {
         Returns: undefined
       }
       reject_money_transfer:
+        | { Args: { p_transaction_id: string }; Returns: boolean }
         | {
             Args: { p_rejection_reason: string; p_transaction_id: string }
             Returns: boolean
           }
-        | { Args: { p_transaction_id: string }; Returns: boolean }
       request_password_reset: { Args: { user_email: string }; Returns: boolean }
       reset_password_with_token: {
         Args: { new_password: string; reset_token: string }
