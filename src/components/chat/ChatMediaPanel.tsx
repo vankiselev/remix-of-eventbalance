@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileIcon, LinkIcon, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatMediaPanelProps {
   chatRoomId: string;
@@ -14,6 +15,8 @@ interface ChatMediaPanelProps {
 }
 
 export const ChatMediaPanel = ({ chatRoomId, open, onOpenChange }: ChatMediaPanelProps) => {
+  const isMobile = useIsMobile();
+
   const { data: attachments = [] } = useQuery({
     queryKey: ['chat-attachments', chatRoomId],
     queryFn: async () => {
@@ -78,35 +81,38 @@ export const ChatMediaPanel = ({ chatRoomId, open, onOpenChange }: ChatMediaPane
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent 
+        side={isMobile ? "bottom" : "right"}
+        className={isMobile ? "h-[85vh] rounded-t-2xl" : "w-[400px] sm:w-[540px]"}
+      >
         <SheetHeader>
           <SheetTitle>Медиа и файлы</SheetTitle>
         </SheetHeader>
 
         <Tabs defaultValue="media" className="mt-6">
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
-            <TabsTrigger value="media" className="whitespace-nowrap">
+            <TabsTrigger value="media" className="whitespace-nowrap flex-1">
               <ImageIcon className="w-4 h-4 mr-2" />
               Медиа
             </TabsTrigger>
-            <TabsTrigger value="files" className="whitespace-nowrap">
+            <TabsTrigger value="files" className="whitespace-nowrap flex-1">
               <FileIcon className="w-4 h-4 mr-2" />
               Файлы
             </TabsTrigger>
-            <TabsTrigger value="links" className="whitespace-nowrap">
+            <TabsTrigger value="links" className="whitespace-nowrap flex-1">
               <LinkIcon className="w-4 h-4 mr-2" />
               Ссылки
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="media" className="mt-4">
-            <ScrollArea className="h-[calc(100vh-250px)]">
+            <ScrollArea className={isMobile ? "h-[calc(85vh-200px)]" : "h-[calc(100vh-250px)]"}>
               {mediaFiles.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Нет медиафайлов
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {mediaFiles.map(file => (
                     <a
                       key={file.id}
@@ -134,7 +140,7 @@ export const ChatMediaPanel = ({ chatRoomId, open, onOpenChange }: ChatMediaPane
           </TabsContent>
 
           <TabsContent value="files" className="mt-4">
-            <ScrollArea className="h-[calc(100vh-250px)]">
+            <ScrollArea className={isMobile ? "h-[calc(85vh-200px)]" : "h-[calc(100vh-250px)]"}>
               {documentFiles.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Нет файлов
@@ -164,7 +170,7 @@ export const ChatMediaPanel = ({ chatRoomId, open, onOpenChange }: ChatMediaPane
           </TabsContent>
 
           <TabsContent value="links" className="mt-4">
-            <ScrollArea className="h-[calc(100vh-250px)]">
+            <ScrollArea className={isMobile ? "h-[calc(85vh-200px)]" : "h-[calc(100vh-250px)]"}>
               {links.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Нет ссылок

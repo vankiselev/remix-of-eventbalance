@@ -5,10 +5,9 @@ import { Plus, MessageSquare } from "lucide-react";
 import { ChatList } from "@/components/chat/ChatList";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { NewChatDialog } from "@/components/chat/NewChatDialog";
-import { useChats } from "@/hooks/useChats";
+import { useChats, type ChatRoom } from "@/hooks/useChats";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 
 const MessagesPage = () => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -22,6 +21,9 @@ const MessagesPage = () => {
     setNewChatDialogOpen(false);
   };
 
+  // Get selected chat for passing to ChatWindow
+  const selectedChat = chats.find(c => c.id === selectedChatId);
+
   if (!user) return null;
 
   return (
@@ -33,17 +35,18 @@ const MessagesPage = () => {
             {selectedChatId ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
                 <ChatWindow
-                  chatRoomId={selectedChatId} 
+                  chatRoomId={selectedChatId}
+                  chat={selectedChat}
                   currentUserId={user.id}
                   onBack={() => setSelectedChatId(null)}
                 />
               </div>
             ) : (
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[env(safe-area-inset-bottom)]">
+                <div className="p-4 border-b flex items-center justify-between bg-[hsl(var(--whatsapp-hover))]">
                   <h2 className="text-xl font-semibold">Чаты</h2>
-                  <Button size="icon" onClick={() => setNewChatDialogOpen(true)}>
-                    <Plus className="w-4 h-4" />
+                  <Button size="icon" variant="ghost" onClick={() => setNewChatDialogOpen(true)}>
+                    <Plus className="w-5 h-5" />
                   </Button>
                 </div>
 
@@ -111,7 +114,11 @@ const MessagesPage = () => {
 
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {selectedChatId ? (
-                <ChatWindow chatRoomId={selectedChatId} currentUserId={user.id} />
+                <ChatWindow 
+                  chatRoomId={selectedChatId} 
+                  chat={selectedChat}
+                  currentUserId={user.id} 
+                />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">

@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.create-test-user]
 verify_jwt = true
+
+[functions.send-message-notification]
+verify_jwt = false
