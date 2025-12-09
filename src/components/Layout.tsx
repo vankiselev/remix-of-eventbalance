@@ -382,17 +382,14 @@ const Layout = ({ children }: LayoutProps) => {
             {/* Main Content with margin to account for fixed sidebar */}
             <main 
               className={cn(
-                "flex-1 flex flex-col transition-all duration-300 overflow-hidden",
-                sidebarCollapsed ? "ml-16" : "ml-64"
+                "flex-1 flex flex-col transition-all duration-300",
+                sidebarCollapsed ? "ml-16" : "ml-64",
+                location.pathname === '/messages' ? "h-[calc(100vh-4rem)] overflow-hidden" : "overflow-hidden"
               )}
-              style={{ 
-                height: location.pathname === '/messages' ? 'calc(100vh - 4rem)' : 'auto',
-                maxHeight: location.pathname === '/messages' ? 'calc(100vh - 4rem)' : 'none'
-              }}
             >
               <div className={cn(
-                "flex-1 main-container w-full flex flex-col",
-                location.pathname === '/messages' ? 'h-full overflow-hidden' : 'overflow-hidden min-h-0'
+                "flex-1 w-full flex flex-col min-h-0",
+                location.pathname === '/messages' ? 'h-full overflow-hidden' : 'main-container overflow-hidden'
               )}>
                 {children}
               </div>
