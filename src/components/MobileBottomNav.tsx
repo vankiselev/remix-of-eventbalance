@@ -32,7 +32,7 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
-    ...(isAdmin ? [{ path: "/messages", label: "Сообщения", icon: "MessageSquare" }] : []),
+    { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/tasks", label: "Мои задачи", icon: "ListChecks" },
     { path: "/warehouse", label: "Склад", icon: "Package" },
