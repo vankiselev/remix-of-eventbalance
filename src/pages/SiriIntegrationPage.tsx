@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Copy, CheckCircle2, Key, Smartphone, MessageSquare, Mic, Wallet } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, CheckCircle2, Key, Smartphone, MessageSquare, Mic, Wallet, ChevronRight, Search, Plus, Type, Variable, Globe, FileJson, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,10 +29,87 @@ const WALLET_TYPES = [
   { name: 'Своя Ваня', voice: 'своя ваня, личная ваня' },
 ];
 
+// Компонент для одного шага инструкции
+const InstructionStep = ({ 
+  number, 
+  icon: Icon, 
+  title, 
+  description, 
+  action,
+  value,
+  note
+}: { 
+  number: number;
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+  action?: string;
+  value?: string;
+  note?: string;
+}) => (
+  <div className="flex gap-4 py-3">
+    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+      {number}
+    </div>
+    <div className="flex-1 space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium">{title}</span>
+      </div>
+      {description && (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      )}
+      {action && (
+        <div className="flex items-center gap-2 text-sm">
+          <ChevronRight className="h-3 w-3 text-primary" />
+          <span className="text-primary font-medium">{action}</span>
+        </div>
+      )}
+      {value && (
+        <div className="p-2 bg-muted rounded-md font-mono text-sm">
+          {value}
+        </div>
+      )}
+      {note && (
+        <p className="text-xs text-muted-foreground italic">{note}</p>
+      )}
+    </div>
+  </div>
+);
+
+// Компонент для секции инструкций
+const InstructionSection = ({ 
+  icon: Icon, 
+  title, 
+  badge,
+  children 
+}: { 
+  icon: React.ElementType;
+  title: string;
+  badge?: string;
+  children: React.ReactNode;
+}) => (
+  <div className="border rounded-lg p-4 space-y-3">
+    <div className="flex items-center gap-2">
+      <div className="p-2 bg-primary/10 rounded-lg">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <h3 className="font-semibold text-lg">{title}</h3>
+      {badge && (
+        <Badge variant="secondary" className="ml-auto">{badge}</Badge>
+      )}
+    </div>
+    <div className="divide-y">
+      {children}
+    </div>
+  </div>
+);
+
 export default function SiriIntegrationPage() {
   const [apiKey, setApiKey] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   const generateApiKey = async () => {
     setIsGenerating(true);
@@ -91,11 +169,16 @@ export default function SiriIntegrationPage() {
     loadExistingKey();
   }, []);
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, type: 'key' | 'url' = 'key') => {
     navigator.clipboard.writeText(text);
-    setIsCopied(true);
+    if (type === 'key') {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } else {
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }
     toast.success("Скопировано в буфер обмена!");
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const apiUrl = "https://wpxhmajdeunabximyfln.supabase.co/functions/v1/voice-transaction";
@@ -131,26 +214,47 @@ export default function SiriIntegrationPage() {
                 {isGenerating ? "Создание..." : "Создать API ключ"}
               </Button>
             ) : (
-              <div className="space-y-2">
-                <Label>Ваш API ключ:</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    value={apiKey} 
-                    readOnly 
-                    type="password"
-                    className="font-mono"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => copyToClipboard(apiKey)}
-                  >
-                    {isCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Ваш API ключ:</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={apiKey} 
+                      readOnly 
+                      type="password"
+                      className="font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(apiKey, 'key')}
+                    >
+                      {isCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>URL для запросов:</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={apiUrl} 
+                      readOnly 
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(apiUrl, 'url')}
+                    >
+                      {copiedUrl ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
                 <Alert>
                   <AlertDescription>
-                    ⚠️ Сохраните этот ключ в безопасном месте. Вы не сможете увидеть его снова.
+                    ⚠️ Сохраните API ключ — вы не сможете увидеть его снова. URL можно скопировать в любой момент.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -160,6 +264,271 @@ export default function SiriIntegrationPage() {
 
         {apiKey && (
           <>
+            {/* Detailed Instructions */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5" />
+                  Шаг 2: Создайте команду в приложении "Команды"
+                </CardTitle>
+                <CardDescription>
+                  Следуйте инструкциям шаг за шагом. Каждый шаг = одно действие.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                
+                {/* ПОДГОТОВКА */}
+                <InstructionSection icon={Smartphone} title="Подготовка" badge="3 шага">
+                  <InstructionStep
+                    number={1}
+                    icon={Smartphone}
+                    title="Откройте приложение «Команды» на iPhone"
+                    description="Это стандартное приложение Apple. Если его нет — скачайте из App Store."
+                  />
+                  <InstructionStep
+                    number={2}
+                    icon={Plus}
+                    title="Нажмите «+» в правом верхнем углу"
+                    description="Создаём новую команду"
+                  />
+                  <InstructionStep
+                    number={3}
+                    icon={Plus}
+                    title="Нажмите «Добавить действие»"
+                    description="Откроется каталог действий"
+                  />
+                </InstructionSection>
+
+                {/* БЛОК A: API КЛЮЧ */}
+                <InstructionSection icon={Key} title="Блок A: Сохраняем API ключ" badge="6 шагов">
+                  <InstructionStep
+                    number={4}
+                    icon={Search}
+                    title="В поиске введите «Текст»"
+                    action="Выберите действие «Текст» из результатов"
+                  />
+                  <InstructionStep
+                    number={5}
+                    icon={Type}
+                    title="Нажмите на слово «Текст» в добавленном блоке"
+                    action="Вставьте ваш API ключ (скопируйте выше)"
+                    value={apiKey.substring(0, 10) + "..."}
+                    note="Весь ключ целиком, без пробелов"
+                  />
+                  <InstructionStep
+                    number={6}
+                    icon={Plus}
+                    title="Нажмите синюю кнопку «+» под блоком «Текст»"
+                    description="Добавляем следующее действие"
+                  />
+                  <InstructionStep
+                    number={7}
+                    icon={Search}
+                    title="В поиске введите «Задать переменную»"
+                    action="Выберите это действие"
+                  />
+                  <InstructionStep
+                    number={8}
+                    icon={Variable}
+                    title="В поле «Имя переменной» напишите:"
+                    value="apiKey"
+                    note="Точно так, с маленькой буквы"
+                  />
+                  <InstructionStep
+                    number={9}
+                    icon={Eye}
+                    title="Убедитесь, что в строке «на:» стоит «Текст»"
+                    description="Это значит переменная apiKey = вашему ключу"
+                  />
+                </InstructionSection>
+
+                {/* БЛОК B: ШАГ 1 */}
+                <InstructionSection icon={MessageSquare} title="Блок B: Спрашиваем описание транзакции" badge="10 шагов">
+                  <InstructionStep
+                    number={10}
+                    icon={Plus}
+                    title="Нажмите «+» → найдите «Запросить ввод»"
+                    action="Выберите это действие"
+                  />
+                  <InstructionStep
+                    number={11}
+                    icon={Type}
+                    title="В поле «Запрос» напишите:"
+                    value="Опишите трату или доход и сумму"
+                  />
+                  <InstructionStep
+                    number={12}
+                    icon={Plus}
+                    title="Нажмите «+» → найдите «Словарь»"
+                    action="Выберите это действие"
+                  />
+                  <InstructionStep
+                    number={13}
+                    icon={FileJson}
+                    title="Добавьте 3 строки в словарь (нажмите «Добавить новый элемент»):"
+                    description="Ключ: step → Значение (текст): 1"
+                  />
+                  <InstructionStep
+                    number={14}
+                    icon={FileJson}
+                    title="Вторая строка словаря:"
+                    description="Ключ: text → Нажмите на значение → Выберите «Полученный ввод»"
+                    note="Это голубая переменная сверху"
+                  />
+                  <InstructionStep
+                    number={15}
+                    icon={FileJson}
+                    title="Третья строка словаря:"
+                    description="Ключ: apiKey → Нажмите на значение → Выберите переменную «apiKey»"
+                    note="Это переменная, которую вы создали в Блоке A"
+                  />
+                  <InstructionStep
+                    number={16}
+                    icon={Plus}
+                    title="Нажмите «+» → найдите «Получить содержимое URL»"
+                    action="Выберите это действие"
+                  />
+                  <InstructionStep
+                    number={17}
+                    icon={Globe}
+                    title="В поле URL вставьте:"
+                    value={apiUrl}
+                    note="Скопируйте URL выше"
+                  />
+                  <InstructionStep
+                    number={18}
+                    icon={Globe}
+                    title="Нажмите «Показать ещё» под URL"
+                    action="Метод: POST"
+                    description="Тело запроса: JSON → выберите «Словарь» из списка выше"
+                  />
+                  <InstructionStep
+                    number={19}
+                    icon={Plus}
+                    title="Нажмите «+» → найдите «Получить значение из словаря»"
+                    action="Ключ: message"
+                    description="Это покажет ответ Siri с подтверждением"
+                  />
+                </InstructionSection>
+
+                {/* БЛОК C: ШАГ 2 */}
+                <InstructionSection icon={MessageSquare} title="Блок C: Спрашиваем проект" badge="7 шагов">
+                  <InstructionStep
+                    number={20}
+                    icon={Plus}
+                    title="Нажмите «+» → «Показать результат»"
+                    action="Выберите «Значение словаря» (это message из шага 19)"
+                    note="Siri озвучит: «Расход 500₽ — Такси. Какой проект?»"
+                  />
+                  <InstructionStep
+                    number={21}
+                    icon={Plus}
+                    title="Нажмите «+» → «Запросить ввод»"
+                    value="Скажите проект или «без проекта»"
+                  />
+                  <InstructionStep
+                    number={22}
+                    icon={Plus}
+                    title="Нажмите «+» → «Словарь»"
+                    description="Создайте новый словарь для второго запроса"
+                  />
+                  <InstructionStep
+                    number={23}
+                    icon={FileJson}
+                    title="Добавьте 3 строки:"
+                    description="step = 2, text = Полученный ввод, apiKey = переменная apiKey"
+                  />
+                  <InstructionStep
+                    number={24}
+                    icon={Plus}
+                    title="Нажмите «+» → «Получить содержимое URL»"
+                    description="URL: тот же. Метод: POST. Тело: JSON → Словарь"
+                  />
+                  <InstructionStep
+                    number={25}
+                    icon={Plus}
+                    title="Нажмите «+» → «Получить значение из словаря»"
+                    action="Ключ: projectId"
+                    note="Сохраните в переменную если нужно"
+                  />
+                  <InstructionStep
+                    number={26}
+                    icon={Plus}
+                    title="Повторите для ключей: staticProjectName и message"
+                    description="message покажите через «Показать результат»"
+                  />
+                </InstructionSection>
+
+                {/* БЛОК D: ШАГ 3 */}
+                <InstructionSection icon={Wallet} title="Блок D: Спрашиваем кошелёк и создаём транзакцию" badge="6 шагов">
+                  <InstructionStep
+                    number={27}
+                    icon={Plus}
+                    title="Нажмите «+» → «Запросить ввод»"
+                    value="Какой кошелёк?"
+                  />
+                  <InstructionStep
+                    number={28}
+                    icon={Plus}
+                    title="Нажмите «+» → «Словарь»"
+                    description="Финальный словарь с данными транзакции"
+                  />
+                  <InstructionStep
+                    number={29}
+                    icon={FileJson}
+                    title="Добавьте строки:"
+                    description="step = 3, cashType = Полученный ввод, apiKey = apiKey, step1Data = данные из шага 1"
+                    note="Для step1Data нужно сохранить весь ответ первого запроса"
+                  />
+                  <InstructionStep
+                    number={30}
+                    icon={Plus}
+                    title="Также добавьте projectId и staticProjectName"
+                    description="Из шага 25-26"
+                  />
+                  <InstructionStep
+                    number={31}
+                    icon={Plus}
+                    title="Нажмите «+» → «Получить содержимое URL»"
+                    description="URL: тот же. Метод: POST. Тело: JSON → Словарь"
+                  />
+                  <InstructionStep
+                    number={32}
+                    icon={Plus}
+                    title="Нажмите «+» → «Показать результат»"
+                    action="Получите message из ответа"
+                    note="Siri скажет: «Готово! Черновик создан»"
+                  />
+                </InstructionSection>
+
+                {/* ЗАВЕРШЕНИЕ */}
+                <InstructionSection icon={CheckCircle2} title="Завершение" badge="2 шага">
+                  <InstructionStep
+                    number={33}
+                    icon={Type}
+                    title="Нажмите на «Новая команда» вверху экрана"
+                    action="Переименуйте в «Добавь транзакцию»"
+                  />
+                  <InstructionStep
+                    number={34}
+                    icon={CheckCircle2}
+                    title="Нажмите «Готово» в правом верхнем углу"
+                    description="Команда сохранена! Скажите «Привет Siri, добавь транзакцию»"
+                  />
+                </InstructionSection>
+
+                <Alert className="bg-amber-500/10 border-amber-500/30">
+                  <AlertDescription>
+                    <p className="font-semibold mb-2">⚠️ Это сложно?</p>
+                    <p className="text-sm">
+                      Пошаговый режим требует много настройки. Если хотите проще — используйте 
+                      <strong> Legacy режим</strong> ниже (одна команда вместо трёх шагов).
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+
             {/* Wallet Types Reference */}
             <Card className="mb-6">
               <CardHeader>
@@ -168,7 +537,7 @@ export default function SiriIntegrationPage() {
                   Справочник кошельков
                 </CardTitle>
                 <CardDescription>
-                  Полный список кошельков и как их называть голосом
+                  Как называть кошельки голосом (для шага 3)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -183,250 +552,51 @@ export default function SiriIntegrationPage() {
               </CardContent>
             </Card>
 
-            {/* Step 2: Setup Siri Shortcut */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  Шаг 2: Настройте Siri Shortcut (пошаговый диалог)
-                </CardTitle>
-                <CardDescription>
-                  Создайте команду с 3 шагами: описание → проект → кошелёк
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert className="bg-primary/5 border-primary/20">
-                  <AlertDescription>
-                    <p className="font-semibold mb-2">🎯 Как работает пошаговый диалог:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li><strong>Шаг 1:</strong> Siri спрашивает "Какую транзакцию добавить?" → Вы: "Такси 500 рублей"</li>
-                      <li><strong>Шаг 2:</strong> Siri спрашивает "Какой проект?" → Вы: "Саманта" или "без проекта"</li>
-                      <li><strong>Шаг 3:</strong> Siri спрашивает "Какой кошелёк?" → Вы: "Наличка Настя"</li>
-                    </ol>
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">1. Откройте приложение "Команды" на iPhone</h3>
-                    <p className="text-sm text-muted-foreground">Нажмите "+" для создания новой команды</p>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="font-semibold mb-2">2. Добавьте переменные для хранения данных</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Добавьте действие "Установить переменную" для apiKey:
-                    </p>
-                    <div className="p-3 bg-muted rounded-md">
-                      <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-{`Установить переменную "apiKey" на "${apiKey}"`}
-                      </pre>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="font-semibold mb-2">3. ШАГ 1: Спросить описание транзакции</h3>
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Добавьте действие "Запросить ввод":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Вопрос: "Опишите трату или доход и сумму"
-Тип: Текст`}</pre>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">Затем "Получить содержимое URL":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-{`URL: ${apiUrl}
-Метод: POST
-Заголовки: Content-Type = application/json
-Тело (JSON):
-{
-  "step": 1,
-  "text": "[Результат ввода]",
-  "apiKey": "[apiKey]"
-}`}
-                        </pre>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground">Сохраните результат:</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Получить "step1Data" из ответа
-Показать "message" из ответа`}</pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="font-semibold mb-2">4. ШАГ 2: Спросить проект</h3>
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Добавьте действие "Запросить ввод":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Вопрос: "[Показанное сообщение]"
-Тип: Текст`}</pre>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">Затем "Получить содержимое URL":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-{`URL: ${apiUrl}
-Метод: POST
-Заголовки: Content-Type = application/json
-Тело (JSON):
-{
-  "step": 2,
-  "text": "[Результат ввода]",
-  "apiKey": "[apiKey]"
-}`}
-                        </pre>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground">Сохраните результат:</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Получить "projectMatch.id" как projectId (или null)
-Получить "staticProjectName" (если проект не найден)
-Показать "message" из ответа`}</pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="font-semibold mb-2">5. ШАГ 3: Спросить кошелёк и создать транзакцию</h3>
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Добавьте действие "Запросить ввод":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Вопрос: "[Показанное сообщение]"
-Тип: Текст`}</pre>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">Затем "Получить содержимое URL":</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-{`URL: ${apiUrl}
-Метод: POST
-Заголовки: Content-Type = application/json
-Тело (JSON):
-{
-  "step": 3,
-  "step1Data": [step1Data из шага 1],
-  "projectId": [projectId из шага 2 или null],
-  "staticProjectName": [staticProjectName из шага 2],
-  "cashType": "[Результат ввода]",
-  "apiKey": "[apiKey]"
-}`}
-                        </pre>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground">Покажите результат:</p>
-                      <div className="p-3 bg-muted rounded-md">
-                        <pre className="text-xs">{`Показать "message" из ответа`}</pre>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="font-semibold mb-2">6. Назовите команду</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Например: "Добавь транзакцию" или "Новая трата"
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Step 3: Usage Examples */}
+            {/* Example Dialogue */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mic className="h-5 w-5" />
-                  Шаг 3: Примеры диалога
+                  Пример готового диалога
                 </CardTitle>
                 <CardDescription>
-                  Как выглядит общение с Siri при использовании команды
+                  Так будет выглядеть общение после настройки
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Пример диалога:
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex gap-2">
-                        <span className="font-medium text-primary">Siri:</span>
-                        <span>"Опишите трату или доход и сумму"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-green-600">Вы:</span>
-                        <span>"Такси до офиса 500 рублей"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-primary">Siri:</span>
-                        <span>"💰 Расход 500₽ — Такси до офиса. Какой проект?"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-green-600">Вы:</span>
-                        <span>"Саманта"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-primary">Siri:</span>
-                        <span>"📁 Проект: 0101 Саманта. Какой кошелёк?"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-green-600">Вы:</span>
-                        <span>"Наличка Настя"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-primary">Siri:</span>
-                        <span>"✅ Готово! Расход 500₽ создан"</span>
-                      </div>
-                    </div>
+                <div className="space-y-3 p-4 bg-muted rounded-lg">
+                  <div className="flex gap-2 items-start">
+                    <Badge variant="secondary" className="mt-0.5">Вы</Badge>
+                    <span className="text-sm">«Привет Siri, добавь транзакцию»</span>
                   </div>
-
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-3">Без проекта:</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex gap-2">
-                        <span className="font-medium text-primary">Siri:</span>
-                        <span>"Какой проект?"</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-medium text-green-600">Вы:</span>
-                        <span>"Без проекта" / "Пропустить" / "Нет"</span>
-                      </div>
-                    </div>
+                  <div className="flex gap-2 items-start">
+                    <Badge className="mt-0.5">Siri</Badge>
+                    <span className="text-sm">«Опишите трату или доход и сумму»</span>
                   </div>
-
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-3">Умный поиск проектов:</h4>
-                    <ul className="space-y-1 text-sm">
-                      <li>• <strong>"Саманта"</strong> → найдет "0101 Саманта - День рождения"</li>
-                      <li>• <strong>"0111"</strong> → найдет все проекты начинающиеся с 0111</li>
-                      <li>• <strong>"день рождения Маши"</strong> → найдет подходящие события</li>
-                      <li>• Если не найдено — сохранит как текст</li>
-                    </ul>
+                  <div className="flex gap-2 items-start">
+                    <Badge variant="secondary" className="mt-0.5">Вы</Badge>
+                    <span className="text-sm">«Такси до офиса пятьсот рублей»</span>
                   </div>
-
-                  <Alert>
-                    <AlertDescription className="space-y-2">
-                      <p className="font-semibold">💡 Советы:</p>
-                      <ul className="text-sm space-y-1 ml-4 list-disc">
-                        <li>Транзакция создается как черновик — можно отредактировать и добавить чек</li>
-                        <li>Система понимает вариации: "наличка настя", "наличные Настя", "кэш Настя"</li>
-                        <li>Категория определяется автоматически по описанию</li>
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
+                  <div className="flex gap-2 items-start">
+                    <Badge className="mt-0.5">Siri</Badge>
+                    <span className="text-sm">«💰 Расход 500₽ — Такси до офиса. Категория: Транспорт. Какой проект?»</span>
+                  </div>
+                  <div className="flex gap-2 items-start">
+                    <Badge variant="secondary" className="mt-0.5">Вы</Badge>
+                    <span className="text-sm">«Саманта»</span>
+                  </div>
+                  <div className="flex gap-2 items-start">
+                    <Badge className="mt-0.5">Siri</Badge>
+                    <span className="text-sm">«📁 Проект: 0101 Саманта. Какой кошелёк?»</span>
+                  </div>
+                  <div className="flex gap-2 items-start">
+                    <Badge variant="secondary" className="mt-0.5">Вы</Badge>
+                    <span className="text-sm">«Наличка Настя»</span>
+                  </div>
+                  <div className="flex gap-2 items-start">
+                    <Badge className="mt-0.5">Siri</Badge>
+                    <span className="text-sm">«✅ Черновик создан: Такси до офиса — 500₽, Наличка Настя, проект Саманта»</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -436,50 +606,81 @@ export default function SiriIntegrationPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Альтернатива: Одна команда (для опытных)
+                  Legacy режим (упрощённый)
                 </CardTitle>
                 <CardDescription>
-                  Можно использовать одну голосовую команду со всеми данными сразу
+                  Всё в одной команде — быстрее настроить, но нужно говорить всё сразу
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Если не указывать параметр <code className="bg-muted px-1 rounded">step</code>, система попытается распознать всё из одной фразы:
-                  </p>
-                  
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2">Примеры:</h4>
-                    <ul className="space-y-2 text-sm">
-                      <li>• "расход 500 такси наличка настя проект саманта"</li>
-                      <li>• "трата 1500 аниматоры корп карта лера проект 0111"</li>
-                      <li>• "приход 10000 оплата за мероприятие ип настя"</li>
-                    </ul>
-                  </div>
+              <CardContent className="space-y-4">
+                <Alert className="bg-primary/5 border-primary/20">
+                  <AlertDescription>
+                    <p className="font-semibold mb-2">💡 Как использовать:</p>
+                    <p className="text-sm">
+                      Скажите всё в одной фразе: «Такси 500 рублей, Саманта, наличка Настя»
+                    </p>
+                  </AlertDescription>
+                </Alert>
 
-                  <div className="p-3 bg-muted rounded-md">
-                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-{`{
-  "text": "[Полная голосовая команда]",
-  "apiKey": "${apiKey}"
-}`}
-                    </pre>
-                  </div>
+                <div className="space-y-4">
+                  <InstructionSection icon={Smartphone} title="Быстрая настройка" badge="5 шагов">
+                    <InstructionStep
+                      number={1}
+                      icon={Smartphone}
+                      title="Откройте «Команды» → «+» → «Добавить действие»"
+                    />
+                    <InstructionStep
+                      number={2}
+                      icon={Search}
+                      title="Найдите «Запросить ввод»"
+                      value="Скажите транзакцию (сумма, проект, кошелёк)"
+                    />
+                    <InstructionStep
+                      number={3}
+                      icon={Plus}
+                      title="Добавьте «Получить содержимое URL»"
+                      description={`URL: ${apiUrl}`}
+                    />
+                    <InstructionStep
+                      number={4}
+                      icon={Globe}
+                      title="Настройте запрос:"
+                      description="Метод: POST, Тело: JSON с полями text (ввод), apiKey (ваш ключ)"
+                    />
+                    <InstructionStep
+                      number={5}
+                      icon={Eye}
+                      title="Добавьте «Показать результат»"
+                      description="Выберите message из ответа"
+                    />
+                  </InstructionSection>
+                </div>
+
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2">Пример голосовой команды:</h4>
+                  <p className="text-sm text-muted-foreground italic">
+                    «Такси пятьсот рублей, проект Саманта, наличка Настя»
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Security Notice */}
-            <Alert>
-              <AlertDescription className="space-y-2">
-                <p className="font-semibold">🔒 Безопасность:</p>
-                <ul className="text-sm space-y-1 ml-4 list-disc">
-                  <li>Никогда не делитесь вашим API ключом с другими людьми</li>
-                  <li>Если ключ скомпрометирован, создайте новый (старый автоматически деактивируется)</li>
-                  <li>API ключ работает только для вашего аккаунта</li>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-red-500 flex items-center gap-2">
+                  ⚠️ Безопасность
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>API ключ даёт доступ к созданию транзакций от вашего имени</li>
+                  <li>Не передавайте ключ третьим лицам</li>
+                  <li>Если ключ скомпрометирован — создайте новый (старый деактивируется)</li>
+                  <li>Все транзакции создаются как черновики — проверьте их в приложении</li>
                 </ul>
-              </AlertDescription>
-            </Alert>
+              </CardContent>
+            </Card>
           </>
         )}
       </div>
