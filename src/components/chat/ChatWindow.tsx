@@ -136,9 +136,11 @@ export const ChatWindow = ({ chatRoomId, chat, currentUserId, onBack }: ChatWind
 
   return (
     <div 
-      className="flex flex-col bg-background"
+      className={cn(
+        "flex flex-col bg-background h-full",
+        isMobile && "fixed inset-0 z-50"
+      )}
       style={{ 
-        height: isMobile ? '100dvh' : '100%',
         paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined
       }}
     >
