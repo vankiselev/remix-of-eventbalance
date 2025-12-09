@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, History, Plus, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, History, Plus, RefreshCw, Send, Mic } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +57,7 @@ interface Transaction {
   transfer_to_user?: { full_name: string; email: string } | null;
   transfer_from_user?: { full_name: string; email: string } | null;
   transfer_rejection_reason?: string | null;
+  is_draft?: boolean | null;
 }
 
 interface TransactionDetailDialogProps {
@@ -90,6 +91,7 @@ export function TransactionDetailDialog({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [auditHistory, setAuditHistory] = useState<AuditLogEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [auditHistoryLoaded, setAuditHistoryLoaded] = useState(false);
@@ -144,6 +146,40 @@ export function TransactionDetailDialog({
     if (onEdit) {
       onEdit(transaction);
       onClose();
+    }
+  };
+
+  const handlePublishDraft = async () => {
+    setIsPublishing(true);
+    try {
+      const { error } = await supabase
+        .from('financial_transactions')
+        .update({
+          is_draft: false,
+          requires_verification: true,
+          verification_status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: "Транзакция отправлена на проверку",
+      });
+
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error('Error publishing draft:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить на проверку",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -280,6 +316,8 @@ export function TransactionDetailDialog({
   const isExpense = transaction.expense_amount && transaction.expense_amount > 0;
   const amount = transaction.expense_amount || transaction.income_amount || 0;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
+  const isDraft = transaction.is_draft === true;
+  const isVoiceTransaction = transaction.no_receipt_reason?.includes('Siri') || false;
   
   // For the resend button: show only if current user is the sender (created_by) AND status is rejected
   const isRejectedTransfer = isMoneyTransfer && 
@@ -291,9 +329,14 @@ export function TransactionDetailDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Детали транзакции</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {isVoiceTransaction && <Mic className="h-5 w-5 text-blue-500" />}
+            {isDraft ? 'Черновик транзакции' : 'Детали транзакции'}
+          </DialogTitle>
           <DialogDescription>
-            Подробная информация о финансовой операции
+            {isDraft 
+              ? 'Проверьте данные и отправьте на проверку финансисту'
+              : 'Подробная информация о финансовой операции'}
           </DialogDescription>
         </DialogHeader>
 
@@ -479,8 +522,20 @@ export function TransactionDetailDialog({
         </div>
 
         {/* Action Buttons */}
-        {(canEdit || isRejectedTransfer) && (
+        {(canEdit || isRejectedTransfer || isDraft) && (
           <DialogFooter className="flex-col sm:flex-row gap-2">
+            {/* Draft: Show publish button prominently */}
+            {isDraft && (
+              <Button 
+                onClick={handlePublishDraft} 
+                disabled={isPublishing}
+                className="w-full sm:w-auto"
+                variant="default"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {isPublishing ? "Отправка..." : "Отправить на проверку"}
+              </Button>
+            )}
             {isRejectedTransfer && (
               <Button 
                 onClick={handleResendTransfer} 

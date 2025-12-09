@@ -352,8 +352,10 @@ serve(async (req) => {
       project_owner: transactionDetails.cash_type,
       no_receipt: true,
       no_receipt_reason: 'Транзакция создана через голосовой ввод Siri',
-      requires_verification: true,
-      verification_status: 'pending'
+      // Черновик - не отправляется на проверку финансисту сразу
+      is_draft: true,
+      requires_verification: false,
+      verification_status: null
     };
 
     // Set project reference

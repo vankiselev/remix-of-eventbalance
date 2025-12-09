@@ -30,6 +30,7 @@ export default function TransactionsReviewPage() {
       let query = supabase
         .from('financial_transactions')
         .select('*')
+        .eq('is_draft', false) // Исключаем черновики из проверки
         .order('operation_date', { ascending: false })
         .limit(100000);
 
@@ -51,18 +52,22 @@ export default function TransactionsReviewPage() {
         supabase
           .from('financial_transactions')
           .select('*', { count: 'exact', head: true })
+          .eq('is_draft', false)
           .eq('verification_status', 'pending'),
         supabase
           .from('financial_transactions')
           .select('*', { count: 'exact', head: true })
+          .eq('is_draft', false)
           .eq('verification_status', 'approved'),
         supabase
           .from('financial_transactions')
           .select('*', { count: 'exact', head: true })
+          .eq('is_draft', false)
           .eq('verification_status', 'rejected'),
         supabase
           .from('financial_transactions')
-          .select('*', { count: 'exact', head: true }),
+          .select('*', { count: 'exact', head: true })
+          .eq('is_draft', false),
       ]);
 
       return {

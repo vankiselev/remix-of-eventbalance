@@ -14,6 +14,7 @@ export const usePendingTransactionsCount = () => {
       const { count, error } = await supabase
         .from('financial_transactions')
         .select('*', { count: 'exact', head: true })
+        .eq('is_draft', false) // Исключаем черновики
         .eq('verification_status', 'pending')
         .eq('requires_verification', true);
       
