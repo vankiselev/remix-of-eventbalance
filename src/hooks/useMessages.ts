@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { notificationSound } from "@/utils/notificationSound";
 
 export interface Message {
@@ -29,13 +29,21 @@ export interface Message {
 export const useMessages = (chatRoomId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const currentUserIdRef = useRef<string | null>(null);
+
+  // Get current user ID once
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      currentUserIdRef.current = user?.id || null;
+    });
+  }, []);
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['messages', chatRoomId],
     queryFn: async () => {
       if (!chatRoomId) return [];
 
-      // Get messages
+      // Get messages with attachments
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('*, message_attachments(*)')
@@ -61,16 +69,37 @@ export const useMessages = (chatRoomId: string | null) => {
       }) as Message[];
     },
     enabled: !!chatRoomId,
+    staleTime: 1000 * 30, // 30 seconds
   });
+
+  // Process new message from realtime
+  const processNewMessage = useCallback(async (messageId: string) => {
+    // Fetch the complete message with attachments
+    const { data: message } = await supabase
+      .from('messages')
+      .select('*, message_attachments(*)')
+      .eq('id', messageId)
+      .single();
+
+    if (!message) return null;
+
+    // Get sender profile
+    const { data: allProfiles } = await supabase.rpc('get_all_basic_profiles');
+    const profile = (allProfiles || []).find((p: any) => p.id === message.sender_id);
+
+    return {
+      ...message,
+      sender: {
+        full_name: profile?.full_name || '',
+        avatar_url: profile?.avatar_url || null,
+      },
+      attachments: message.message_attachments || [],
+    } as Message;
+  }, []);
 
   // Subscribe to realtime messages
   useEffect(() => {
     if (!chatRoomId) return;
-
-    const getCurrentUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user?.id;
-    };
 
     const channel = supabase
       .channel(`messages:${chatRoomId}`)
@@ -83,58 +112,80 @@ export const useMessages = (chatRoomId: string | null) => {
           filter: `chat_room_id=eq.${chatRoomId}`,
         },
         async (payload) => {
-          const currentUserId = await getCurrentUserId();
+          const newMessageData = payload.new as any;
           
-          // Get message with attachments
-          const { data: message } = await supabase
-            .from('messages')
-            .select('*, message_attachments(*)')
-            .eq('id', payload.new.id)
-            .single();
+          // Check for duplicate before adding
+          const existingMessages = queryClient.getQueryData<Message[]>(['messages', chatRoomId]) || [];
+          if (existingMessages.some(m => m.id === newMessageData.id)) {
+            return; // Skip duplicate
+          }
 
-          if (message) {
-            // Get sender profile
-            const { data: allProfiles } = await supabase.rpc('get_all_basic_profiles');
-            const profile = (allProfiles || []).find((p: any) => p.id === message.sender_id);
+          // Fetch complete message with profile
+          const newMessage = await processNewMessage(newMessageData.id);
+          if (!newMessage) return;
 
-            const newMessage = {
-              ...message,
-              sender: {
-                full_name: profile?.full_name || '',
-                avatar_url: profile?.avatar_url || null,
-              },
-              attachments: message.message_attachments || [],
-            };
+          // Add to cache
+          queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => {
+            // Double-check for duplicates
+            if (old.some(m => m.id === newMessage.id)) return old;
+            return [...old, newMessage];
+          });
 
-            queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => 
-              [...old, newMessage as Message]
-            );
+          // Play sound and show notification if message is from another user
+          const currentUserId = currentUserIdRef.current;
+          if (newMessage.sender_id !== currentUserId) {
+            notificationSound.play();
 
-            // Play sound and show notification if message is from another user
-            if (message.sender_id !== currentUserId) {
-              // Play sound notification
-              notificationSound.play();
+            // Show browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const senderName = newMessage.sender?.full_name || 'Кто-то';
+              const messageText = newMessage.content || 'Новое сообщение';
+              
+              const notification = new Notification(senderName, {
+                body: messageText,
+                icon: newMessage.sender?.avatar_url || '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: `message-${newMessage.id}`,
+              });
 
-              // Show browser notification
-              if ('Notification' in window && Notification.permission === 'granted') {
-                const sender = newMessage.sender;
-                const senderName = sender && 'full_name' in sender ? sender.full_name : 'Кто-то';
-                const messageText = message.content || 'Новое сообщение';
-                
-                const notification = new Notification(senderName, {
-                  body: messageText,
-                  icon: sender && 'avatar_url' in sender ? sender.avatar_url || '/favicon.ico' : '/favicon.ico',
-                  badge: '/favicon.ico',
-                  tag: `message-${message.id}`,
-                });
-
-                notification.onclick = () => {
-                  window.focus();
-                  notification.close();
-                };
-              }
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
             }
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${chatRoomId}`,
+        },
+        async (payload) => {
+          const updatedMessage = await processNewMessage(payload.new.id);
+          if (!updatedMessage) return;
+
+          queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => 
+            old.map(m => m.id === updatedMessage.id ? updatedMessage : m)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${chatRoomId}`,
+        },
+        (payload) => {
+          const deletedId = (payload.old as any).id;
+          queryClient.setQueryData(['messages', chatRoomId], (old: Message[] = []) => 
+            old.filter(m => m.id !== deletedId)
+          );
         }
       )
       .subscribe();
@@ -142,7 +193,7 @@ export const useMessages = (chatRoomId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatRoomId, queryClient]);
+  }, [chatRoomId, queryClient, processNewMessage]);
 
   const sendMessage = useMutation({
     mutationFn: async ({ 
@@ -198,7 +249,7 @@ export const useMessages = (chatRoomId: string | null) => {
       return message;
     },
     onSuccess: () => {
-      // Don't invalidate messages - realtime will handle it
+      // Invalidate chats to update last message
       queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
     onError: (error) => {
@@ -232,7 +283,7 @@ export const useMessages = (chatRoomId: string | null) => {
   return {
     messages,
     isLoading,
-    sendMessage: sendMessage.mutate,
+    sendMessage: sendMessage.mutateAsync,
     isSending: sendMessage.isPending,
     markAsRead: markAsRead.mutate,
   };
