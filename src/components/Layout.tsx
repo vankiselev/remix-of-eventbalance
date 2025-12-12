@@ -3,13 +3,13 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, Package, ListChecks } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, Package, ListChecks, Search } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useNavigate } from "react-router-dom";
-import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileNavEnhanced from "@/components/navigation/MobileNavEnhanced";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { formatFullName, getInitials } from "@/utils/formatName";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { CommandPalette } from "@/components/navigation/CommandPalette";
+import { NavigationGroups } from "@/components/navigation/NavigationGroups";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,7 +42,20 @@ const Layout = ({ children }: LayoutProps) => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  // Keyboard shortcut for Command Palette
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setShowCommandPalette((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
   
   const { pendingCount } = usePendingTransactionsCount();
   const { pendingTasksCount } = usePendingTasksCount();
@@ -278,6 +293,19 @@ const Layout = ({ children }: LayoutProps) => {
                 )}
               </div>
 
+              {/* Search Button */}
+              <Button
+                variant="outline"
+                className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowCommandPalette(true)}
+              >
+                <Search className="h-4 w-4" />
+                <span className="text-sm">Поиск...</span>
+                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium lg:inline-flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+
               {/* User Profile & Actions */}
               <div className="flex items-center gap-3">
                 <NotificationsMenu />
@@ -330,51 +358,8 @@ const Layout = ({ children }: LayoutProps) => {
               onMouseLeave={() => setSidebarHovered(false)}
             >
               <div className="flex h-full flex-col">
-                {/* Sidebar Navigation */}
-                <nav className="flex-1 p-3 overflow-y-auto">
-                  <ul className="space-y-1">
-                    {menuItems.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(item.path);
-                      return (
-                        <li key={item.path}>
-                          <Button
-                            variant={active ? "secondary" : "ghost"}
-                            className={`w-full transition-all duration-200 relative ${
-                              sidebarCollapsed
-                                ? "justify-center px-2"
-                                : "justify-start px-3"
-                            } ${
-                              active
-                                ? "bg-primary/10 text-primary font-medium shadow-sm"
-                                : "hover:bg-accent/50"
-                            }`}
-                            onClick={() => navigate(item.path)}
-                            title={sidebarCollapsed ? item.label : undefined}
-                          >
-                            <Icon className="h-4 w-4 flex-shrink-0" />
-                            {!sidebarCollapsed && (
-                              <span className="ml-3 truncate flex-1 text-left">{item.label}</span>
-                            )}
-                             {!sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
-                               <Badge variant="destructive" className="ml-auto">
-                                 {item.badge}
-                               </Badge>
-                             )}
-                             {sidebarCollapsed && 'badge' in item && item.badge && item.badge > 0 && (
-                               <Badge 
-                                 variant="destructive" 
-                                 className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full"
-                               >
-                                 {item.badge}
-                               </Badge>
-                             )}
-                          </Button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </nav>
+                {/* Sidebar Navigation with Groups */}
+                <NavigationGroups isCollapsed={sidebarCollapsed} isAdmin={isAdminRbac} />
               </div>
             </aside>
 
@@ -446,9 +431,12 @@ const Layout = ({ children }: LayoutProps) => {
             {children}
           </main>
           
-          <MobileBottomNav />
+          <MobileNavEnhanced onOpenCommandPalette={() => setShowCommandPalette(true)} />
         </div>
       )}
+      
+      {/* Command Palette */}
+      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} />
       
       {/* Events Import Dialog */}
       <EventsImportDialog 
