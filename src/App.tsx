@@ -28,7 +28,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AdministrationPage from "./pages/AdministrationPage";
 import TransactionsReviewPage from "./pages/TransactionsReviewPage";
-import MessagesPage from "./pages/MessagesPage";
+
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
 import TasksPage from "./pages/TasksPage";
@@ -170,7 +170,7 @@ const App = () => {
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+            
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
             <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
             <Route path="/warehouse-tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
