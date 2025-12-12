@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, MessageSquare, Package, ListChecks } from "lucide-react";
+import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, Package, ListChecks } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventsImportDialog from "@/components/EventsImportDialog";
-import { useChatUnread } from "@/hooks/useChatUnread";
+
 import { cn } from "@/lib/utils";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
@@ -41,7 +41,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  const { totalUnread } = useChatUnread();
+  
   const { pendingCount } = usePendingTransactionsCount();
   const { pendingTasksCount } = usePendingTasksCount();
   
@@ -147,7 +147,6 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
-    { path: "/messages", label: "Сообщения", icon: MessageSquare, ...(totalUnread > 0 && { badge: totalUnread }) },
     { path: "/events", label: t('events'), icon: CalendarDays },
     { path: "/calendar", label: t('calendar'), icon: Calendar },
     { path: "/transaction", label: t('transaction'), icon: PlusCircle },
@@ -382,15 +381,11 @@ const Layout = ({ children }: LayoutProps) => {
             {/* Main Content with margin to account for fixed sidebar */}
             <main 
               className={cn(
-                "flex-1 flex flex-col transition-all duration-300",
-                sidebarCollapsed ? "ml-16" : "ml-64",
-                location.pathname === '/messages' ? "h-[calc(100vh-4rem)] overflow-hidden" : "overflow-hidden"
+                "flex-1 flex flex-col transition-all duration-300 overflow-hidden",
+                sidebarCollapsed ? "ml-16" : "ml-64"
               )}
             >
-              <div className={cn(
-                "flex-1 w-full flex flex-col min-h-0",
-                location.pathname === '/messages' ? 'h-full overflow-hidden' : 'main-container overflow-hidden'
-              )}>
+              <div className="flex-1 w-full flex flex-col min-h-0 main-container overflow-hidden">
                 {children}
               </div>
               
@@ -447,12 +442,7 @@ const Layout = ({ children }: LayoutProps) => {
             </header>
           )}
 
-          <main className={cn(
-            "flex-1 w-full overflow-x-hidden",
-            location.pathname === '/messages' 
-              ? "overflow-hidden flex flex-col min-h-0 h-[calc(100dvh-80px)]" 
-              : "overflow-auto px-4 py-6 pb-28"
-          )}>
+          <main className="flex-1 w-full overflow-x-hidden overflow-auto px-4 py-6 pb-28">
             {children}
           </main>
           

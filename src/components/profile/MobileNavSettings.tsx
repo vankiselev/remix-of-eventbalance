@@ -25,7 +25,6 @@ const availableRoutes = [
   { path: '/events', label: 'Мероприятия', icon: 'CalendarDays' },
   { path: '/calendar', label: 'Календарь', icon: 'Calendar' },
   { path: '/staff', label: 'Сотрудники', icon: 'Users' },
-  { path: '/messages', label: 'Сообщения', icon: 'MessageSquare' },
   { path: '/birthdays', label: 'Дни рождения', icon: 'Cake' },
   { path: '/vacations', label: 'График отпусков', icon: 'Plane' },
   { path: '/contacts', label: 'Контакты', icon: 'Briefcase' },

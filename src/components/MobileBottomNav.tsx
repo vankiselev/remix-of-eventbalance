@@ -3,7 +3,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import * as LucideIcons from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { useChatUnread } from "@/hooks/useChatUnread";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
@@ -21,7 +20,6 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const { totalUnread } = useChatUnread();
   const { pendingCount } = usePendingTransactionsCount();
   const { pendingTasksCount } = usePendingTasksCount();
   const mainNavItems: NavItem[] = [
@@ -32,7 +30,6 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
-    { path: "/messages", label: "Сообщения", icon: "MessageSquare" },
     { path: "/calendar", label: "Календарь", icon: "Calendar" },
     { path: "/tasks", label: "Мои задачи", icon: "ListChecks" },
     { path: "/warehouse", label: "Склад", icon: "Package" },
@@ -66,8 +63,6 @@ const MobileBottomNav = () => {
           {/* Dynamic main nav items */}
           {mainNavItems.slice(0, 4).map((item) => {
             const IconComponent = getIconComponent(item.icon);
-            const showBadge = item.path === '/messages' && totalUnread > 0;
-            const badgeCount = totalUnread;
             return (
               <div key={item.path} className="flex flex-col items-center gap-1.5">
                 <div className="relative">
@@ -81,14 +76,6 @@ const MobileBottomNav = () => {
                   >
                     <IconComponent className="h-5 w-5" strokeWidth={2} />
                   </button>
-                  {showBadge && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] rounded-full"
-                    >
-                      {badgeCount}
-                    </Badge>
-                  )}
                 </div>
                 <span className={`text-xs font-medium ${
                   isActive(item.path) ? "text-primary" : "text-foreground"
@@ -117,11 +104,9 @@ const MobileBottomNav = () => {
                 <div className="grid gap-2 pb-6">
                   {moreMenuItems.map((item) => {
                     const IconComponent = getIconComponent(item.icon);
-                    const showBadge = (item.path === '/messages' && totalUnread > 0) || 
-                                      (item.path === '/transactions-review' && pendingCount > 0) ||
+                    const showBadge = (item.path === '/transactions-review' && pendingCount > 0) ||
                                       (item.path === '/tasks' && pendingTasksCount > 0);
-                    const badgeCount = item.path === '/messages' ? totalUnread : 
-                                       item.path === '/tasks' ? pendingTasksCount : pendingCount;
+                    const badgeCount = item.path === '/tasks' ? pendingTasksCount : pendingCount;
                     return (
                       <button
                         key={item.path}
