@@ -31,7 +31,6 @@ import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
-import TasksPage from "./pages/TasksPage";
 import CRMTasksPage from "./pages/CRMTasksPage";
 import FinancialReportPage from "./pages/FinancialReportPage";
 import { notificationSound } from "@/utils/notificationSound";
@@ -173,7 +172,6 @@ const App = () => {
             
             <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
             <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
-            <Route path="/warehouse-tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
             
             {/* Admin-only routes */}

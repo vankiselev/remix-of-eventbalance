@@ -9,12 +9,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2, Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal, Package, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTasks, CreateTaskInput, Task } from "@/hooks/useTasks";
+import { useTasks, CreateTaskInput, Task, TaskType, TaskItem } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useClients } from "@/hooks/useClients";
 import { useEvents } from "@/hooks/useEvents";
+import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TaskCreateDialogProps {
@@ -25,12 +26,14 @@ interface TaskCreateDialogProps {
   defaultAssignedTo?: string;
 }
 
-const taskTypes: { value: Task['task_type']; label: string; icon: React.ReactNode }[] = [
+const taskTypes: { value: TaskType; label: string; icon: React.ReactNode }[] = [
   { value: 'call', label: 'Звонок', icon: <Phone className="h-4 w-4" /> },
   { value: 'meeting', label: 'Встреча', icon: <Users className="h-4 w-4" /> },
   { value: 'task', label: 'Задача', icon: <CheckSquare className="h-4 w-4" /> },
   { value: 'reminder', label: 'Напоминание', icon: <Bell className="h-4 w-4" /> },
   { value: 'follow_up', label: 'Повторный контакт', icon: <RefreshCw className="h-4 w-4" /> },
+  { value: 'collection', label: 'Сбор реквизита', icon: <Package className="h-4 w-4" /> },
+  { value: 'return', label: 'Возврат реквизита', icon: <Undo2 className="h-4 w-4" /> },
   { value: 'other', label: 'Другое', icon: <MoreHorizontal className="h-4 w-4" /> },
 ];
 
@@ -52,6 +55,9 @@ export const TaskCreateDialog = ({
   const { data: profiles } = useProfiles();
   const { data: clients } = useClients();
   const { data: events } = useEvents();
+  const { items: warehouseItems } = useWarehouseItems();
+
+  const isWarehouseTask = (type: TaskType) => type === 'collection' || type === 'return';
 
   const [formData, setFormData] = useState<CreateTaskInput>({
     title: '',
@@ -63,7 +69,11 @@ export const TaskCreateDialog = ({
     event_id: defaultEventId || null,
     due_date: null,
     checklists: [],
+    items: [],
   });
+
+  // Для добавления товаров в складские задачи
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
 
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [selectedHour, setSelectedHour] = useState<string>('12');
@@ -121,8 +131,55 @@ export const TaskCreateDialog = ({
       event_id: defaultEventId || null,
       due_date: null,
       checklists: [],
+      items: [],
     });
     setNewChecklistItem('');
+    setSelectedItemId('');
+  };
+
+  // Добавление товара в задачу
+  const addItem = () => {
+    if (!selectedItemId) return;
+    const item = warehouseItems?.find(i => i.id === selectedItemId);
+    if (!item) return;
+    
+    // Проверяем, не добавлен ли уже этот товар
+    if (formData.items?.some(i => i.item_id === selectedItemId)) {
+      setSelectedItemId('');
+      return;
+    }
+
+    const newItem: TaskItem = {
+      item_id: item.id,
+      item_name: item.name,
+      quantity: 1,
+      collected_quantity: 0,
+      is_collected: false,
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      items: [...(prev.items || []), newItem],
+    }));
+    setSelectedItemId('');
+  };
+
+  // Удаление товара из задачи
+  const removeItem = (itemId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items?.filter(i => i.item_id !== itemId),
+    }));
+  };
+
+  // Изменение количества товара
+  const updateItemQuantity = (itemId: string, quantity: number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items?.map(i => 
+        i.item_id === itemId ? { ...i, quantity: Math.max(1, quantity) } : i
+      ),
+    }));
   };
 
   const addChecklistItem = () => {
@@ -343,38 +400,95 @@ export const TaskCreateDialog = ({
               />
             </div>
 
-            {/* Checklist */}
-            <div className="space-y-2">
-              <Label>Чек-лист</Label>
+            {/* Items for warehouse tasks */}
+            {isWarehouseTask(formData.task_type as TaskType) && (
               <div className="space-y-2">
-                {formData.checklists?.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4 text-muted-foreground" />
-                    <span className="flex-1 text-sm">{item.text}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => removeChecklistItem(index)}
-                    >
-                      <Trash2 className="h-3 w-3" />
+                <Label>Товары для {formData.task_type === 'collection' ? 'сбора' : 'возврата'}</Label>
+                <div className="space-y-2">
+                  {formData.items?.map((item) => (
+                    <div key={item.item_id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="flex-1 text-sm truncate">{item.item_name}</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => updateItemQuantity(item.item_id, parseInt(e.target.value) || 1)}
+                        className="w-16 h-8 text-center"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeItem(item.item_id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Выберите товар..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouseItems?.filter(item => 
+                          !formData.items?.some(i => i.item_id === item.id)
+                        ).map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name} {item.sku ? `(${item.sku})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={addItem} disabled={!selectedItemId}>
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    value={newChecklistItem}
-                    onChange={(e) => setNewChecklistItem(e.target.value)}
-                    placeholder="Добавить пункт..."
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addChecklistItem())}
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={addChecklistItem}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {(!formData.items || formData.items.length === 0) && (
+                    <p className="text-xs text-muted-foreground">
+                      Добавьте товары, которые нужно {formData.task_type === 'collection' ? 'собрать' : 'вернуть'}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Checklist (only for non-warehouse tasks) */}
+            {!isWarehouseTask(formData.task_type as TaskType) && (
+              <div className="space-y-2">
+                <Label>Чек-лист</Label>
+                <div className="space-y-2">
+                  {formData.checklists?.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                      <span className="flex-1 text-sm">{item.text}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeChecklistItem(index)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <Input
+                      value={newChecklistItem}
+                      onChange={(e) => setNewChecklistItem(e.target.value)}
+                      placeholder="Добавить пункт..."
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addChecklistItem())}
+                    />
+                    <Button type="button" variant="outline" size="icon" onClick={addChecklistItem}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">

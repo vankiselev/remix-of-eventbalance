@@ -1,24 +1,27 @@
 import { format, isPast, isToday } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal, Calendar, User, Building2 } from "lucide-react";
+import { Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal, Calendar, User, Building2, Package, Undo2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { TaskWithDetails, Task, getStatusLabel } from "@/hooks/useTasks";
+import { TaskWithDetails, Task, TaskType, getStatusLabel, isWarehouseTask } from "@/hooks/useTasks";
 
 interface TaskCardProps {
   task: TaskWithDetails;
   onClick?: () => void;
 }
 
-const getTaskTypeIcon = (type: Task['task_type']) => {
+const getTaskTypeIcon = (type: TaskType) => {
   switch (type) {
     case 'call': return <Phone className="h-4 w-4" />;
     case 'meeting': return <Users className="h-4 w-4" />;
     case 'task': return <CheckSquare className="h-4 w-4" />;
     case 'reminder': return <Bell className="h-4 w-4" />;
     case 'follow_up': return <RefreshCw className="h-4 w-4" />;
+    case 'collection': return <Package className="h-4 w-4" />;
+    case 'return': return <Undo2 className="h-4 w-4" />;
     default: return <MoreHorizontal className="h-4 w-4" />;
   }
 };
@@ -56,6 +59,12 @@ const getPriorityDot = (priority: Task['priority']) => {
 export const TaskCard = ({ task, onClick }: TaskCardProps) => {
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== 'completed';
   const isDueToday = task.due_date && isToday(new Date(task.due_date));
+  
+  // Прогресс сбора товаров для складских задач
+  const hasItems = task.items && task.items.length > 0;
+  const collectedItems = hasItems ? task.items!.filter(i => i.is_collected).length : 0;
+  const totalItems = hasItems ? task.items!.length : 0;
+  const itemsProgress = totalItems > 0 ? (collectedItems / totalItems) * 100 : 0;
 
   return (
     <Card
@@ -143,6 +152,20 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
                 </Badge>
               )}
             </div>
+
+            {/* Items Progress for warehouse tasks */}
+            {hasItems && (
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Товары: {collectedItems} / {totalItems}
+                  </span>
+                  <span>{Math.round(itemsProgress)}%</span>
+                </div>
+                <Progress value={itemsProgress} className="h-1.5" />
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

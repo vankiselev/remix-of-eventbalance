@@ -4,7 +4,7 @@ import { ru } from "date-fns/locale";
 import { 
   Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal, 
   Calendar, Building2, CalendarDays, User, Plus, Trash2, Send,
-  Play, CheckCircle2, XCircle, Edit
+  Play, CheckCircle2, XCircle, Edit, Package, Undo2
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { 
   TaskWithDetails, 
   Task, 
+  TaskType,
+  TaskItem,
   useTasks, 
   useTaskChecklists, 
   useTaskComments,
   getTaskTypeLabel,
   getPriorityLabel,
-  getStatusLabel 
+  getStatusLabel,
+  isWarehouseTask 
 } from "@/hooks/useTasks";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -35,13 +39,15 @@ interface TaskDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const getTaskTypeIcon = (type: Task['task_type']) => {
+const getTaskTypeIcon = (type: TaskType) => {
   switch (type) {
     case 'call': return <Phone className="h-5 w-5" />;
     case 'meeting': return <Users className="h-5 w-5" />;
     case 'task': return <CheckSquare className="h-5 w-5" />;
     case 'reminder': return <Bell className="h-5 w-5" />;
     case 'follow_up': return <RefreshCw className="h-5 w-5" />;
+    case 'collection': return <Package className="h-5 w-5" />;
+    case 'return': return <Undo2 className="h-5 w-5" />;
     default: return <MoreHorizontal className="h-5 w-5" />;
   }
 };
@@ -238,17 +244,66 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
 
             <Separator />
 
-            {/* Tabs for Checklist and Comments */}
-            <Tabs defaultValue="checklist" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="checklist" className="flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" />
-                  Чек-лист {totalChecklists > 0 && `(${completedChecklists}/${totalChecklists})`}
-                </TabsTrigger>
+            {/* Tabs for Items/Checklist and Comments */}
+            <Tabs defaultValue={isWarehouseTask(task.task_type as TaskType) ? "items" : "checklist"} className="w-full">
+              <TabsList className={cn("grid w-full", isWarehouseTask(task.task_type as TaskType) ? "grid-cols-2" : "grid-cols-2")}>
+                {isWarehouseTask(task.task_type as TaskType) ? (
+                  <TabsTrigger value="items" className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Товары {task.items && task.items.length > 0 && `(${task.items.filter(i => i.is_collected).length}/${task.items.length})`}
+                  </TabsTrigger>
+                ) : (
+                  <TabsTrigger value="checklist" className="flex items-center gap-2">
+                    <CheckSquare className="h-4 w-4" />
+                    Чек-лист {totalChecklists > 0 && `(${completedChecklists}/${totalChecklists})`}
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="comments" className="flex items-center gap-2">
                   Комментарии {comments.length > 0 && `(${comments.length})`}
                 </TabsTrigger>
               </TabsList>
+
+              {/* Items Tab for warehouse tasks */}
+              {isWarehouseTask(task.task_type as TaskType) && (
+                <TabsContent value="items" className="space-y-2 mt-4">
+                  {task.items && task.items.length > 0 ? (
+                    <>
+                      {task.items.map((item) => (
+                        <div key={item.item_id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                          <Checkbox
+                            checked={item.is_collected}
+                            onCheckedChange={(checked) => {
+                              const updatedItems = task.items!.map(i => 
+                                i.item_id === item.item_id 
+                                  ? { ...i, is_collected: checked as boolean, collected_quantity: checked ? i.quantity : 0 }
+                                  : i
+                              );
+                              updateTask.mutate({ id: task.id, items: updatedItems });
+                            }}
+                          />
+                          <span className={cn(
+                            "flex-1 text-sm",
+                            item.is_collected && "line-through text-muted-foreground"
+                          )}>
+                            {item.item_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.collected_quantity} / {item.quantity}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="mt-2">
+                        <Progress 
+                          value={(task.items.filter(i => i.is_collected).length / task.items.length) * 100} 
+                          className="h-2"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Нет товаров в задаче</p>
+                  )}
+                </TabsContent>
+              )}
 
               <TabsContent value="checklist" className="space-y-2 mt-4">
                 {checklists.map((item) => (
