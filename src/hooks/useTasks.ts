@@ -4,11 +4,24 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendNotification } from "@/utils/notifications";
 
+// Типы задач включают складские (collection, return)
+export type TaskType = 'call' | 'meeting' | 'task' | 'reminder' | 'follow_up' | 'collection' | 'return' | 'other';
+
+// Товар в складской задаче
+export interface TaskItem {
+  item_id: string;
+  item_name: string;
+  quantity: number;
+  collected_quantity: number;
+  is_collected: boolean;
+  notes?: string | null;
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string | null;
-  task_type: 'call' | 'meeting' | 'task' | 'reminder' | 'follow_up' | 'other';
+  task_type: TaskType;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   assigned_to: string | null;
@@ -21,6 +34,7 @@ export interface Task {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  items: TaskItem[] | null;  // Товары для складских задач
 }
 
 export interface TaskWithDetails extends Task {
@@ -54,7 +68,7 @@ export interface TaskComment {
 export interface CreateTaskInput {
   title: string;
   description?: string;
-  task_type?: Task['task_type'];
+  task_type?: TaskType;
   priority?: Task['priority'];
   assigned_to?: string | null;
   client_id?: string | null;
@@ -63,13 +77,14 @@ export interface CreateTaskInput {
   reminder_at?: string | null;
   tags?: string[];
   checklists?: { text: string }[];
+  items?: TaskItem[];  // Товары для складских задач
 }
 
 export interface UpdateTaskInput {
   id: string;
   title?: string;
   description?: string;
-  task_type?: Task['task_type'];
+  task_type?: TaskType;
   priority?: Task['priority'];
   status?: Task['status'];
   assigned_to?: string | null;
@@ -79,6 +94,7 @@ export interface UpdateTaskInput {
   reminder_at?: string | null;
   tags?: string[];
   completed_at?: string | null;
+  items?: TaskItem[];  // Товары для складских задач
 }
 
 export const useTasks = (filter?: { assignedTo?: string; status?: string; showAll?: boolean }) => {
@@ -144,6 +160,7 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
 
       return (data || []).map(task => ({
         ...task,
+        items: Array.isArray(task.items) ? (task.items as unknown as TaskItem[]) : [],
         assigned_user: task.assigned_to ? profilesMap.get(task.assigned_to) : null,
         created_user: task.created_by ? profilesMap.get(task.created_by) : null,
         client: task.client_id ? clientsMap.get(task.client_id) : null,
@@ -155,14 +172,15 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
 
   const createTask = useMutation({
     mutationFn: async (input: CreateTaskInput) => {
-      const { checklists, ...taskData } = input;
+      const { checklists, items, ...taskData } = input;
 
       const { data: task, error } = await supabase
         .from('tasks')
         .insert({
           ...taskData,
+          items: items ? JSON.parse(JSON.stringify(items)) : [],
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
 
@@ -218,11 +236,15 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
 
   const updateTask = useMutation({
     mutationFn: async (input: UpdateTaskInput) => {
-      const { id, ...updateData } = input;
+      const { id, items, ...restData } = input;
 
       // If status is being changed to completed, set completed_at
+      const updateData: any = { ...restData };
       if (updateData.status === 'completed' && !updateData.completed_at) {
         updateData.completed_at = new Date().toISOString();
+      }
+      if (items !== undefined) {
+        updateData.items = JSON.parse(JSON.stringify(items));
       }
 
       const { data, error } = await supabase
@@ -426,24 +448,28 @@ export const useTaskComments = (taskId: string) => {
 };
 
 // Helper function for task type emoji
-export const getTaskTypeEmoji = (type: Task['task_type']) => {
+export const getTaskTypeEmoji = (type: TaskType) => {
   switch (type) {
     case 'call': return '📞';
     case 'meeting': return '🤝';
     case 'task': return '📋';
     case 'reminder': return '⏰';
     case 'follow_up': return '🔄';
+    case 'collection': return '📦';
+    case 'return': return '↩️';
     default: return '📌';
   }
 };
 
-export const getTaskTypeLabel = (type: Task['task_type']) => {
+export const getTaskTypeLabel = (type: TaskType) => {
   switch (type) {
     case 'call': return 'Звонок';
     case 'meeting': return 'Встреча';
     case 'task': return 'Задача';
     case 'reminder': return 'Напоминание';
     case 'follow_up': return 'Повторный контакт';
+    case 'collection': return 'Сбор реквизита';
+    case 'return': return 'Возврат реквизита';
     default: return 'Другое';
   }
 };
@@ -466,4 +492,9 @@ export const getStatusLabel = (status: Task['status']) => {
     case 'cancelled': return 'Отменена';
     default: return status;
   }
+};
+
+// Проверка, является ли задача складской
+export const isWarehouseTask = (type: TaskType) => {
+  return type === 'collection' || type === 'return';
 };

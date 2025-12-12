@@ -1771,6 +1771,7 @@ export type Database = {
           due_date: string | null
           event_id: string | null
           id: string
+          items: Json | null
           priority: string
           reminder_at: string | null
           status: string
@@ -1789,6 +1790,7 @@ export type Database = {
           due_date?: string | null
           event_id?: string | null
           id?: string
+          items?: Json | null
           priority?: string
           reminder_at?: string | null
           status?: string
@@ -1807,6 +1809,7 @@ export type Database = {
           due_date?: string | null
           event_id?: string | null
           id?: string
+          items?: Json | null
           priority?: string
           reminder_at?: string | null
           status?: string
