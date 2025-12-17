@@ -21,9 +21,8 @@ import { TasksWidget } from './widgets/TasksWidget';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-const ReactGridLayout = GridLayout.WidthProvider(GridLayout);
-
-const ReactGridLayout = WidthProvider(RGL);
+// @ts-ignore - react-grid-layout types are incomplete
+const ReactGridLayout = GridLayout.WidthProvider ? GridLayout.WidthProvider(GridLayout) : GridLayout;
 
 interface LayoutItem {
   i: string;
