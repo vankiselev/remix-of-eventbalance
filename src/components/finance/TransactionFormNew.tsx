@@ -250,6 +250,27 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     }
   }, [isInternalMoneyTransfer, form, editTransaction]);
 
+  // Auto-select "Наличка Ваня" for specific static projects
+  const VANYA_CASH_PROJECTS = [
+    'Расходы вне проекта',
+    'Склад / Офис',
+    'Оплата связи и сервисов',
+    'Новогодняя премия',
+    'Бонус',
+  ];
+  
+  useEffect(() => {
+    if (!watchProjectId || editTransaction) return;
+    
+    const isVanyaProject = VANYA_CASH_PROJECTS.includes(watchProjectId) || 
+      watchProjectId.startsWith('Оклад ');
+    
+    if (isVanyaProject) {
+      form.setValue('whose_project', 'Наличка Ваня');
+      setIsWhoseProjectAutoFilled(true);
+    }
+  }, [watchProjectId, form, editTransaction]);
+
   useEffect(() => {
     if (watchNoReceipt && files.length === 0 && !isMoneyTransfer && !isInternalMoneyTransfer) {
       // Auto-focus on reason field when "no receipt" is checked and no files
