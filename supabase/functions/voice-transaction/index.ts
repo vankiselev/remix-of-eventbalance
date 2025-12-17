@@ -381,9 +381,31 @@ serve(async (req) => {
         );
       }
 
-      if (!parsedData.amount || !parsedData.description) {
+      if (!parsedData.amount && !parsedData.description) {
         return new Response(
-          JSON.stringify({ error: 'Укажите сумму и описание.', success: false }),
+          JSON.stringify({ error: 'Не удалось распознать сумму и описание. Попробуйте сказать, например: "Такси 500 рублей"', success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!parsedData.amount) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Не указана сумма. Добавьте сумму, например: "${parsedData.description} 500 рублей"`, 
+            success: false,
+            partialData: { description: parsedData.description }
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!parsedData.description) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Не указано описание. Добавьте описание, например: "Такси ${parsedData.amount} рублей"`, 
+            success: false,
+            partialData: { amount: parsedData.amount }
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
