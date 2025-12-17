@@ -1,95 +1,18 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { CashSummaryCard } from "@/components/dashboard/CashSummaryCard";
-import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
-import TodayBirthdaysCard from "@/components/dashboard/TodayBirthdaysCard";
-import TodayVacationsCard from "@/components/dashboard/TodayVacationsCard";
-import MyEventsCard from "@/components/dashboard/MyEventsCard";
-import { EventActionRequestsCard } from "@/components/dashboard/EventActionRequestsCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
-import { AdvancesDashboardCard } from "@/components/dashboard/AdvancesDashboardCard";
-
-interface DashboardData {
-  totalEvents: number;
-  totalIncome: number;
-  totalExpenses: number;
-  profit: number;
-  totalCash: number;
-  cashNastya: number;
-  cashLera: number;
-  cashVanya: number;
-}
+import { useMyEvents } from "@/hooks/useMyEvents";
+import { QuickStatsRow } from "@/components/dashboard/QuickStatsRow";
+import { CompactInfoCard } from "@/components/dashboard/CompactInfoCard";
+import TodayEventsCard from "@/components/dashboard/TodayEventsCard";
+import MyEventsCard from "@/components/dashboard/MyEventsCard";
+import { EventActionRequestsCard } from "@/components/dashboard/EventActionRequestsCard";
 
 const Dashboard = () => {
-  const [data, setData] = useState<DashboardData>({
-    totalEvents: 0,
-    totalIncome: 0,
-    totalExpenses: 0,
-    profit: 0,
-    totalCash: 0,
-    cashNastya: 0,
-    cashLera: 0,
-    cashVanya: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { isAdmin } = useUserPermissions();
+  const { data: myEvents = [] } = useMyEvents();
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch events count
-        const { count: eventsCount } = await supabase
-          .from("events")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch financial data
-        const { data: transactions } = await supabase
-          .from("financial_transactions")
-          .select("income_amount, expense_amount, cash_type");
-
-        // Calculate totals
-        let totalIncome = 0;
-        let totalExpenses = 0;
-        let cashNastya = 0;
-        let cashLera = 0;
-        let cashVanya = 0;
-
-        transactions?.forEach(t => {
-          if (t.income_amount) totalIncome += t.income_amount;
-          if (t.expense_amount) totalExpenses += t.expense_amount;
-          
-          const netAmount = (t.income_amount || 0) - (t.expense_amount || 0);
-          if (t.cash_type === 'nastya') cashNastya += netAmount;
-          else if (t.cash_type === 'lera') cashLera += netAmount;
-          else if (t.cash_type === 'vanya') cashVanya += netAmount;
-        });
-
-        const totalCash = cashNastya + cashLera + cashVanya;
-        const profit = totalIncome - totalExpenses;
-
-        setData({
-          totalEvents: eventsCount || 0,
-          totalIncome,
-          totalExpenses,
-          profit,
-          totalCash,
-          cashNastya,
-          cashLera,
-          cashVanya,
-        });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
+  const hasMyEvents = myEvents.length > 0;
 
   return (
     <div className="space-y-6 w-full overflow-x-hidden">
@@ -97,7 +20,7 @@ const Dashboard = () => {
       <div className="min-w-0">
         <h1 className="text-3xl font-bold truncate">Главная</h1>
         <p className="text-muted-foreground truncate">
-          Добро пожаловать в EventBalance! Система управления ивентами
+          Добро пожаловать в EventBalance
         </p>
       </div>
 
@@ -108,18 +31,28 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Today's information */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr w-full">
-        <TodayEventsCard />
-        <TodayBirthdaysCard />
-        <TodayVacationsCard />
-        <AdvancesDashboardCard />
+      {/* Quick Stats Row - Financial metrics */}
+      <QuickStatsRow />
+
+      {/* Main Content Grid - 2 columns on desktop */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Events (takes 2 cols) */}
+        <div className="lg:col-span-2">
+          <TodayEventsCard />
+        </div>
+
+        {/* Right Column - Compact Info */}
+        <div className="lg:col-span-1">
+          <CompactInfoCard />
+        </div>
       </div>
 
-      {/* My Events */}
-      <div className="w-full">
-        <MyEventsCard />
-      </div>
+      {/* My Events - Only show if user has assigned events */}
+      {hasMyEvents && (
+        <div className="w-full">
+          <MyEventsCard />
+        </div>
+      )}
     </div>
   );
 };
