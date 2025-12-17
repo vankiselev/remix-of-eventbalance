@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import * as LucideIcons from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -30,17 +30,17 @@ const MobileBottomNav = () => {
   ];
 
   const moreMenuItems = [
-    { path: "/calendar", label: "Календарь", icon: "Calendar" },
-    { path: "/tasks", label: "Мои задачи", icon: "ListChecks" },
-    { path: "/warehouse", label: "Склад", icon: "Package" },
-    { path: "/staff", label: "Сотрудники", icon: "Users" },
-    { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
-    { path: "/vacations", label: "График отпусков", icon: "Plane" },
-    { path: "/contacts", label: "Контакты", icon: "Briefcase" },
-    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: "FileText" }] : []),
-    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", icon: "ClipboardCheck" }] : []),
-    { path: "/settings", label: "Настройки", icon: "Settings" },
-    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Shield" }] : []),
+    { path: "/calendar", label: "Календарь", shortLabel: "Календарь", icon: "Calendar" },
+    { path: "/tasks", label: "Мои задачи", shortLabel: "Задачи", icon: "ListChecks" },
+    { path: "/warehouse", label: "Склад", shortLabel: "Склад", icon: "Package" },
+    { path: "/staff", label: "Сотрудники", shortLabel: "Сотрудн.", icon: "Users" },
+    { path: "/birthdays", label: "Дни рождения", shortLabel: "Дни рожд.", icon: "Cake" },
+    { path: "/vacations", label: "График отпусков", shortLabel: "Отпуска", icon: "Plane" },
+    { path: "/contacts", label: "Контакты", shortLabel: "Контакты", icon: "Briefcase" },
+    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: "FileText" }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: "ClipboardCheck" }] : []),
+    { path: "/settings", label: "Настройки", shortLabel: "Настройки", icon: "Settings" },
+    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: "Shield" }] : []),
   ];
 
   const getIconComponent = (iconName: string) => {
@@ -97,11 +97,8 @@ const MobileBottomNav = () => {
                 <span className="text-xs font-medium text-foreground">Ещё</span>
               </div>
             </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl border-t border-border/20">
-                <SheetHeader className="pb-4">
-                  <SheetTitle>Меню</SheetTitle>
-                </SheetHeader>
-                <div className="grid gap-2 pb-6">
+              <SheetContent side="bottom" className="rounded-t-2xl border-t border-border/20 px-4 pb-8 pt-6">
+                <div className="grid grid-cols-4 gap-3">
                   {moreMenuItems.map((item) => {
                     const IconComponent = getIconComponent(item.icon);
                     const showBadge = (item.path === '/transactions-review' && pendingCount > 0) ||
@@ -111,22 +108,30 @@ const MobileBottomNav = () => {
                       <button
                         key={item.path}
                         onClick={() => handleNavigation(item.path)}
-                        className={`w-full flex items-center justify-start gap-3 h-12 px-4 rounded-lg transition-all duration-200 active:scale-98 relative ${
-                          isActive(item.path) 
-                            ? "bg-primary/10 text-primary font-medium" 
-                            : "hover:bg-accent/50 text-foreground"
-                        }`}
+                        className="flex flex-col items-center gap-1.5"
                       >
-                         <IconComponent className="h-5 w-5" strokeWidth={2} />
-                         <span className="font-medium">{item.label}</span>
-                         {showBadge && (
-                           <Badge 
-                             variant="destructive" 
-                             className="ml-auto h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
-                           >
-                             {badgeCount}
-                           </Badge>
-                         )}
+                        <div className="relative">
+                          <div
+                            className={`flex items-center justify-center h-12 w-12 rounded-full transition-all duration-200 active:scale-95 ${
+                              isActive(item.path) 
+                                ? "border-2 border-primary text-primary bg-primary/5" 
+                                : "border-2 border-border/30 text-foreground hover:border-primary hover:text-primary hover:bg-primary/5"
+                            }`}
+                          >
+                            <IconComponent className="h-5 w-5" strokeWidth={2} />
+                          </div>
+                          {showBadge && (
+                            <Badge 
+                              variant="destructive" 
+                              className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
+                            >
+                              {badgeCount}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className={`text-[11px] font-medium text-center leading-tight ${
+                          isActive(item.path) ? "text-primary" : "text-muted-foreground"
+                        }`}>{item.shortLabel}</span>
                       </button>
                     );
                   })}
