@@ -1,29 +1,19 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import * as LucideIcons from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { cn } from "@/lib/utils";
-import { Search, ChevronDown, ChevronRight, Zap } from "lucide-react";
 
 interface NavItem {
   path: string;
   label: string;
+  shortLabel: string;
   icon: string;
-  badge?: number;
-}
-
-interface NavGroup {
-  id: string;
-  label: string;
-  icon: string;
-  items: NavItem[];
 }
 
 interface MobileNavEnhancedProps {
@@ -36,60 +26,28 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
   const location = useLocation();
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    work: true,
-    finance: true,
-  });
   const { pendingCount } = usePendingTransactionsCount();
   const { pendingTasksCount } = usePendingTasksCount();
 
   const mainNavItems: NavItem[] = [
-    { path: "/dashboard", label: "Главная", icon: "Home" },
-    { path: "/finances", label: "Финансы", icon: "DollarSign" },
-    { path: "/transaction", label: "Траты", icon: "Plus" },
-    { path: "/events", label: "События", icon: "CalendarDays" },
+    { path: "/dashboard", label: "Главная", shortLabel: "Главная", icon: "Home" },
+    { path: "/finances", label: "Финансы", shortLabel: "Финансы", icon: "DollarSign" },
+    { path: "/transaction", label: "Траты", shortLabel: "Траты", icon: "Plus" },
+    { path: "/events", label: "События", shortLabel: "События", icon: "CalendarDays" },
   ];
 
-  const navGroups: NavGroup[] = [
-    {
-      id: "work",
-      label: "Работа",
-      icon: "Briefcase",
-      items: [
-        { path: "/calendar", label: "Календарь", icon: "Calendar" },
-        { path: "/tasks", label: "Мои задачи", icon: "ListChecks", badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
-        { path: "/staff", label: "Сотрудники", icon: "Users" },
-        { path: "/birthdays", label: "Дни рождения", icon: "Cake" },
-        { path: "/vacations", label: "Отпуска", icon: "Plane" },
-        { path: "/contacts", label: "Контакты", icon: "Briefcase" },
-      ],
-    },
-    {
-      id: "finance",
-      label: "Финансы",
-      icon: "Wallet",
-      items: [
-        ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка", icon: "ClipboardCheck", badge: pendingCount > 0 ? pendingCount : undefined }] : []),
-        ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: "FileText" }] : []),
-      ],
-    },
-    {
-      id: "warehouse",
-      label: "Склад",
-      icon: "Package",
-      items: [
-        { path: "/warehouse", label: "Склад", icon: "Package" },
-      ],
-    },
-    {
-      id: "settings",
-      label: "Настройки",
-      icon: "Settings",
-      items: [
-        { path: "/settings", label: "Настройки", icon: "Settings" },
-        ...(isAdmin ? [{ path: "/administration", label: "Администрирование", icon: "Shield" }] : []),
-      ],
-    },
+  const moreMenuItems: NavItem[] = [
+    { path: "/calendar", label: "Календарь", shortLabel: "Календарь", icon: "Calendar" },
+    { path: "/tasks", label: "Мои задачи", shortLabel: "Задачи", icon: "ListChecks" },
+    { path: "/warehouse", label: "Склад", shortLabel: "Склад", icon: "Package" },
+    { path: "/staff", label: "Сотрудники", shortLabel: "Сотрудн.", icon: "Users" },
+    { path: "/birthdays", label: "Дни рождения", shortLabel: "Дни рожд.", icon: "Cake" },
+    { path: "/vacations", label: "График отпусков", shortLabel: "Отпуска", icon: "Plane" },
+    { path: "/contacts", label: "Контакты", shortLabel: "Контакты", icon: "Briefcase" },
+    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: "FileText" }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: "ClipboardCheck" }] : []),
+    { path: "/settings", label: "Настройки", shortLabel: "Настройки", icon: "Settings" },
+    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: "Shield" }] : []),
   ];
 
   const getIconComponent = (iconName: string) => {
@@ -104,15 +62,10 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
 
   const isActive = (path: string) => location.pathname === path;
 
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  };
-
-  const getGroupBadge = (group: NavGroup) => {
-    return group.items.reduce((sum, item) => sum + (item.badge || 0), 0);
+  const getBadgeCount = (path: string) => {
+    if (path === '/tasks') return pendingTasksCount;
+    if (path === '/transactions-review') return pendingCount;
+    return 0;
   };
 
   return (
@@ -165,116 +118,49 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 <span className="text-[10px] font-medium text-muted-foreground">Ещё</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-3xl border-t-0 max-h-[85vh] overflow-hidden">
-              <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-4" />
+            <SheetContent side="bottom" className="rounded-t-3xl border-t-0 px-4 pb-8 pt-2">
+              <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-6" />
               
-              <SheetHeader className="pb-4">
-                <SheetTitle className="text-left">Меню</SheetTitle>
-              </SheetHeader>
-
-              {/* Search button */}
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 mb-4 h-12"
-                onClick={() => {
-                  setIsMoreMenuOpen(false);
-                  onOpenCommandPalette();
-                }}
-              >
-                <Search className="h-4 w-4" />
-                <span>Поиск...</span>
-                <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-
-              {/* Quick Actions */}
-              <div className="flex gap-2 mb-4">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-12 gap-2"
-                  onClick={() => handleNavigation("/transaction")}
-                >
-                  <Zap className="h-4 w-4 text-warning" />
-                  <span>Новая транзакция</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 h-12 gap-2"
-                  onClick={() => handleNavigation("/tasks?create=true")}
-                >
-                  <Zap className="h-4 w-4 text-warning" />
-                  <span>Новая задача</span>
-                </Button>
-              </div>
-
-              {/* Navigation Groups */}
-              <div className="overflow-y-auto max-h-[50vh] pb-6 space-y-2">
-                {navGroups.map((group) => {
-                  if (group.items.length === 0) return null;
+              {/* Icon Grid */}
+              <div className="grid grid-cols-4 gap-4">
+                {moreMenuItems.map((item) => {
+                  const IconComponent = getIconComponent(item.icon);
+                  const active = isActive(item.path);
+                  const badgeCount = getBadgeCount(item.path);
                   
-                  const GroupIcon = getIconComponent(group.icon);
-                  const isExpanded = expandedGroups[group.id] ?? false;
-                  const groupBadge = getGroupBadge(group);
-
                   return (
-                    <Collapsible
-                      key={group.id}
-                      open={isExpanded}
-                      onOpenChange={() => toggleGroup(group.id)}
+                    <button
+                      key={item.path}
+                      onClick={() => handleNavigation(item.path)}
+                      className="flex flex-col items-center gap-1.5"
                     >
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-between px-3 py-3 h-auto font-medium"
+                      <div className="relative">
+                        <div
+                          className={cn(
+                            "flex items-center justify-center h-12 w-12 rounded-2xl transition-all duration-200 active:scale-95",
+                            active
+                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                              : "bg-accent/50 text-foreground hover:bg-accent"
+                          )}
                         >
-                          <div className="flex items-center gap-3">
-                            <GroupIcon className="h-5 w-5" />
-                            <span>{group.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {groupBadge > 0 && (
-                              <Badge variant="destructive" className="text-[10px] animate-pulse">
-                                {groupBadge}
-                              </Badge>
-                            )}
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </div>
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="animate-accordion-down">
-                        <div className="ml-4 border-l border-border/50 pl-3 space-y-1">
-                          {group.items.map((item) => {
-                            const IconComponent = getIconComponent(item.icon);
-                            const active = isActive(item.path);
-                            return (
-                              <button
-                                key={item.path}
-                                onClick={() => handleNavigation(item.path)}
-                                className={cn(
-                                  "w-full flex items-center gap-3 h-11 px-3 rounded-lg transition-all duration-200",
-                                  active
-                                    ? "bg-primary/10 text-primary font-medium"
-                                    : "hover:bg-accent/50 text-foreground"
-                                )}
-                              >
-                                <IconComponent className="h-4 w-4" />
-                                <span>{item.label}</span>
-                                {item.badge && item.badge > 0 && (
-                                  <Badge variant="destructive" className="ml-auto text-[10px]">
-                                    {item.badge}
-                                  </Badge>
-                                )}
-                              </button>
-                            );
-                          })}
+                          <IconComponent className="h-5 w-5" strokeWidth={2} />
                         </div>
-                      </CollapsibleContent>
-                    </Collapsible>
+                        {badgeCount > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
+                          >
+                            {badgeCount}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className={cn(
+                        "text-[11px] font-medium text-center leading-tight",
+                        active ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {item.shortLabel}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
