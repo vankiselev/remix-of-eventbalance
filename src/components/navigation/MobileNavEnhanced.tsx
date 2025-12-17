@@ -120,6 +120,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
             </SheetTrigger>
             <SheetContent 
               side="bottom" 
+              hideCloseButton
               className="rounded-t-3xl border-t-0 px-4 pb-4 pt-2 mb-[88px] mx-2 rounded-b-2xl"
             >
               <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-4" />
