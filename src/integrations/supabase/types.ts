@@ -2042,6 +2042,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_voice_settings: {
+        Row: {
+          auto_create_draft: boolean | null
+          created_at: string | null
+          default_project_id: string | null
+          default_wallet: string | null
+          preferred_categories: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_create_draft?: boolean | null
+          created_at?: string | null
+          default_project_id?: string | null
+          default_wallet?: string | null
+          preferred_categories?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_create_draft?: boolean | null
+          created_at?: string | null
+          default_project_id?: string | null
+          default_wallet?: string | null
+          preferred_categories?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_voice_settings_default_project_id_fkey"
+            columns: ["default_project_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacations: {
         Row: {
           created_at: string

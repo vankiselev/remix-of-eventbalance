@@ -212,7 +212,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { text, apiKey, step, step1Data, projectId, cashType } = body;
+    const { text, apiKey, step, step1Data, projectId, cashType, mode } = body;
     
     // Validate API key
     if (!apiKey) {
@@ -222,7 +222,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[voice-transaction] Processing step:', step || 'legacy', 'text:', text);
+    console.log('[voice-transaction] Processing:', mode === 'simple' ? 'simple mode' : `step ${step || 'legacy'}`, 'text:', text);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -245,6 +245,213 @@ serve(async (req) => {
     console.log('[voice-transaction] Authenticated user:', userId);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
+    // ============================================
+    // SIMPLE MODE: One-step transaction creation
+    // ============================================
+    if (mode === 'simple') {
+      // Get user's voice settings for defaults
+      const { data: voiceSettings } = await supabase
+        .from('user_voice_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const defaultWallet = cashType || voiceSettings?.default_wallet || 'Наличка Настя';
+
+      // If step 3 with step1Data - create transaction directly
+      if (step === 3 || step === '3') {
+        if (!step1Data) {
+          return new Response(
+            JSON.stringify({ error: 'step1Data is required for step 3', success: false }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const normalizedCashType = normalizeCashType(defaultWallet);
+        const normalizedCategory = normalizeCategory(step1Data.suggestedCategory || 'Прочие расходы');
+
+        const transactionData: any = {
+          created_by: userId,
+          operation_date: new Date().toISOString().split('T')[0],
+          income_amount: step1Data.type === 'income' ? step1Data.amount : 0,
+          expense_amount: step1Data.type === 'expense' ? step1Data.amount : 0,
+          category: normalizedCategory,
+          cash_type: normalizedCashType,
+          description: step1Data.description,
+          project_owner: normalizedCashType,
+          no_receipt: true,
+          no_receipt_reason: 'Транзакция создана через голосовой ввод Siri',
+          is_draft: true,
+          requires_verification: false,
+          verification_status: null,
+          project_id: voiceSettings?.default_project_id || null,
+          static_project_name: voiceSettings?.default_project_id ? null : 'Расходы вне проекта'
+        };
+
+        const { data: transaction, error: transactionError } = await supabase
+          .from('financial_transactions')
+          .insert(transactionData)
+          .select()
+          .single();
+
+        if (transactionError) {
+          console.error('[voice-transaction] Simple mode error:', transactionError);
+          throw transactionError;
+        }
+
+        const typeLabel = step1Data.type === 'expense' ? 'Расход' : 'Приход';
+        return new Response(
+          JSON.stringify({
+            success: true,
+            step: 3,
+            message: `✅ Черновик создан: ${typeLabel} ${step1Data.amount}₽ — ${step1Data.description}`,
+            transaction: {
+              id: transaction.id,
+              amount: step1Data.amount,
+              description: step1Data.description,
+              type: step1Data.type,
+              category: normalizedCategory,
+              cash_type: normalizedCashType,
+              is_draft: true
+            }
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Step 1: Parse text only (for web widget preview)
+      if (!text) {
+        return new Response(
+          JSON.stringify({ error: 'Text is required', success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Use AI to parse the text
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `Извлеки детали транзакции из текста на русском. Верни JSON:
+- amount (число): сумма в рублях
+- description (строка): краткое описание (1-3 слова)
+- type: "expense" или "income"
+- suggestedCategory: категория из списка:
+  ${EXPENSE_INCOME_CATEGORIES.slice(0, 15).join(', ')}
+
+Примеры:
+"такси 500" → {"amount":500,"description":"Такси","type":"expense","suggestedCategory":"Доставка / Трансфер / Парковка / Вывоз мусора"}
+"приход 10000 за праздник" → {"amount":10000,"description":"Оплата за праздник","type":"income","suggestedCategory":"Прибыль/доход"}`
+            },
+            { role: 'user', content: text }
+          ],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        if (aiResponse.status === 429) {
+          return new Response(
+            JSON.stringify({ error: 'Слишком много запросов. Попробуйте позже.', success: false }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        throw new Error('AI Gateway error');
+      }
+
+      const aiData = await aiResponse.json();
+      const aiContent = aiData.choices?.[0]?.message?.content;
+      
+      let parsedData: any;
+      try {
+        const jsonMatch = aiContent?.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON');
+        parsedData = JSON.parse(jsonMatch[0]);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'Не удалось распознать. Попробуйте иначе.', success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!parsedData.amount || !parsedData.description) {
+        return new Response(
+          JSON.stringify({ error: 'Укажите сумму и описание.', success: false }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      parsedData.suggestedCategory = normalizeCategory(parsedData.suggestedCategory || 'Прочие расходы');
+
+      // If auto_create_draft is enabled, create transaction immediately
+      if (voiceSettings?.auto_create_draft && !step) {
+        const normalizedCashType = normalizeCashType(defaultWallet);
+        
+        const transactionData: any = {
+          created_by: userId,
+          operation_date: new Date().toISOString().split('T')[0],
+          income_amount: parsedData.type === 'income' ? parsedData.amount : 0,
+          expense_amount: parsedData.type === 'expense' ? parsedData.amount : 0,
+          category: parsedData.suggestedCategory,
+          cash_type: normalizedCashType,
+          description: parsedData.description,
+          project_owner: normalizedCashType,
+          no_receipt: true,
+          no_receipt_reason: 'Транзакция создана через голосовой ввод Siri',
+          is_draft: true,
+          requires_verification: false,
+          verification_status: null,
+          project_id: voiceSettings?.default_project_id || null,
+          static_project_name: voiceSettings?.default_project_id ? null : 'Расходы вне проекта'
+        };
+
+        const { data: transaction, error: transactionError } = await supabase
+          .from('financial_transactions')
+          .insert(transactionData)
+          .select()
+          .single();
+
+        if (transactionError) throw transactionError;
+
+        const typeLabel = parsedData.type === 'expense' ? 'Расход' : 'Приход';
+        return new Response(
+          JSON.stringify({
+            success: true,
+            autoCreated: true,
+            message: `✅ ${typeLabel} ${parsedData.amount}₽ — ${parsedData.description}`,
+            transaction: {
+              id: transaction.id,
+              amount: parsedData.amount,
+              description: parsedData.description,
+              type: parsedData.type,
+              category: parsedData.suggestedCategory,
+              cash_type: normalizedCashType,
+              is_draft: true
+            }
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Return parsed data for preview
+      return new Response(
+        JSON.stringify({
+          success: true,
+          step: 1,
+          step1Data: parsedData,
+          defaultWallet,
+          message: `${parsedData.type === 'expense' ? 'Расход' : 'Приход'} ${parsedData.amount}₽ — ${parsedData.description}`
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // ============================================
     // STEP 1: Parse description and amount
