@@ -70,8 +70,8 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
 
   return (
     <>
-      {/* Fixed bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 border-t border-border/20 backdrop-blur-lg safe-area-inset-bottom">
+      {/* Fixed bottom navigation - z-[60] to stay above Sheet overlay */}
+      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-card border-t border-border/20 safe-area-inset-bottom">
         <div className="flex items-center justify-around px-2 py-3 max-w-screen-sm mx-auto">
           {/* Main nav items */}
           {mainNavItems.map((item) => {
