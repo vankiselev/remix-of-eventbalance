@@ -777,6 +777,141 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
             <FormField
               control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Подробное описание</FormLabel>
+                    {isDescriptionAutoFilled && (
+                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 animate-in fade-in-50 duration-300">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Автоматически
+                      </span>
+                    )}
+                  </div>
+                  <FormControl>
+                    <Textarea
+                      placeholder={
+                        form.watch("category") === "Передано или получено от сотрудника"
+                          ? "Например: Передал на наличные расходы по проекту"
+                          : "Опишите операцию..."
+                      }
+                      className={cn(
+                        "resize-none",
+                        isDescriptionAutoFilled && "border-green-500 bg-green-50 dark:bg-green-950/20 ring-2 ring-green-500/20"
+                      )}
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // If user manually changes the value, remove auto-fill indicator
+                        if (isDescriptionAutoFilled) {
+                          setIsDescriptionAutoFilled(false);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  
+                  {/* AI Transaction Suggestions */}
+                  {isAnalyzing && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Анализ описания...</span>
+                    </div>
+                  )}
+
+                  {aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                            AI предлагает:
+                          </p>
+                          <div className="space-y-1">
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                              <span className="font-medium">Категория:</span> {aiSuggestions.category}
+                            </p>
+                            {aiSuggestions.project && (
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
+                                <span className="font-medium">Проект:</span> {aiSuggestions.project}
+                              </p>
+                            )}
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              Уверенность: {Math.round(aiConfidence * 100)}%
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            onClick={applyAISuggestions}
+                            className="h-10 min-h-[44px] text-xs"
+                          >
+                            Применить
+                          </Button>
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={dismissSuggestions}
+                            className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* AI Grammar Check Feedback */}
+                  {isChecking && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Проверка текста...</span>
+                    </div>
+                  )}
+
+                  {hasErrors && correctedText && !isChecking && (
+                    <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            Найдены ошибки в описании
+                          </p>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                            Исправленный вариант: <strong>{correctedText}</strong>
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          form.setValue("description", correctedText);
+                          toast({
+                            title: "Исправление применено",
+                            description: "Описание обновлено",
+                          });
+                        }}
+                        className="mt-2 h-10 min-h-[44px]"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Применить исправление
+                      </Button>
+                    </div>
+                  )}
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="project_id"
               render={({ field }) => {
                 const filteredStaticProjects = STATIC_PROJECTS.filter(project =>
@@ -1227,141 +1362,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   </FormItem>
                 );
               }}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-2">
-                    <FormLabel>Подробное описание</FormLabel>
-                    {isDescriptionAutoFilled && (
-                      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 animate-in fade-in-50 duration-300">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Автоматически
-                      </span>
-                    )}
-                  </div>
-                  <FormControl>
-                    <Textarea
-                      placeholder={
-                        form.watch("category") === "Передано или получено от сотрудника"
-                          ? "Например: Передал на наличные расходы по проекту"
-                          : "Опишите операцию..."
-                      }
-                      className={cn(
-                        "resize-none",
-                        isDescriptionAutoFilled && "border-green-500 bg-green-50 dark:bg-green-950/20 ring-2 ring-green-500/20"
-                      )}
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        // If user manually changes the value, remove auto-fill indicator
-                        if (isDescriptionAutoFilled) {
-                          setIsDescriptionAutoFilled(false);
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  
-                  {/* AI Transaction Suggestions */}
-                  {isAnalyzing && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Анализ описания...</span>
-                    </div>
-                  )}
-
-                  {aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
-                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
-                      <div className="flex items-start gap-2">
-                        <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                            AI предлагает:
-                          </p>
-                          <div className="space-y-1">
-                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                              <span className="font-medium">Категория:</span> {aiSuggestions.category}
-                            </p>
-                            {aiSuggestions.project && (
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                <span className="font-medium">Проект:</span> {aiSuggestions.project}
-                              </p>
-                            )}
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                              Уверенность: {Math.round(aiConfidence * 100)}%
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button 
-                            type="button"
-                            size="sm" 
-                            onClick={applyAISuggestions}
-                            className="h-10 min-h-[44px] text-xs"
-                          >
-                            Применить
-                          </Button>
-                          <Button 
-                            type="button"
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={dismissSuggestions}
-                            className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* AI Grammar Check Feedback */}
-                  {isChecking && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Проверка текста...</span>
-                    </div>
-                  )}
-
-                  {hasErrors && correctedText && !isChecking && (
-                    <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <div className="flex items-start gap-2 mb-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                            Найдены ошибки в описании
-                          </p>
-                          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                            Исправленный вариант: <strong>{correctedText}</strong>
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          form.setValue("description", correctedText);
-                          toast({
-                            title: "Исправление применено",
-                            description: "Описание обновлено",
-                          });
-                        }}
-                        className="mt-2 h-10 min-h-[44px]"
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        Применить исправление
-                      </Button>
-                    </div>
-                  )}
-                </FormItem>
-              )}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
