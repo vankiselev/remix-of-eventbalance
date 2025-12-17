@@ -118,8 +118,11 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 <span className="text-[10px] font-medium text-muted-foreground">Ещё</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-3xl border-t-0 px-4 pb-8 pt-2">
-              <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-6" />
+            <SheetContent 
+              side="bottom" 
+              className="rounded-t-3xl border-t-0 px-4 pb-4 pt-2 mb-[72px] mx-2 rounded-b-2xl"
+            >
+              <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-4" />
               
               {/* Icon Grid */}
               <div className="grid grid-cols-4 gap-4">
