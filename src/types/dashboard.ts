@@ -131,7 +131,7 @@ export const WIDGET_DEFINITIONS: Record<WidgetType, WidgetDefinition> = {
 
 export const DEFAULT_LAYOUT: WidgetConfig[] = [
   { id: '1', type: 'events', x: 0, y: 0, w: 2, h: 3 },
-  { id: '2', type: 'birthdays', x: 2, y: 0, w: 1, h: 2 },
-  { id: '3', type: 'vacations', x: 3, y: 0, w: 1, h: 2 },
-  { id: '4', type: 'my_events', x: 0, y: 3, w: 4, h: 2 },
+  { id: '2', type: 'my_events', x: 2, y: 0, w: 2, h: 2 },
+  { id: '3', type: 'birthdays', x: 2, y: 2, w: 1, h: 2 },
+  { id: '4', type: 'vacations', x: 3, y: 2, w: 1, h: 2 },
 ];

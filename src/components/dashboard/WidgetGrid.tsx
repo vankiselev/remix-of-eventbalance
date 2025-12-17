@@ -20,6 +20,7 @@ import { TasksWidget } from './widgets/TasksWidget';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import './WidgetGrid.css';
 
 // @ts-ignore - react-grid-layout types are incomplete
 const ReactGridLayout = GridLayout.WidthProvider ? GridLayout.WidthProvider(GridLayout) : GridLayout;
@@ -38,6 +39,7 @@ interface LayoutItem {
 
 const ROW_HEIGHT = 120;
 const MARGIN: [number, number] = [16, 16];
+const COLS = 4;
 
 const widgetComponents: Record<string, React.ComponentType<{ compact?: boolean }>> = {
   events: TodayEventsCard,
@@ -157,9 +159,9 @@ export function WidgetGrid() {
       </div>
 
       <ReactGridLayout
-        className="layout"
+        className={`layout ${isEditing ? 'widget-grid-editing' : ''}`}
         layout={gridLayout}
-        cols={4}
+        cols={COLS}
         rowHeight={ROW_HEIGHT}
         margin={MARGIN}
         isDraggable={isEditing}
@@ -167,6 +169,8 @@ export function WidgetGrid() {
         onLayoutChange={handleLayoutChange}
         draggableHandle=".cursor-grab"
         useCSSTransforms
+        compactType="vertical"
+        preventCollision={false}
       >
         {currentLayout.map(widget => {
           const WidgetComponent = widgetComponents[widget.type];
