@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Menu, RussianRuble, Calendar, CalendarDays, UsersRound, BarChart3, PlusCircle, Cake, Plane, FileText, Settings, Download, Upload, Trash2, Contact, UserPlus, ClipboardCheck, FileSpreadsheet, Package, ListChecks, Search } from "lucide-react";
+import { LogOut, Download, Upload, Trash2, FileSpreadsheet } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -12,19 +12,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import MobileNavEnhanced from "@/components/navigation/MobileNavEnhanced";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventsImportDialog from "@/components/EventsImportDialog";
 
-import { cn } from "@/lib/utils";
 import { RoleBadges } from "@/components/roles/RoleBadge";
-import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
-import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { formatFullName, getInitials } from "@/utils/formatName";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
-import { CommandPalette } from "@/components/navigation/CommandPalette";
-import { NavigationGroups } from "@/components/navigation/NavigationGroups";
+import { TopNavigation } from "@/components/navigation/TopNavigation";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,32 +33,12 @@ const Layout = ({ children }: LayoutProps) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarHovered, setSidebarHovered] = useState(false);
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
-
-  // Keyboard shortcut for Command Palette
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setShowCommandPalette((open) => !open);
-      }
-    };
-
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
-  
-  const { pendingCount } = usePendingTransactionsCount();
-  const { pendingTasksCount } = usePendingTasksCount();
   
   // Enable real-time updates globally
   useRealtimeUpdates();
   
-  const sidebarCollapsed = !sidebarHovered;
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
   const displayName = userProfile ? formatFullName(userProfile) : user?.email?.split('@')[0] || 'Пользователь';
@@ -160,29 +135,27 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
-  const menuItems = [
-    { path: "/dashboard", label: t('dashboard'), icon: BarChart3 },
-    { path: "/events", label: t('events'), icon: CalendarDays },
-    { path: "/calendar", label: t('calendar'), icon: Calendar },
-    { path: "/transaction", label: t('transaction'), icon: PlusCircle },
-    { path: "/finances", label: t('finances'), icon: RussianRuble },
-    { path: "/warehouse", label: "Склад", icon: Package },
-    { path: "/tasks", label: "Мои задачи", icon: ListChecks, ...(pendingTasksCount > 0 && { badge: pendingTasksCount }) },
-    { path: "/staff", label: t('staff'), icon: UsersRound },
-    { path: "/birthdays", label: "Дни рождения", icon: Cake },
-    { path: "/vacations", label: "График отпусков", icon: Plane },
-    { path: "/contacts", label: t('contacts'), icon: Contact },
-    ...(!isFinancier || isAdminRbac ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
-    { path: "/settings", label: "Настройки", icon: Settings },
-    ...(isAdminRbac ? [{ path: "/administration", label: "Администрирование", icon: UserPlus }] : []),
-  ];
-
   const getPageTitle = () => {
-    const item = menuItems.find(item => item.path === location.pathname);
-    return item ? item.label : "EventBalance";
+    const pageTitles: Record<string, string> = {
+      '/dashboard': 'Главная',
+      '/events': 'Мероприятия',
+      '/calendar': 'Календарь',
+      '/transaction': 'Новая транзакция',
+      '/finances': 'Финансы',
+      '/warehouse': 'Склад',
+      '/tasks': 'Мои задачи',
+      '/staff': 'Сотрудники',
+      '/birthdays': 'Дни рождения',
+      '/vacations': 'Отпуска',
+      '/contacts': 'Контакты',
+      '/reports': 'Отчёты',
+      '/settings': 'Настройки',
+      '/administration': 'Администрирование',
+      '/profile': 'Профиль',
+      '/transactions-review': 'Проверка транзакций',
+    };
+    return pageTitles[location.pathname] || 'EventBalance';
   };
-
-  const isActive = (path: string) => location.pathname === path;
 
   return (
     <div className="min-h-screen bg-background flex flex-col w-full overflow-x-hidden">
@@ -190,42 +163,27 @@ const Layout = ({ children }: LayoutProps) => {
         <>
           {/* Desktop Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-            <div className="flex h-16 items-center px-6">
-              {/* Logo - fixed width matching sidebar with safe zone */}
-              <div className={`flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'min-w-[180px]' : 'w-64'}`}>
-                <h1 className="text-xl font-bold text-foreground">EventBalance</h1>
-              </div>
+            <div className="flex h-16 items-center px-6 gap-4">
+              {/* Logo */}
+              <h1 className="text-xl font-bold text-foreground flex-shrink-0">EventBalance</h1>
               
-              {/* Menu items */}
-              <div className="flex items-center gap-2 flex-1">
+              {/* Top Navigation */}
+              <TopNavigation isAdmin={isAdminRbac} />
+              
+              {/* Context menus for specific pages */}
+              <div className="flex items-center gap-2">
                 {location.pathname === '/finances' && isAdminRbac && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <div
-                        onMouseEnter={(e) => {
-                          const button = e.currentTarget.querySelector('button');
-                          button?.click();
-                        }}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
                       >
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
-                        >
-                          Редактирование
-                        </Button>
-                      </div>
+                        Редактирование
+                      </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent 
-                      align="start" 
-                      className="w-56 bg-background z-50"
-                      onMouseLeave={(e) => {
-                        const trigger = e.currentTarget.previousElementSibling;
-                        if (trigger && !trigger.contains(e.relatedTarget as Node)) {
-                          // Close dropdown
-                        }
-                      }}
-                    >
+                    <DropdownMenuContent align="start" className="w-56 bg-background z-50">
                       <DropdownMenuItem onClick={onExport}>
                         <Download className="mr-2 h-4 w-4" />
                         Экспорт CSV
@@ -248,31 +206,15 @@ const Layout = ({ children }: LayoutProps) => {
                 {(location.pathname === '/calendar' || location.pathname === '/events') && isAdminRbac && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <div
-                        onMouseEnter={(e) => {
-                          const button = e.currentTarget.querySelector('button');
-                          button?.click();
-                        }}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
                       >
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-auto px-3 py-1.5 font-normal text-sm hover:bg-accent/50 border-0"
-                        >
-                          Редактирование
-                        </Button>
-                      </div>
+                        Редактирование
+                      </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent 
-                      align="start" 
-                      className="w-56 bg-background z-50"
-                      onMouseLeave={(e) => {
-                        const trigger = e.currentTarget.previousElementSibling;
-                        if (trigger && !trigger.contains(e.relatedTarget as Node)) {
-                          // Close dropdown
-                        }
-                      }}
-                    >
+                    <DropdownMenuContent align="start" className="w-56 bg-background z-50">
                       <DropdownMenuItem onClick={handleEventsExport}>
                         <Download className="mr-2 h-4 w-4" />
                         Экспорт CSV
@@ -293,18 +235,8 @@ const Layout = ({ children }: LayoutProps) => {
                 )}
               </div>
 
-              {/* Search Button */}
-              <Button
-                variant="outline"
-                className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowCommandPalette(true)}
-              >
-                <Search className="h-4 w-4" />
-                <span className="text-sm">Поиск...</span>
-                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium lg:inline-flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
+              {/* Spacer */}
+              <div className="flex-1" />
 
               {/* User Profile & Actions */}
               <div className="flex items-center gap-3">
@@ -347,96 +279,67 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          {/* Main Layout with Sidebar */}
-          <div className="flex flex-1 w-full min-h-0 overflow-x-hidden">
-            {/* Collapsible Sidebar - Fixed */}
-            <aside
-              className={`fixed top-16 left-0 bottom-0 border-r bg-card transition-all duration-300 overflow-y-auto z-40 ${
-                sidebarCollapsed ? "w-16" : "w-64"
-              }`}
-              onMouseEnter={() => setSidebarHovered(true)}
-              onMouseLeave={() => setSidebarHovered(false)}
-            >
-              <div className="flex h-full flex-col">
-                {/* Sidebar Navigation with Groups */}
-                <NavigationGroups isCollapsed={sidebarCollapsed} isAdmin={isAdminRbac} />
-              </div>
-            </aside>
-
-            {/* Main Content with margin to account for fixed sidebar */}
-            <main 
-              className={cn(
-                "flex-1 flex flex-col transition-all duration-300 overflow-hidden",
-                sidebarCollapsed ? "ml-16" : "ml-64"
-              )}
-            >
-              <div className="flex-1 w-full flex flex-col min-h-0 main-container overflow-hidden">
-                {children}
-              </div>
-              
-              {/* Footer - hidden on messages page */}
-              {location.pathname !== '/messages' && (
-                <footer className="border-t bg-card mt-auto">
-                  <div className="px-6 py-4">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <p>© 2025 EventBalance. Все права защищены.</p>
-                      <div className="flex items-center gap-4">
-                        <a href="#" className="hover:text-foreground transition-colors">О компании</a>
-                        <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
-                        <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
-                      </div>
-                    </div>
+          {/* Main Content - Full Width */}
+          <main className="flex-1 flex flex-col w-full min-h-0 overflow-hidden">
+            <div className="flex-1 w-full flex flex-col min-h-0 main-container overflow-hidden">
+              {children}
+            </div>
+            
+            {/* Footer */}
+            <footer className="border-t bg-card mt-auto">
+              <div className="px-6 py-4">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <p>© 2025 EventBalance. Все права защищены.</p>
+                  <div className="flex items-center gap-4">
+                    <a href="#" className="hover:text-foreground transition-colors">О компании</a>
+                    <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
+                    <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
                   </div>
-                </footer>
-              )}
-            </main>
-          </div>
+                </div>
+              </div>
+            </footer>
+          </main>
         </>
       ) : (
         /* Mobile Layout */
         <div className="flex-1 flex flex-col overflow-x-hidden">
-          {/* Mobile Header - hidden when in messages with active chat */}
-          {location.pathname !== '/messages' && (
-            <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-              <div className="flex h-14 items-center px-4 justify-between">
-                {/* Page Title */}
-                <h1 className="text-lg font-semibold text-foreground">
-                  {getPageTitle()}
-                </h1>
-                
-                {/* Right Actions: Notifications & Profile */}
-                <div className="flex items-center gap-2">
-                  <NotificationsMenu />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate('/profile')}
-                    className="h-9 w-9 p-0 rounded-full"
-                  >
-                    <Avatar className="h-8 w-8">
-                      {avatarUrl && (
-                        <AvatarImage src={avatarUrl} alt={displayName} />
-                      )}
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </div>
+          {/* Mobile Header */}
+          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
+            <div className="flex h-14 items-center px-4 justify-between">
+              {/* Page Title */}
+              <h1 className="text-lg font-semibold text-foreground">
+                {getPageTitle()}
+              </h1>
+              
+              {/* Right Actions: Notifications & Profile */}
+              <div className="flex items-center gap-2">
+                <NotificationsMenu />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/profile')}
+                  className="h-9 w-9 p-0 rounded-full"
+                >
+                  <Avatar className="h-8 w-8">
+                    {avatarUrl && (
+                      <AvatarImage src={avatarUrl} alt={displayName} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
               </div>
-            </header>
-          )}
+            </div>
+          </header>
 
           <main className="flex-1 w-full overflow-x-hidden overflow-auto px-4 py-6 pb-28">
             {children}
           </main>
           
-          <MobileNavEnhanced onOpenCommandPalette={() => setShowCommandPalette(true)} />
+          <MobileNavEnhanced onOpenCommandPalette={() => {}} />
         </div>
       )}
-      
-      {/* Command Palette */}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} />
       
       {/* Events Import Dialog */}
       <EventsImportDialog 
