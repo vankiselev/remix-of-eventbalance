@@ -1,0 +1,59 @@
+/* Visual grid for editing mode - Apple-like dot pattern */
+.widget-grid-editing {
+  background-image: radial-gradient(circle, hsl(var(--border)) 1.5px, transparent 1.5px);
+  background-size: calc(25% - 12px) 136px; /* column width × row height + margin */
+  background-position: 8px 8px;
+  border-radius: 1rem;
+  padding: 8px;
+  margin: -8px;
+  transition: background-color 0.2s ease;
+}
+
+/* Smooth animations for drag & drop */
+.react-grid-item {
+  transition: transform 200ms ease, box-shadow 200ms ease !important;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 100;
+  box-shadow: 0 20px 40px -10px hsl(var(--foreground) / 0.2);
+  transform: scale(1.02);
+  opacity: 0.95;
+}
+
+.react-grid-item.resizing {
+  z-index: 100;
+  box-shadow: 0 10px 30px -5px hsl(var(--foreground) / 0.15);
+}
+
+/* Placeholder styling - where widget will land */
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.15) !important;
+  border: 2px dashed hsl(var(--primary) / 0.5) !important;
+  border-radius: 1rem;
+  opacity: 1 !important;
+  transition: all 150ms ease;
+}
+
+/* Resize handle styling */
+.react-resizable-handle {
+  background: none !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid hsl(var(--muted-foreground) / 0.5);
+  border-bottom: 2px solid hsl(var(--muted-foreground) / 0.5);
+  border-radius: 0 0 2px 0;
+}
+
+.react-resizable-handle:hover::after {
+  border-color: hsl(var(--primary));
+}
