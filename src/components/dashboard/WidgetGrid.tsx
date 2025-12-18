@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import GridLayout from 'react-grid-layout';
 import { Plus, Settings, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { WidgetCatalog } from './WidgetCatalog';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import { WidgetConfig, WIDGET_DEFINITIONS } from '@/types/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // Widget components
 import TodayEventsCard from './TodayEventsCard';
@@ -21,40 +22,6 @@ import { TasksWidget } from './widgets/TasksWidget';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './WidgetGrid.css';
-
-// Grid background component - renders actual cells matching react-grid-layout
-interface GridBackgroundProps {
-  cols: number;
-  rows: number;
-  rowHeight: number;
-  margin: [number, number];
-  containerWidth: number;
-}
-
-function GridBackground({ cols, rows, rowHeight, margin, containerWidth }: GridBackgroundProps) {
-  const cellWidth = (containerWidth - margin[0] * (cols + 1)) / cols;
-  const cellHeight = rowHeight;
-
-  return (
-    <div className="absolute inset-0 pointer-events-none" style={{ padding: margin[0] / 2 }}>
-      <div 
-        className="grid gap-0 w-full h-full"
-        style={{ 
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
-          gap: `${margin[1]}px ${margin[0]}px`,
-        }}
-      >
-        {Array.from({ length: cols * rows }).map((_, i) => (
-          <div 
-            key={i} 
-            className="grid-cell rounded-xl border-2 border-dashed border-border/40 bg-muted/20"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // @ts-ignore - react-grid-layout types are incomplete
 const ReactGridLayout = GridLayout.WidthProvider ? GridLayout.WidthProvider(GridLayout) : GridLayout;
@@ -91,18 +58,6 @@ export function WidgetGrid() {
   const [isEditing, setIsEditing] = useState(false);
   const [tempLayout, setTempLayout] = useState<WidgetConfig[]>([]);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  // Track container width for grid background
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      setContainerWidth(entries[0].contentRect.width);
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   const handleStartEditing = useCallback(() => {
     setTempLayout([...layout]);
@@ -165,13 +120,6 @@ export function WidgetGrid() {
       };
     }), [currentLayout]);
 
-  // Calculate number of rows needed for grid background
-  const gridRows = useMemo(() => {
-    if (currentLayout.length === 0) return 4;
-    const maxY = Math.max(...currentLayout.map(w => w.y + w.h));
-    return maxY + 2; // Add extra rows for dropping
-  }, [currentLayout]);
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-4 gap-4">
@@ -183,7 +131,7 @@ export function WidgetGrid() {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative">
       <div className="flex justify-end gap-2 mb-4">
         {isEditing ? (
           <>
@@ -211,45 +159,31 @@ export function WidgetGrid() {
         )}
       </div>
 
-      <div className="relative">
-        {/* Grid background - visible only in edit mode */}
-        {isEditing && containerWidth > 0 && (
-          <GridBackground
-            cols={COLS}
-            rows={gridRows}
-            rowHeight={ROW_HEIGHT}
-            margin={MARGIN}
-            containerWidth={containerWidth}
-          />
-        )}
-
-        <ReactGridLayout
-          className={`layout ${isEditing ? 'widget-grid-editing' : ''}`}
-          layout={gridLayout}
-          cols={COLS}
-          rowHeight={ROW_HEIGHT}
-          margin={MARGIN}
-          isDraggable={isEditing}
-          isResizable={isEditing}
-          onLayoutChange={handleLayoutChange}
-          draggableHandle=".cursor-grab"
-          useCSSTransforms
-          compactType="vertical"
-          preventCollision={false}
-        >
+      <ReactGridLayout
+        className={cn('layout', isEditing && 'widget-grid-editing')}
+        layout={gridLayout}
+        cols={COLS}
+        rowHeight={ROW_HEIGHT}
+        margin={MARGIN}
+        isDraggable={isEditing}
+        isResizable={isEditing}
+        onLayoutChange={handleLayoutChange}
+        useCSSTransforms
+        compactType="vertical"
+        preventCollision={false}
+      >
         {currentLayout.map(widget => {
           const WidgetComponent = widgetComponents[widget.type];
           if (!WidgetComponent) return null;
           return (
-            <div key={widget.id} className="relative">
+            <div key={widget.id} className={cn("relative", isEditing && "widget-jiggle")}>
               <WidgetWrapper isEditing={isEditing} onRemove={() => handleRemoveWidget(widget.id)}>
                 <WidgetComponent compact={widget.w < 2 || widget.h < 2} />
               </WidgetWrapper>
             </div>
           );
         })}
-        </ReactGridLayout>
-      </div>
+      </ReactGridLayout>
 
       <WidgetCatalog
         open={catalogOpen}

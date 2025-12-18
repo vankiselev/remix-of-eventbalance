@@ -1,6 +1,27 @@
-/* Grid cell styling for editing mode */
-.grid-cell {
-  transition: all 150ms ease;
+/* iOS-style jiggle animation for edit mode */
+@keyframes widget-jiggle-1 {
+  0%, 100% { transform: rotate(-0.5deg); }
+  50% { transform: rotate(0.5deg); }
+}
+
+@keyframes widget-jiggle-2 {
+  0%, 100% { transform: rotate(0.5deg); }
+  50% { transform: rotate(-0.5deg); }
+}
+
+.widget-jiggle:nth-child(odd) .widget-wrapper {
+  animation: widget-jiggle-1 0.15s ease-in-out infinite;
+  transform-origin: 50% 10%;
+}
+
+.widget-jiggle:nth-child(even) .widget-wrapper {
+  animation: widget-jiggle-2 0.12s ease-in-out infinite;
+  transform-origin: 30% 5%;
+}
+
+/* Stop jiggle when dragging */
+.react-grid-item.react-draggable-dragging .widget-wrapper {
+  animation: none !important;
 }
 
 .widget-grid-editing {
