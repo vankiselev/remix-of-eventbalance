@@ -1,12 +1,10 @@
-/* Visual grid for editing mode - Apple-like dot pattern */
+/* Grid cell styling for editing mode */
+.grid-cell {
+  transition: all 150ms ease;
+}
+
 .widget-grid-editing {
-  background-image: radial-gradient(circle, hsl(var(--border)) 1.5px, transparent 1.5px);
-  background-size: calc(25% - 12px) 136px; /* column width × row height + margin */
-  background-position: 8px 8px;
-  border-radius: 1rem;
-  padding: 8px;
-  margin: -8px;
-  transition: background-color 0.2s ease;
+  position: relative;
 }
 
 /* Smooth animations for drag & drop */
