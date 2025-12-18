@@ -40,7 +40,7 @@ interface LayoutItem {
 
 const ROW_HEIGHT = 120;
 const MARGIN: [number, number] = [16, 16];
-const COLS = 4;
+const COLS = 3;
 
 const widgetComponents: Record<string, React.ComponentType<{ compact?: boolean }>> = {
   events: TodayEventsCard,
@@ -122,10 +122,10 @@ export function WidgetGrid() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-4 gap-4">
-        <Skeleton className="col-span-2 h-[360px] rounded-xl" />
-        <Skeleton className="h-[240px] rounded-xl" />
-        <Skeleton className="h-[240px] rounded-xl" />
+      <div className="grid grid-cols-3 gap-4">
+        <Skeleton className="col-span-2 row-span-2 h-[256px] rounded-xl" />
+        <Skeleton className="h-[120px] rounded-xl" />
+        <Skeleton className="h-[120px] rounded-xl" />
       </div>
     );
   }
