@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut, Download, Upload, Trash2, FileSpreadsheet } from "lucide-react";
+import logoFull from "@/assets/logo-full.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
@@ -165,7 +166,7 @@ const Layout = ({ children }: LayoutProps) => {
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-16 items-center px-6 gap-4">
               {/* Logo */}
-              <h1 className="text-xl font-bold text-foreground flex-shrink-0">EventBalance</h1>
+              <img src={logoFull} alt="EventBalance" className="h-8 flex-shrink-0" />
               
               {/* Top Navigation */}
               <TopNavigation isAdmin={isAdminRbac} />
