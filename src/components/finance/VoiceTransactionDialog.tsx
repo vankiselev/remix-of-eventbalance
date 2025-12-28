@@ -146,25 +146,22 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'ru-RU';
 
+        let finalText = '';
+        
         recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
           let interimTranscript = '';
 
-          for (let i = event.resultIndex; i < event.results.length; i++) {
+          for (let i = 0; i < event.results.length; i++) {
             const result = event.results[i];
             if (result.isFinal) {
-              finalTranscript += result[0].transcript;
+              finalText += result[0].transcript + ' ';
             } else {
               interimTranscript += result[0].transcript;
             }
           }
 
-          setTranscript(prev => {
-            if (finalTranscript) {
-              return (prev + ' ' + finalTranscript).trim();
-            }
-            return prev + interimTranscript;
-          });
+          // Show final + current interim
+          setTranscript((finalText + interimTranscript).trim());
         };
 
         recognitionRef.current.onerror = (event: any) => {
@@ -175,6 +172,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
 
         recognitionRef.current.onend = () => {
           setIsListening(false);
+          finalText = ''; // Reset for next session
         };
       }
     }
@@ -220,7 +218,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
     try {
       const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
         body: {
-          api_key: apiKey,
+          apiKey: apiKey,
           mode: 'simple',
           step: 1,
           text: text,
@@ -256,14 +254,16 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
     try {
       const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
         body: {
-          api_key: apiKey,
+          apiKey: apiKey,
           mode: 'simple',
           step: 3,
-          amount: parsedData.amount,
-          description: parsedData.description,
-          type: parsedData.type,
-          category: parsedData.suggestedCategory,
-          cash_type: 'Наличка Ваня', // Default
+          step1Data: {
+            amount: parsedData.amount,
+            description: parsedData.description,
+            type: parsedData.type,
+            suggestedCategory: parsedData.suggestedCategory,
+          },
+          cashType: 'Наличка Ваня',
         }
       });
 
