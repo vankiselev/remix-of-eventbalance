@@ -1248,6 +1248,27 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_rate_limits: {
+        Row: {
+          attempted_at: string
+          email: string
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+        }
+        Relationships: []
+      }
       password_reset_tokens: {
         Row: {
           created_at: string
@@ -2845,6 +2866,16 @@ export type Database = {
         Args: { invitation_token: string }
         Returns: boolean
       }
+      check_password_reset_rate_limit: {
+        Args: {
+          p_email: string
+          p_ip_address?: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
+      cleanup_password_reset_rate_limits: { Args: never; Returns: undefined }
       delete_all_transactions: { Args: never; Returns: undefined }
       delete_employee_permanently: {
         Args: { p_employee_user_id: string }

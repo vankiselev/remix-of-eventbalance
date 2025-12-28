@@ -16,6 +16,28 @@ function isValidEmail(email: string): boolean {
   return regex.test(email) && email.length <= 255;
 }
 
+// Get client IP from request headers
+function getClientIP(req: Request): string | null {
+  // Try various headers that might contain the real IP
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    // x-forwarded-for can contain multiple IPs, get the first one
+    return forwardedFor.split(',')[0].trim();
+  }
+  
+  const realIP = req.headers.get('x-real-ip');
+  if (realIP) {
+    return realIP;
+  }
+  
+  const cfConnectingIP = req.headers.get('cf-connecting-ip');
+  if (cfConnectingIP) {
+    return cfConnectingIP;
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   console.log('send-password-reset function called');
   
@@ -47,6 +69,36 @@ serve(async (req) => {
 
     if (!email || !isValidEmail(email)) {
       // Return success to avoid email enumeration
+      return new Response(
+        JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Get client IP for rate limiting
+    const clientIP = getClientIP(req);
+    console.log('Client IP:', clientIP);
+
+    // Check rate limit before processing (max 3 attempts per hour per email)
+    const { data: isAllowed, error: rateLimitError } = await supabaseClient.rpc(
+      'check_password_reset_rate_limit',
+      { 
+        p_email: email,
+        p_ip_address: clientIP,
+        p_max_attempts: 3,
+        p_window_minutes: 60
+      }
+    )
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+      // On error, still allow the request but log it
+    } else if (!isAllowed) {
+      console.log(`Rate limit exceeded for email: ${email}`);
+      // Return the same success message to avoid information leakage
       return new Response(
         JSON.stringify({ message: 'Если email существует в системе, ссылка для сброса отправлена' }),
         { 
