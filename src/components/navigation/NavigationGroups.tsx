@@ -25,12 +25,14 @@ import {
   Wallet,
   Boxes,
   Shield,
+  Mic,
   LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
+import { VoiceTransactionDialog } from "@/components/finance/VoiceTransactionDialog";
 
 interface NavigationGroupsProps {
   isCollapsed: boolean;
@@ -38,10 +40,11 @@ interface NavigationGroupsProps {
 }
 
 interface NavItem {
-  path: string;
+  path?: string;
   label: string;
   icon: LucideIcon;
   badge?: number;
+  action?: () => void;
 }
 
 interface NavGroup {
@@ -59,6 +62,7 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
   const { isFinancier } = useFinancierPermissions();
   const { pendingCount } = usePendingTransactionsCount();
   const { pendingTasksCount } = usePendingTasksCount();
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const stored = localStorage.getItem(EXPANDED_GROUPS_KEY);
@@ -105,6 +109,7 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
       icon: Wallet,
       items: [
         { path: "/transaction", label: "Новая транзакция", icon: PlusCircle },
+        { label: "Голосовой ввод", icon: Mic, action: () => setVoiceDialogOpen(true) },
         { path: "/finances", label: "Финансы", icon: RussianRuble },
         ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка", icon: ClipboardCheck, badge: pendingCount > 0 ? pendingCount : undefined }] : []),
         ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", icon: FileText }] : []),
@@ -136,7 +141,7 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
   };
 
   // Check if any item in group is active
-  const isGroupActive = (group: NavGroup) => group.items.some(item => isActive(item.path));
+  const isGroupActive = (group: NavGroup) => group.items.some(item => item.path && isActive(item.path));
 
   // Get total badge count for group
   const getGroupBadge = (group: NavGroup) => {
@@ -146,39 +151,47 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
   if (isCollapsed) {
     // Collapsed view - just show icons
     return (
-      <nav className="flex-1 p-2 overflow-y-auto">
-        <ul className="space-y-1">
-          {navGroups.flatMap(group => group.items).map((item) => {
-            const active = isActive(item.path);
-            return (
-              <li key={item.path}>
-                <Button
-                  variant={active ? "secondary" : "ghost"}
-                  size="icon"
-                  className={cn(
-                    "w-full h-10 relative transition-all duration-200",
-                    active
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "hover:bg-accent/50"
-                  )}
-                  onClick={() => navigate(item.path)}
-                  title={item.label}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.badge && item.badge > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full animate-pulse"
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <>
+        <nav className="flex-1 p-2 overflow-y-auto">
+          <ul className="space-y-1">
+            {navGroups.flatMap(group => group.items).map((item, index) => {
+              const active = item.path ? isActive(item.path) : false;
+              const key = item.path || `action-${index}`;
+              return (
+                <li key={key}>
+                  <Button
+                    variant={active ? "secondary" : "ghost"}
+                    size="icon"
+                    className={cn(
+                      "w-full h-10 relative transition-all duration-200",
+                      active
+                        ? "bg-primary/10 text-primary shadow-sm"
+                        : "hover:bg-accent/50"
+                    )}
+                    onClick={() => item.action ? item.action() : item.path && navigate(item.path)}
+                    title={item.label}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.badge && item.badge > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full animate-pulse"
+                      >
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <VoiceTransactionDialog 
+          isOpen={voiceDialogOpen} 
+          onOpenChange={setVoiceDialogOpen}
+          onSuccess={() => navigate('/finances')}
+        />
+      </>
     );
   }
 
@@ -226,10 +239,11 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
               </CollapsibleTrigger>
               <CollapsibleContent className="animate-accordion-down">
                 <ul className="mt-1 ml-4 space-y-0.5 border-l border-border/50 pl-2">
-                  {group.items.map((item) => {
-                    const active = isActive(item.path);
+                  {group.items.map((item, index) => {
+                    const active = item.path ? isActive(item.path) : false;
+                    const key = item.path || `action-${group.id}-${index}`;
                     return (
-                      <li key={item.path}>
+                      <li key={key}>
                         <Button
                           variant={active ? "secondary" : "ghost"}
                           className={cn(
@@ -238,7 +252,7 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
                               ? "bg-primary/10 text-primary font-medium shadow-sm"
                               : "hover:bg-accent/50 hover:translate-x-1"
                           )}
-                          onClick={() => navigate(item.path)}
+                          onClick={() => item.action ? item.action() : item.path && navigate(item.path)}
                         >
                           <item.icon className="h-4 w-4 mr-2" />
                           <span className="truncate flex-1 text-left">{item.label}</span>
@@ -257,6 +271,11 @@ export function NavigationGroups({ isCollapsed, isAdmin }: NavigationGroupsProps
           );
         })}
       </div>
+      <VoiceTransactionDialog 
+        isOpen={voiceDialogOpen} 
+        onOpenChange={setVoiceDialogOpen}
+        onSuccess={() => navigate('/finances')}
+      />
     </nav>
   );
 }
