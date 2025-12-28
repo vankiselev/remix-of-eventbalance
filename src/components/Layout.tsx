@@ -166,7 +166,12 @@ const Layout = ({ children }: LayoutProps) => {
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-16 items-center px-6 gap-4">
               {/* Logo */}
-              <img src={logoFull} alt="EventBalance" className="h-8 flex-shrink-0" />
+              <img 
+                src={logoFull} 
+                alt="EventBalance" 
+                className="h-8 flex-shrink-0 cursor-pointer" 
+                onClick={() => navigate('/dashboard')}
+              />
               
               {/* Top Navigation */}
               <TopNavigation isAdmin={isAdminRbac} />
