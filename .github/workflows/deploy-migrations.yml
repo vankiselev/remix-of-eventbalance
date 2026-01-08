@@ -1,0 +1,27 @@
+name: Deploy to Self-Hosted Supabase
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        
+      - name: Link to self-hosted via API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          supabase link --project-ref self-hosted --api-url "$SUPABASE_URL"
+          
+      - name: Push migrations
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: supabase db push --use-service-key
