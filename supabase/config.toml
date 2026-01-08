@@ -1,4 +1,4 @@
-project_id = "wpxhmajdeunabximyfln"
+project_id = "a73e88c7ef6a2ca735abc52404257a9f"
 
 [functions.check-transaction-description]
 verify_jwt = true
