@@ -1687,6 +1687,24 @@ export type Database = {
           },
         ]
       }
+      test_migrations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
       transaction_categories: {
         Row: {
           created_at: string
