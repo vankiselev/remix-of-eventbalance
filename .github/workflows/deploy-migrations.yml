@@ -46,25 +46,23 @@ jobs:
             echo ""
             echo "Please create the function manually by running this SQL in your database:"
             echo "----------------------------------------"
-            cat << 'EOSQL'
-CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  EXECUTE sql_query;
-  RETURN 'Success';
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN 'Error: ' || SQLERRM;
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;
-GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;
-GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;
-EOSQL
+            echo "CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)"
+            echo "RETURNS TEXT"
+            echo "LANGUAGE plpgsql"
+            echo "SECURITY DEFINER"
+            echo "AS \$\$"
+            echo "BEGIN"
+            echo "  EXECUTE sql_query;"
+            echo "  RETURN 'Success';"
+            echo "EXCEPTION"
+            echo "  WHEN OTHERS THEN"
+            echo "    RETURN 'Error: ' || SQLERRM;"
+            echo "END;"
+            echo "\$\$;"
+            echo ""
+            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;"
+            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;"
+            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;"
             echo "----------------------------------------"
             exit 1
           fi
