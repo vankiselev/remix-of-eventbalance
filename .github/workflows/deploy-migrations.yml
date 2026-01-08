@@ -2,30 +2,77 @@ name: Deploy to Self-Hosted Supabase
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-migrations:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-      - name: Apply migrations via REST API
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      
+      - name: Apply migrations
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
+          echo "🚀 Starting migration deployment..."
+          
+          # Check if migrations directory exists
+          if [ ! -d "supabase/migrations" ]; then
+            echo "❌ No migrations directory found"
+            exit 1
+          fi
+          
+          # Count migrations
+          migration_count=$(ls -1 supabase/migrations/*.sql 2>/dev/null | wc -l)
+          echo "📊 Found $migration_count migration(s)"
+          
+          if [ $migration_count -eq 0 ]; then
+            echo "⚠️  No migrations to apply"
+            exit 0
+          fi
+          
+          # Apply each migration
           for migration in supabase/migrations/*.sql; do
             migration_name=$(basename "$migration")
-            sql_content=$(cat "$migration")
+            sql_content=$(cat "$migration" | jq -Rs .)
             
             echo "📝 Applying: $migration_name"
             
-            # Execute SQL via Supabase REST API
-            curl -X POST "$SUPABASE_URL/rest/v1/rpc/exec_sql" \
+            response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/execute_migration" \
               -H "apikey: $SUPABASE_SERVICE_KEY" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"query\": $(jq -Rs . <<< "$sql_content")}"
+              -d "{\"sql_query\": $sql_content}")
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n-1)
+            
+            if [ "$http_code" -eq 200 ]; then
+              echo "✅ Success: $migration_name"
+              echo "   Response: $body"
+            else
+              echo "❌ Failed: $migration_name (HTTP $http_code)"
+              echo "   Response: $body"
+              exit 1
+            fi
+            
+            echo ""
           done
+          
+          echo "🎉 All migrations applied successfully!"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Migration deployment failed!"
+          echo "Check the logs above for details."
