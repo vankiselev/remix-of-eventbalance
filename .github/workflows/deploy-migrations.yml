@@ -27,46 +27,39 @@ jobs:
         run: |
           echo "🔧 Creating execute_migration function..."
           
-          bootstrap_sql=$(cat <<'EOF'
-CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  EXECUTE sql_query;
-  RETURN 'Success';
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN 'Error: ' || SQLERRM;
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;
-GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;
-GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;
-EOF
-)
+          cat > /tmp/bootstrap.sql << 'EOSQL'
+          CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)
+          RETURNS TEXT
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          AS $$
+          BEGIN
+            EXECUTE sql_query;
+            RETURN 'Success';
+          EXCEPTION
+            WHEN OTHERS THEN
+              RETURN 'Error: ' || SQLERRM;
+          END;
+          $$;
           
-          # Try to create via direct SQL query endpoint (some self-hosted setups have this)
+          GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;
+          GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;
+          GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;
+          EOSQL
+          
+          bootstrap_sql=$(cat /tmp/bootstrap.sql | jq -Rs .)
+          
           response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/query" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"query\": $(echo "$bootstrap_sql" | jq -Rs .)}" 2>/dev/null)
+            -d "{\"query\": $bootstrap_sql}" 2>/dev/null)
           
           http_code=$(echo "$response" | tail -n1)
           
           if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
             echo "✅ Function created successfully"
           else
-            echo "⚠️  Could not create via query endpoint, trying alternative..."
-            
-            # Alternative: Use psql if available
-            if command -v psql &> /dev/null; then
-              echo "$bootstrap_sql" | psql "$SUPABASE_DB_URL" 2>/dev/null && echo "✅ Created via psql"
-            else
-              echo "⚠️  Function may already exist or need manual creation"
-            fi
+            echo "⚠️  Function may already exist (will try to use it anyway)"
           fi
       
       - name: Apply migrations
@@ -87,7 +80,6 @@ EOF
           if [ $migration_count -eq 0 ]; then
             echo "⚠️  No migrations to apply"
             exit 0
-            
           fi
           
           for migration in supabase/migrations/*.sql; do
@@ -121,4 +113,3 @@ EOF
         if: failure()
         run: |
           echo "❌ Migration deployment failed!"
-          echo "Check the logs above for details."
