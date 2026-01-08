@@ -21,46 +21,52 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       
-      - name: Create execute_migration function
+      - name: Verify execute_migration function exists
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          echo "🔧 Creating execute_migration function..."
-          
-          cat > /tmp/bootstrap.sql << 'EOSQL'
-          CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)
-          RETURNS TEXT
-          LANGUAGE plpgsql
-          SECURITY DEFINER
-          AS $$
-          BEGIN
-            EXECUTE sql_query;
-            RETURN 'Success';
-          EXCEPTION
-            WHEN OTHERS THEN
-              RETURN 'Error: ' || SQLERRM;
-          END;
-          $$;
-          
-          GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;
-          GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;
-          GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;
-          EOSQL
-          
-          bootstrap_sql=$(cat /tmp/bootstrap.sql | jq -Rs .)
-          
-          response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/query" \
+          echo "🔍 Checking if execute_migration function exists..."
+
+          # Try to call the function with a harmless query to verify it exists
+          response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/execute_migration" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"query\": $bootstrap_sql}" 2>/dev/null)
-          
+            -d '{"sql_query": "SELECT 1"}')
+
           http_code=$(echo "$response" | tail -n1)
-          
-          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
-            echo "✅ Function created successfully"
+          body=$(echo "$response" | head -n-1)
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ execute_migration function is available and working"
           else
-            echo "⚠️  Function may already exist (will try to use it anyway)"
+            echo "❌ execute_migration function not found or not working (HTTP $http_code)"
+            echo "Response: $body"
+            echo ""
+            echo "Please create the function manually by running this SQL in your database:"
+            echo "----------------------------------------"
+            cat << 'EOSQL'
+CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  EXECUTE sql_query;
+  RETURN 'Success';
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN 'Error: ' || SQLERRM;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;
+GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;
+GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;
+EOSQL
+            echo "----------------------------------------"
+            exit 1
           fi
       
       - name: Apply migrations
@@ -69,45 +75,89 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo "🚀 Starting migration deployment..."
-          
+          echo "Using Supabase URL: $SUPABASE_URL"
+
           if [ ! -d "supabase/migrations" ]; then
             echo "❌ No migrations directory found"
             exit 1
           fi
-          
+
           migration_count=$(ls -1 supabase/migrations/*.sql 2>/dev/null | wc -l)
           echo "📊 Found $migration_count migration(s)"
-          
+
           if [ $migration_count -eq 0 ]; then
             echo "⚠️  No migrations to apply"
             exit 0
           fi
-          
+
+          success_count=0
+          fail_count=0
+
           for migration in supabase/migrations/*.sql; do
             migration_name=$(basename "$migration")
-            sql_content=$(cat "$migration" | jq -Rs .)
-            
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "📝 Applying: $migration_name"
-            
+
+            # Show first 3 lines of migration for context
+            echo "Preview:"
+            head -n 3 "$migration" | sed 's/^/  /'
+            echo "  ..."
+            echo ""
+
+            # Escape SQL content for JSON
+            sql_content=$(cat "$migration" | jq -Rs .)
+
+            # Make the API call
             response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/execute_migration" \
               -H "apikey: $SUPABASE_SERVICE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
               -H "Content-Type: application/json" \
+              -H "Prefer: return=representation" \
               -d "{\"sql_query\": $sql_content}")
-            
+
             http_code=$(echo "$response" | tail -n1)
             body=$(echo "$response" | head -n-1)
-            
+
             if [ "$http_code" -eq 200 ]; then
               echo "✅ Success: $migration_name"
+
+              # Show the response if it contains useful info
+              if [ -n "$body" ] && [ "$body" != "null" ] && [ "$body" != '""' ]; then
+                echo "   Response: $body"
+              fi
+
+              success_count=$((success_count + 1))
             else
               echo "❌ Failed: $migration_name (HTTP $http_code)"
               echo "   Response: $body"
-              exit 1
+              echo ""
+              echo "Migration file content:"
+              cat "$migration" | head -n 20
+              echo "..."
+
+              fail_count=$((fail_count + 1))
+
+              # Continue instead of exiting to see all failures
+              # exit 1
             fi
-            
+
             echo ""
           done
-          
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Summary:"
+          echo "   ✅ Successful: $success_count"
+          echo "   ❌ Failed: $fail_count"
+          echo "   📝 Total: $migration_count"
+
+          if [ $fail_count -gt 0 ]; then
+            echo ""
+            echo "❌ Some migrations failed!"
+            exit 1
+          fi
+
+          echo ""
           echo "🎉 All migrations applied successfully!"
       
       - name: Notify on failure
