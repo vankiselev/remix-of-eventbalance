@@ -11,17 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        
-      - name: Link to self-hosted via API
+      - name: Apply migrations via REST API
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          supabase link --project-ref self-hosted --api-url "$SUPABASE_URL"
-          
-      - name: Push migrations
-        env:
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: supabase db push --use-service-key
+          for migration in supabase/migrations/*.sql; do
+            migration_name=$(basename "$migration")
+            sql_content=$(cat "$migration")
+            
+            echo "📝 Applying: $migration_name"
+            
+            # Execute SQL via Supabase REST API
+            curl -X POST "$SUPABASE_URL/rest/v1/rpc/exec_sql" \
+              -H "apikey: $SUPABASE_SERVICE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(jq -Rs . <<< "$sql_content")}"
+          done
