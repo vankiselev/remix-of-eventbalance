@@ -87,6 +87,7 @@ EOF
           if [ $migration_count -eq 0 ]; then
             echo "⚠️  No migrations to apply"
             exit 0
+            
           fi
           
           for migration in supabase/migrations/*.sql; do
