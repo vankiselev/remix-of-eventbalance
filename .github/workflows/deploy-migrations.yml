@@ -35,13 +35,7 @@ jobs:
           
           # Create migrations tracking table if it doesn't exist
           echo "📋 Setting up migration tracking..."
-          docker exec supabase-db psql -U postgres -d postgres << 'SQL'
-            CREATE TABLE IF NOT EXISTS public.schema_migrations (
-              filename TEXT PRIMARY KEY,
-              applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-              success BOOLEAN NOT NULL DEFAULT true
-            );
-SQL
+          docker exec supabase-db psql -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS public.schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), success BOOLEAN NOT NULL DEFAULT true);"
           echo "✅ Migration tracking ready"
       
       - name: Apply migrations
