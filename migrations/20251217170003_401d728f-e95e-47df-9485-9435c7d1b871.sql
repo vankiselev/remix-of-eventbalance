@@ -1,5 +1,5 @@
 -- Create table for storing user dashboard widget configurations
-CREATE TABLE public.user_dashboard_layouts (
+CREATE TABLE IF NOT EXISTS public.user_dashboard_layouts (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL UNIQUE,
   layout JSONB NOT NULL DEFAULT '[]'::jsonb,
