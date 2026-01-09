@@ -36,3 +36,4 @@ UPDATE auth.users
 SET raw_app_meta_data = '{"provider": "email", "providers": ["email"]}'::jsonb
 WHERE email IN ('test1@example.com', 'test2@example.com')
   AND (raw_app_meta_data IS NULL OR raw_app_meta_data = '{}'::jsonb);
+-- Migration tracking enabled
