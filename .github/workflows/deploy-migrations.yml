@@ -32,6 +32,17 @@ jobs:
             echo "❌ Cannot connect to database"
             exit 1
           fi
+          
+          # Create migrations tracking table if it doesn't exist
+          echo "📋 Setting up migration tracking..."
+          docker exec supabase-db psql -U postgres -d postgres << 'SQL'
+            CREATE TABLE IF NOT EXISTS public.schema_migrations (
+              filename TEXT PRIMARY KEY,
+              applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              success BOOLEAN NOT NULL DEFAULT true
+            );
+SQL
+          echo "✅ Migration tracking ready"
       
       - name: Apply migrations
         run: |
@@ -52,9 +63,19 @@ jobs:
 
           success_count=0
           fail_count=0
+          skip_count=0
 
           for migration in migrations/*.sql; do
             migration_name=$(basename "$migration")
+
+            # Check if migration was already applied
+            already_applied=$(docker exec supabase-db psql -U postgres -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM public.schema_migrations WHERE filename = '$migration_name' AND success = true);")
+            
+            if echo "$already_applied" | grep -q "t"; then
+              echo "⏭️  Skipping: $migration_name (already applied)"
+              skip_count=$((skip_count + 1))
+              continue
+            fi
 
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "📝 Applying: $migration_name"
@@ -74,6 +95,9 @@ jobs:
                 cat /tmp/psql_output.txt | grep -v "^$" | sed 's/^/   /'
               fi
               
+              # Record successful migration
+              docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', true) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = true;" > /dev/null
+              
               success_count=$((success_count + 1))
             else
               echo "❌ Failed: $migration_name"
@@ -83,6 +107,9 @@ jobs:
               echo "Migration file content (first 20 lines):"
               head -n 20 "$migration" | sed 's/^/   /'
               echo "   ..."
+
+              # Record failed migration
+              docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', false) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = false;" > /dev/null
 
               fail_count=$((fail_count + 1))
 
@@ -97,6 +124,7 @@ jobs:
           echo "📊 Summary:"
           echo "   ✅ Successful: $success_count"
           echo "   ❌ Failed: $fail_count"
+          echo "   ⏭️  Skipped: $skip_count"
           echo "   📝 Total: $migration_count"
 
           if [ $fail_count -gt 0 ]; then
