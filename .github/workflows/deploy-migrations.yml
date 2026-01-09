@@ -17,63 +17,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-      
-      - name: Verify execute_migration function exists
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      - name: Verify Supabase database connection
         run: |
-          echo "🔍 Checking if execute_migration function exists..."
-
-          # Try to call the function with a harmless query to verify it exists
-          response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/execute_migration" \
-            -H "apikey: $SUPABASE_SERVICE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"sql_query": "SELECT 1"}')
-
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n-1)
-          body_compact=$(echo "$body" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
-
-          if [ "$http_code" -eq 200 ] && echo "$body_compact" | grep -q "Success" && ! echo "$body_compact" | grep -q "Error:"; then
-            echo "✅ execute_migration function is available and working"
+          echo "🔍 Checking database connection..."
+          
+          if ! docker ps | grep -q supabase-db; then
+            echo "❌ Supabase database container not running"
+            exit 1
+          fi
+          
+          if docker exec supabase-db psql -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
+            echo "✅ Database connection successful"
           else
-            echo "❌ execute_migration function not found or not working (HTTP $http_code)"
-            echo "Response: $body"
-            echo ""
-            echo "Please create the function manually by running this SQL in your database:"
-            echo "----------------------------------------"
-            echo "CREATE OR REPLACE FUNCTION public.execute_migration(sql_query TEXT)"
-            echo "RETURNS TEXT"
-            echo "LANGUAGE plpgsql"
-            echo "SECURITY DEFINER"
-            echo "AS \$\$"
-            echo "BEGIN"
-            echo "  EXECUTE sql_query;"
-            echo "  RETURN 'Success';"
-            echo "EXCEPTION"
-            echo "  WHEN OTHERS THEN"
-            echo "    RETURN 'Error: ' || SQLERRM;"
-            echo "END;"
-            echo "\$\$;"
-            echo ""
-            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO service_role;"
-            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO anon;"
-            echo "GRANT EXECUTE ON FUNCTION public.execute_migration TO authenticated;"
-            echo "----------------------------------------"
+            echo "❌ Cannot connect to database"
             exit 1
           fi
       
       - name: Apply migrations
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo "🚀 Starting migration deployment..."
-          echo "Using Supabase URL: $SUPABASE_URL"
 
           if [ ! -d "migrations" ]; then
             echo "❌ No migrations directory found"
@@ -103,41 +65,28 @@ jobs:
             echo "  ..."
             echo ""
 
-            # Escape SQL content for JSON
-            sql_content=$(cat "$migration" | jq -Rs .)
-
-            # Make the API call
-            response=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/rpc/execute_migration" \
-              -H "apikey: $SUPABASE_SERVICE_KEY" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
-              -H "Content-Type: application/json" \
-              -H "Prefer: return=representation" \
-              -d "{\"sql_query\": $sql_content}")
-
-            http_code=$(echo "$response" | tail -n1)
-            body=$(echo "$response" | head -n-1)
-            body_compact=$(echo "$body" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
-
-            if [ "$http_code" -eq 200 ] && echo "$body_compact" | grep -q "Success" && ! echo "$body_compact" | grep -q "Error:"; then
+            # Execute migration directly via psql in Docker container
+            if docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration" > /tmp/psql_output.txt 2>&1; then
               echo "✅ Success: $migration_name"
-
-              # Show the response if it contains useful info
-              if [ -n "$body" ] && [ "$body" != "null" ] && [ "$body" != '""' ]; then
-                echo "   Response: $body"
+              
+              # Show any notices or output
+              if [ -s /tmp/psql_output.txt ]; then
+                cat /tmp/psql_output.txt | grep -v "^$" | sed 's/^/   /'
               fi
-
+              
               success_count=$((success_count + 1))
             else
-              echo "❌ Failed: $migration_name (HTTP $http_code)"
-              echo "   Response: $body"
+              echo "❌ Failed: $migration_name"
+              echo "   Error output:"
+              cat /tmp/psql_output.txt | sed 's/^/   /'
               echo ""
-              echo "Migration file content:"
-              cat "$migration" | head -n 20
-              echo "..."
+              echo "Migration file content (first 20 lines):"
+              head -n 20 "$migration" | sed 's/^/   /'
+              echo "   ..."
 
               fail_count=$((fail_count + 1))
 
-              # Continue instead of exiting to see all failures
+              # Continue to see all failures
               # exit 1
             fi
 
