@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'supabase/migrations/**'
+      - 'migrations/**'
 
   workflow_dispatch:
 
@@ -74,12 +74,12 @@ jobs:
           echo "🚀 Starting migration deployment..."
           echo "Using Supabase URL: $SUPABASE_URL"
 
-          if [ ! -d "supabase/migrations" ]; then
+          if [ ! -d "migrations" ]; then
             echo "❌ No migrations directory found"
             exit 1
           fi
 
-          migration_count=$(ls -1 supabase/migrations/*.sql 2>/dev/null | wc -l)
+          migration_count=$(ls -1 migrations/*.sql 2>/dev/null | wc -l)
           echo "📊 Found $migration_count migration(s)"
 
           if [ $migration_count -eq 0 ]; then
@@ -90,7 +90,7 @@ jobs:
           success_count=0
           fail_count=0
 
-          for migration in supabase/migrations/*.sql; do
+          for migration in migrations/*.sql; do
             migration_name=$(basename "$migration")
 
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
