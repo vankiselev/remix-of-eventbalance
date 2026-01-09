@@ -36,8 +36,9 @@ jobs:
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n-1)
+          body_compact=$(echo "$body" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
 
-          if [ "$http_code" -eq 200 ]; then
+          if [ "$http_code" -eq 200 ] && echo "$body_compact" | grep -q "Success" && ! echo "$body_compact" | grep -q "Error:"; then
             echo "✅ execute_migration function is available and working"
           else
             echo "❌ execute_migration function not found or not working (HTTP $http_code)"
@@ -115,8 +116,9 @@ jobs:
 
             http_code=$(echo "$response" | tail -n1)
             body=$(echo "$response" | head -n-1)
+            body_compact=$(echo "$body" | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
 
-            if [ "$http_code" -eq 200 ]; then
+            if [ "$http_code" -eq 200 ] && echo "$body_compact" | grep -q "Success" && ! echo "$body_compact" | grep -q "Error:"; then
               echo "✅ Success: $migration_name"
 
               # Show the response if it contains useful info
