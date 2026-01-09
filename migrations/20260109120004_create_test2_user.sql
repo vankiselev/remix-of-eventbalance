@@ -27,7 +27,7 @@ BEGIN
     '{"provider": "email", "providers": ["email"]}'::jsonb,
     'authenticated',
     'authenticated'
-  ) ON CONFLICT (email) DO NOTHING;
+  ) ON CONFLICT ON CONSTRAINT users_email_partial_key DO NOTHING;
 
   -- Создаём identity для email-авторизации
   INSERT INTO auth.identities (
