@@ -45,7 +45,8 @@ USING (
 );
 
 -- Create receipts storage bucket
-INSERT INTO storage.buckets (id, name, public) VALUES ('receipts', 'receipts', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('receipts', 'receipts', false)
+ON CONFLICT (id) DO NOTHING;
 
 -- Create storage policies for receipts bucket
 DROP POLICY IF EXISTS "Users can view their own receipts and admins can view all" ON storage.objects;

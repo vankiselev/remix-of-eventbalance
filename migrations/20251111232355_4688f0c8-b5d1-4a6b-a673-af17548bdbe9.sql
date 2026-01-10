@@ -139,15 +139,15 @@ CREATE TABLE IF NOT EXISTS public.warehouse_settings (
 -- INDEXES
 -- ============================================================================
 
-CREATE INDEX idx_warehouse_items_category ON public.warehouse_items(category_id);
-CREATE INDEX idx_warehouse_items_active ON public.warehouse_items(is_active);
-CREATE INDEX idx_warehouse_stock_item ON public.warehouse_stock(item_id);
-CREATE INDEX idx_warehouse_stock_location ON public.warehouse_stock(location_id);
-CREATE INDEX idx_warehouse_movements_item ON public.warehouse_movements(item_id);
-CREATE INDEX idx_warehouse_movements_date ON public.warehouse_movements(operation_date);
-CREATE INDEX idx_warehouse_tasks_status ON public.warehouse_tasks(status);
-CREATE INDEX idx_warehouse_tasks_assigned ON public.warehouse_tasks(assigned_to);
-CREATE INDEX idx_warehouse_tasks_event ON public.warehouse_tasks(event_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_items_category ON public.warehouse_items(category_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_items_active ON public.warehouse_items(is_active);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_item ON public.warehouse_stock(item_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_location ON public.warehouse_stock(location_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_movements_item ON public.warehouse_movements(item_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_movements_date ON public.warehouse_movements(operation_date);
+CREATE INDEX IF NOT EXISTS idx_warehouse_tasks_status ON public.warehouse_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_warehouse_tasks_assigned ON public.warehouse_tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_warehouse_tasks_event ON public.warehouse_tasks(event_id);
 
 -- ============================================================================
 -- TRIGGERS

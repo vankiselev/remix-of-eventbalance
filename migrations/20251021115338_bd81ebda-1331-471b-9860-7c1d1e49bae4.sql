@@ -63,7 +63,7 @@ SET role = 'admin'
 WHERE id = '93c5776a-bd4a-4753-b965-df8d0b302916';
 
 -- И назначаем роль в RBAC системе (только если пользователь существует)
-DO $
+DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM auth.users WHERE id = '93c5776a-bd4a-4753-b965-df8d0b302916') THEN
     DELETE FROM public.user_role_assignments
@@ -77,4 +77,4 @@ BEGIN
       now()
     );
   END IF;
-END $;
+END $$;

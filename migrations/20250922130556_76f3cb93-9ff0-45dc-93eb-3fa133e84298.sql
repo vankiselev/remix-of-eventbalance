@@ -74,14 +74,18 @@ CREATE TRIGGER trg_events_updated
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
-CREATE POLICY IF NOT EXISTS "events_select" ON public.events 
+DROP POLICY IF EXISTS "events_select" ON public.events;
+CREATE POLICY "events_select" ON public.events
   FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY IF NOT EXISTS "events_insert" ON public.events 
+DROP POLICY IF EXISTS "events_insert" ON public.events;
+CREATE POLICY "events_insert" ON public.events
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY IF NOT EXISTS "events_update" ON public.events 
+DROP POLICY IF EXISTS "events_update" ON public.events;
+CREATE POLICY "events_update" ON public.events
   FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "events_delete" ON public.events 
+DROP POLICY IF EXISTS "events_delete" ON public.events;
+CREATE POLICY "events_delete" ON public.events
   FOR DELETE TO authenticated USING (auth.uid() = created_by OR get_current_user_role() = 'admin'::user_role);

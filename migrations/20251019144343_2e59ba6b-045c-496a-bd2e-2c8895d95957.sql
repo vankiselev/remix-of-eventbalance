@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.chat_rooms (
 );
 
 -- Create chat_participants table
-CREATE TABLE public.chat_participants (
+CREATE TABLE IF NOT EXISTS public.chat_participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   chat_room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -22,7 +22,7 @@ CREATE TABLE public.chat_participants (
 );
 
 -- Create messages table
-CREATE TABLE public.messages (
+CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   chat_room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -34,7 +34,7 @@ CREATE TABLE public.messages (
 );
 
 -- Create message_attachments table
-CREATE TABLE public.message_attachments (
+CREATE TABLE IF NOT EXISTS public.message_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   message_id UUID NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
   file_name TEXT NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE public.message_attachments (
 );
 
 -- Create message_read_status table
-CREATE TABLE public.message_read_status (
+CREATE TABLE IF NOT EXISTS public.message_read_status (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   message_id UUID NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
