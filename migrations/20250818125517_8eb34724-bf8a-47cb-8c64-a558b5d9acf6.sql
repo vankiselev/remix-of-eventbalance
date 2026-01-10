@@ -6,7 +6,7 @@ RETURNS text
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT encode(digest(token_value, 'sha256'), 'hex');
 $$;

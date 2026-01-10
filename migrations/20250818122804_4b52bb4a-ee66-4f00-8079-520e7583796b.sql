@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.get_my_employee_profile()
 RETURNS TABLE (
   id uuid,
   user_id uuid,
-  position text,
+  "position" text,
   hire_date date,
   created_at timestamp with time zone,
   updated_at timestamp with time zone

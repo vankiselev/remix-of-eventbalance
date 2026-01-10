@@ -1,5 +1,22 @@
 -- Исправление RLS политик для избежания циркулярных зависимостей
--- Используем существующую функцию has_role из user_roles
+-- Создаем has_role функцию если еще не существует
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT COALESCE(
+    EXISTS (
+      SELECT 1
+      FROM public.user_roles ur
+      WHERE ur.user_id = _user_id
+        AND ur.role = _role
+        AND ur.revoked_at IS NULL
+    ),
+    false
+  );
+$$;
 
 -- 1. Удаляем старые политики для role_definitions
 DROP POLICY IF EXISTS "Admins can view all roles" ON role_definitions;

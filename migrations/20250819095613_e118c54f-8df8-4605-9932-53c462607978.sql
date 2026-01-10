@@ -31,11 +31,8 @@ FROM public.profiles;
 -- Enable RLS on the view
 ALTER VIEW public.user_profiles SET (security_invoker = on);
 
--- Create policies for the view
-CREATE POLICY "Users can view own basic profile data" 
-ON public.user_profiles 
-FOR SELECT 
-USING (auth.uid() = id);
+-- Note: Cannot create policies on views - RLS is enforced through security_invoker setting
+-- which runs the view query with the caller's permissions against the underlying table
 
 -- Create a view for financial profile data that only admins can access
 CREATE OR REPLACE VIEW public.admin_profiles AS
@@ -58,11 +55,8 @@ FROM public.profiles p;
 -- Enable RLS on the admin view
 ALTER VIEW public.admin_profiles SET (security_invoker = on);
 
--- Create policy for admin view using the security definer function
-CREATE POLICY "Admins can view all profile data including financial" 
-ON public.admin_profiles 
-FOR SELECT 
-USING (public.get_current_user_role() = 'admin'::user_role);
+-- Note: Cannot create policies on views - RLS is enforced through security_invoker setting
+-- which runs the view query with the caller's permissions against the underlying table
 
 -- Update the main profiles table policies
 -- Drop existing policies and create new restrictive ones

@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.get_employee_basic_data()
 RETURNS TABLE(
   id uuid,
   user_id uuid,
-  position text,
+  "position" text,
   hire_date date,
   phone text,
   birth_date date,
@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION public.get_admin_employee_data()
 RETURNS TABLE(
   id uuid,
   user_id uuid,
-  position text,
+  "position" text,
   hire_date date,
   salary numeric,
   phone text,

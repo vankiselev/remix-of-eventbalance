@@ -9,7 +9,7 @@ RETURNS text
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT encode(digest(token_value, 'sha256'), 'hex');
 $$;
@@ -19,7 +19,7 @@ CREATE OR REPLACE FUNCTION public.hash_invitation_token()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 BEGIN
   NEW.token_hash = public.hash_token(NEW.token::text);
@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION public.hash_password_reset_token()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 BEGIN
   NEW.token_hash = public.hash_token(NEW.token::text);
