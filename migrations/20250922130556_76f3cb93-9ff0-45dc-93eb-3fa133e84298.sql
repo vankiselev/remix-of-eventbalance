@@ -19,6 +19,38 @@ CREATE TABLE IF NOT EXISTS public.events (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Rename 'name' column to 'title' if it exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'events'
+    AND column_name = 'name'
+  ) THEN
+    ALTER TABLE public.events RENAME COLUMN name TO title;
+  END IF;
+END $$;
+
+-- Add title column if it doesn't exist (in case table was created without it)
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS title text;
+
+-- Make title NOT NULL if it's currently nullable
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'events'
+    AND column_name = 'title'
+    AND is_nullable = 'YES'
+  ) THEN
+    -- Set default value for existing nulls
+    UPDATE public.events SET title = 'Untitled Event' WHERE title IS NULL;
+    ALTER TABLE public.events ALTER COLUMN title SET NOT NULL;
+  END IF;
+END $$;
+
 -- Create unique index for upsert logic
 CREATE UNIQUE INDEX IF NOT EXISTS events_uniq_date_title
   ON public.events (event_date, lower(title));

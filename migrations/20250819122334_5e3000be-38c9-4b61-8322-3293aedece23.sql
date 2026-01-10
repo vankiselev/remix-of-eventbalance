@@ -1,6 +1,14 @@
 -- Исправляем предупреждения безопасности для функций телефонов
 -- Устанавливаем search_path для безопасности
 
+-- First drop triggers that depend on the functions
+DROP TRIGGER IF EXISTS trigger_profiles_update_phone_e164 ON public.profiles;
+DROP TRIGGER IF EXISTS trigger_animators_update_phone_e164 ON public.animators;
+DROP TRIGGER IF EXISTS trigger_clients_update_phone_e164 ON public.clients;
+DROP TRIGGER IF EXISTS trigger_contractors_update_phone_e164 ON public.contractors;
+DROP TRIGGER IF EXISTS trigger_venues_update_phone_e164 ON public.venues;
+
+-- Now drop the functions
 DROP FUNCTION IF EXISTS public.normalize_phone_to_e164(text);
 DROP FUNCTION IF EXISTS public.format_phone_display(text);
 DROP FUNCTION IF EXISTS public.update_phone_e164();

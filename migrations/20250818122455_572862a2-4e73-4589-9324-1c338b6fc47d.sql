@@ -35,9 +35,5 @@ FROM public.employees;
 -- Grant access to the view
 GRANT SELECT ON public.employee_profile TO authenticated;
 
--- Create RLS policy for the view
+-- Set security barrier for the view (views don't support RLS policies directly)
 ALTER VIEW public.employee_profile SET (security_barrier = true);
-CREATE POLICY "Employees can view their own profile" 
-ON public.employee_profile 
-FOR SELECT 
-USING (auth.uid() = user_id);

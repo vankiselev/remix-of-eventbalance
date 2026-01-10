@@ -1,14 +1,13 @@
 -- Add money transfer fields to financial_transactions table
-ALTER TABLE public.financial_transactions
-ADD COLUMN transfer_to_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-ADD COLUMN transfer_status text CHECK (transfer_status IN ('pending', 'accepted', 'rejected')),
-ADD COLUMN linked_transaction_id uuid REFERENCES public.financial_transactions(id) ON DELETE SET NULL,
-ADD COLUMN transfer_from_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.financial_transactions ADD COLUMN IF NOT EXISTS transfer_to_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.financial_transactions ADD COLUMN IF NOT EXISTS transfer_status text CHECK (transfer_status IN ('pending', 'accepted', 'rejected'));
+ALTER TABLE public.financial_transactions ADD COLUMN IF NOT EXISTS linked_transaction_id uuid REFERENCES public.financial_transactions(id) ON DELETE SET NULL;
+ALTER TABLE public.financial_transactions ADD COLUMN IF NOT EXISTS transfer_from_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- Add index for better query performance
-CREATE INDEX idx_financial_transactions_transfer_to ON public.financial_transactions(transfer_to_user_id);
-CREATE INDEX idx_financial_transactions_transfer_from ON public.financial_transactions(transfer_from_user_id);
-CREATE INDEX idx_financial_transactions_linked ON public.financial_transactions(linked_transaction_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transactions_transfer_to ON public.financial_transactions(transfer_to_user_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transactions_transfer_from ON public.financial_transactions(transfer_from_user_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transactions_linked ON public.financial_transactions(linked_transaction_id);
 
 -- Update RLS policies to allow recipients to see pending transfers
 CREATE POLICY "Recipients can view pending transfers to them"

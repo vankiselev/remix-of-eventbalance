@@ -62,11 +62,10 @@ DROP COLUMN IF EXISTS animators,
 DROP COLUMN IF EXISTS managers;
 
 -- Add new fields to events table
-ALTER TABLE public.events
-ADD COLUMN venue_id uuid REFERENCES public.venues(id),
-ADD COLUMN contractor_ids uuid[],
-ADD COLUMN responsible_manager_ids uuid[],
-ADD COLUMN manager_ids uuid[];
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS venue_id uuid REFERENCES public.venues(id);
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS contractor_ids uuid[];
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS responsible_manager_ids uuid[];
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS manager_ids uuid[];
 
 -- Enable RLS on new tables
 ALTER TABLE public.contractors ENABLE ROW LEVEL SECURITY;

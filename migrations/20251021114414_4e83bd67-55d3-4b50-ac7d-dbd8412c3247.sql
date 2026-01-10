@@ -1,6 +1,27 @@
 -- Обновляем функцию get_current_user_role() чтобы она проверяла новую систему ролей
 -- из таблиц user_role_assignments и role_definitions
 
+-- First, create get_user_highest_role() if it doesn't exist
+CREATE OR REPLACE FUNCTION public.get_user_highest_role(_user_id uuid)
+RETURNS app_role
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT role
+  FROM public.user_roles
+  WHERE user_id = _user_id
+    AND revoked_at IS NULL
+  ORDER BY
+    CASE role
+      WHEN 'super_admin'::app_role THEN 1
+      WHEN 'admin'::app_role THEN 2
+      WHEN 'employee'::app_role THEN 3
+      ELSE 4
+    END
+  LIMIT 1;
+$$;
+
 CREATE OR REPLACE FUNCTION public.get_current_user_role()
 RETURNS user_role
 LANGUAGE sql

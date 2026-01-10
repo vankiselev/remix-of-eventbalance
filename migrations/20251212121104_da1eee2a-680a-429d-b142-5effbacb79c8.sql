@@ -20,13 +20,13 @@ INSERT INTO public.tasks (
   updated_at,
   items
 )
-SELECT 
-  CASE 
-    WHEN wt.task_type = 'collection' THEN 'Сбор реквизита'
+SELECT
+  CASE
+    WHEN wt.type = 'collection' THEN 'Сбор реквизита'
     ELSE 'Возврат реквизита'
-  END || COALESCE(': ' || e.name, '') as title,
+  END || COALESCE(': ' || e.title, '') as title,
   wt.notes as description,
-  wt.task_type,
+  wt.type as task_type,
   'medium' as priority,
   wt.status,
   wt.assigned_to,
@@ -44,7 +44,7 @@ SELECT
           'item_name', COALESCE(wi.name, 'Неизвестный товар'),
           'quantity', wti.quantity,
           'collected_quantity', wti.collected_quantity,
-          'is_collected', wti.is_collected,
+          'is_collected', (wti.collected_quantity >= wti.quantity),
           'notes', wti.notes
         )
       )
@@ -73,6 +73,6 @@ SELECT
   wtc.created_at
 FROM warehouse_task_comments wtc
 JOIN warehouse_tasks wt ON wtc.task_id = wt.id
-JOIN tasks t ON t.event_id = wt.event_id 
-  AND t.task_type = wt.task_type 
+JOIN tasks t ON t.event_id = wt.event_id
+  AND t.task_type = wt.type
   AND t.created_at = wt.created_at;

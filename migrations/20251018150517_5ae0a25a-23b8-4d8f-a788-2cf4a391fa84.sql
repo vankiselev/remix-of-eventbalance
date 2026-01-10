@@ -1,5 +1,5 @@
 -- Add estimate_file_url column to events table to store budget/estimate files
-ALTER TABLE public.events ADD COLUMN estimate_file_url text;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS estimate_file_url text;
 
 -- Create storage bucket for estimate files if it doesn't exist
 INSERT INTO storage.buckets (id, name, public)

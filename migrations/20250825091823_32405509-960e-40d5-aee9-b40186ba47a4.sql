@@ -1,10 +1,10 @@
 -- Add receipt-related fields to financial_transactions
-ALTER TABLE public.financial_transactions 
-ADD COLUMN no_receipt boolean DEFAULT false,
-ADD COLUMN no_receipt_reason text;
+ALTER TABLE public.financial_transactions
+ADD COLUMN IF NOT EXISTS no_receipt boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS no_receipt_reason text;
 
 -- Create financial_attachments table
-CREATE TABLE public.financial_attachments (
+CREATE TABLE IF NOT EXISTS public.financial_attachments (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   transaction_id uuid NOT NULL REFERENCES public.financial_transactions(id) ON DELETE CASCADE,
   storage_path text NOT NULL,

@@ -1,5 +1,5 @@
 -- Create warehouse_inventories table
-CREATE TABLE warehouse_inventories (
+CREATE TABLE IF NOT EXISTS warehouse_inventories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'draft',
@@ -13,7 +13,7 @@ CREATE TABLE warehouse_inventories (
 );
 
 -- Create warehouse_inventory_items table
-CREATE TABLE warehouse_inventory_items (
+CREATE TABLE IF NOT EXISTS warehouse_inventory_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   inventory_id UUID NOT NULL REFERENCES warehouse_inventories(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES warehouse_items(id),

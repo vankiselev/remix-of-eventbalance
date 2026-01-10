@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.hash_token(token_value text)
 RETURNS text
 LANGUAGE sql
 STABLE SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path TO 'public', 'extensions'
 AS $$
   SELECT encode(digest(token_value, 'sha256'), 'hex');
 $$;

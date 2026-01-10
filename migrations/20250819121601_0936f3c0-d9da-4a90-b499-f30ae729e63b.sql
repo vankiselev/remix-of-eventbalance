@@ -1,4 +1,5 @@
 -- Добавляем политику для обновления собственного профиля администраторами
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 CREATE POLICY "Admins can update any profile" ON public.profiles
   FOR UPDATE USING (
     get_current_user_role() = 'admin'::user_role

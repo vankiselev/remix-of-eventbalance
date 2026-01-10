@@ -2,11 +2,13 @@
 DROP POLICY IF EXISTS "Users can update profiles with field restrictions" ON public.profiles;
 
 -- Recreate simple update policies
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
 ON public.profiles
 FOR UPDATE
 USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 CREATE POLICY "Admins can update any profile"
 ON public.profiles
 FOR UPDATE

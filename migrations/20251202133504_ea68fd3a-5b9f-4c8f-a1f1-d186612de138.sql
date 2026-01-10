@@ -1,5 +1,5 @@
 -- Create financial_reports table
-CREATE TABLE public.financial_reports (
+CREATE TABLE IF NOT EXISTS public.financial_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   event_id UUID REFERENCES events(id) ON DELETE SET NULL,
@@ -17,7 +17,7 @@ CREATE TABLE public.financial_reports (
 );
 
 -- Create financial_report_items table
-CREATE TABLE public.financial_report_items (
+CREATE TABLE IF NOT EXISTS public.financial_report_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   report_id UUID NOT NULL REFERENCES financial_reports(id) ON DELETE CASCADE,
   item_type TEXT NOT NULL CHECK (item_type IN ('income', 'expense')),

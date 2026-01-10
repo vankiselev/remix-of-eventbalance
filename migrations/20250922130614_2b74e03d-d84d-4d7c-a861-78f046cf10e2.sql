@@ -19,6 +19,27 @@ CREATE TABLE IF NOT EXISTS public.events (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Ensure title column exists (rename from name if needed)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'events'
+    AND column_name = 'name'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'events'
+    AND column_name = 'title'
+  ) THEN
+    ALTER TABLE public.events RENAME COLUMN name TO title;
+  END IF;
+END $$;
+
+-- Add title column if it doesn't exist
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS title text;
+
 -- Create unique index for upsert logic
 CREATE UNIQUE INDEX IF NOT EXISTS events_uniq_date_title
   ON public.events (event_date, lower(title));
