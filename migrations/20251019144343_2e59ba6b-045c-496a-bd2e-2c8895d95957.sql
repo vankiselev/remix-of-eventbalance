@@ -1,5 +1,5 @@
 -- Create chat_rooms table for individual and group chats
-CREATE TABLE public.chat_rooms (
+CREATE TABLE IF NOT EXISTS public.chat_rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT,
   is_group BOOLEAN NOT NULL DEFAULT false,

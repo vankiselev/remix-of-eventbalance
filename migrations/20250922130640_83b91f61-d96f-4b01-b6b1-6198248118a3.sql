@@ -1,7 +1,7 @@
 -- Create or update events table for import functionality
 CREATE TABLE IF NOT EXISTS public.events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_date date NOT NULL,
+  start_date date NOT NULL,
   title text NOT NULL,
   project_owner text,
   managers text,
@@ -42,7 +42,7 @@ ALTER TABLE public.events ADD COLUMN IF NOT EXISTS title text;
 
 -- Create unique index for upsert logic
 CREATE UNIQUE INDEX IF NOT EXISTS events_uniq_date_title
-  ON public.events (event_date, lower(title));
+  ON public.events (start_date, lower(title));
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION public.set_updated_at() 

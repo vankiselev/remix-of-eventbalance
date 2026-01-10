@@ -15,22 +15,26 @@ CREATE TABLE IF NOT EXISTS public.category_icons (
 ALTER TABLE public.category_icons ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+DROP POLICY IF EXISTS "Everyone can view category icons" ON public.category_icons;
 CREATE POLICY "Everyone can view category icons"
   ON public.category_icons
   FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admins can insert category icons" ON public.category_icons;
 CREATE POLICY "Admins can insert category icons"
   ON public.category_icons
   FOR INSERT
   WITH CHECK (is_admin_user(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins can update category icons" ON public.category_icons;
 CREATE POLICY "Admins can update category icons"
   ON public.category_icons
   FOR UPDATE
   USING (is_admin_user(auth.uid()))
   WITH CHECK (is_admin_user(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins can delete category icons" ON public.category_icons;
 CREATE POLICY "Admins can delete category icons"
   ON public.category_icons
   FOR DELETE
@@ -42,11 +46,13 @@ VALUES ('category-icons', 'category-icons', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for category icons
+DROP POLICY IF EXISTS "Public can view category icons" ON storage.objects;
 CREATE POLICY "Public can view category icons"
   ON storage.objects
   FOR SELECT
   USING (bucket_id = 'category-icons');
 
+DROP POLICY IF EXISTS "Admins can upload category icons" ON storage.objects;
 CREATE POLICY "Admins can upload category icons"
   ON storage.objects
   FOR INSERT
@@ -55,6 +61,7 @@ CREATE POLICY "Admins can upload category icons"
     is_admin_user(auth.uid())
   );
 
+DROP POLICY IF EXISTS "Admins can update category icons" ON storage.objects;
 CREATE POLICY "Admins can update category icons"
   ON storage.objects
   FOR UPDATE
@@ -67,6 +74,7 @@ CREATE POLICY "Admins can update category icons"
     is_admin_user(auth.uid())
   );
 
+DROP POLICY IF EXISTS "Admins can delete category icons" ON storage.objects;
 CREATE POLICY "Admins can delete category icons"
   ON storage.objects
   FOR DELETE

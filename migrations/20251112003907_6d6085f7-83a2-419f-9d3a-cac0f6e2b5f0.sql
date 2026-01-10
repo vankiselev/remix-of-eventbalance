@@ -34,20 +34,24 @@ ALTER TABLE warehouse_inventories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE warehouse_inventory_items ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for warehouse_inventories
+DROP POLICY IF EXISTS "Active users can view inventories" ON warehouse_inventories;
 CREATE POLICY "Active users can view inventories"
   ON warehouse_inventories FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage inventories" ON warehouse_inventories;
 CREATE POLICY "Users with permission can manage inventories"
   ON warehouse_inventories FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- RLS Policies for warehouse_inventory_items
+DROP POLICY IF EXISTS "Active users can view inventory items" ON warehouse_inventory_items;
 CREATE POLICY "Active users can view inventory items"
   ON warehouse_inventory_items FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage inventory items" ON warehouse_inventory_items;
 CREATE POLICY "Users with permission can manage inventory items"
   ON warehouse_inventory_items FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))

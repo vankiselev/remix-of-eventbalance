@@ -74,13 +74,14 @@ AS $$
 $$;
 
 -- Create new restrictive policy - only admins can directly access employees table
-CREATE POLICY "Only verified admins can access employees table directly" 
-ON public.employees 
-FOR SELECT 
+DROP POLICY IF EXISTS "Only verified admins can access employees table directly" ON public.employees;
+CREATE POLICY "Only verified admins can access employees table directly"
+ON public.employees
+FOR SELECT
 USING (
   EXISTS (
-    SELECT 1 FROM public.profiles admin_check 
-    WHERE admin_check.id = auth.uid() 
+    SELECT 1 FROM public.profiles admin_check
+    WHERE admin_check.id = auth.uid()
     AND admin_check.role = 'admin'::user_role
   )
 );

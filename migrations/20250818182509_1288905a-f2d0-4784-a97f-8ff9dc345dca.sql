@@ -12,11 +12,12 @@ $$;
 
 -- 2. Fix the invitation RLS policies to work properly
 DROP POLICY IF EXISTS "Secure invitation access via functions only" ON public.invitations;
+DROP POLICY IF EXISTS "Allow access via secure functions only" ON public.invitations;
 
 -- Create a proper policy for invitation access via functions
-CREATE POLICY "Allow access via secure functions only" 
-ON public.invitations 
-FOR SELECT 
+CREATE POLICY "Allow access via secure functions only"
+ON public.invitations
+FOR SELECT
 USING (false);
 
 -- Allow system to insert invitations (for admin users)

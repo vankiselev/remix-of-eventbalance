@@ -7,6 +7,7 @@ VALUES ('estimate-files', 'estimate-files', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS policies for estimate files bucket
+DROP POLICY IF EXISTS "Active users can view estimate files" ON storage.objects;
 CREATE POLICY "Active users can view estimate files"
 ON storage.objects FOR SELECT
 USING (
@@ -17,6 +18,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Active users can upload estimate files" ON storage.objects;
 CREATE POLICY "Active users can upload estimate files"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -28,6 +30,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Users can update their own estimate files" ON storage.objects;
 CREATE POLICY "Users can update their own estimate files"
 ON storage.objects FOR UPDATE
 USING (
@@ -35,6 +38,7 @@ USING (
   auth.uid() IS NOT NULL
 );
 
+DROP POLICY IF EXISTS "Users can delete estimate files" ON storage.objects;
 CREATE POLICY "Users can delete estimate files"
 ON storage.objects FOR DELETE
 USING (

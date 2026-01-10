@@ -12,23 +12,26 @@ $$;
 
 -- 2. Fix the invitation RLS policies to work properly
 DROP POLICY IF EXISTS "Secure invitation access via functions only" ON public.invitations;
+DROP POLICY IF EXISTS "Allow access via secure functions only" ON public.invitations;
 
 -- Create a proper policy for invitation access via functions
-CREATE POLICY "Allow access via secure functions only" 
-ON public.invitations 
-FOR SELECT 
+CREATE POLICY "Allow access via secure functions only"
+ON public.invitations
+FOR SELECT
 USING (false);
 
--- Allow system to insert invitations (for admin users)  
-CREATE POLICY "Admins can create invitations" 
-ON public.invitations 
-FOR INSERT 
+-- Allow system to insert invitations (for admin users)
+DROP POLICY IF EXISTS "Admins can create invitations" ON public.invitations;
+CREATE POLICY "Admins can create invitations"
+ON public.invitations
+FOR INSERT
 WITH CHECK (get_user_role(auth.uid()) = 'admin'::user_role);
 
 -- Allow system to update invitations (for accepting them)
-CREATE POLICY "Allow system updates for accepting invitations" 
-ON public.invitations 
-FOR UPDATE 
+DROP POLICY IF EXISTS "Allow system updates for accepting invitations" ON public.invitations;
+CREATE POLICY "Allow system updates for accepting invitations"
+ON public.invitations
+FOR UPDATE
 USING (true)
 WITH CHECK (true);
 
@@ -91,9 +94,10 @@ $$;
 
 -- 5. Fix password reset token access - remove user access to tokens
 DROP POLICY IF EXISTS "Users can view their own reset tokens" ON public.password_reset_tokens;
+DROP POLICY IF EXISTS "No direct access to password reset tokens" ON public.password_reset_tokens;
 
 -- Only allow system functions to access password reset tokens
-CREATE POLICY "No direct access to password reset tokens" 
-ON public.password_reset_tokens 
+CREATE POLICY "No direct access to password reset tokens"
+ON public.password_reset_tokens
 FOR ALL
 USING (false);

@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 -- ============================================================================
 
 -- Warehouse Categories
-CREATE TABLE public.warehouse_categories (
+CREATE TABLE IF NOT EXISTS public.warehouse_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   icon_type TEXT NOT NULL DEFAULT 'lucide',
@@ -27,7 +27,7 @@ CREATE TABLE public.warehouse_categories (
 );
 
 -- Warehouse Locations
-CREATE TABLE public.warehouse_locations (
+CREATE TABLE IF NOT EXISTS public.warehouse_locations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   type TEXT NOT NULL DEFAULT 'warehouse',
@@ -41,7 +41,7 @@ CREATE TABLE public.warehouse_locations (
 );
 
 -- Warehouse Items
-CREATE TABLE public.warehouse_items (
+CREATE TABLE IF NOT EXISTS public.warehouse_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
@@ -59,7 +59,7 @@ CREATE TABLE public.warehouse_items (
 );
 
 -- Warehouse Stock
-CREATE TABLE public.warehouse_stock (
+CREATE TABLE IF NOT EXISTS public.warehouse_stock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.warehouse_items(id) ON DELETE CASCADE,
   location_id UUID NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE CASCADE,
@@ -69,7 +69,7 @@ CREATE TABLE public.warehouse_stock (
 );
 
 -- Warehouse Movements
-CREATE TABLE public.warehouse_movements (
+CREATE TABLE IF NOT EXISTS public.warehouse_movements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_id UUID NOT NULL REFERENCES public.warehouse_items(id) ON DELETE CASCADE,
   from_location_id UUID REFERENCES public.warehouse_locations(id) ON DELETE SET NULL,
@@ -84,7 +84,7 @@ CREATE TABLE public.warehouse_movements (
 );
 
 -- Warehouse Tasks
-CREATE TABLE public.warehouse_tasks (
+CREATE TABLE IF NOT EXISTS public.warehouse_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
@@ -99,7 +99,7 @@ CREATE TABLE public.warehouse_tasks (
 );
 
 -- Warehouse Task Items
-CREATE TABLE public.warehouse_task_items (
+CREATE TABLE IF NOT EXISTS public.warehouse_task_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id UUID NOT NULL REFERENCES public.warehouse_tasks(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES public.warehouse_items(id) ON DELETE CASCADE,
@@ -110,7 +110,7 @@ CREATE TABLE public.warehouse_task_items (
 );
 
 -- Warehouse Task Comments
-CREATE TABLE public.warehouse_task_comments (
+CREATE TABLE IF NOT EXISTS public.warehouse_task_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id UUID NOT NULL REFERENCES public.warehouse_tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -120,7 +120,7 @@ CREATE TABLE public.warehouse_task_comments (
 );
 
 -- Warehouse Settings
-CREATE TABLE public.warehouse_settings (
+CREATE TABLE IF NOT EXISTS public.warehouse_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enable_notifications BOOLEAN NOT NULL DEFAULT true,
   notify_on_low_stock BOOLEAN NOT NULL DEFAULT true,

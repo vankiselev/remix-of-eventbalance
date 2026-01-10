@@ -20,24 +20,27 @@ CREATE TABLE IF NOT EXISTS public.financial_attachments (
 ALTER TABLE public.financial_attachments ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for financial_attachments
-CREATE POLICY "Users can view their own attachments and admins can view all" 
-ON public.financial_attachments 
-FOR SELECT 
+DROP POLICY IF EXISTS "Users can view their own attachments and admins can view all" ON public.financial_attachments;
+CREATE POLICY "Users can view their own attachments and admins can view all"
+ON public.financial_attachments
+FOR SELECT
 USING (
-  (auth.uid() = created_by) OR 
+  (auth.uid() = created_by) OR
   (get_user_role(auth.uid()) = 'admin'::user_role)
 );
 
-CREATE POLICY "Users can create their own attachments" 
-ON public.financial_attachments 
-FOR INSERT 
+DROP POLICY IF EXISTS "Users can create their own attachments" ON public.financial_attachments;
+CREATE POLICY "Users can create their own attachments"
+ON public.financial_attachments
+FOR INSERT
 WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Users can delete their own attachments and admins can delete all" 
-ON public.financial_attachments 
-FOR DELETE 
+DROP POLICY IF EXISTS "Users can delete their own attachments and admins can delete all" ON public.financial_attachments;
+CREATE POLICY "Users can delete their own attachments and admins can delete all"
+ON public.financial_attachments
+FOR DELETE
 USING (
-  (auth.uid() = created_by) OR 
+  (auth.uid() = created_by) OR
   (get_user_role(auth.uid()) = 'admin'::user_role)
 );
 
@@ -45,32 +48,35 @@ USING (
 INSERT INTO storage.buckets (id, name, public) VALUES ('receipts', 'receipts', false);
 
 -- Create storage policies for receipts bucket
-CREATE POLICY "Users can view their own receipts and admins can view all" 
-ON storage.objects 
-FOR SELECT 
+DROP POLICY IF EXISTS "Users can view their own receipts and admins can view all" ON storage.objects;
+CREATE POLICY "Users can view their own receipts and admins can view all"
+ON storage.objects
+FOR SELECT
 USING (
-  bucket_id = 'receipts' AND 
+  bucket_id = 'receipts' AND
   (
-    auth.uid()::text = (storage.foldername(name))[2] OR 
+    auth.uid()::text = (storage.foldername(name))[2] OR
     get_user_role(auth.uid()) = 'admin'::user_role
   )
 );
 
-CREATE POLICY "Users can upload their own receipts" 
-ON storage.objects 
-FOR INSERT 
+DROP POLICY IF EXISTS "Users can upload their own receipts" ON storage.objects;
+CREATE POLICY "Users can upload their own receipts"
+ON storage.objects
+FOR INSERT
 WITH CHECK (
-  bucket_id = 'receipts' AND 
+  bucket_id = 'receipts' AND
   auth.uid()::text = (storage.foldername(name))[2]
 );
 
-CREATE POLICY "Users can delete their own receipts and admins can delete all" 
-ON storage.objects 
-FOR DELETE 
+DROP POLICY IF EXISTS "Users can delete their own receipts and admins can delete all" ON storage.objects;
+CREATE POLICY "Users can delete their own receipts and admins can delete all"
+ON storage.objects
+FOR DELETE
 USING (
-  bucket_id = 'receipts' AND 
+  bucket_id = 'receipts' AND
   (
-    auth.uid()::text = (storage.foldername(name))[2] OR 
+    auth.uid()::text = (storage.foldername(name))[2] OR
     get_user_role(auth.uid()) = 'admin'::user_role
   )
 );

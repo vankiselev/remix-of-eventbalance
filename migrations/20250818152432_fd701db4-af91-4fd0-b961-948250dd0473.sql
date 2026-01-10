@@ -33,9 +33,10 @@ CREATE TABLE IF NOT EXISTS public.financial_audit_log (
 ALTER TABLE public.financial_audit_log ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for audit log - only admins can view
-CREATE POLICY "Admins can view all audit logs" 
-ON public.financial_audit_log 
-FOR SELECT 
+DROP POLICY IF EXISTS "Admins can view all audit logs" ON public.financial_audit_log;
+CREATE POLICY "Admins can view all audit logs"
+ON public.financial_audit_log
+FOR SELECT
 USING (get_user_role(auth.uid()) = 'admin'::user_role);
 
 -- Add more detailed fields to financial_transactions table

@@ -62,14 +62,19 @@ UPDATE public.profiles
 SET role = 'admin'
 WHERE id = '93c5776a-bd4a-4753-b965-df8d0b302916';
 
--- И назначаем роль в RBAC системе
-DELETE FROM public.user_role_assignments
-WHERE user_id = '93c5776a-bd4a-4753-b965-df8d0b302916';
+-- И назначаем роль в RBAC системе (только если пользователь существует)
+DO $
+BEGIN
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = '93c5776a-bd4a-4753-b965-df8d0b302916') THEN
+    DELETE FROM public.user_role_assignments
+    WHERE user_id = '93c5776a-bd4a-4753-b965-df8d0b302916';
 
-INSERT INTO public.user_role_assignments (user_id, role_id, assigned_by, assigned_at)
-VALUES (
-  '93c5776a-bd4a-4753-b965-df8d0b302916',
-  (SELECT id FROM public.role_definitions WHERE code = 'admin'),
-  '93c5776a-bd4a-4753-b965-df8d0b302916',
-  now()
-);
+    INSERT INTO public.user_role_assignments (user_id, role_id, assigned_by, assigned_at)
+    VALUES (
+      '93c5776a-bd4a-4753-b965-df8d0b302916',
+      (SELECT id FROM public.role_definitions WHERE code = 'admin'),
+      '93c5776a-bd4a-4753-b965-df8d0b302916',
+      now()
+    );
+  END IF;
+END $;

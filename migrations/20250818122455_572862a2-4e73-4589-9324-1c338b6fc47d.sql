@@ -1,23 +1,25 @@
 -- Fix security issue: Restrict salary information access to admins only
 -- Drop the current employee self-view policy
 DROP POLICY IF EXISTS "Employees can view only their own record" ON public.employees;
+DROP POLICY IF EXISTS "Employees can view their own record (excluding salary)" ON public.employees;
 
 -- Create a new policy that allows employees to view their own records EXCEPT salary
-CREATE POLICY "Employees can view their own record (excluding salary)" 
-ON public.employees 
-FOR SELECT 
+CREATE POLICY "Employees can view their own record (excluding salary)"
+ON public.employees
+FOR SELECT
 USING (
-  auth.uid() = user_id 
+  auth.uid() = user_id
   AND current_setting('request.columns', true) NOT LIKE '%salary%'
 );
 
 -- Create a separate policy for admins to view salary information
 -- (The existing admin policy already covers this, but let's be explicit)
-CREATE POLICY "Only admins can view salary information" 
-ON public.employees 
-FOR SELECT 
+DROP POLICY IF EXISTS "Only admins can view salary information" ON public.employees;
+CREATE POLICY "Only admins can view salary information"
+ON public.employees
+FOR SELECT
 USING (
-  get_user_role(auth.uid()) = 'admin'::user_role 
+  get_user_role(auth.uid()) = 'admin'::user_role
   AND current_setting('request.columns', true) LIKE '%salary%'
 );
 
