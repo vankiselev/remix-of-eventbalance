@@ -26,7 +26,6 @@ END $$;
 
 -- Grant necessary permissions for public schema to reference auth schema
 -- This is typically done automatically but we ensure it here
--- Note: COMMENT ON SCHEMA auth requires ownership, so we skip it
 GRANT USAGE ON SCHEMA auth TO postgres, anon, authenticated, service_role;
 
 -- Log successful initialization
