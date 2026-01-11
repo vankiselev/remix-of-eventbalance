@@ -229,7 +229,8 @@ CREATE INDEX IF NOT EXISTS idx_message_read_status_message_id ON public.message_
 CREATE INDEX IF NOT EXISTS idx_message_read_status_user_id ON public.message_read_status(user_id);
 
 -- Create storage bucket for chat attachments
-INSERT INTO storage.buckets (id, name, public) VALUES ('chat-attachments', 'chat-attachments', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('chat-attachments', 'chat-attachments', false)
+ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for chat-attachments
 DROP POLICY IF EXISTS "Users can upload attachments" ON storage.objects;

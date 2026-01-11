@@ -322,110 +322,132 @@ ALTER TABLE public.warehouse_task_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.warehouse_settings ENABLE ROW LEVEL SECURITY;
 
 -- Categories Policies
+DROP POLICY IF EXISTS "Active users can view categories" ON public.warehouse_categories;
 CREATE POLICY "Active users can view categories"
   ON public.warehouse_categories FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage categories" ON public.warehouse_categories;
 CREATE POLICY "Users with permission can manage categories"
   ON public.warehouse_categories FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- Locations Policies
+DROP POLICY IF EXISTS "Active users can view locations" ON public.warehouse_locations;
 CREATE POLICY "Active users can view locations"
   ON public.warehouse_locations FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage locations" ON public.warehouse_locations;
 CREATE POLICY "Users with permission can manage locations"
   ON public.warehouse_locations FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- Items Policies
+DROP POLICY IF EXISTS "Active users can view items" ON public.warehouse_items;
 CREATE POLICY "Active users can view items"
   ON public.warehouse_items FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage items" ON public.warehouse_items;
 CREATE POLICY "Users with permission can manage items"
   ON public.warehouse_items FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- Stock Policies
+DROP POLICY IF EXISTS "Active users can view stock" ON public.warehouse_stock;
 CREATE POLICY "Active users can view stock"
   ON public.warehouse_stock FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage stock" ON public.warehouse_stock;
 CREATE POLICY "Users with permission can manage stock"
   ON public.warehouse_stock FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- Movements Policies
+DROP POLICY IF EXISTS "Active users can view movements" ON public.warehouse_movements;
 CREATE POLICY "Active users can view movements"
   ON public.warehouse_movements FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Active users can create movements" ON public.warehouse_movements;
 CREATE POLICY "Active users can create movements"
   ON public.warehouse_movements FOR INSERT
   WITH CHECK (is_active_user() AND auth.uid() = created_by);
 
+DROP POLICY IF EXISTS "Users with permission can manage movements" ON public.warehouse_movements;
 CREATE POLICY "Users with permission can manage movements"
   ON public.warehouse_movements FOR ALL
   USING (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_items') OR is_admin_user(auth.uid()));
 
 -- Tasks Policies
+DROP POLICY IF EXISTS "Active users can view tasks" ON public.warehouse_tasks;
 CREATE POLICY "Active users can view tasks"
   ON public.warehouse_tasks FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Active users can create tasks" ON public.warehouse_tasks;
 CREATE POLICY "Active users can create tasks"
   ON public.warehouse_tasks FOR INSERT
   WITH CHECK (is_active_user() AND auth.uid() = created_by);
 
+DROP POLICY IF EXISTS "Assigned users can update their tasks" ON public.warehouse_tasks;
 CREATE POLICY "Assigned users can update their tasks"
   ON public.warehouse_tasks FOR UPDATE
   USING (auth.uid() = assigned_to OR auth.uid() = created_by OR has_permission('warehouse.manage_tasks') OR is_admin_user(auth.uid()));
 
+DROP POLICY IF EXISTS "Users with permission can manage tasks" ON public.warehouse_tasks;
 CREATE POLICY "Users with permission can manage tasks"
   ON public.warehouse_tasks FOR ALL
   USING (has_permission('warehouse.manage_tasks') OR is_admin_user(auth.uid()))
   WITH CHECK (has_permission('warehouse.manage_tasks') OR is_admin_user(auth.uid()));
 
 -- Task Items Policies
+DROP POLICY IF EXISTS "Active users can view task items" ON public.warehouse_task_items;
 CREATE POLICY "Active users can view task items"
   ON public.warehouse_task_items FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Users with permission can manage task items" ON public.warehouse_task_items;
 CREATE POLICY "Users with permission can manage task items"
   ON public.warehouse_task_items FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM warehouse_tasks 
-      WHERE id = warehouse_task_items.task_id 
+      SELECT 1 FROM warehouse_tasks
+      WHERE id = warehouse_task_items.task_id
       AND (assigned_to = auth.uid() OR created_by = auth.uid())
     ) OR has_permission('warehouse.manage_tasks') OR is_admin_user(auth.uid())
   );
 
 -- Task Comments Policies
+DROP POLICY IF EXISTS "Active users can view task comments" ON public.warehouse_task_comments;
 CREATE POLICY "Active users can view task comments"
   ON public.warehouse_task_comments FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Active users can create task comments" ON public.warehouse_task_comments;
 CREATE POLICY "Active users can create task comments"
   ON public.warehouse_task_comments FOR INSERT
   WITH CHECK (is_active_user() AND auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own comments" ON public.warehouse_task_comments;
 CREATE POLICY "Users can delete their own comments"
   ON public.warehouse_task_comments FOR DELETE
   USING (auth.uid() = user_id OR is_admin_user(auth.uid()));
 
 -- Settings Policies
+DROP POLICY IF EXISTS "Active users can view settings" ON public.warehouse_settings;
 CREATE POLICY "Active users can view settings"
   ON public.warehouse_settings FOR SELECT
   USING (is_active_user());
 
+DROP POLICY IF EXISTS "Admins can manage settings" ON public.warehouse_settings;
 CREATE POLICY "Admins can manage settings"
   ON public.warehouse_settings FOR ALL
   USING (has_permission('warehouse.manage_settings') OR is_admin_user(auth.uid()))
