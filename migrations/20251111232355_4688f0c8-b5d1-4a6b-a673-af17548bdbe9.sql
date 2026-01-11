@@ -440,28 +440,32 @@ VALUES ('warehouse-photos', 'warehouse-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage Policies
+DROP POLICY IF EXISTS "Public can view warehouse photos" ON storage.objects;
 CREATE POLICY "Public can view warehouse photos"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'warehouse-photos');
 
+DROP POLICY IF EXISTS "Authenticated users can upload warehouse photos" ON storage.objects;
 CREATE POLICY "Authenticated users can upload warehouse photos"
   ON storage.objects FOR INSERT
   WITH CHECK (
-    bucket_id = 'warehouse-photos' 
+    bucket_id = 'warehouse-photos'
     AND auth.uid() IS NOT NULL
   );
 
+DROP POLICY IF EXISTS "Users can update their own warehouse photos" ON storage.objects;
 CREATE POLICY "Users can update their own warehouse photos"
   ON storage.objects FOR UPDATE
   USING (
-    bucket_id = 'warehouse-photos' 
+    bucket_id = 'warehouse-photos'
     AND auth.uid() IS NOT NULL
   );
 
+DROP POLICY IF EXISTS "Users can delete their own warehouse photos" ON storage.objects;
 CREATE POLICY "Users can delete their own warehouse photos"
   ON storage.objects FOR DELETE
   USING (
-    bucket_id = 'warehouse-photos' 
+    bucket_id = 'warehouse-photos'
     AND auth.uid() IS NOT NULL
   );
 

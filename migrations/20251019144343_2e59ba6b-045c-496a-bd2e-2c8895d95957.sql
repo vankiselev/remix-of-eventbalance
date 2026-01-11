@@ -219,14 +219,14 @@ CREATE POLICY "Users can mark messages as read"
   WITH CHECK (auth.uid() = user_id);
 
 -- Create indexes for better performance
-CREATE INDEX idx_chat_participants_user_id ON public.chat_participants(user_id);
-CREATE INDEX idx_chat_participants_chat_room_id ON public.chat_participants(chat_room_id);
-CREATE INDEX idx_messages_chat_room_id ON public.messages(chat_room_id);
-CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
-CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
-CREATE INDEX idx_message_attachments_message_id ON public.message_attachments(message_id);
-CREATE INDEX idx_message_read_status_message_id ON public.message_read_status(message_id);
-CREATE INDEX idx_message_read_status_user_id ON public.message_read_status(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_participants_user_id ON public.chat_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_participants_chat_room_id ON public.chat_participants(chat_room_id);
+CREATE INDEX IF NOT EXISTS idx_messages_chat_room_id ON public.messages(chat_room_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON public.messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_attachments_message_id ON public.message_attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_read_status_message_id ON public.message_read_status(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_read_status_user_id ON public.message_read_status(user_id);
 
 -- Create storage bucket for chat attachments
 INSERT INTO storage.buckets (id, name, public) VALUES ('chat-attachments', 'chat-attachments', false);
