@@ -61,8 +61,6 @@ ALTER TABLE public.message_attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.message_read_status ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for chat_rooms
-DROP POLICY IF EXISTS "Users can view chats they participate in" ON public.chat_rooms;
-DROP POLICY IF EXISTS "Users can view chats they participate in" ON public.chat_rooms;
 CREATE POLICY "Users can view chats they participate in"
   ON public.chat_rooms FOR SELECT
   USING (
@@ -73,8 +71,6 @@ CREATE POLICY "Users can view chats they participate in"
     )
   );
 
-DROP POLICY IF EXISTS "Active users can create chat rooms" ON public.chat_rooms;
-DROP POLICY IF EXISTS "Active users can create chat rooms" ON public.chat_rooms;
 CREATE POLICY "Active users can create chat rooms"
   ON public.chat_rooms FOR INSERT
   WITH CHECK (
@@ -86,8 +82,6 @@ CREATE POLICY "Active users can create chat rooms"
     )
   );
 
-DROP POLICY IF EXISTS "Chat admins can update chat rooms" ON public.chat_rooms;
-DROP POLICY IF EXISTS "Chat admins can update chat rooms" ON public.chat_rooms;
 CREATE POLICY "Chat admins can update chat rooms"
   ON public.chat_rooms FOR UPDATE
   USING (
@@ -100,7 +94,6 @@ CREATE POLICY "Chat admins can update chat rooms"
   );
 
 -- RLS Policies for chat_participants
-DROP POLICY IF EXISTS "Users can view participants in their chats" ON public.chat_participants;
 CREATE POLICY "Users can view participants in their chats"
   ON public.chat_participants FOR SELECT
   USING (
@@ -111,7 +104,6 @@ CREATE POLICY "Users can view participants in their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Chat creators and admins can add participants" ON public.chat_participants;
 CREATE POLICY "Chat creators and admins can add participants"
   ON public.chat_participants FOR INSERT
   WITH CHECK (
@@ -130,19 +122,16 @@ CREATE POLICY "Chat creators and admins can add participants"
     )
   );
 
-DROP POLICY IF EXISTS "Users can leave chats" ON public.chat_participants;
 CREATE POLICY "Users can leave chats"
   ON public.chat_participants FOR DELETE
   USING (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can update their own last_read_at" ON public.chat_participants;
 CREATE POLICY "Users can update their own last_read_at"
   ON public.chat_participants FOR UPDATE
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 -- RLS Policies for messages
-DROP POLICY IF EXISTS "Users can view messages in their chats" ON public.messages;
 CREATE POLICY "Users can view messages in their chats"
   ON public.messages FOR SELECT
   USING (
@@ -153,7 +142,6 @@ CREATE POLICY "Users can view messages in their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Users can send messages to their chats" ON public.messages;
 CREATE POLICY "Users can send messages to their chats"
   ON public.messages FOR INSERT
   WITH CHECK (
@@ -165,19 +153,16 @@ CREATE POLICY "Users can send messages to their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Users can update their own messages" ON public.messages;
 CREATE POLICY "Users can update their own messages"
   ON public.messages FOR UPDATE
   USING (sender_id = auth.uid())
   WITH CHECK (sender_id = auth.uid());
 
-DROP POLICY IF EXISTS "Users can delete their own messages" ON public.messages;
 CREATE POLICY "Users can delete their own messages"
   ON public.messages FOR DELETE
   USING (sender_id = auth.uid());
 
 -- RLS Policies for message_attachments
-DROP POLICY IF EXISTS "Users can view attachments in their chats" ON public.message_attachments;
 CREATE POLICY "Users can view attachments in their chats"
   ON public.message_attachments FOR SELECT
   USING (
@@ -189,7 +174,6 @@ CREATE POLICY "Users can view attachments in their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Users can add attachments to their messages" ON public.message_attachments;
 CREATE POLICY "Users can add attachments to their messages"
   ON public.message_attachments FOR INSERT
   WITH CHECK (
@@ -201,7 +185,6 @@ CREATE POLICY "Users can add attachments to their messages"
   );
 
 -- RLS Policies for message_read_status
-DROP POLICY IF EXISTS "Users can view read status in their chats" ON public.message_read_status;
 CREATE POLICY "Users can view read status in their chats"
   ON public.message_read_status FOR SELECT
   USING (
@@ -213,7 +196,6 @@ CREATE POLICY "Users can view read status in their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Users can mark messages as read" ON public.message_read_status;
 CREATE POLICY "Users can mark messages as read"
   ON public.message_read_status FOR INSERT
   WITH CHECK (auth.uid() = user_id);
@@ -232,7 +214,6 @@ CREATE INDEX idx_message_read_status_user_id ON public.message_read_status(user_
 INSERT INTO storage.buckets (id, name, public) VALUES ('chat-attachments', 'chat-attachments', false);
 
 -- Storage policies for chat-attachments
-DROP POLICY IF EXISTS "Users can upload attachments" ON storage.objects;
 CREATE POLICY "Users can upload attachments"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -240,7 +221,6 @@ CREATE POLICY "Users can upload attachments"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
-DROP POLICY IF EXISTS "Users can view attachments in their chats" ON storage.objects;
 CREATE POLICY "Users can view attachments in their chats"
   ON storage.objects FOR SELECT
   USING (
@@ -257,7 +237,6 @@ CREATE POLICY "Users can view attachments in their chats"
     )
   );
 
-DROP POLICY IF EXISTS "Users can delete their own attachments" ON storage.objects;
 CREATE POLICY "Users can delete their own attachments"
   ON storage.objects FOR DELETE
   USING (

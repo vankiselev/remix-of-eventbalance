@@ -99,7 +99,8 @@ $$;
 DROP POLICY IF EXISTS "Users can view their own reset tokens" ON public.password_reset_tokens;
 
 -- Only allow system functions to access password reset tokens
-CREATE POLICY "No direct access to password reset tokens" 
-ON public.password_reset_tokens 
+DROP POLICY IF EXISTS "No direct access to password reset tokens" ON public.password_reset_tokens;
+CREATE POLICY "No direct access to password reset tokens"
+ON public.password_reset_tokens
 FOR ALL
 USING (false);

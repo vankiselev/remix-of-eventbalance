@@ -153,6 +153,16 @@ CREATE INDEX IF NOT EXISTS idx_warehouse_tasks_event ON public.warehouse_tasks(e
 -- TRIGGERS
 -- ============================================================================
 
+-- Drop existing triggers
+DROP TRIGGER IF EXISTS update_warehouse_categories_updated_at ON public.warehouse_categories;
+DROP TRIGGER IF EXISTS update_warehouse_locations_updated_at ON public.warehouse_locations;
+DROP TRIGGER IF EXISTS update_warehouse_items_updated_at ON public.warehouse_items;
+DROP TRIGGER IF EXISTS update_warehouse_tasks_updated_at ON public.warehouse_tasks;
+DROP TRIGGER IF EXISTS update_warehouse_settings_updated_at ON public.warehouse_settings;
+DROP TRIGGER IF EXISTS on_warehouse_task_created ON public.warehouse_tasks;
+DROP TRIGGER IF EXISTS on_warehouse_task_status_changed ON public.warehouse_tasks;
+DROP TRIGGER IF EXISTS on_warehouse_task_comment_added ON public.warehouse_task_comments;
+
 -- Update timestamps
 CREATE TRIGGER update_warehouse_categories_updated_at
   BEFORE UPDATE ON public.warehouse_categories
