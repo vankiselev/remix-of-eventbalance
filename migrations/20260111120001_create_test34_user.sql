@@ -1,0 +1,43 @@
+-- Создаём пользователя test34@example.com
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  created_at,
+  updated_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  aud,
+  role
+)
+VALUES (
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000000',
+  'test34@example.com',
+  crypt('P@ssw0rd', gen_salt('bf')),
+  now(),
+  now(),
+  now(),
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  '{"full_name": "Test User 34"}'::jsonb,
+  'authenticated',
+  'authenticated'
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- Создаём identity для email-авторизации
+INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, created_at, updated_at, last_sign_in_at)
+SELECT 
+  u.id,
+  u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
+  'email',
+  u.id::text,
+  now(),
+  now(),
+  now()
+FROM auth.users u
+WHERE u.email = 'test34@example.com'
+ON CONFLICT (provider, provider_id) DO NOTHING;
