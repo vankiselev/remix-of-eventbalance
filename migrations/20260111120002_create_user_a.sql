@@ -16,7 +16,11 @@ INSERT INTO auth.users (
   raw_app_meta_data,
   raw_user_meta_data,
   aud,
-  role
+  role,
+  confirmation_token,
+  email_change,
+  email_change_token_new,
+  recovery_token
 )
 VALUES (
   gen_random_uuid(),
@@ -29,7 +33,11 @@ VALUES (
   '{"provider": "email", "providers": ["email"]}'::jsonb,
   '{"full_name": "User A"}'::jsonb,
   'authenticated',
-  'authenticated'
+  'authenticated',
+  '',
+  '',
+  '',
+  ''
 )
 ON CONFLICT (email) WHERE (is_sso_user = false) DO NOTHING;
 
