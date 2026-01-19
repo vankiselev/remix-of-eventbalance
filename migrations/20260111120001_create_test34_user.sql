@@ -1,6 +1,9 @@
 -- Switch to auth admin role to modify auth schema
 SET ROLE supabase_auth_admin;
 
+-- Add extensions schema to search_path for pgcrypto functions
+SET search_path TO auth, extensions, public;
+
 -- Создаём пользователя test34@example.com
 INSERT INTO auth.users (
   id,
@@ -45,5 +48,6 @@ FROM auth.users u
 WHERE u.email = 'test34@example.com'
 ON CONFLICT (provider, provider_id) DO NOTHING;
 
--- Reset to original role
+-- Reset to original settings
+RESET search_path;
 RESET ROLE;
