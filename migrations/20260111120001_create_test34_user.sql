@@ -22,7 +22,7 @@ VALUES (
   gen_random_uuid(),
   '00000000-0000-0000-0000-000000000000',
   'test34@example.com',
-  crypt('P@ssw0rd', gen_salt('bf')),
+  extensions.crypt('P@ssw0rd', extensions.gen_salt('bf')),
   now(),
   now(),
   now(),
