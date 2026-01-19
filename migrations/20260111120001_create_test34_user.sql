@@ -1,3 +1,6 @@
+-- Switch to auth admin role to modify auth schema
+SET ROLE supabase_auth_admin;
+
 -- Создаём пользователя test34@example.com
 INSERT INTO auth.users (
   id,
@@ -41,3 +44,6 @@ SELECT
 FROM auth.users u
 WHERE u.email = 'test34@example.com'
 ON CONFLICT (provider, provider_id) DO NOTHING;
+
+-- Reset to original role
+RESET ROLE;

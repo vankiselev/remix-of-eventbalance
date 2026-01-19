@@ -2,6 +2,9 @@
 -- These indexes are required for ON CONFLICT clauses in user creation migrations
 -- The auth schema is created by Supabase Auth service, but indexes might be missing
 
+-- Switch to auth admin role to modify auth schema
+SET ROLE supabase_auth_admin;
+
 -- Partial unique index on email for non-SSO users
 -- This allows multiple SSO users with the same email (from different providers)
 -- but enforces uniqueness for regular email/password users
@@ -31,5 +34,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS identities_provider_id_provider_unique
 -- Log successful initialization
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Auth unique indexes verified/created successfully';
+  RAISE NOTICE 'Auth unique indexes verified/created successfully';
 END $$;
+
+-- Reset to original role
+RESET ROLE;
