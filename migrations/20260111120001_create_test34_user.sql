@@ -31,7 +31,7 @@ VALUES (
   'authenticated',
   'authenticated'
 )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) WHERE (is_sso_user = false) DO NOTHING;
 
 -- Создаём identity для email-авторизации
 INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, created_at, updated_at, last_sign_in_at)
