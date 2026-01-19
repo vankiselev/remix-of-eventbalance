@@ -16,17 +16,25 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
-        // Check if user has any admin role via RBAC
-        const { data: adminRoles } = await supabase
-          .from('user_role_assignments')
-          .select('role_definitions!inner(is_admin_role)')
-          .eq('user_id', user.id);
+        // Use has_role function which checks RBAC, user_roles, and profiles.role
+        const { data: hasAdmin, error } = await supabase
+          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
 
-        const hasAdminRole = adminRoles?.some(
-          (item: any) => item.role_definitions?.is_admin_role === true
-        );
+        if (error) {
+          console.error('[AdminRoute] Error checking admin role:', error);
+          // Fallback: check user_role_assignments directly
+          const { data: adminRoles } = await supabase
+            .from('user_role_assignments')
+            .select('role_definitions!inner(is_admin_role)')
+            .eq('user_id', user.id);
 
-        setUserRole(hasAdminRole ? 'admin' : 'employee');
+          const hasAdminRole = adminRoles?.some(
+            (item: any) => item.role_definitions?.is_admin_role === true
+          );
+          setUserRole(hasAdminRole ? 'admin' : 'employee');
+        } else {
+          setUserRole(hasAdmin ? 'admin' : 'employee');
+        }
       }
       setLoading(false);
     };
