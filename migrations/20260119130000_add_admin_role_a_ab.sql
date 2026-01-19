@@ -1,6 +1,11 @@
--- Добавление роли admin для a@ab.com
-INSERT INTO public.user_roles (user_id, role)
-SELECT id, 'admin'::app_role
-FROM auth.users
-WHERE email = 'a@ab.com'
-ON CONFLICT (user_id, role) DO NOTHING;
+-- Добавление роли admin для a@ab.com через RBAC систему
+INSERT INTO public.user_role_assignments (user_id, role_id, assigned_by)
+SELECT 
+  u.id,
+  rd.id,
+  u.id
+FROM auth.users u
+CROSS JOIN public.role_definitions rd
+WHERE u.email = 'a@ab.com'
+  AND rd.code = 'admin'
+ON CONFLICT (user_id, role_id) DO NOTHING;
