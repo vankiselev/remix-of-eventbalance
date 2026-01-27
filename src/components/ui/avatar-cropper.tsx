@@ -93,16 +93,22 @@ export function AvatarCropper({
     
     setIsProcessing(true);
     try {
+      // Preview viewport is 256x256 (w-64 h-64). The cropper's position is in preview pixels.
+      // Our output is 400x400, so we scale offsets to keep saved result matching preview.
+      const previewSize = containerRef.current?.clientWidth ?? 256;
+      const outputSize = 400;
+      const offsetScale = outputSize / previewSize;
+
       // Crop the image with current settings
       const croppedBlob = await cropCircularImage(
         imageFile,
         {
-          x: position.x,
-          y: position.y,
+          x: position.x * offsetScale,
+          y: position.y * offsetScale,
           scale: scale,
           rotation: rotation,
         },
-        400 // Output size
+        outputSize // Output size
       );
       
       // Compress the cropped image

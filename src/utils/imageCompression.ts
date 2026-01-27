@@ -136,9 +136,13 @@ export async function cropCircularImage(
       ctx.closePath();
       ctx.clip();
 
-      // Calculate the scaled dimensions
-      const scaledWidth = img.width * cropData.scale;
-      const scaledHeight = img.height * cropData.scale;
+      // Match CSS `object-fit: cover` behavior inside a square viewport.
+      // First scale the image so it fully covers the output square, then apply user zoom.
+      const coverScale = Math.max(outputSize / img.width, outputSize / img.height);
+      const finalScale = coverScale * cropData.scale;
+
+      const scaledWidth = img.width * finalScale;
+      const scaledHeight = img.height * finalScale;
 
       // Move to center, apply rotation, then draw
       ctx.translate(outputSize / 2, outputSize / 2);
