@@ -144,6 +144,7 @@ export const EmployeeProfileDialog = ({
 
   // Get the current user data (either from employee or profile)
   const currentUser = employee ? employee.profiles : profile;
+  const currentUserId = currentUser?.id;
   const { roles: rbacRoles, refetch: refetchRoles } = useUserRbacRoles(currentUser?.id);
 
   const form = useForm<ProfileFormData>({
@@ -172,6 +173,15 @@ export const EmployeeProfileDialog = ({
 
       // Initialize form with known data first
       const initializeForm = async () => {
+        // Always fetch the full profile (staff list/joins may not include split name fields)
+        const { data: fullProfile } = await supabase
+          .from('profiles')
+          .select('id,email,full_name,first_name,last_name,middle_name,phone,phone_e164,birth_date')
+          .eq('id', userData.id)
+          .maybeSingle();
+
+        const profileSource = fullProfile ?? userData;
+
         let empData: { position?: string; hire_date?: string; salary?: number; phone?: string } | null = null;
         
         // Fetch employee data if not provided
@@ -196,14 +206,14 @@ export const EmployeeProfileDialog = ({
 
         // Now reset form with all available data
         form.reset({
-          last_name: (userData as any).last_name || "",
-          first_name: (userData as any).first_name || "",
-          middle_name: (userData as any).middle_name || "",
-          email: userData.email,
-          phone_display: userData.phone || "",
-          phone_e164: userData.phone_e164 || "",
+          last_name: (profileSource as any).last_name || "",
+          first_name: (profileSource as any).first_name || "",
+          middle_name: (profileSource as any).middle_name || "",
+          email: (profileSource as any).email || userData.email,
+          phone_display: (profileSource as any).phone || "",
+          phone_e164: (profileSource as any).phone_e164 || "",
           work_phone: employee?.phone || empData?.phone || "",
-          birth_date: userData.birth_date || "",
+          birth_date: (profileSource as any).birth_date || "",
           position: employee?.position || empData?.position || "",
           hire_date: employee?.hire_date || empData?.hire_date || "",
           salary: employee?.salary?.toString() || empData?.salary?.toString() || "",
@@ -215,7 +225,7 @@ export const EmployeeProfileDialog = ({
       initializeForm();
       fetchEditHistory();
     }
-  }, [employee, profile, isOpen, form, currentUser]);
+  }, [employee, profile, isOpen, form, currentUserId]);
 
   const fetchEditHistory = async () => {
     if (!currentUser) return;
