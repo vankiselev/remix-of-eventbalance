@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
 import { useRoles } from "@/hooks/useRoles";
-import { Upload, ChevronDown, History, UserX, Trash2, UserCheck } from "lucide-react";
+import { Upload, ChevronDown, History, UserX, Trash2, UserCheck, X, ImageIcon } from "lucide-react";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import {
@@ -135,8 +135,11 @@ export const EmployeeProfileDialog = ({
   const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
+  const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
+  // Store original values for change tracking
+  const [originalValues, setOriginalValues] = useState<ProfileFormData | null>(null);
   const { user } = useAuth();
   const { isAdmin: canEditRole } = useUserRbacRoles();
   const { roles } = useRoles();
@@ -204,8 +207,8 @@ export const EmployeeProfileDialog = ({
           setUserRoleAssignments(roleData);
         }
 
-        // Now reset form with all available data
-        form.reset({
+        // Build initial values object
+        const initialValues: ProfileFormData = {
           last_name: (profileSource as any).last_name || "",
           first_name: (profileSource as any).first_name || "",
           middle_name: (profileSource as any).middle_name || "",
@@ -219,7 +222,13 @@ export const EmployeeProfileDialog = ({
           salary: employee?.salary?.toString() || empData?.salary?.toString() || "",
           role_id: roleData?.[0]?.role_id || "",
           notes: "",
-        });
+        };
+
+        // Store original values for change tracking
+        setOriginalValues(initialValues);
+        
+        // Now reset form with all available data
+        form.reset(initialValues);
       };
 
       initializeForm();
@@ -292,6 +301,45 @@ export const EmployeeProfileDialog = ({
         toast.error("Ошибка", {
           description: error.message || "Не удалось загрузить фото",
         });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!currentUser) return;
+
+    try {
+      setUploading(true);
+
+      // Delete avatar file from storage
+      const fileName = `${currentUser.id}.jpg`;
+      const filePath = `avatars/${fileName}`;
+      
+      await supabase.storage
+        .from('avatars')
+        .remove([filePath]);
+
+      // Clear avatar_url in profile
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", currentUser.id);
+
+      if (updateError) throw updateError;
+
+      await logFieldChange("avatar_url", currentUser.avatar_url, null);
+
+      toast.success("Успешно!", {
+        description: "Фото профиля удалено",
+      });
+      
+      setShowAvatarDialog(false);
+      onSuccess();
+    } catch (error: any) {
+      toast.error("Ошибка", {
+        description: error.message || "Не удалось удалить фото",
+      });
     } finally {
       setUploading(false);
     }
@@ -410,27 +458,26 @@ export const EmployeeProfileDialog = ({
         });
       }
 
-      // Log changes for profile
-      const currentFullName = [currentProfile.last_name, currentProfile.first_name, currentProfile.middle_name].filter(Boolean).join(' ');
-      const newFullName = [data.last_name, data.first_name, data.middle_name].filter(Boolean).join(' ');
-      
-      if (data.last_name !== (currentProfile.last_name || "")) {
-        await logFieldChange("last_name", currentProfile.last_name || "", data.last_name);
-      }
-      if (data.first_name !== (currentProfile.first_name || "")) {
-        await logFieldChange("first_name", currentProfile.first_name || "", data.first_name);
-      }
-      if ((data.middle_name || "") !== (currentProfile.middle_name || "")) {
-        await logFieldChange("middle_name", currentProfile.middle_name || "", data.middle_name || "");
-      }
-      if (data.phone_display !== (currentProfile.phone || "")) {
-        await logFieldChange("phone", currentProfile.phone, data.phone_display);
-      }
-      if (data.birth_date !== (currentProfile.birth_date || "")) {
-        await logFieldChange("birth_date", currentProfile.birth_date, data.birth_date);
-      }
-      if (isAdmin && data.email !== currentProfile.email) {
-        await logFieldChange("email", currentProfile.email, data.email);
+      // Log changes for profile using stored original values
+      if (originalValues) {
+        if (data.last_name !== originalValues.last_name) {
+          await logFieldChange("last_name", originalValues.last_name, data.last_name);
+        }
+        if (data.first_name !== originalValues.first_name) {
+          await logFieldChange("first_name", originalValues.first_name, data.first_name);
+        }
+        if ((data.middle_name || "") !== (originalValues.middle_name || "")) {
+          await logFieldChange("middle_name", originalValues.middle_name || "", data.middle_name || "");
+        }
+        if (data.phone_display !== originalValues.phone_display) {
+          await logFieldChange("phone", originalValues.phone_display, data.phone_display);
+        }
+        if (data.birth_date !== originalValues.birth_date) {
+          await logFieldChange("birth_date", originalValues.birth_date, data.birth_date);
+        }
+        if (isAdmin && data.email !== originalValues.email) {
+          await logFieldChange("email", originalValues.email, data.email);
+        }
       }
 
       const { error: profileError } = await supabase
@@ -453,18 +500,18 @@ export const EmployeeProfileDialog = ({
         }
 
         if (employee) {
-          // Update existing employee record
-          if (data.position !== currentEmployee?.position) {
-            await logFieldChange("position", currentEmployee?.position, data.position);
+          // Update existing employee record - use originalValues for comparison
+          if (originalValues && data.position !== originalValues.position) {
+            await logFieldChange("position", originalValues.position, data.position);
           }
-          if (data.hire_date !== currentEmployee?.hire_date) {
-            await logFieldChange("hire_date", currentEmployee?.hire_date, data.hire_date);
+          if (originalValues && data.hire_date !== originalValues.hire_date) {
+            await logFieldChange("hire_date", originalValues.hire_date, data.hire_date);
           }
-          if (data.work_phone !== (employee?.phone || "")) {
-            await logFieldChange("work_phone", employee?.phone, data.work_phone);
+          if (originalValues && data.work_phone !== originalValues.work_phone) {
+            await logFieldChange("work_phone", originalValues.work_phone, data.work_phone);
           }
-          if (isAdmin && data.salary !== (currentEmployee?.salary?.toString() || "")) {
-            await logFieldChange("salary", currentEmployee?.salary?.toString(), data.salary);
+          if (originalValues && isAdmin && data.salary !== originalValues.salary) {
+            await logFieldChange("salary", originalValues.salary, data.salary);
           }
 
           const { error: employeeError } = await supabase
@@ -657,7 +704,12 @@ export const EmployeeProfileDialog = ({
           {/* Avatar Section */}
           <div className="flex items-center gap-4">
             <div className="relative group">
-              <label htmlFor="avatar-upload" className="cursor-pointer">
+              {/* Click to open avatar dialog */}
+              <button
+                type="button"
+                onClick={() => setShowAvatarDialog(true)}
+                className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full"
+              >
                 <Avatar className="w-20 h-20">
                   <AvatarImage src={currentUser.avatar_url} />
                   <AvatarFallback>
@@ -667,19 +719,11 @@ export const EmployeeProfileDialog = ({
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                   <div className="text-white text-center">
-                    <Upload className="w-5 h-5 mx-auto mb-1" />
-                    <span className="text-xs font-medium">Изменить фото</span>
+                    <ImageIcon className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-xs font-medium">Просмотр</span>
                   </div>
                 </div>
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-                disabled={uploading}
-              />
+              </button>
             </div>
             <div>
               <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
@@ -1103,6 +1147,69 @@ export const EmployeeProfileDialog = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Avatar View/Edit Dialog */}
+      <Dialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Фото профиля</DialogTitle>
+            <DialogDescription>
+              Просмотр и управление фото профиля
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4 py-4">
+            {currentUser?.avatar_url ? (
+              <img
+                src={currentUser.avatar_url}
+                alt={currentUser.full_name}
+                className="w-64 h-64 object-cover rounded-lg shadow-lg"
+              />
+            ) : (
+              <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-2" />
+                  <p>Фото не загружено</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById('avatar-upload-dialog')?.click()}
+              disabled={uploading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {currentUser?.avatar_url ? 'Заменить' : 'Загрузить'}
+            </Button>
+            
+            {currentUser?.avatar_url && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAvatar}
+                disabled={uploading}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Удалить
+              </Button>
+            )}
+          </div>
+          
+          <input
+            id="avatar-upload-dialog"
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              handleAvatarUpload(e);
+              setShowAvatarDialog(false);
+            }}
+            className="hidden"
+            disabled={uploading}
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
