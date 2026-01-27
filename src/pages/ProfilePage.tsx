@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneInputRU } from "@/components/ui/phone-input-ru";
+import { AvatarCropper } from "@/components/ui/avatar-cropper";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2, LogOut } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-
 
 const profileSchema = z.object({
   last_name: z.string().min(1, "Фамилия обязательна"),
@@ -51,6 +51,8 @@ const ProfilePage = () => {
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -103,8 +105,8 @@ const ProfilePage = () => {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !user) return;
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0]) return;
 
     const file = event.target.files[0];
     
@@ -118,22 +120,23 @@ const ProfilePage = () => {
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Размер файла не должен превышать 5MB",
-      });
-      return;
-    }
+    // Open cropper with selected file (no size limit since we'll compress)
+    setSelectedFile(file);
+    setCropperOpen(true);
+    
+    // Reset input so same file can be selected again
+    event.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
 
     try {
       setUploading(true);
 
       // Delete old avatar if exists
       if (avatarUrl) {
-        const oldPath = avatarUrl.split('/').pop();
+        const oldPath = avatarUrl.split('/').pop()?.split('?')[0];
         if (oldPath) {
           await supabase.storage
             .from('avatars')
@@ -142,13 +145,15 @@ const ProfilePage = () => {
       }
 
       // Upload new avatar
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
+      const fileName = `${user.id}.jpg`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, croppedBlob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -168,6 +173,7 @@ const ProfilePage = () => {
       if (updateError) throw updateError;
 
       setAvatarUrl(versionedUrl);
+      setSelectedFile(null);
 
       toast({
         title: "Успешно",
@@ -282,13 +288,20 @@ const ProfilePage = () => {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={handleAvatarUpload}
+                  onChange={handleFileSelect}
                   disabled={uploading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  JPG, PNG или GIF (макс. 5MB)
+                  JPG, PNG или GIF (автосжатие)
                 </p>
               </div>
+              
+              <AvatarCropper
+                open={cropperOpen}
+                onOpenChange={setCropperOpen}
+                imageFile={selectedFile}
+                onCropComplete={handleCropComplete}
+              />
             </div>
 
             {/* Position (read-only) */}
