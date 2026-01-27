@@ -129,6 +129,7 @@ export const useWarehouseTasks = () => {
     },
     onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Задача создана');
       
       // Send notification to assigned employee
@@ -182,6 +183,7 @@ export const useWarehouseTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Задача обновлена');
     },
     onError: (error) => {
@@ -209,6 +211,7 @@ export const useWarehouseTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Статус задачи обновлен');
     },
     onError: (error) => {
