@@ -31,7 +31,10 @@ export function AvatarCropper({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const PREVIEW_SIZE = 256; // w-64 h-64
 
   // Load image when file changes
   useEffect(() => {
@@ -42,6 +45,13 @@ export function AvatarCropper({
       setScale(1);
       setRotation(0);
       setPosition({ x: 0, y: 0 });
+      
+      // Load image to get dimensions
+      const img = new Image();
+      img.onload = () => {
+        setImageSize({ width: img.width, height: img.height });
+      };
+      img.src = url;
       
       return () => URL.revokeObjectURL(url);
     }
@@ -143,7 +153,7 @@ export function AvatarCropper({
         
         <div className="space-y-4">
           {/* Preview Area */}
-          <div 
+        <div 
             ref={containerRef}
             className="relative w-64 h-64 mx-auto overflow-hidden rounded-full border-2 border-primary bg-muted cursor-move touch-none"
             onMouseDown={handleMouseDown}
@@ -154,19 +164,31 @@ export function AvatarCropper({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {imageUrl && (
-              <img
-                src={imageUrl}
-                alt="Preview"
-                className="absolute w-full h-full object-cover pointer-events-none select-none"
-                style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
-                  transformOrigin: 'center center',
-                  transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                }}
-                draggable={false}
-              />
-            )}
+            {imageUrl && imageSize.width > 0 && (() => {
+              // Calculate same coverScale as canvas uses
+              const coverScale = Math.max(PREVIEW_SIZE / imageSize.width, PREVIEW_SIZE / imageSize.height);
+              const finalScale = coverScale * scale;
+              const displayWidth = imageSize.width * finalScale;
+              const displayHeight = imageSize.height * finalScale;
+              
+              return (
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="absolute pointer-events-none select-none"
+                  style={{
+                    width: `${displayWidth}px`,
+                    height: `${displayHeight}px`,
+                    left: `${PREVIEW_SIZE / 2 - displayWidth / 2 + position.x}px`,
+                    top: `${PREVIEW_SIZE / 2 - displayHeight / 2 + position.y}px`,
+                    transform: `rotate(${rotation}deg)`,
+                    transformOrigin: 'center center',
+                    transition: isDragging ? 'none' : 'all 0.1s ease-out',
+                  }}
+                  draggable={false}
+                />
+              );
+            })()}
             {/* Overlay with circular cutout hint */}
             <div className="absolute inset-0 border-4 border-dashed border-primary/30 rounded-full pointer-events-none" />
           </div>
