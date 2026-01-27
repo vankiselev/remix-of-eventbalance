@@ -137,7 +137,7 @@ const ProfilePage = () => {
       // Delete old avatar if exists
       if (avatarUrl) {
         // Extract path from URL: .../avatars/avatars/USER_ID.jpg?v=... -> avatars/USER_ID.jpg
-        const urlPath = new URL(avatarUrl).pathname;
+        const urlPath = new URL(avatarUrl, window.location.origin).pathname;
         const match = urlPath.match(/\/avatars\/(.+?)(?:\?|$)/);
         if (match && match[1]) {
           const pathInBucket = match[1].split('?')[0];
