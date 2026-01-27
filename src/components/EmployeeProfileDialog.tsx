@@ -170,56 +170,49 @@ export const EmployeeProfileDialog = ({
       const userData = currentUser;
       if (!userData) return;
 
-      // Fetch employee data if not provided
-      const fetchEmployeeData = async () => {
+      // Initialize form with known data first
+      const initializeForm = async () => {
+        let empData: { position?: string; hire_date?: string; salary?: number; phone?: string } | null = null;
+        
+        // Fetch employee data if not provided
         if (!employee && userData) {
-          const { data: empData } = await supabase
+          const { data } = await supabase
             .from('employees')
             .select('*')
             .eq('user_id', userData.id)
             .maybeSingle();
-          
-          if (empData) {
-            form.setValue('position', empData.position || '');
-            form.setValue('hire_date', empData.hire_date || '');
-            form.setValue('salary', empData.salary?.toString() || '');
-            form.setValue('work_phone', empData.phone || '');
-          }
+          empData = data;
         }
-      };
 
-      // Fetch user role assignments
-      const fetchUserRoles = async () => {
-        const { data } = await supabase
+        // Fetch user role assignments
+        const { data: roleData } = await supabase
           .from('user_role_assignments')
           .select('role_id')
           .eq('user_id', userData.id);
         
-        if (data && data.length > 0) {
-          setUserRoleAssignments(data);
-          form.setValue('role_id', data[0].role_id);
+        if (roleData && roleData.length > 0) {
+          setUserRoleAssignments(roleData);
         }
+
+        // Now reset form with all available data
+        form.reset({
+          last_name: (userData as any).last_name || "",
+          first_name: (userData as any).first_name || "",
+          middle_name: (userData as any).middle_name || "",
+          email: userData.email,
+          phone_display: userData.phone || "",
+          phone_e164: userData.phone_e164 || "",
+          work_phone: employee?.phone || empData?.phone || "",
+          birth_date: userData.birth_date || "",
+          position: employee?.position || empData?.position || "",
+          hire_date: employee?.hire_date || empData?.hire_date || "",
+          salary: employee?.salary?.toString() || empData?.salary?.toString() || "",
+          role_id: roleData?.[0]?.role_id || "",
+          notes: "",
+        });
       };
 
-      fetchUserRoles();
-      fetchEmployeeData();
-
-      form.reset({
-        last_name: (userData as any).last_name || "",
-        first_name: (userData as any).first_name || "",
-        middle_name: (userData as any).middle_name || "",
-        email: userData.email,
-        phone_display: userData.phone || "",
-        phone_e164: userData.phone_e164 || "",
-        work_phone: employee?.phone || "",
-        birth_date: userData.birth_date || "",
-        position: employee?.position || "",
-        hire_date: employee?.hire_date || "",
-        salary: employee?.salary?.toString() || "",
-        role_id: "",
-        notes: "",
-      });
-      
+      initializeForm();
       fetchEditHistory();
     }
   }, [employee, profile, isOpen, form, currentUser]);
@@ -693,12 +686,12 @@ export const EmployeeProfileDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="last_name"
+                  name="first_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Фамилия</FormLabel>
+                      <FormLabel>Имя</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Введите фамилию" />
+                        <Input {...field} placeholder="Введите имя" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -707,12 +700,12 @@ export const EmployeeProfileDialog = ({
 
                 <FormField
                   control={form.control}
-                  name="first_name"
+                  name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Имя</FormLabel>
+                      <FormLabel>Фамилия</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Введите имя" />
+                        <Input {...field} placeholder="Введите фамилию" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -774,7 +767,11 @@ export const EmployeeProfileDialog = ({
                     <FormItem>
                       <FormLabel>Рабочий телефон</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="+7 (999) 123-45-67" />
+                        <Input 
+                          {...field} 
+                          placeholder="+7 (999) 123-45-67" 
+                          className="placeholder:text-muted-foreground/50"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
