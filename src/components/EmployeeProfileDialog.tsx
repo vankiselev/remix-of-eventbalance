@@ -20,9 +20,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from 'react-i18next';
 import { useRoles } from "@/hooks/useRoles";
-import { Upload, ChevronDown, History, UserX, Trash2, UserCheck, X, ImageIcon } from "lucide-react";
+import { Upload, ChevronDown, History, UserX, Trash2, UserCheck, X, ImageIcon, Crop } from "lucide-react";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
+import { AvatarCropper } from "@/components/ui/avatar-cropper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -140,6 +141,9 @@ export const EmployeeProfileDialog = ({
   const [userRoleAssignments, setUserRoleAssignments] = useState<RoleAssignment[]>([]);
   // Store original values for change tracking
   const [originalValues, setOriginalValues] = useState<ProfileFormData | null>(null);
+  // Cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { user } = useAuth();
   const { isAdmin: canEditRole } = useUserRbacRoles();
   const { roles } = useRoles();
@@ -261,19 +265,32 @@ export const EmployeeProfileDialog = ({
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection - open cropper instead of direct upload
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !currentUser) return;
+    if (!file) return;
+    
+    setSelectedFile(file);
+    setCropperOpen(true);
+    // Reset input so the same file can be selected again
+    event.target.value = '';
+  };
+
+  // Handle cropped image upload
+  const handleCroppedImageUpload = async (croppedBlob: Blob) => {
+    if (!currentUser) return;
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentUser.id}.${fileExt}`;
+      const fileName = `${currentUser.id}.jpg`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, croppedBlob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -291,11 +308,14 @@ export const EmployeeProfileDialog = ({
 
       if (updateError) throw updateError;
 
+      await logFieldChange("avatar_url", currentUser.avatar_url, avatarUrl);
+
       toast.success("Успешно!", {
         description: "Фото профиля обновлено",
       });
       
-      // Обновляем данные и закрываем диалог
+      setShowAvatarDialog(false);
+      setSelectedFile(null);
       onSuccess();
     } catch (error: any) {
         toast.error("Ошибка", {
@@ -1201,15 +1221,23 @@ export const EmployeeProfileDialog = ({
             id="avatar-upload-dialog"
             type="file"
             accept="image/*"
-            onChange={(e) => {
-              handleAvatarUpload(e);
-              setShowAvatarDialog(false);
-            }}
+            onChange={handleFileSelect}
             className="hidden"
             disabled={uploading}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Avatar Cropper Dialog */}
+      <AvatarCropper
+        open={cropperOpen}
+        onOpenChange={(open) => {
+          setCropperOpen(open);
+          if (!open) setSelectedFile(null);
+        }}
+        imageFile={selectedFile}
+        onCropComplete={handleCroppedImageUpload}
+      />
     </Dialog>
   );
 };
