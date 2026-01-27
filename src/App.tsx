@@ -104,6 +104,7 @@ const RealtimeSync = () => {
       })
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'warehouse_tasks' }, () => {
         queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       })
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'tasks' }, () => {
         queryClient.invalidateQueries({ queryKey: ['tasks'] });

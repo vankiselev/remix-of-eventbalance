@@ -207,6 +207,7 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
     },
     onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Задача создана');
 
       // Send notification to assigned user
@@ -259,6 +260,7 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Задача обновлена');
     },
     onError: (error) => {
@@ -278,6 +280,7 @@ export const useTasks = (filter?: { assignedTo?: string; status?: string; showAl
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-tasks-count'] });
       toast.success('Задача удалена');
     },
     onError: (error) => {
