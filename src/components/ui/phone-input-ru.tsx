@@ -59,7 +59,8 @@ const isValidRussianPhone = (digits: string): boolean => {
 };
 
 // Извлекаем цифры из отформатированного номера
-const extractDigits = (formatted: string): string => {
+const extractDigits = (formatted: string | unknown): string => {
+  if (typeof formatted !== 'string') return '';
   return formatted.replace(/\D/g, '');
 };
 
