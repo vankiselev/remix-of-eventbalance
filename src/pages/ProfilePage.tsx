@@ -373,7 +373,10 @@ const ProfilePage = () => {
                     <FormItem>
                       <FormLabel>Телефон</FormLabel>
                       <FormControl>
-                        <PhoneInputRU {...field} />
+                        <PhoneInputRU 
+                          value={field.value}
+                          onChange={(result) => field.onChange(result.display)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -83,8 +83,9 @@ export const PhoneInputRU: React.FC<PhoneInputRUProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Обновляем displayValue при изменении value извне
+  // Игнорируем если value — объект (некорректная интеграция с формой)
   useEffect(() => {
-    if (value !== undefined) {
+    if (value !== undefined && typeof value === 'string') {
       const digits = extractDigits(value);
       const formatted = formatPhone(digits);
       if (formatted !== displayValue) {
