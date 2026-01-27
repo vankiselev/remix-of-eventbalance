@@ -66,11 +66,11 @@ export const TextTruncate: React.FC<TextTruncateProps> = ({
   const truncateClass = lines === 1 ? 'text-truncate' : 'text-truncate-2';
   
   return (
-    <div 
-      className={cn(truncateClass, 'min-w-0', className)}
+    <span 
+      className={cn(truncateClass, 'min-w-0 block', className)}
       title={tooltip ? children?.toString() : undefined}
     >
       {children}
-    </div>
+    </span>
   );
 };
