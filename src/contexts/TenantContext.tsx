@@ -165,11 +165,28 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setTenantError('У вас нет доступа к этой компании');
           setCurrentTenantState(null);
         }
-      } else if (memberships.length === 1 && memberships[0].tenant) {
-        // Auto-select if user has only one tenant
-        setCurrentTenantState(memberships[0].tenant);
       } else {
-        setCurrentTenantState(null);
+        // No tenant in URL - use fallback logic for legacy routes
+        const savedSlug = localStorage.getItem('last_tenant_slug');
+        
+        if (savedSlug) {
+          // Try to restore from localStorage
+          const savedMembership = memberships.find(m => m.tenant?.slug === savedSlug && m.status === 'active');
+          if (savedMembership?.tenant) {
+            setCurrentTenantState(savedMembership.tenant);
+            setIsLoadingTenant(false);
+            return;
+          }
+        }
+        
+        // Fallback: select first available active tenant
+        const firstActiveMembership = memberships.find(m => m.status === 'active' && m.tenant);
+        if (firstActiveMembership?.tenant) {
+          setCurrentTenantState(firstActiveMembership.tenant);
+          localStorage.setItem('last_tenant_slug', firstActiveMembership.tenant.slug);
+        } else {
+          setCurrentTenantState(null);
+        }
       }
     } catch (error) {
       console.error('[TenantContext] Error fetching memberships:', error);
