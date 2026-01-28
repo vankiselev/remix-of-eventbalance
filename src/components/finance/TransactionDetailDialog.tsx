@@ -29,6 +29,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { AttachmentsView } from './AttachmentsView';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -85,6 +86,7 @@ export function TransactionDetailDialog({
   onEdit
 }: TransactionDetailDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { hasPermission } = useUserPermissions();
   const isAdmin = hasPermission('transactions.view_all');
   
@@ -170,7 +172,10 @@ export function TransactionDetailDialog({
       });
 
       onClose();
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     } catch (error) {
       console.error('Error publishing draft:', error);
       toast({
@@ -248,7 +253,10 @@ export function TransactionDetailDialog({
       });
 
       onClose();
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     } catch (error) {
       console.error('❌ Error resending transfer:', error);
       toast({
@@ -280,8 +288,11 @@ export function TransactionDetailDialog({
       setDeleteDialogOpen(false);
       onClose();
       
-      // Reload the page to refresh the list
-      window.location.reload();
+      // Invalidate queries to refresh data in real-time
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     } catch (error) {
       console.error('Error deleting transaction:', error);
       toast({
