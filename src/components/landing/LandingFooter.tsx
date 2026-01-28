@@ -123,10 +123,10 @@ const LandingFooter = () => {
               <li className="flex items-start gap-3">
                 <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <a
-                  href="tel:+74951234567"
+                  href="tel:+79152903377"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  +7 (495) 123-45-67
+                  +7 (915) 290-33-77
                 </a>
               </li>
               <li className="flex items-start gap-3">
