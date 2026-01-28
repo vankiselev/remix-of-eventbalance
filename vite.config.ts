@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
+      "@/integrations/supabase/client": path.resolve(__dirname, "./src/lib/supabase.ts"),
       "@": path.resolve(__dirname, "./src"),
     },
   },
