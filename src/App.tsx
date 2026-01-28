@@ -15,6 +15,8 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfUsePage from "./pages/TermsOfUsePage";
 import FinancesPage from "./pages/FinancesPage";
 import EventsPage from "./pages/EventsPage";
 import CalendarPageWrapper from "./pages/CalendarPageWrapper";
@@ -154,8 +156,10 @@ const App = () => {
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             
-            {/* Public landing page */}
+            {/* Public pages */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsOfUsePage />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

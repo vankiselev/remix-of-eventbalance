@@ -152,12 +152,12 @@ const LandingFooter = () => {
               © {currentYear} EventBalance. Все права защищены.
             </p>
             <div className="flex gap-6">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Политика конфиденциальности
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              </Link>
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Условия использования
-              </a>
+              </Link>
             </div>
           </div>
         </div>
