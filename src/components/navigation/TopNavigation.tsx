@@ -59,13 +59,6 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
 
   const navGroups: NavGroup[] = [
     {
-      id: "main",
-      label: "Главное",
-      items: [
-        { path: "/dashboard", label: "Главная", icon: BarChart3 },
-      ],
-    },
-    {
       id: "work",
       label: "Работа",
       items: [
@@ -110,6 +103,20 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
 
   return (
     <nav className="flex items-center gap-1">
+      {/* Dashboard - direct button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate("/dashboard")}
+        className={cn(
+          "h-9 px-3 font-medium text-sm",
+          isActive("/dashboard") && "bg-accent text-accent-foreground"
+        )}
+      >
+        <BarChart3 className="h-4 w-4 mr-1.5" />
+        Дашборд
+      </Button>
+
       {navGroups.map((group) => {
         const filteredItems = filterItems(group.items);
         if (filteredItems.length === 0) return null;
