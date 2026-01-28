@@ -352,6 +352,8 @@ const Finances = () => {
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+    // Ensure the "Проверка" badge updates immediately after creating a pending transaction
+    queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
     
     // Refresh selected employee summary if viewing employee details
     if (selectedEmployee) {
