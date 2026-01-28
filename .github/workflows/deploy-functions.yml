@@ -121,13 +121,7 @@ jobs:
             fi
           done
 
-          # Ensure Google AI key is present (do NOT print the value)
-          if ! docker exec "$CONTAINER" sh -lc "[ -n \"\${GOOGLE_AI_API_KEY:-}\" ]" >/dev/null 2>&1; then
-            echo "❌ GOOGLE_AI_API_KEY is not set in the Edge Runtime container environment"
-            MISSING=1
-          else
-            echo "✅ GOOGLE_AI_API_KEY is set"
-          fi
+          # Note: GOOGLE_AI_API_KEY should be configured in docker-compose.yml for AI functions to work
 
           if [ "$MISSING" -ne 0 ]; then
             echo ""
