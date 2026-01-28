@@ -71,7 +71,7 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
       items: [
         { path: "/events", label: "Мероприятия", icon: CalendarDays },
         { path: "/calendar", label: "Календарь", icon: Calendar },
-        { path: "/reports", label: "Отчёты", icon: FileText },
+        { path: "/reports", label: "Отчет по мероприятию", icon: FileText },
         { path: "/tasks", label: "Мои задачи", icon: ListChecks, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
         { path: "/staff", label: "Сотрудники", icon: UsersRound },
         { path: "/birthdays", label: "Дни рождения", icon: Cake },
