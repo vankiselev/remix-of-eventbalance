@@ -139,18 +139,26 @@ const LandingFooter = () => {
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {currentYear} EventBalance. Все права защищены.
-          </p>
-          <div className="flex gap-6">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Политика конфиденциальности
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Условия использования
-            </a>
+        {/* Legal info */}
+        <div className="mt-12 pt-8 border-t border-border">
+          <div className="text-xs text-muted-foreground space-y-1 mb-6">
+            <p>ИП Киселёв Иван Павлович</p>
+            <p>ИНН: 773365251443 | ОГРНИП: 321774600221968</p>
+            <p>Адрес: г. Москва, Новокуркинское шоссе д.47</p>
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              © {currentYear} EventBalance. Все права защищены.
+            </p>
+            <div className="flex gap-6">
+              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Политика конфиденциальности
+              </a>
+              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Условия использования
+              </a>
+            </div>
           </div>
         </div>
       </div>
