@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getSystemSecret } from "../_shared/secrets.ts";
+import { callAIProxy, extractTextContent } from "../_shared/ai-proxy-client.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
@@ -205,40 +206,36 @@ function isSkipProject(text: string): boolean {
   return skipPhrases.some(phrase => normalized.includes(phrase));
 }
 
-// Helper function to call Google AI API
-async function callGoogleAI(systemPrompt: string, userPrompt: string): Promise<{ success: boolean; content?: string; error?: string; status?: number }> {
-  const GOOGLE_AI_API_KEY = await getSystemSecret('GOOGLE_AI_API_KEY');
-  
-  if (!GOOGLE_AI_API_KEY) {
-    return { success: false, error: 'GOOGLE_AI_API_KEY is not configured in system_secrets', status: 500 };
-  }
+// Helper function to call AI through proxy
+async function callAI(systemPrompt: string, userPrompt: string): Promise<{ success: boolean; content?: string; error?: string; status?: number }> {
+  try {
+    const response = await callAIProxy({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ]
+    });
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      }),
+    const content = extractTextContent(response);
+    
+    if (!content) {
+      return { success: false, error: 'No response from AI' };
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[voice-transaction] Google AI API error:', response.status, errorText);
-    return { success: false, error: errorText, status: response.status };
+    return { success: true, content };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[voice-transaction] AI error:', errorMessage);
+    
+    if (errorMessage.includes("Rate limit")) {
+      return { success: false, error: errorMessage, status: 429 };
+    }
+    if (errorMessage.includes("Payment required")) {
+      return { success: false, error: errorMessage, status: 402 };
+    }
+    
+    return { success: false, error: errorMessage, status: 500 };
   }
-
-  const data = await response.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!content) {
-    return { success: false, error: 'No response from AI' };
-  }
-
-  return { success: true, content };
 }
 
 serve(async (req) => {
@@ -374,7 +371,7 @@ serve(async (req) => {
 "такси 500" → {"amount":500,"description":"Такси","type":"expense","suggestedCategory":"Доставка / Трансфер / Парковка / Вывоз мусора"}
 "приход 10000 за праздник" → {"amount":10000,"description":"Оплата за праздник","type":"income","suggestedCategory":"Прибыль/доход"}`;
 
-      const aiResult = await callGoogleAI(systemPrompt, text);
+      const aiResult = await callAI(systemPrompt, text);
 
       if (!aiResult.success) {
         if (aiResult.status === 429) {
@@ -524,7 +521,7 @@ serve(async (req) => {
 "расход 1500 аниматоры" → {"amount": 1500, "description": "Аниматоры", "type": "expense", "suggestedCategory": "Аниматоры / Шоу программа (мастер-классы, попвата, интерактивы, пиньята)"}
 "приход 5000 за мероприятие" → {"amount": 5000, "description": "Оплата за мероприятие", "type": "income", "suggestedCategory": "Прибыль/доход"}`;
 
-      const aiResult = await callGoogleAI(systemPrompt, text);
+      const aiResult = await callAI(systemPrompt, text);
 
       if (!aiResult.success) {
         console.error('[voice-transaction] AI error:', aiResult.status, aiResult.error);
@@ -625,7 +622,7 @@ serve(async (req) => {
 "день рождения у Маши" → {"searchTerms": ["день рождения", "маша", "маши"], "normalized": "день рождения маша"}
 "корпоратив в офисе" → {"searchTerms": ["корпоратив", "офис"], "normalized": "корпоратив офис"}`;
 
-      const aiResult = await callGoogleAI(systemPrompt, text);
+      const aiResult = await callAI(systemPrompt, text);
 
       let searchTerms: string[] = [text.toLowerCase().trim()];
       
@@ -870,7 +867,7 @@ serve(async (req) => {
 
 ОБЯЗАТЕЛЬНО верни ВАЛИДНЫЙ JSON объект с этими полями. Не добавляй никаких комментариев или пояснений, только JSON.`;
 
-      const aiResult = await callGoogleAI(systemPrompt, text);
+      const aiResult = await callAI(systemPrompt, text);
 
       if (!aiResult.success) {
         console.error('[voice-transaction] AI error:', aiResult.status, aiResult.error);

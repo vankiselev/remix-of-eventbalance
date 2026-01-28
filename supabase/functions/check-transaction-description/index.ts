@@ -1,10 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getSystemSecret } from "../_shared/secrets.ts";
+import { callAIProxy, extractToolCallArgs } from "../_shared/ai-proxy-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface CheckResult {
+  has_errors: boolean;
+  corrected_text: string;
+  errors: Array<{
+    original: string;
+    correction: string;
+    type: string;
+  }>;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,15 +28,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ has_errors: false, corrected_text: text, errors: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const GOOGLE_AI_API_KEY = await getSystemSecret("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) {
-      console.error("GOOGLE_AI_API_KEY is not configured in system_secrets");
-      return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -58,75 +59,55 @@ serve(async (req) => {
       ? `Текст: "${text}"\nКатегория транзакции: ${category}`
       : `Текст: "${text}"`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+    const tools = [
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          tools: [{
-            functionDeclarations: [{
-              name: "report_text_corrections",
-              description: "Report spelling and grammar corrections for transaction description",
-              parameters: {
-                type: "OBJECT",
-                properties: {
-                  has_errors: { 
-                    type: "BOOLEAN", 
-                    description: "Whether the text has any spelling or grammar errors" 
+        type: "function" as const,
+        function: {
+          name: "report_text_corrections",
+          description: "Report spelling and grammar corrections for transaction description",
+          parameters: {
+            type: "object",
+            properties: {
+              has_errors: { 
+                type: "boolean", 
+                description: "Whether the text has any spelling or grammar errors" 
+              },
+              corrected_text: { 
+                type: "string", 
+                description: "Corrected version of the text (or original if no errors)" 
+              },
+              errors: {
+                type: "array",
+                description: "List of found errors with corrections",
+                items: {
+                  type: "object",
+                  properties: {
+                    original: { type: "string", description: "Original incorrect text" },
+                    correction: { type: "string", description: "Corrected text" },
+                    type: { type: "string", description: "Type of error: spelling, grammar, or style" }
                   },
-                  corrected_text: { 
-                    type: "STRING", 
-                    description: "Corrected version of the text (or original if no errors)" 
-                  },
-                  errors: {
-                    type: "ARRAY",
-                    description: "List of found errors with corrections",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        original: { type: "STRING", description: "Original incorrect text" },
-                        correction: { type: "STRING", description: "Corrected text" },
-                        type: { type: "STRING", description: "Type of error: spelling, grammar, or style" }
-                      },
-                      required: ["original", "correction", "type"]
-                    }
-                  }
-                },
-                required: ["has_errors", "corrected_text", "errors"]
+                  required: ["original", "correction", "type"]
+                }
               }
-            }]
-          }],
-          toolConfig: { functionCallingConfig: { mode: "ANY" } }
-        }),
+            },
+            required: ["has_errors", "corrected_text", "errors"]
+          }
+        }
       }
-    );
+    ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Google AI API error:", response.status, errorText);
+    const response = await callAIProxy({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      tools,
+      tool_choice: { type: "function", function: { name: "report_text_corrections" } }
+    });
 
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ error: "AI service error" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const data = await response.json();
-    console.log("AI response:", JSON.stringify(data, null, 2));
-
-    // Extract function call result from Gemini response
-    const functionCall = data.candidates?.[0]?.content?.parts?.[0]?.functionCall;
-    if (!functionCall) {
+    const result = extractToolCallArgs<CheckResult>(response, "report_text_corrections");
+    
+    if (!result) {
       console.error("No function call in response");
       return new Response(
         JSON.stringify({ has_errors: false, corrected_text: text, errors: [] }),
@@ -134,7 +115,6 @@ serve(async (req) => {
       );
     }
 
-    const result = functionCall.args;
     console.log("Parsed result:", result);
 
     return new Response(
@@ -144,8 +124,26 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in check-transaction-description:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Handle specific errors from AI proxy
+    if (errorMessage.includes("Rate limit")) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (errorMessage.includes("Payment required")) {
+      return new Response(
+        JSON.stringify({ error: "Payment required. Please add credits." }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
