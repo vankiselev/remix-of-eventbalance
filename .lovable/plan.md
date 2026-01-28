@@ -1,204 +1,400 @@
 
-# Двухэтапная регистрация с приглашением администратора
+# Мультитенантная Архитектура EventBalance
 
-## Обзор изменений
+## Обзор
 
-Предлагается новый поток регистрации:
-1. **Пользователь регистрируется самостоятельно** — создает аккаунт с email/паролем
-2. **Аккаунт в статусе "ожидает приглашения"** — пользователь видит страницу ожидания
-3. **Администратор приглашает** — выбирает из списка незаприглашенных пользователей и назначает роль
-4. **Пользователь получает доступ** — после приглашения может войти в систему
+Преобразование системы из single-tenant в полноценную SaaS-платформу, где каждая компания работает в изолированном окружении.
 
 ```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Регистрация    │───▶│  Ожидание       │───▶│  Полный доступ  │
-│  (AuthPage)     │    │  приглашения    │    │  (Dashboard)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │  Админ выбирает │
-                       │  роль и         │
-                       │  приглашает     │
-                       └─────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      eventbalance.ru                                │
+├──────────────┬──────────────┬──────────────┬───────────────────────┤
+│  /fantasykids │  /rainbowkids │  /superparty  │  /admin (superadmin) │
+├──────────────┴──────────────┴──────────────┴───────────────────────┤
+│                  Единая база данных PostgreSQL                      │
+│                  Данные изолированы по tenant_id                    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Изменения в базе данных
+## Фаза 1: Фундамент — Таблица Компаний
 
-### Миграция 1: Добавление статуса в profiles
-
-**Файл:** `migrations/20260128100000_add_pending_invitation_status.sql`
-
-Добавляем новый статус в `profiles`:
-- Поле `invitation_status`: `pending` (по умолчанию для самостоятельной регистрации), `invited` (после приглашения админом)
-- Поле `invited_at`: дата приглашения администратором
+### Миграция: Создание таблицы tenants
 
 ```sql
--- Добавляем колонки
-ALTER TABLE public.profiles 
-ADD COLUMN invitation_status text NOT NULL DEFAULT 'invited' 
-CHECK (invitation_status IN ('pending', 'invited'));
-
-ALTER TABLE public.profiles 
-ADD COLUMN invited_at timestamp with time zone;
-
-ALTER TABLE public.profiles 
-ADD COLUMN invited_by uuid REFERENCES auth.users(id);
-
--- Индекс для поиска ожидающих пользователей
-CREATE INDEX idx_profiles_invitation_status 
-ON public.profiles(invitation_status) 
-WHERE invitation_status = 'pending';
+CREATE TABLE public.tenants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE NOT NULL,  -- "fantasykids" для URL
+  name text NOT NULL,          -- "Fantasy Kids" отображаемое имя
+  logo_url text,
+  settings jsonb DEFAULT '{}',
+  is_active boolean DEFAULT true,
+  trial_ends_at timestamp with time zone,
+  plan text DEFAULT 'trial',   -- trial, basic, pro, enterprise
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
 ```
 
-### Миграция 2: Обновление handle_new_user триггера
+### Миграция: Связь пользователей с компаниями
 
-При самостоятельной регистрации пользователь получает статус `pending`:
+Так как один пользователь может быть в нескольких компаниях:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role, invitation_status)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data ->> 'full_name', 'User'),
-    'employee',
-    'pending'  -- Самостоятельная регистрация = ожидает приглашения
+CREATE TABLE public.tenant_memberships (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid REFERENCES tenants(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role_id uuid REFERENCES role_definitions(id),
+  is_owner boolean DEFAULT false,
+  status text DEFAULT 'active' CHECK (status IN ('active', 'pending', 'suspended')),
+  invited_at timestamp with time zone,
+  joined_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  UNIQUE(tenant_id, user_id)
+);
+```
+
+---
+
+## Фаза 2: Добавление tenant_id во все таблицы
+
+### Список таблиц для изменения (50+ таблиц)
+
+Каждая бизнес-таблица получает колонку `tenant_id`:
+
+| Группа | Таблицы |
+|--------|---------|
+| **Контакты** | profiles, clients, animators, contractors, venues |
+| **Мероприятия** | events, event_reports, event_report_salaries, event_action_requests |
+| **Финансы** | financial_transactions, financial_reports, expenses, incomes |
+| **Склад** | warehouse_items, warehouse_categories, warehouse_stock, warehouse_tasks |
+| **Задачи** | tasks, task_checklists, task_comments |
+| **RBAC** | role_definitions, permissions, role_permissions (локальные роли) |
+| **Прочее** | vacations, notifications, invitations, chat_rooms |
+
+### Стратегия миграции
+
+```sql
+-- Добавляем tenant_id (nullable сначала)
+ALTER TABLE public.events ADD COLUMN tenant_id uuid REFERENCES tenants(id);
+
+-- Создаем default tenant для существующих данных
+INSERT INTO tenants (slug, name) VALUES ('default', 'Default Company')
+RETURNING id INTO default_tenant_id;
+
+-- Мигрируем существующие данные
+UPDATE public.events SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+
+-- Делаем NOT NULL
+ALTER TABLE public.events ALTER COLUMN tenant_id SET NOT NULL;
+
+-- Индекс для производительности
+CREATE INDEX idx_events_tenant ON public.events(tenant_id);
+```
+
+---
+
+## Фаза 3: Row Level Security (RLS)
+
+### Функции-помощники
+
+```sql
+-- Получить текущий tenant из JWT claims или сессии
+CREATE OR REPLACE FUNCTION public.get_current_tenant_id()
+RETURNS uuid AS $$
+  SELECT COALESCE(
+    (current_setting('app.current_tenant_id', true))::uuid,
+    NULL
   );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
+
+-- Проверить членство пользователя в tenant
+CREATE OR REPLACE FUNCTION public.user_belongs_to_tenant(_tenant_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM tenant_memberships
+    WHERE user_id = auth.uid()
+      AND tenant_id = _tenant_id
+      AND status = 'active'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
 ```
 
-### Миграция 3: Безопасная функция для приглашения пользователя
+### RLS политики для каждой таблицы
 
 ```sql
-CREATE OR REPLACE FUNCTION public.invite_pending_user(
-  target_user_id uuid,
-  role_id_param uuid
-)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  -- Проверяем что вызывающий - админ
-  IF NOT public.is_admin_user(auth.uid()) THEN
-    RAISE EXCEPTION 'Требуются права администратора';
-  END IF;
-  
-  -- Обновляем статус пользователя
-  UPDATE public.profiles
-  SET 
-    invitation_status = 'invited',
-    invited_at = now(),
-    invited_by = auth.uid()
-  WHERE id = target_user_id AND invitation_status = 'pending';
-  
-  -- Назначаем RBAC роль
-  INSERT INTO public.user_role_assignments (user_id, role_id, assigned_by)
-  VALUES (target_user_id, role_id_param, auth.uid())
-  ON CONFLICT (user_id) DO UPDATE SET role_id = role_id_param, assigned_by = auth.uid();
-  
-  RETURN true;
-END;
-$$;
+-- Пример для events
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Tenant isolation for events"
+ON events FOR ALL
+USING (user_belongs_to_tenant(tenant_id))
+WITH CHECK (user_belongs_to_tenant(tenant_id));
 ```
 
 ---
 
-## Изменения во фронтенде
+## Фаза 4: URL-роутинг и Tenant Context
 
-### 1. Новая страница ожидания приглашения
+### Изменения в роутере React
 
-**Файл:** `src/pages/AwaitingInvitationPage.tsx`
+```text
+eventbalance.ru/              → Landing Page
+eventbalance.ru/auth          → Общая авторизация
+eventbalance.ru/register      → Регистрация новой компании
+eventbalance.ru/fantasykids/  → Dashboard Fantasy Kids
+eventbalance.ru/rainbowkids/  → Dashboard Rainbow Kids
+eventbalance.ru/admin/        → Суперадмин панель
+```
 
-Страница для пользователей со статусом `pending`:
-- Информативное сообщение "Ваша заявка на рассмотрении"
-- Кнопка выхода
-- Автоматическое обновление статуса через realtime subscription
+### Новые компоненты
 
-### 2. Обновление AuthContext
+| Компонент | Описание |
+|-----------|----------|
+| `TenantProvider` | Контекст с текущим tenant, извлекает slug из URL |
+| `TenantGuard` | HOC, проверяет доступ к tenant |
+| `TenantSwitcher` | Выпадающее меню для переключения между компаниями |
+| `TenantLayout` | Layout с логотипом и настройками компании |
 
-**Файл:** `src/contexts/AuthContext.tsx`
+### Логика определения tenant
 
-Добавляем проверку `invitation_status`:
-- Если `pending` — перенаправляем на `/awaiting-invitation`
-- Если `invited` — разрешаем доступ к системе
+```typescript
+// Из URL: /fantasykids/dashboard
+const pathParts = location.pathname.split('/');
+const tenantSlug = pathParts[1]; // "fantasykids"
 
-### 3. Обновление ProtectedRoute
-
-**Файл:** `src/components/ProtectedRoute.tsx`
-
-Добавляем проверку статуса приглашения:
-- Если пользователь в статусе `pending` — редирект на страницу ожидания
-
-### 4. Обновление AuthPage
-
-**Файл:** `src/pages/AuthPage.tsx`
-
-После регистрации:
-- Показать сообщение "Регистрация успешна! Ожидайте приглашения от администратора"
-- Добавить чекбокс согласия с Политикой конфиденциальности и Условиями использования (ФЗ-152)
-
-### 5. Новый компонент для приглашения зарегистрированных пользователей
-
-**Файл:** `src/components/admin/PendingUsersManagement.tsx`
-
-Таблица пользователей со статусом `pending`:
-- Email, имя, дата регистрации
-- Выбор роли из RBAC
-- Кнопка "Пригласить"
-- Кнопка "Отклонить" (удаление аккаунта)
-
-### 6. Обновление страницы приглашений
-
-**Файл:** `src/pages/InvitationsPage.tsx`
-
-Добавляем табы:
-- "Ожидающие пользователи" — новый список
-- "Приглашения по email" — существующий функционал
-
-### 7. Маршрутизация
-
-**Файл:** `src/App.tsx`
-
-Добавляем новый маршрут:
-```tsx
-<Route path="/awaiting-invitation" element={<AwaitingInvitationPage />} />
+// Проверяем в API
+const { data: tenant } = await supabase
+  .from('tenants')
+  .select('*')
+  .eq('slug', tenantSlug)
+  .single();
 ```
 
 ---
 
-## Безопасность
+## Фаза 5: Регистрация компании
 
-1. **RLS политики** — пользователи со статусом `pending` не могут просматривать данные системы
-2. **RBAC** — роль назначается только при приглашении администратором
-3. **Проверка на бэкенде** — функция `invite_pending_user` проверяет права админа
+### Новый флоу регистрации
+
+```text
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Регистрация    │────▶│  Создание       │────▶│  Настройка      │
+│  пользователя   │     │  компании       │     │  компании       │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        │                       ▼
+        │               ┌─────────────────┐
+        └──────────────▶│  Выбор slug     │
+                        │  (URL компании) │
+                        └─────────────────┘
+```
+
+### Страница /register
+
+- Шаг 1: Email, пароль (как сейчас)
+- Шаг 2: Название компании, slug (fantasykids)
+- Шаг 3: Базовые настройки (логотип, часовой пояс)
+
+### Edge Function: create-tenant
+
+```typescript
+// Создает tenant + назначает owner
+Deno.serve(async (req) => {
+  const { name, slug } = await req.json();
+  
+  // Валидация slug (a-z, 0-9, -)
+  // Проверка уникальности
+  // Создание tenant
+  // Создание tenant_membership с is_owner = true
+});
+```
 
 ---
 
-## Сводка файлов
+## Фаза 6: Изоляция Storage
 
-| Файл | Действие |
-|------|----------|
-| `migrations/20260128100000_add_pending_invitation_status.sql` | Создать миграцию |
-| `src/pages/AwaitingInvitationPage.tsx` | Создать страницу ожидания |
-| `src/pages/AuthPage.tsx` | Добавить чекбокс согласия + сообщение |
-| `src/contexts/AuthContext.tsx` | Добавить проверку invitation_status |
-| `src/components/ProtectedRoute.tsx` | Добавить редирект для pending |
-| `src/components/admin/PendingUsersManagement.tsx` | Создать компонент |
-| `src/pages/InvitationsPage.tsx` | Добавить табы |
-| `src/App.tsx` | Добавить маршрут |
+### Структура bucket'ов
+
+```text
+storage/
+├── avatars/
+│   ├── fantasykids/
+│   │   └── user-123/avatar.jpg
+│   └── rainbowkids/
+│       └── user-456/avatar.jpg
+├── events/
+│   ├── fantasykids/
+│   │   └── event-789/photos/...
+│   └── rainbowkids/
+│       └── event-012/photos/...
+└── warehouse/
+    ├── fantasykids/
+    │   └── item-345/image.jpg
+    └── rainbowkids/
+        └── item-678/image.jpg
+```
+
+### RLS политики для Storage
+
+```sql
+CREATE POLICY "Tenant isolation for storage"
+ON storage.objects FOR ALL
+USING (
+  -- Путь начинается с tenant_slug
+  (storage.foldername(name))[1] IN (
+    SELECT t.slug FROM tenants t
+    JOIN tenant_memberships tm ON tm.tenant_id = t.id
+    WHERE tm.user_id = auth.uid() AND tm.status = 'active'
+  )
+);
+```
 
 ---
 
-## Соответствие требованиям ФЗ-152
+## Фаза 7: Суперадмин панель
 
-При самостоятельной регистрации добавляется обязательный чекбокс:
-- "Я соглашаюсь с Политикой конфиденциальности и Условиями использования"
-- Кнопка регистрации неактивна до принятия согласия
+### Доступ: /admin/
+
+Доступна только пользователям с `is_super_admin = true` в profiles.
+
+### Функционал
+
+| Раздел | Возможности |
+|--------|-------------|
+| **Компании** | Список, статистика, блокировка, удаление |
+| **Пользователи** | Все пользователи системы, их членства |
+| **Финансы** | Подписки, платежи, лимиты |
+| **Статистика** | Общие метрики, активность |
+| **Настройки** | Глобальные настройки системы |
+
+### Новая колонка в profiles
+
+```sql
+ALTER TABLE profiles ADD COLUMN is_super_admin boolean DEFAULT false;
+```
+
+---
+
+## Фаза 8: Приглашения внутри компании
+
+### Обновленный флоу приглашений
+
+Существующая система приглашений адаптируется для мультитенантности:
+
+```sql
+ALTER TABLE invitations ADD COLUMN tenant_id uuid REFERENCES tenants(id);
+```
+
+При принятии приглашения:
+1. Создается профиль пользователя (если нет)
+2. Создается `tenant_membership` с назначенной ролью
+3. Пользователь перенаправляется на /{tenant_slug}/dashboard
+
+---
+
+## Порядок реализации
+
+### Этап 1: Базовая инфраструктура (Миграции)
+1. Таблица `tenants`
+2. Таблица `tenant_memberships`
+3. Колонка `is_super_admin` в profiles
+4. Функции-помощники (get_current_tenant_id, user_belongs_to_tenant)
+
+### Этап 2: Миграция существующих данных
+1. Создание default tenant
+2. Добавление `tenant_id` во все таблицы (поэтапно)
+3. Обновление существующих данных
+4. Настройка RLS политик
+
+### Этап 3: Frontend
+1. TenantProvider и TenantContext
+2. Обновление роутинга (/:tenant_slug/...)
+3. TenantGuard для проверки доступа
+4. TenantSwitcher в навигации
+
+### Этап 4: Регистрация компании
+1. Страница /register с созданием компании
+2. Edge Function create-tenant
+3. Onboarding wizard
+
+### Этап 5: Storage изоляция
+1. Обновление путей загрузки файлов
+2. RLS политики для storage.objects
+
+### Этап 6: Суперадмин
+1. Страница /admin
+2. Управление компаниями
+3. Статистика и мониторинг
+
+---
+
+## Технические детали
+
+### Изменения в AuthContext
+
+```typescript
+interface AuthContextType {
+  // Существующие поля
+  user: User | null;
+  // ...
+  
+  // Новые поля
+  currentTenant: Tenant | null;
+  tenantMemberships: TenantMembership[];
+  setCurrentTenant: (tenant: Tenant) => void;
+  hasTenantAccess: (tenantSlug: string) => boolean;
+}
+```
+
+### Изменения в Supabase клиенте
+
+Каждый запрос должен учитывать tenant:
+
+```typescript
+// До
+supabase.from('events').select('*')
+
+// После
+supabase.from('events')
+  .select('*')
+  .eq('tenant_id', currentTenant.id)
+```
+
+### Realtime подписки
+
+```typescript
+supabase.channel('events')
+  .on('postgres_changes', {
+    event: '*',
+    schema: 'public',
+    table: 'events',
+    filter: `tenant_id=eq.${currentTenant.id}` // Фильтр по tenant
+  }, callback)
+```
+
+---
+
+## Количество файлов для изменения
+
+| Категория | Количество |
+|-----------|------------|
+| Миграции SQL | ~15 файлов |
+| Новые компоненты | ~10 файлов |
+| Изменение hooks | ~20 файлов |
+| Изменение страниц | ~30 файлов |
+| Edge Functions | ~3 файла |
+| **Итого** | ~80 файлов |
+
+---
+
+## Риски и рекомендации
+
+1. **Постепенная миграция** — не делать все сразу, этапами
+2. **Обратная совместимость** — default tenant для существующих пользователей
+3. **Тестирование RLS** — критически важно проверить изоляцию данных
+4. **Производительность** — индексы на tenant_id обязательны
+5. **Rollback план** — возможность откатить изменения
+
