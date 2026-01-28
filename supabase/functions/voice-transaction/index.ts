@@ -205,6 +205,42 @@ function isSkipProject(text: string): boolean {
   return skipPhrases.some(phrase => normalized.includes(phrase));
 }
 
+// Helper function to call Google AI API
+async function callGoogleAI(systemPrompt: string, userPrompt: string): Promise<{ success: boolean; content?: string; error?: string; status?: number }> {
+  const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+  
+  if (!GOOGLE_AI_API_KEY) {
+    return { success: false, error: 'GOOGLE_AI_API_KEY is not configured', status: 500 };
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[voice-transaction] Google AI API error:', response.status, errorText);
+    return { success: false, error: errorText, status: response.status };
+  }
+
+  const data = await response.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  
+  if (!content) {
+    return { success: false, error: 'No response from AI' };
+  }
+
+  return { success: true, content };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -243,8 +279,6 @@ serve(async (req) => {
     }
 
     console.log('[voice-transaction] Authenticated user:', userId);
-
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     // ============================================
     // SIMPLE MODE: One-step transaction creation
@@ -329,18 +363,7 @@ serve(async (req) => {
       }
 
       // Use AI to parse the text
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `Извлеки детали транзакции из текста на русском. Верни JSON:
+      const systemPrompt = `Извлеки детали транзакции из текста на русском. Верни JSON:
 - amount (число): сумма в рублях
 - description (строка): краткое описание (1-3 слова)
 - type: "expense" или "income"
@@ -349,29 +372,23 @@ serve(async (req) => {
 
 Примеры:
 "такси 500" → {"amount":500,"description":"Такси","type":"expense","suggestedCategory":"Доставка / Трансфер / Парковка / Вывоз мусора"}
-"приход 10000 за праздник" → {"amount":10000,"description":"Оплата за праздник","type":"income","suggestedCategory":"Прибыль/доход"}`
-            },
-            { role: 'user', content: text }
-          ],
-        }),
-      });
+"приход 10000 за праздник" → {"amount":10000,"description":"Оплата за праздник","type":"income","suggestedCategory":"Прибыль/доход"}`;
 
-      if (!aiResponse.ok) {
-        if (aiResponse.status === 429) {
+      const aiResult = await callGoogleAI(systemPrompt, text);
+
+      if (!aiResult.success) {
+        if (aiResult.status === 429) {
           return new Response(
             JSON.stringify({ error: 'Слишком много запросов. Попробуйте позже.', success: false }),
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        throw new Error('AI Gateway error');
+        throw new Error(aiResult.error || 'AI error');
       }
 
-      const aiData = await aiResponse.json();
-      const aiContent = aiData.choices?.[0]?.message?.content;
-      
       let parsedData: any;
       try {
-        const jsonMatch = aiContent?.match(/\{[\s\S]*\}/);
+        const jsonMatch = aiResult.content?.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON');
         parsedData = JSON.parse(jsonMatch[0]);
       } catch {
@@ -486,18 +503,7 @@ serve(async (req) => {
         );
       }
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `Ты помощник для извлечения деталей финансовых транзакций из голосовых команд на русском языке.
+      const systemPrompt = `Ты помощник для извлечения деталей финансовых транзакций из голосовых команд на русском языке.
 Извлеки следующую информацию:
 - amount (число, обязательно): сумма в рублях
 - description (строка, обязательно): краткое описание транзакции (1-3 слова)
@@ -516,39 +522,28 @@ serve(async (req) => {
 "добавь расход 200 рублей такси до офиса" → {"amount": 200, "description": "Такси до офиса", "type": "expense", "suggestedCategory": "Доставка / Трансфер / Парковка / Вывоз мусора"}
 "трата 500 такси" → {"amount": 500, "description": "Такси", "type": "expense", "suggestedCategory": "Доставка / Трансфер / Парковка / Вывоз мусора"}
 "расход 1500 аниматоры" → {"amount": 1500, "description": "Аниматоры", "type": "expense", "suggestedCategory": "Аниматоры / Шоу программа (мастер-классы, попвата, интерактивы, пиньята)"}
-"приход 5000 за мероприятие" → {"amount": 5000, "description": "Оплата за мероприятие", "type": "income", "suggestedCategory": "Прибыль/доход"}`
-            },
-            { role: 'user', content: text }
-          ],
-        }),
-      });
+"приход 5000 за мероприятие" → {"amount": 5000, "description": "Оплата за мероприятие", "type": "income", "suggestedCategory": "Прибыль/доход"}`;
 
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error('[voice-transaction] AI error:', aiResponse.status, errorText);
+      const aiResult = await callGoogleAI(systemPrompt, text);
+
+      if (!aiResult.success) {
+        console.error('[voice-transaction] AI error:', aiResult.status, aiResult.error);
         
-        if (aiResponse.status === 429) {
+        if (aiResult.status === 429) {
           return new Response(
             JSON.stringify({ error: 'Слишком много запросов. Попробуйте позже.', success: false }),
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
-        throw new Error(`AI Gateway error: ${errorText}`);
+        throw new Error(`AI error: ${aiResult.error}`);
       }
 
-      const aiData = await aiResponse.json();
-      const aiContent = aiData.choices?.[0]?.message?.content;
-      
-      if (!aiContent) {
-        throw new Error('No response from AI');
-      }
-
-      console.log('[voice-transaction] Step 1 AI response:', aiContent);
+      console.log('[voice-transaction] Step 1 AI response:', aiResult.content);
 
       let parsedData: Step1Data;
       try {
-        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        const jsonMatch = aiResult.content?.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON found');
         parsedData = JSON.parse(jsonMatch[0]);
       } catch (parseError) {
@@ -617,18 +612,7 @@ serve(async (req) => {
       }
 
       // Use AI to normalize project name and find best match
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `Ты помощник для нормализации названий проектов.
+      const systemPrompt = `Ты помощник для нормализации названий проектов.
 Пользователь называет проект голосом. Извлеки ключевые слова для поиска.
 
 Верни JSON:
@@ -639,15 +623,14 @@ serve(async (req) => {
 "саманта" → {"searchTerms": ["саманта"], "normalized": "саманта"}
 "0101 саманта" → {"searchTerms": ["0101", "саманта"], "normalized": "0101 саманта"}
 "день рождения у Маши" → {"searchTerms": ["день рождения", "маша", "маши"], "normalized": "день рождения маша"}
-"корпоратив в офисе" → {"searchTerms": ["корпоратив", "офис"], "normalized": "корпоратив офис"}`
-            },
-            { role: 'user', content: text }
-          ],
-        }),
-      });
+"корпоратив в офисе" → {"searchTerms": ["корпоратив", "офис"], "normalized": "корпоратив офис"}`;
 
-      if (!aiResponse.ok) {
-        console.error('[voice-transaction] AI error in step 2');
+      const aiResult = await callGoogleAI(systemPrompt, text);
+
+      let searchTerms: string[] = [text.toLowerCase().trim()];
+      
+      if (!aiResult.success) {
+        console.error('[voice-transaction] AI error in step 2, using fallback');
         // Fallback to direct search
         const searchTerm = text.toLowerCase().trim();
         
@@ -671,22 +654,18 @@ serve(async (req) => {
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-      }
-
-      const aiData = await aiResponse.json();
-      const aiContent = aiData.choices?.[0]?.message?.content;
-      
-      let searchTerms: string[] = [text.toLowerCase().trim()];
-      try {
-        if (aiContent) {
-          const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.searchTerms) searchTerms = parsed.searchTerms;
+      } else {
+        try {
+          if (aiResult.content) {
+            const jsonMatch = aiResult.content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.searchTerms) searchTerms = parsed.searchTerms;
+            }
           }
+        } catch (e) {
+          console.log('[voice-transaction] Using fallback search terms');
         }
-      } catch (e) {
-        console.log('[voice-transaction] Using fallback search terms');
       }
 
       console.log('[voice-transaction] Search terms:', searchTerms);
@@ -878,18 +857,7 @@ serve(async (req) => {
         .eq('id', userId)
         .single();
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `Ты помощник для извлечения деталей финансовых транзакций из голосовых команд на русском языке.
+      const systemPrompt = `Ты помощник для извлечения деталей финансовых транзакций из голосовых команд на русском языке.
 Извлеки следующую информацию:
 - amount (число, обязательно): сумма в рублях
 - description (строка, обязательно): краткое описание транзакции
@@ -900,29 +868,18 @@ serve(async (req) => {
   ${PROJECT_OWNERS.map(o => `  * "${o}"`).join('\n')}
 - project_name (строка, опционально): название проекта или его префикс (например: "0111", "0101 саманта", "День рождения")
 
-ОБЯЗАТЕЛЬНО верни ВАЛИДНЫЙ JSON объект с этими полями. Не добавляй никаких комментариев или пояснений, только JSON.`
-            },
-            { role: 'user', content: text }
-          ],
-        }),
-      });
+ОБЯЗАТЕЛЬНО верни ВАЛИДНЫЙ JSON объект с этими полями. Не добавляй никаких комментариев или пояснений, только JSON.`;
 
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error('[voice-transaction] AI error:', aiResponse.status, errorText);
-        throw new Error(`AI Gateway error: ${errorText}`);
-      }
+      const aiResult = await callGoogleAI(systemPrompt, text);
 
-      const aiData = await aiResponse.json();
-      const aiContent = aiData.choices?.[0]?.message?.content;
-      
-      if (!aiContent) {
-        throw new Error('No response from AI');
+      if (!aiResult.success) {
+        console.error('[voice-transaction] AI error:', aiResult.status, aiResult.error);
+        throw new Error(`AI error: ${aiResult.error}`);
       }
 
       let transactionDetails: TransactionDetails;
       try {
-        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        const jsonMatch = aiResult.content?.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON found');
         transactionDetails = JSON.parse(jsonMatch[0]);
       } catch (parseError) {
