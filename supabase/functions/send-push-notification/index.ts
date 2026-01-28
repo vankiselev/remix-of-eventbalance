@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import webpush from "npm:web-push@3.6.7";
+import { getSystemSecrets } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,14 +27,16 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const contact = Deno.env.get("WEB_PUSH_CONTACT") || "mailto:admin@example.com";
+    // Get VAPID keys from database
+    const secrets = await getSystemSecrets(['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'WEB_PUSH_CONTACT']);
+    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY'];
+    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY'];
+    const contact = secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com";
 
     if (vapidPublicKey && vapidPrivateKey) {
       webpush.setVapidDetails(contact, vapidPublicKey, vapidPrivateKey);
     } else {
-      console.warn("VAPID keys not configured. Web Push deliveries will be skipped.");
+      console.warn("VAPID keys not configured in system_secrets. Web Push deliveries will be skipped.");
     }
 
     const { user_id, title, message, type, data } = (await req.json()) as NotificationRequest;

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getSystemSecret } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    const GOOGLE_AI_API_KEY = await getSystemSecret("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) {
-      console.error("GOOGLE_AI_API_KEY is not configured");
+      console.error("GOOGLE_AI_API_KEY is not configured in system_secrets");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

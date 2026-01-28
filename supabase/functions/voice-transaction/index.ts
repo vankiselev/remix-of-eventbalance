@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { getSystemSecret } from "../_shared/secrets.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
@@ -207,10 +207,10 @@ function isSkipProject(text: string): boolean {
 
 // Helper function to call Google AI API
 async function callGoogleAI(systemPrompt: string, userPrompt: string): Promise<{ success: boolean; content?: string; error?: string; status?: number }> {
-  const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+  const GOOGLE_AI_API_KEY = await getSystemSecret('GOOGLE_AI_API_KEY');
   
   if (!GOOGLE_AI_API_KEY) {
-    return { success: false, error: 'GOOGLE_AI_API_KEY is not configured', status: 500 };
+    return { success: false, error: 'GOOGLE_AI_API_KEY is not configured in system_secrets', status: 500 };
   }
 
   const response = await fetch(

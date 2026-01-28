@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getSystemSecret } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ serve(async (req) => {
 
   try {
     // Verify cron secret for security
-    const cronSecret = Deno.env.get('CRON_SECRET');
+    const cronSecret = await getSystemSecret('CRON_SECRET');
     const providedSecret = req.headers.get('x-cron-secret');
     
     if (!cronSecret || providedSecret !== cronSecret) {
