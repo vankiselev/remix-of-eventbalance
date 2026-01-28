@@ -63,7 +63,6 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
       label: "Главное",
       items: [
         { path: "/dashboard", label: "Главная", icon: BarChart3 },
-        { path: "/settings", label: "Настройки", icon: Settings },
       ],
     },
     {

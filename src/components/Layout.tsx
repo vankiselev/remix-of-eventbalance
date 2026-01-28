@@ -3,7 +3,7 @@ import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Download, Upload, Trash2, FileSpreadsheet } from "lucide-react";
+import { LogOut, Download, Upload, Trash2, FileSpreadsheet, Settings } from "lucide-react";
 import logoFull from "@/assets/logo-full.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -272,6 +272,15 @@ const Layout = ({ children }: LayoutProps) => {
                     </div>
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/settings')}
+                  title="Настройки"
+                  className="h-9 w-9"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
