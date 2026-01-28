@@ -136,7 +136,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                     <button
                       key={item.path}
                       onClick={() => handleNavigation(item.path)}
-                      className="flex flex-col items-center gap-1.5"
+                      className="flex flex-col items-center gap-1.5 outline-none focus:outline-none focus-visible:ring-0"
                     >
                       <div className="relative">
                         <div
