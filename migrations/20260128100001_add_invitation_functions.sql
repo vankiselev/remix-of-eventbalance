@@ -1,6 +1,9 @@
 -- Migration: Функции для двухэтапной регистрации
 -- Часть 2: Создаем функции после добавления колонок
 
+-- Сначала дропаем get_user_profile_with_roles т.к. меняется структура возврата
+DROP FUNCTION IF EXISTS public.get_user_profile_with_roles();
+
 -- 1. Обновляем функцию handle_new_user для установки статуса pending при самостоятельной регистрации
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
