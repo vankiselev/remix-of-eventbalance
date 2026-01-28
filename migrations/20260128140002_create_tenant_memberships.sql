@@ -69,21 +69,40 @@ USING (
   )
 );
 
--- Super admins can manage all memberships
+-- Super admins can manage all memberships (using function)
 CREATE POLICY "Super admins can manage all memberships"
 ON public.tenant_memberships FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_super_admin = true
-  )
-);
+USING (public.is_super_admin())
+WITH CHECK (public.is_super_admin());
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tenant_memberships_tenant ON public.tenant_memberships(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_memberships_user ON public.tenant_memberships(user_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_memberships_status ON public.tenant_memberships(status);
 CREATE INDEX IF NOT EXISTS idx_tenant_memberships_owner ON public.tenant_memberships(tenant_id, is_owner) WHERE is_owner = true;
+
+-- Now that tenant_memberships exists, add tenant owners policy to tenants table
+CREATE POLICY "Tenant owners can update their tenant"
+ON public.tenants FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.tenant_memberships
+    WHERE tenant_id = tenants.id
+      AND user_id = auth.uid()
+      AND is_owner = true
+      AND status = 'active'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.tenant_memberships
+    WHERE tenant_id = tenants.id
+      AND user_id = auth.uid()
+      AND is_owner = true
+      AND status = 'active'
+  )
+);
 
 COMMIT;

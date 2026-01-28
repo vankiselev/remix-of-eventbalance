@@ -47,39 +47,14 @@ ON public.tenants FOR SELECT
 TO authenticated
 USING (is_active = true);
 
--- Super admins can manage all tenants
+-- Super admins can manage all tenants (using function from 140000 migration)
 CREATE POLICY "Super admins can manage all tenants"
 ON public.tenants FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_super_admin = true
-  )
-);
+USING (public.is_super_admin())
+WITH CHECK (public.is_super_admin());
 
--- Tenant owners can update their own tenant
-CREATE POLICY "Tenant owners can update their tenant"
-ON public.tenants FOR UPDATE
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE tenant_id = tenants.id
-      AND user_id = auth.uid()
-      AND is_owner = true
-      AND status = 'active'
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE tenant_id = tenants.id
-      AND user_id = auth.uid()
-      AND is_owner = true
-      AND status = 'active'
-  )
-);
+-- NOTE: Tenant owners policy will be added in later migration after tenant_memberships is created
 
 -- Create index for slug lookups
 CREATE INDEX IF NOT EXISTS idx_tenants_slug ON public.tenants(slug);
