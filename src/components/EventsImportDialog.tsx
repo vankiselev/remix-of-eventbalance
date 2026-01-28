@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 import { Progress } from "@/components/ui/progress";
 
@@ -33,6 +33,11 @@ interface ImportResult {
   errors: Array<{ row: number; reason: string; data?: any }>;
 }
 
+interface ExcelWorkbookData {
+  sheetNames: string[];
+  sheets: Map<string, { headers: string[]; rows: any[][] }>;
+}
+
 const EventsImportDialog = ({ 
   open, 
   onOpenChange, 
@@ -40,7 +45,7 @@ const EventsImportDialog = ({
 }: EventsImportDialogProps) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [workbookData, setWorkbookData] = useState<ExcelWorkbookData | null>(null);
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
@@ -71,6 +76,7 @@ const EventsImportDialog = ({
 
   // Heuristic header detection for Excel/CSV with top banner rows
   const headerKeywords = ['дат','date','праздник','название','name','проект','owner','менеджер','manager','место','location','place','время','time','аниматор','animator','шоу','программа','program','подрядчик','contractor','фото','photo','видео','video','примечан','note','?'];
+  
   const findHeaderRow = (rows: any[][]) => {
     const limit = Math.min(15, rows.length);
     for (let i = 0; i < limit; i++) {
@@ -101,47 +107,28 @@ const EventsImportDialog = ({
     return objects;
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
 
     setFile(uploadedFile);
     
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        if (uploadedFile.name.endsWith('.csv')) {
-          // Для CSV файлов обрабатываем сразу
-          processCSVFile(event.target?.result as string);
-        } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
-          // Для Excel файлов сначала показываем выбор листов
-          const workbookData = XLSX.read(event.target?.result, { type: 'binary' });
-          setWorkbook(workbookData);
-          setAvailableSheets(workbookData.SheetNames);
-          if (workbookData.SheetNames.length === 1) {
-            // Если только один лист, выбираем его автоматически
-            setSelectedSheet(workbookData.SheetNames[0]);
-            processExcelSheet(workbookData, workbookData.SheetNames[0]);
-          } else {
-            // Показываем выбор листа
-            setStep(2);
-          }
-        }
-      } catch (error: any) {
-        console.error("File parsing error:", error);
-        toast({
-          variant: "destructive",
-          title: "Ошибка парсинга файла",
-          description: error.message || "Не удалось прочитать файл",
-        });
-        setStep(1);
+    try {
+      if (uploadedFile.name.endsWith('.csv')) {
+        const csvText = await uploadedFile.text();
+        processCSVFile(csvText);
+      } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        await loadExcelWorkbook(arrayBuffer);
       }
-    };
-
-    if (uploadedFile.name.endsWith('.csv')) {
-      reader.readAsText(uploadedFile, 'utf-8');
-    } else {
-      reader.readAsBinaryString(uploadedFile);
+    } catch (error: any) {
+      console.error("File parsing error:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка парсинга файла",
+        description: error.message || "Не удалось прочитать файл",
+      });
+      setStep(1);
     }
   };
 
@@ -190,9 +177,54 @@ const EventsImportDialog = ({
     setStep(3);
   };
 
-  const processExcelSheet = (workbookData: XLSX.WorkBook, sheetName: string) => {
-    const worksheet = workbookData.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+  const loadExcelWorkbook = async (arrayBuffer: ArrayBuffer) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    
+    const sheets = new Map<string, { headers: string[]; rows: any[][] }>();
+    const sheetNames: string[] = [];
+    
+    workbook.eachSheet((worksheet) => {
+      sheetNames.push(worksheet.name);
+      const rows: any[][] = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          // Handle different cell value types
+          let value = cell.value;
+          if (value && typeof value === 'object') {
+            if ('richText' in value) {
+              value = value.richText.map((rt: any) => rt.text).join('');
+            } else if ('result' in value) {
+              value = value.result;
+            }
+          }
+          rowValues[colNumber - 1] = value;
+        });
+        rows.push(rowValues);
+      });
+      
+      const { index, headers } = findHeaderRow(rows);
+      sheets.set(worksheet.name, { headers, rows });
+    });
+    
+    setWorkbookData({ sheetNames, sheets });
+    setAvailableSheets(sheetNames);
+    
+    if (sheetNames.length === 1) {
+      setSelectedSheet(sheetNames[0]);
+      processExcelSheet(sheets, sheetNames[0]);
+    } else {
+      setStep(2);
+    }
+  };
+
+  const processExcelSheet = (sheets: Map<string, { headers: string[]; rows: any[][] }>, sheetName: string) => {
+    const sheetData = sheets.get(sheetName);
+    if (!sheetData) return;
+    
+    const { rows } = sheetData;
     
     console.log('Original Excel rows:', rows);
     
@@ -263,7 +295,7 @@ const EventsImportDialog = ({
   };
 
   const handleSheetSelect = () => {
-    if (!workbook || !selectedSheet) {
+    if (!workbookData || !selectedSheet) {
       toast({
         variant: "destructive",
         title: "Ошибка",
@@ -271,7 +303,7 @@ const EventsImportDialog = ({
       });
       return;
     }
-    processExcelSheet(workbook, selectedSheet);
+    processExcelSheet(workbookData.sheets, selectedSheet);
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
@@ -567,7 +599,7 @@ const EventsImportDialog = ({
   const handleClose = () => {
     setStep(1);
     setFile(null);
-    setWorkbook(null);
+    setWorkbookData(null);
     setAvailableSheets([]);
     setSelectedSheet('');
     setParsedData([]);
