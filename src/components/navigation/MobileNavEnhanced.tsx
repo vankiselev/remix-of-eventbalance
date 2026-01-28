@@ -46,7 +46,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
     { path: "/contacts", label: "Контакты", shortLabel: "Контакты", icon: "Briefcase" },
     ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: "FileText" }] : []),
     ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: "ClipboardCheck" }] : []),
-    { path: "/settings", label: "Настройки", shortLabel: "Настройки", icon: "Settings" },
+    // Settings moved to header next to logout
     ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: "Shield" }] : []),
   ];
 

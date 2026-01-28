@@ -1,5 +1,32 @@
-// Helper function to format full name from profile parts
+// Helper function to format display name (First Name + Last Name) for UI
 export const formatFullName = (profile: {
+  last_name?: string | null;
+  first_name?: string | null;
+  middle_name?: string | null;
+  full_name?: string | null;
+}): string => {
+  // Show "First Name Last Name" for display in UI
+  if (profile.first_name || profile.last_name) {
+    return [profile.first_name, profile.last_name]
+      .filter(Boolean)
+      .join(' ') || 'Пользователь';
+  }
+  
+  // Fallback to full_name (take first two words if it has middle name)
+  if (profile.full_name) {
+    const parts = profile.full_name.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      // Assume format "Фамилия Имя Отчество" → return "Имя Фамилия"
+      return `${parts[1]} ${parts[0]}`;
+    }
+    return profile.full_name;
+  }
+  
+  return 'Пользователь';
+};
+
+// Helper function to format full official name (Last Name + First Name + Middle Name) for profile
+export const formatOfficialFullName = (profile: {
   last_name?: string | null;
   first_name?: string | null;
   middle_name?: string | null;

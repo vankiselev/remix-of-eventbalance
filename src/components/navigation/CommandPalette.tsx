@@ -87,7 +87,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigationItems: NavigationItem[] = [
     // Main
     { path: "/dashboard", label: "Главная", icon: BarChart3, keywords: ["дашборд", "главная", "home", "dashboard"], group: "main" },
-    { path: "/settings", label: "Настройки", icon: Settings, keywords: ["настройки", "settings"], group: "main" },
+    { path: "/settings", label: "Настройки", icon: Settings, keywords: ["настройки", "settings"], group: "quick" },
     
     // Work
     { path: "/events", label: "Мероприятия", icon: CalendarDays, keywords: ["мероприятия", "события", "events"], group: "work" },
