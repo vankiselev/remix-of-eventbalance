@@ -1,92 +1,61 @@
 
-# Включение Real-time для всех таблиц системы
+# Исправление Real-time обновления при удалении транзакций
 
-## Текущая проблема
+## Проблема
 
-В коде (App.tsx) настроены подписки на 17 таблиц, но только 10 из них реально добавлены в Supabase Realtime publication. Это объясняет, почему real-time не работает для задач и других модулей.
+При удалении транзакции из диалога деталей (`TransactionDetailDialog`) происходит полная перезагрузка страницы вместо real-time обновления списка. Это противоречит принципам React Query и UX ожиданиям.
 
----
+## Причина
 
-## Что будет сделано
+В файле `src/components/finance/TransactionDetailDialog.tsx` найдены 3 вызова `window.location.reload()`:
+- Строка 173: после публикации черновика
+- Строка 251: после повторной отправки перевода  
+- Строка 284: после удаления транзакции
 
-### 1. Единая миграция для включения realtime на все таблицы
+Это устаревший подход. Для сравнения, в `EnhancedTransactionTableNew.tsx` удаление уже работает правильно через `queryClient.invalidateQueries()`.
 
-Создадим миграцию `migrations/20260128_enable_all_realtime.sql`:
+## Решение
 
-```sql
--- Включаем REPLICA IDENTITY FULL для корректной работы realtime с RLS
-ALTER TABLE public.animators REPLICA IDENTITY FULL;
-ALTER TABLE public.clients REPLICA IDENTITY FULL;
-ALTER TABLE public.contractors REPLICA IDENTITY FULL;
-ALTER TABLE public.venues REPLICA IDENTITY FULL;
-ALTER TABLE public.category_icons REPLICA IDENTITY FULL;
-ALTER TABLE public.warehouse_items REPLICA IDENTITY FULL;
-ALTER TABLE public.warehouse_stock REPLICA IDENTITY FULL;
-ALTER TABLE public.warehouse_categories REPLICA IDENTITY FULL;
-ALTER TABLE public.warehouse_locations REPLICA IDENTITY FULL;
-ALTER TABLE public.warehouse_tasks REPLICA IDENTITY FULL;
-ALTER TABLE public.task_checklists REPLICA IDENTITY FULL;
-ALTER TABLE public.task_comments REPLICA IDENTITY FULL;
+Заменить все `window.location.reload()` на инвалидацию React Query кэша:
 
--- Добавляем таблицы в realtime publication (с обработкой ошибок если уже добавлены)
-DO $$
-BEGIN
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.animators;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+### Изменения в `src/components/finance/TransactionDetailDialog.tsx`:
 
-DO $$
-BEGIN
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.clients;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
--- ... и так для всех 12 таблиц
+1. **Добавить импорт `useQueryClient`**:
+```typescript
+import { useQueryClient } from "@tanstack/react-query";
 ```
 
----
+2. **Инициализировать queryClient в компоненте**:
+```typescript
+const queryClient = useQueryClient();
+```
 
-## Полный список таблиц для realtime
+3. **Заменить `window.location.reload()` на инвалидацию** (3 места):
 
-| Таблица | Статус до | Статус после |
-|---------|-----------|--------------|
-| events | Включено | Включено |
-| financial_transactions | Включено | Включено |
-| vacations | Включено | Включено |
-| profiles | Включено | Включено |
-| tasks | Включено | Включено |
-| event_reports | Включено | Включено |
-| event_report_salaries | Включено | Включено |
-| user_role_assignments | Включено | Включено |
-| notifications | Включено | Включено |
-| messages | Включено | Включено |
-| **animators** | Нет | Добавляем |
-| **clients** | Нет | Добавляем |
-| **contractors** | Нет | Добавляем |
-| **venues** | Нет | Добавляем |
-| **category_icons** | Нет | Добавляем |
-| **warehouse_items** | Нет | Добавляем |
-| **warehouse_stock** | Нет | Добавляем |
-| **warehouse_categories** | Нет | Добавляем |
-| **warehouse_locations** | Нет | Добавляем |
-| **warehouse_tasks** | Нет | Добавляем |
-| **task_checklists** | Нет | Добавляем |
-| **task_comments** | Нет | Добавляем |
+```typescript
+// Вместо: window.location.reload();
+queryClient.invalidateQueries({ queryKey: ['transactions'] });
+```
 
----
+## Какие query keys нужно инвалидировать
 
-## Важно знать
-
-- `REPLICA IDENTITY FULL` необходим для работы realtime с RLS-политиками
-- Каждая таблица добавляется с обработкой ошибки `duplicate_object` на случай, если уже была добавлена ранее
-- После применения миграции через GitHub Actions все счётчики и списки будут обновляться в реальном времени
-
----
+При изменении транзакции нужно обновить:
+- `['transactions']` - основной список
+- `['company-cash-summary']` - сводка по компании
+- `['user-cash-summary']` - сводка по пользователю
+- `['dashboard-stats']` - статистика на дашборде
 
 ## Результат
 
-После применения миграции:
-- Шильдик "Работа" будет обновляться при создании/удалении задач
-- Контакты (аниматоры, клиенты, подрядчики, площадки) обновляются без перезагрузки
-- Склад полностью синхронизируется в реальном времени
-- Чеклисты и комментарии к задачам обновляются мгновенно
+После изменений:
+- Удаление транзакции мгновенно убирает её из списка без перезагрузки
+- Публикация черновика обновляет список без перезагрузки
+- Повторная отправка перевода обновляет статус без перезагрузки
+- Сохраняется скролл-позиция и состояние фильтров
+
+## Техническая информация
+
+Файлы для изменения:
+- `src/components/finance/TransactionDetailDialog.tsx`
+
+Изменения минимальны - добавляется 1 импорт, 1 инициализация хука, и заменяются 3 строки кода.
