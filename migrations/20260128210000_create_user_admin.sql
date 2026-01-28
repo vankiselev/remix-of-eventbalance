@@ -60,9 +60,9 @@ ON CONFLICT (provider, provider_id) DO NOTHING;
 RESET search_path;
 RESET ROLE;
 
--- Создаём профиль для пользователя
-INSERT INTO public.profiles (id, user_id, email, full_name, first_name)
-SELECT u.id, u.id, u.email, 'Admin User', 'Admin'
+-- Создаём профиль для пользователя (id = user_id в profiles)
+INSERT INTO public.profiles (id, email, full_name, first_name)
+SELECT u.id, u.email, 'Admin User', 'Admin'
 FROM auth.users u
 WHERE u.email = 'a@a.com'
 ON CONFLICT (id) DO NOTHING;
