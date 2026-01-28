@@ -1411,7 +1411,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         placeholder={
                           form.watch("category") === "Передано или получено от сотрудника"
                             ? "Сумма передачи сотруднику"
-                            : "Введите сумму (можно отрицательную)"
+                            : "Введите сумму"
                         }
                       />
                     </FormControl>
@@ -1435,7 +1435,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             form.setValue("expense_amount", undefined);
                           }
                         }}
-                        placeholder="Введите сумму (можно отрицательную)"
+                        placeholder="Введите сумму"
                         disabled={form.watch("category") === "Передано или получено от сотрудника"}
                       />
                     </FormControl>
