@@ -5,12 +5,12 @@ import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useRoles } from "@/hooks/useRoles";
+import { useTenant } from "@/contexts/TenantContext";
 
 const inviteSchema = z.object({
   email: z.string().email("Введите корректный email"),
@@ -31,6 +31,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { roles } = useRoles();
+  const { currentTenant } = useTenant();
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
@@ -43,6 +44,15 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
   });
 
   const onSubmit = async (data: InviteFormData) => {
+    if (!currentTenant) {
+      toast({
+        title: "Ошибка",
+        description: "Не выбрана компания для приглашения",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -89,6 +99,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           last_name: data.lastName || null,
           invited_by: (await supabase.auth.getUser()).data.user?.id!,
           token_hash: '', // Will be overridden by trigger
+          tenant_id: currentTenant.id,
         })
         .select()
         .single();
