@@ -1,0 +1,97 @@
+name: Deploy Edge Functions to Self-Hosted Supabase
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/**'
+
+  workflow_dispatch:
+
+jobs:
+  deploy-functions:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Find Edge Runtime container
+        id: find-container
+        run: |
+          echo "🔍 Looking for Edge Runtime container..."
+          
+          # Try different possible container names
+          CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'supabase-edge-functions|edge-runtime|functions' | head -1)
+          
+          if [ -z "$CONTAINER" ]; then
+            echo "❌ Edge Runtime container not found"
+            echo "Available containers:"
+            docker ps --format '{{.Names}}'
+            exit 1
+          fi
+          
+          echo "✅ Found container: $CONTAINER"
+          echo "container=$CONTAINER" >> $GITHUB_OUTPUT
+      
+      - name: List functions to deploy
+        run: |
+          echo "📋 Functions to deploy:"
+          ls -la supabase/functions/ | grep "^d" | awk '{print "  - " $NF}' | grep -v "^\s*-\s*\.$"
+          
+          FUNC_COUNT=$(ls -d supabase/functions/*/ 2>/dev/null | wc -l)
+          echo ""
+          echo "📊 Total: $FUNC_COUNT function(s)"
+      
+      - name: Deploy functions to container
+        run: |
+          CONTAINER="${{ steps.find-container.outputs.container }}"
+          
+          echo "🚀 Deploying functions to $CONTAINER..."
+          
+          # Copy all functions to the container
+          # Standard Supabase path is /home/deno/functions/
+          docker cp supabase/functions/. $CONTAINER:/home/deno/functions/
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Functions copied successfully"
+          else
+            echo "❌ Failed to copy functions"
+            exit 1
+          fi
+      
+      - name: Restart Edge Runtime
+        run: |
+          CONTAINER="${{ steps.find-container.outputs.container }}"
+          
+          echo "🔄 Restarting $CONTAINER to apply changes..."
+          docker restart $CONTAINER
+          
+          # Wait for container to be healthy
+          echo "⏳ Waiting for container to be ready..."
+          sleep 5
+          
+          if docker ps | grep -q $CONTAINER; then
+            echo "✅ Container restarted successfully"
+          else
+            echo "❌ Container failed to restart"
+            docker logs $CONTAINER --tail 20
+            exit 1
+          fi
+      
+      - name: Verify deployment
+        run: |
+          CONTAINER="${{ steps.find-container.outputs.container }}"
+          
+          echo "🔍 Verifying deployed functions..."
+          docker exec $CONTAINER ls -la /home/deno/functions/ 2>/dev/null || echo "⚠️ Could not list functions in container"
+          
+          echo ""
+          echo "🎉 Edge Functions deployment complete!"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Edge Functions deployment failed!"
+          echo "Check the logs above for details."
