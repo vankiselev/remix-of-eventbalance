@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.noop]
 verify_jwt = false
+
+[functions.check-transaction-description]
+verify_jwt = false
+
+[functions.suggest-transaction-fields]
+verify_jwt = false
+
+[functions.voice-transaction]
+verify_jwt = false

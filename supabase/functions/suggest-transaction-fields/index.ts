@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getSystemSecret } from "../_shared/secrets.ts";
+import { callAIProxy, extractTextContent } from "../_shared/ai-proxy-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,11 +22,6 @@ serve(async (req) => {
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    }
-
-    const GOOGLE_AI_API_KEY = await getSystemSecret('GOOGLE_AI_API_KEY');
-    if (!GOOGLE_AI_API_KEY) {
-      throw new Error('GOOGLE_AI_API_KEY is not configured in system_secrets');
     }
 
     const categories = [
@@ -144,35 +139,14 @@ ${projects.map(p => `- ${p}`).join('\n')}
   "confidence": число от 0 до 1
 }`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: `Описание транзакции: "${description}"` }] }],
-          generationConfig: { temperature: 0.3 }
-        }),
-      }
-    );
+    const response = await callAIProxy({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Описание транзакции: "${description}"` }
+      ]
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Google AI API error:', response.status, errorText);
-      
-      return new Response(JSON.stringify({ 
-        suggestions: null, 
-        confidence: 0,
-        error: 'AI service unavailable' 
-      }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const content = extractTextContent(response);
     
     if (!content) {
       return new Response(JSON.stringify({ 
@@ -209,8 +183,34 @@ ${projects.map(p => `- ${p}`).join('\n')}
 
   } catch (error) {
     console.error('Error in suggest-transaction-fields:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Handle specific errors from AI proxy
+    if (errorMessage.includes("Rate limit")) {
+      return new Response(JSON.stringify({ 
+        error: 'Rate limit exceeded. Please try again later.',
+        suggestions: null,
+        confidence: 0 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (errorMessage.includes("Payment required")) {
+      return new Response(JSON.stringify({ 
+        error: 'Payment required. Please add credits.',
+        suggestions: null,
+        confidence: 0 
+      }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
       suggestions: null,
       confidence: 0 
     }), {
