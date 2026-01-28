@@ -47,8 +47,8 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await (supabase
+        .from('profiles') as any)
         .update({ advance_balance: numAmount })
         .eq('id', selectedEmployeeId);
 
@@ -96,7 +96,7 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
-                {profiles?.filter(p => p.employment_status === 'active').map((profile) => (
+                {(profiles as any)?.filter((p: any) => p.employment_status === 'active').map((profile: any) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     {profile.full_name}
                   </SelectItem>

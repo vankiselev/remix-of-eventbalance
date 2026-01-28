@@ -43,8 +43,8 @@ export const EventActionRequestsCard = () => {
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['event-action-requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('event_action_requests')
+      const { data, error } = await (supabase
+        .from('event_action_requests') as any)
         .select(`
           *,
           events(name)
@@ -56,7 +56,7 @@ export const EventActionRequestsCard = () => {
 
       // Get requester names
       const requestsWithNames = await Promise.all(
-        (data || []).map(async (request) => {
+        (data || []).map(async (request: any) => {
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name')
@@ -80,8 +80,8 @@ export const EventActionRequestsCard = () => {
     setIsProcessing(true);
     try {
       // Update request status
-      const { error: updateError } = await supabase
-        .from('event_action_requests')
+      const { error: updateError } = await (supabase
+        .from('event_action_requests') as any)
         .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
@@ -134,8 +134,8 @@ export const EventActionRequestsCard = () => {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from('event_action_requests')
+      const { error } = await (supabase
+        .from('event_action_requests') as any)
         .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),

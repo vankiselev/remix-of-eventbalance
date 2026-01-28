@@ -47,23 +47,22 @@ const CashOnHandCard = () => {
       if (isAdmin) {
         // Админ видит свои данные И общую сумму по компании
         const [myData, companyData] = await Promise.all([
-          supabase.rpc('calculate_user_cash_totals', { user_uuid: user?.id }).maybeSingle(),
-          supabase.rpc('get_company_cash_summary').maybeSingle()
+          (supabase.rpc as any)('calculate_user_cash_totals', { user_uuid: user?.id }).maybeSingle(),
+          (supabase.rpc as any)('get_company_cash_summary').maybeSingle()
         ]);
 
         if (myData.error) throw myData.error;
         if (companyData.error) throw companyData.error;
 
-        setCashData(myData.data || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
-        setCompanyCashData(companyData.data || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
+        setCashData((myData.data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
+        setCompanyCashData((companyData.data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
       } else {
         // Сотрудник видит только свои данные
-        const { data, error } = await supabase
-          .rpc('calculate_user_cash_totals', { user_uuid: user?.id })
+        const { data, error } = await (supabase.rpc as any)('calculate_user_cash_totals', { user_uuid: user?.id })
           .maybeSingle();
 
         if (error) throw error;
-        setCashData(data || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
+        setCashData((data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
       }
     } catch (error) {
       console.error('Error fetching cash data:', error);

@@ -29,8 +29,8 @@ export function TestDataManagement() {
   const { data: testUsers, isLoading: loadingTestUsers } = useQuery({
     queryKey: ["test-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
+      const { data, error } = await (supabase
+        .from("profiles") as any)
         .select("id, email, full_name, first_name, last_name, created_at, temp_password")
         .eq("is_test_user", true)
         .order("created_at", { ascending: false });
@@ -115,8 +115,8 @@ export function TestDataManagement() {
   // Delete user transactions mutation
   const deleteUserTransactions = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.rpc("delete_user_transactions", {
-        target_user_id: userId,
+      const { error } = await (supabase.rpc as any)("delete_user_transactions", {
+        p_user_id: userId,
       });
       if (error) throw error;
     },

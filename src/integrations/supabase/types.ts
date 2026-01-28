@@ -16,29 +16,38 @@ export type Database = {
     Tables: {
       animators: {
         Row: {
+          contact_person: string | null
           created_at: string | null
+          description: string | null
           email: string | null
           id: string
           name: string
           phone: string | null
+          specialization: string | null
           specialty: string | null
           tenant_id: string | null
         }
         Insert: {
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name: string
           phone?: string | null
+          specialization?: string | null
           specialty?: string | null
           tenant_id?: string | null
         }
         Update: {
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
+          specialization?: string | null
           specialty?: string | null
           tenant_id?: string | null
         }
@@ -109,7 +118,10 @@ export type Database = {
       }
       clients: {
         Row: {
+          company: string | null
+          contact_person: string | null
           created_at: string | null
+          description: string | null
           email: string | null
           id: string
           name: string
@@ -117,7 +129,10 @@ export type Database = {
           tenant_id: string | null
         }
         Insert: {
+          company?: string | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name: string
@@ -125,7 +140,10 @@ export type Database = {
           tenant_id?: string | null
         }
         Update: {
+          company?: string | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -170,34 +188,43 @@ export type Database = {
       contractors: {
         Row: {
           company: string | null
+          contact_person: string | null
           created_at: string | null
+          description: string | null
           email: string | null
           id: string
           name: string
           phone: string | null
           rating: number | null
+          specialization: string | null
           specialty: string | null
           tenant_id: string | null
         }
         Insert: {
           company?: string | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name: string
           phone?: string | null
           rating?: number | null
+          specialization?: string | null
           specialty?: string | null
           tenant_id?: string | null
         }
         Update: {
           company?: string | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
           rating?: number | null
+          specialization?: string | null
           specialty?: string | null
           tenant_id?: string | null
         }
@@ -1351,25 +1378,37 @@ export type Database = {
         Row: {
           address: string | null
           capacity: number | null
+          contact_person: string | null
           created_at: string | null
+          description: string | null
+          email: string | null
           id: string
           name: string
+          phone: string | null
           tenant_id: string | null
         }
         Insert: {
           address?: string | null
           capacity?: number | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
+          email?: string | null
           id?: string
           name: string
+          phone?: string | null
           tenant_id?: string | null
         }
         Update: {
           address?: string | null
           capacity?: number | null
+          contact_person?: string | null
           created_at?: string | null
+          description?: string | null
+          email?: string | null
           id?: string
           name?: string
+          phone?: string | null
           tenant_id?: string | null
         }
         Relationships: []

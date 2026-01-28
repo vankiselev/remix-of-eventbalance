@@ -14,11 +14,14 @@ import { useUserPermissions } from "@/hooks/useUserPermissions";
 interface Contractor {
   id: string;
   name: string;
-  contact_person: string | null;
+  contact_person?: string | null;
   phone: string | null;
   email: string | null;
-  description: string | null;
-  specialization: string | null;
+  description?: string | null;
+  specialization?: string | null;
+  specialty?: string | null; // alias from DB
+  company?: string | null;
+  rating?: number | null;
 }
 
 const ContractorsTab = () => {

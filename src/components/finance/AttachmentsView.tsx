@@ -47,8 +47,8 @@ export function AttachmentsView({
   const fetchAttachments = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('financial_attachments')
+      const { data, error } = await (supabase
+        .from('financial_attachments') as any)
         .select('*')
         .eq('transaction_id', transactionId)
         .order('created_at', { ascending: true });
@@ -62,8 +62,8 @@ export function AttachmentsView({
       
       // Batch load preview URLs for all images at once
       const imagePaths = data
-        .filter(file => file.mime_type.startsWith('image/'))
-        .map(file => file.storage_path);
+        .filter((file: any) => file.mime_type?.startsWith('image/'))
+        .map((file: any) => file.storage_path);
       
       let previewUrlMap = new Map<string, string>();
       
@@ -88,14 +88,14 @@ export function AttachmentsView({
       }
       
       // Apply preview URLs to attachments
-      const attachmentsWithPreviews = data.map(file => ({
+      const attachmentsWithPreviews = data.map((file: any) => ({
         ...file,
-        preview_url: file.mime_type.startsWith('image/') 
+        preview_url: file.mime_type?.startsWith('image/') 
           ? previewUrlMap.get(file.storage_path) 
           : undefined
       }));
       
-      setAttachments(attachmentsWithPreviews);
+      setAttachments(attachmentsWithPreviews as any);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast({
@@ -154,8 +154,8 @@ export function AttachmentsView({
       if (storageError) throw storageError;
 
       // Delete from database
-      const { error: dbError } = await supabase
-        .from('financial_attachments')
+      const { error: dbError } = await (supabase
+        .from('financial_attachments') as any)
         .delete()
         .eq('id', fileId);
 

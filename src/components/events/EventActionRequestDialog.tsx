@@ -47,8 +47,8 @@ export const EventActionRequestDialog = ({
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('event_action_requests')
+      const { error } = await (supabase
+        .from('event_action_requests') as any)
         .insert({
           event_id: eventId,
           requested_by: user.id,
