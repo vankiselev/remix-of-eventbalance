@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Pause, Play, AlertTriangle, CheckCircle2, XCircle, CloudUpload, Loader2, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +48,12 @@ interface RowValidation {
   issues: string[];
 }
 
+interface ExcelWorkbookData {
+  sheetNames: string[];
+  sheets: Map<string, { headers: string[]; rows: any[][] }>;
+  fullRef?: string;
+}
+
 // Словарь синонимов для категорий
 const categoryAliases: { [key: string]: string[] } = {
   'зп': ['Выплаты (зарплата, оклад, премии, бонусы и т.д.)', 'Зарплата'],
@@ -84,7 +90,7 @@ const FinancesImportDialog = ({
 }: FinancesImportDialogProps) => {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [workbookData, setWorkbookData] = useState<ExcelWorkbookData | null>(null);
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [range, setRange] = useState<string>('A5:I');
@@ -145,76 +151,48 @@ const FinancesImportDialog = ({
     return categories?.map(c => c.name) || [];
   }, [categories]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
 
     setFile(uploadedFile);
     
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        if (uploadedFile.name.endsWith('.csv')) {
-          processCSVFile(event.target?.result as string);
-        } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
-          const workbookData = XLSX.read(event.target?.result, { type: 'binary' });
-          setWorkbook(workbookData);
-          setAvailableSheets(workbookData.SheetNames);
-          
-          // Автоопределение диапазона
-          if (workbookData.SheetNames.length > 0) {
-            const firstSheet = workbookData.SheetNames[0];
-            const autoRange = detectDataRange(workbookData, firstSheet);
-            if (autoRange) {
-              setRange(autoRange);
-            }
-          }
-          
-          if (workbookData.SheetNames.length === 1) {
-            setSelectedSheet(workbookData.SheetNames[0]);
-            setStep(2);
-          } else {
-            setStep(2);
-          }
-        }
-      } catch (error: any) {
-        console.error("File parsing error:", error);
-        toast({
-          variant: "destructive",
-          title: "Ошибка парсинга файла",
-          description: error.message || "Не удалось прочитать файл",
-        });
-        setStep(1);
+    try {
+      if (uploadedFile.name.endsWith('.csv')) {
+        const csvText = await uploadedFile.text();
+        processCSVFile(csvText);
+      } else if (uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls')) {
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        await loadExcelWorkbook(arrayBuffer);
       }
-    };
-
-    if (uploadedFile.name.endsWith('.csv')) {
-      reader.readAsText(uploadedFile, 'utf-8');
-    } else {
-      reader.readAsBinaryString(uploadedFile);
+    } catch (error: any) {
+      console.error("File parsing error:", error);
+      toast({
+        variant: "destructive",
+        title: "Ошибка парсинга файла",
+        description: error.message || "Не удалось прочитать файл",
+      });
+      setStep(1);
     }
   };
 
   // Автоопределение диапазона данных в Excel
-  const detectDataRange = (wb: XLSX.WorkBook, sheetName: string): string | null => {
-    const worksheet = wb.Sheets[sheetName];
-    if (!worksheet['!ref']) return null;
+  const detectDataRange = (sheets: Map<string, { headers: string[]; rows: any[][] }>, sheetName: string): string | null => {
+    const sheetData = sheets.get(sheetName);
+    if (!sheetData) return null;
     
-    const fullRange = XLSX.utils.decode_range(worksheet['!ref']);
+    const { rows } = sheetData;
     
     // Ищем строку с заголовками (обычно содержит "Дата" или "Date")
-    for (let row = fullRange.s.r; row <= Math.min(fullRange.s.r + 10, fullRange.e.r); row++) {
-      for (let col = fullRange.s.c; col <= fullRange.e.c; col++) {
-        const cellAddr = XLSX.utils.encode_cell({ r: row, c: col });
-        const cell = worksheet[cellAddr];
-        if (cell && typeof cell.v === 'string') {
-          const val = cell.v.toLowerCase();
-          if (val.includes('дата') || val.includes('date') || val.includes('операц')) {
-            // Нашли заголовки, диапазон начинается с этой строки
-            const startCol = XLSX.utils.encode_col(fullRange.s.c);
-            const endCol = XLSX.utils.encode_col(fullRange.e.c);
-            return `${startCol}${row + 1}:${endCol}`;
-          }
+    for (let row = 0; row <= Math.min(10, rows.length - 1); row++) {
+      const rowData = rows[row] || [];
+      for (let col = 0; col < rowData.length; col++) {
+        const val = String(rowData[col] || '').toLowerCase();
+        if (val.includes('дата') || val.includes('date') || val.includes('операц')) {
+          // Нашли заголовки, диапазон начинается с этой строки
+          const startCol = String.fromCharCode(65); // 'A'
+          const endCol = String.fromCharCode(65 + Math.min(rowData.length - 1, 25));
+          return `${startCol}${row + 1}:${endCol}`;
         }
       }
     }
@@ -246,31 +224,83 @@ const FinancesImportDialog = ({
     setStep(3);
   };
 
-  const processExcelSheet = (workbookData: XLSX.WorkBook, sheetName: string, rangeStr: string) => {
-    const worksheet = workbookData.Sheets[sheetName];
+  const loadExcelWorkbook = async (arrayBuffer: ArrayBuffer) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
     
-    // Парсим диапазон A5:I в Excel формат
-    const rangeObj = XLSX.utils.decode_range(rangeStr + (worksheet['!ref']?.split(':')[1]?.match(/\d+/)?.[0] || '1000'));
+    const sheets = new Map<string, { headers: string[]; rows: any[][] }>();
+    const sheetNames: string[] = [];
     
-    // Получаем данные из указанного диапазона
-    const rows = XLSX.utils.sheet_to_json(worksheet, { 
-      header: 1,
-      range: rangeObj,
-      defval: ""
-    }) as any[][];
+    workbook.eachSheet((worksheet) => {
+      sheetNames.push(worksheet.name);
+      const rows: any[][] = [];
+      
+      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          // Handle different cell value types
+          let value = cell.value;
+          if (value && typeof value === 'object') {
+            if ('richText' in value) {
+              value = (value as any).richText.map((rt: any) => rt.text).join('');
+            } else if ('result' in value) {
+              value = (value as any).result;
+            }
+          }
+          rowValues[colNumber - 1] = value;
+        });
+        rows.push(rowValues);
+      });
+      
+      // Get headers from first row
+      const headers = rows[0]?.map(h => String(h || '').trim()) || [];
+      sheets.set(worksheet.name, { headers, rows });
+    });
     
-    console.log('Excel rows from range:', rangeStr, rows);
+    setWorkbookData({ sheetNames, sheets });
+    setAvailableSheets(sheetNames);
     
-    if (rows.length > 0) {
+    // Автоопределение диапазона
+    if (sheetNames.length > 0) {
+      const firstSheet = sheetNames[0];
+      const autoRange = detectDataRange(sheets, firstSheet);
+      if (autoRange) {
+        setRange(autoRange);
+      }
+    }
+    
+    if (sheetNames.length === 1) {
+      setSelectedSheet(sheetNames[0]);
+      setStep(2);
+    } else {
+      setStep(2);
+    }
+  };
+
+  const processExcelSheet = (sheets: Map<string, { headers: string[]; rows: any[][] }>, sheetName: string, rangeStr: string) => {
+    const sheetData = sheets.get(sheetName);
+    if (!sheetData) return;
+    
+    const { rows } = sheetData;
+    
+    // Parse range like "A5:I" to get starting row
+    const rangeMatch = rangeStr.match(/[A-Z]+(\d+)/);
+    const startRow = rangeMatch ? parseInt(rangeMatch[1]) - 1 : 0;
+    
+    console.log('Excel rows from range:', rangeStr, 'starting at row:', startRow);
+    
+    const dataRows = rows.slice(startRow);
+    
+    if (dataRows.length > 0) {
       // Первая строка - заголовки
-      const fileHeaders = (rows[0] || []).map(h => String(h || '').trim());
-      const dataRows = rows.slice(1);
+      const fileHeaders = (dataRows[0] || []).map(h => String(h || '').trim());
+      const actualDataRows = dataRows.slice(1);
       
       console.log('Headers:', fileHeaders);
-      console.log('Data rows:', dataRows.length);
+      console.log('Data rows:', actualDataRows.length);
       
       // Строим объекты из строк данных
-      const data = dataRows.map((row) => {
+      const data = actualDataRows.map((row) => {
         const obj: ParsedRow = {};
         fileHeaders.forEach((header, idx) => {
           obj[header] = row[idx] ?? '';
@@ -286,7 +316,7 @@ const FinancesImportDialog = ({
   };
 
   const handleSheetSelect = () => {
-    if (!workbook || !selectedSheet) {
+    if (!workbookData || !selectedSheet) {
       toast({
         variant: "destructive",
         title: "Ошибка",
@@ -294,7 +324,7 @@ const FinancesImportDialog = ({
       });
       return;
     }
-    processExcelSheet(workbook, selectedSheet, range);
+    processExcelSheet(workbookData.sheets, selectedSheet, range);
   };
 
   const setupColumnMapping = (fileHeaders: string[]) => {
@@ -1196,7 +1226,7 @@ const FinancesImportDialog = ({
   const resetDialog = () => {
     setStep(1);
     setFile(null);
-    setWorkbook(null);
+    setWorkbookData(null);
     setAvailableSheets([]);
     setSelectedSheet('');
     setRange('A5:I');

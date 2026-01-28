@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 
 interface ImportDialogProps {
@@ -59,105 +59,112 @@ const ImportDialog = ({
     { value: 'notes', label: 'Примечания' },
   ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
 
     setFile(uploadedFile);
     
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        let data: ParsedRow[] = [];
-        let fileHeaders: string[] = [];
+    try {
+      let data: ParsedRow[] = [];
+      let fileHeaders: string[] = [];
 
-        if (uploadedFile.name.endsWith('.csv')) {
-          const csvText = event.target?.result as string;
-          
-          // Удаляем BOM если есть
-          const cleanText = csvText.replace(/^\uFEFF/, '');
-          
-          // Используем PapaParse для надежного парсинга CSV
-          const parseResult = Papa.parse(cleanText, {
-            header: true,
-            skipEmptyLines: true,
-            delimiter: "", // автоопределение
-            transformHeader: (header: string) => header.trim(),
-            transform: (value: string) => value.trim()
-          });
+      if (uploadedFile.name.endsWith('.csv')) {
+        // CSV parsing with PapaParse
+        const csvText = await uploadedFile.text();
+        const cleanText = csvText.replace(/^\uFEFF/, '');
+        
+        const parseResult = Papa.parse(cleanText, {
+          header: true,
+          skipEmptyLines: true,
+          delimiter: "",
+          transformHeader: (header: string) => header.trim(),
+          transform: (value: string) => value.trim()
+        });
 
-          if (parseResult.errors.length > 0) {
-            throw new Error(`Ошибки парсинга CSV: ${parseResult.errors.map(e => e.message).join(', ')}`);
-          }
-
-          fileHeaders = parseResult.meta.fields || [];
-          data = parseResult.data as ParsedRow[];
-          
-        } else if (uploadedFile.name.endsWith('.xlsx')) {
-          const workbook = XLSX.read(event.target?.result, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-          
-          if (jsonData.length > 0) {
-            fileHeaders = jsonData[0].map(h => String(h || ''));
-            data = jsonData.slice(1).map(row => {
-              const rowData: ParsedRow = {};
-              fileHeaders.forEach((header, index) => {
-                rowData[header] = row[index] || '';
-              });
-              return rowData;
-            }).filter(row => Object.values(row).some(v => v)); // Убираем пустые строки
-          }
+        if (parseResult.errors.length > 0) {
+          throw new Error(`Ошибки парсинга CSV: ${parseResult.errors.map(e => e.message).join(', ')}`);
         }
 
-        setHeaders(fileHeaders);
-        setParsedData(data);
-        setStep(2);
+        fileHeaders = parseResult.meta.fields || [];
+        data = parseResult.data as ParsedRow[];
+        
+      } else if (uploadedFile.name.endsWith('.xlsx')) {
+        // Excel parsing with ExcelJS
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+        
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          throw new Error('Файл не содержит листов');
+        }
 
-        // Автоматическое сопоставление по похожим названиям
-        const autoMapping: ColumnMapping = {};
-        fileHeaders.forEach(header => {
-          const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('дат') || lowerHeader.includes('date')) {
-            autoMapping[header] = 'start_date';
-          } else if (lowerHeader.includes('праздник') || lowerHeader.includes('название') || lowerHeader.includes('name')) {
-            autoMapping[header] = 'name';
-          } else if (lowerHeader.includes('проект') || lowerHeader.includes('owner')) {
-            autoMapping[header] = 'project_owner';
-          } else if (lowerHeader.includes('менеджер') || lowerHeader.includes('manager')) {
-            autoMapping[header] = 'managers';
-          } else if (lowerHeader.includes('место') || lowerHeader.includes('location')) {
-            autoMapping[header] = 'location';
-          } else if (lowerHeader.includes('время') || lowerHeader.includes('time')) {
-            autoMapping[header] = 'event_time';
-          } else if (lowerHeader.includes('аниматор') || lowerHeader.includes('animator')) {
-            autoMapping[header] = 'animators';
-          } else if (lowerHeader.includes('шоу') || lowerHeader.includes('программа') || lowerHeader.includes('program')) {
-            autoMapping[header] = 'show_program';
-          } else if (lowerHeader.includes('подрядчик') || lowerHeader.includes('contractor')) {
-            autoMapping[header] = 'contractors';
-          } else if (lowerHeader.includes('фото') || lowerHeader.includes('видео') || lowerHeader.includes('photo') || lowerHeader.includes('video')) {
-            autoMapping[header] = 'photo_video';
-          } else if (lowerHeader.includes('примечани') || lowerHeader.includes('note')) {
-            autoMapping[header] = 'notes';
+        // Get headers from first row
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell, colNumber) => {
+          fileHeaders[colNumber - 1] = String(cell.value || '');
+        });
+
+        // Get data rows
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // Skip header
+          
+          const rowData: ParsedRow = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            const header = fileHeaders[colNumber - 1];
+            if (header) {
+              rowData[header] = cell.value ?? '';
+            }
+          });
+          
+          // Only add non-empty rows
+          if (Object.values(rowData).some(v => v !== '' && v !== null && v !== undefined)) {
+            data.push(rowData);
           }
         });
-        setColumnMapping(autoMapping);
-
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "Не удалось прочитать файл",
-        });
       }
-    };
 
-    if (uploadedFile.name.endsWith('.csv')) {
-      reader.readAsText(uploadedFile, 'utf-8');
-    } else {
-      reader.readAsBinaryString(uploadedFile);
+      setHeaders(fileHeaders);
+      setParsedData(data);
+      setStep(2);
+
+      // Автоматическое сопоставление по похожим названиям
+      const autoMapping: ColumnMapping = {};
+      fileHeaders.forEach(header => {
+        const lowerHeader = header.toLowerCase();
+        if (lowerHeader.includes('дат') || lowerHeader.includes('date')) {
+          autoMapping[header] = 'start_date';
+        } else if (lowerHeader.includes('праздник') || lowerHeader.includes('название') || lowerHeader.includes('name')) {
+          autoMapping[header] = 'name';
+        } else if (lowerHeader.includes('проект') || lowerHeader.includes('owner')) {
+          autoMapping[header] = 'project_owner';
+        } else if (lowerHeader.includes('менеджер') || lowerHeader.includes('manager')) {
+          autoMapping[header] = 'managers';
+        } else if (lowerHeader.includes('место') || lowerHeader.includes('location')) {
+          autoMapping[header] = 'location';
+        } else if (lowerHeader.includes('время') || lowerHeader.includes('time')) {
+          autoMapping[header] = 'event_time';
+        } else if (lowerHeader.includes('аниматор') || lowerHeader.includes('animator')) {
+          autoMapping[header] = 'animators';
+        } else if (lowerHeader.includes('шоу') || lowerHeader.includes('программа') || lowerHeader.includes('program')) {
+          autoMapping[header] = 'show_program';
+        } else if (lowerHeader.includes('подрядчик') || lowerHeader.includes('contractor')) {
+          autoMapping[header] = 'contractors';
+        } else if (lowerHeader.includes('фото') || lowerHeader.includes('видео') || lowerHeader.includes('photo') || lowerHeader.includes('video')) {
+          autoMapping[header] = 'photo_video';
+        } else if (lowerHeader.includes('примечани') || lowerHeader.includes('note')) {
+          autoMapping[header] = 'notes';
+        }
+      });
+      setColumnMapping(autoMapping);
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: error.message || "Не удалось прочитать файл",
+      });
     }
   };
 

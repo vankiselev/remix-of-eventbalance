@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -36,11 +36,16 @@ interface ImportResult {
   errors: Array<{ row: number; reason: string; data?: any }>;
 }
 
+interface ExcelWorkbookData {
+  sheetNames: string[];
+  sheets: Map<string, { headers: string[]; rows: any[][] }>;
+}
+
 export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: ReportsImportDialogProps) => {
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [file, setFile] = useState<File | null>(null);
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [workbookData, setWorkbookData] = useState<ExcelWorkbookData | null>(null);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -72,10 +77,12 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
     try {
       if (fileType === 'csv') {
-        await processCSVFile(uploadedFile);
+        const csvText = await uploadedFile.text();
+        processCSVFile(csvText);
         setStep(3); // Skip sheet selection for CSV
       } else {
-        await loadExcelWorkbook(uploadedFile);
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        await loadExcelWorkbook(arrayBuffer);
         setStep(2); // Show sheet selection for Excel
       }
     } catch (error) {
@@ -88,71 +95,98 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     }
   };
 
-  const processCSVFile = (file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      Papa.parse(file, {
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            const data = results.data as string[][];
-            
-            // Get column letters (A, B, C, etc.)
-            const getColumnLetter = (index: number): string => {
-              let letter = '';
-              while (index >= 0) {
-                letter = String.fromCharCode((index % 26) + 65) + letter;
-                index = Math.floor(index / 26) - 1;
-              }
-              return letter;
-            };
-
-            // Create headers with column letters
-            const headerRow = data[0].map((cell: string, index: number) => {
-              const columnLetter = getColumnLetter(index);
-              const cellValue = cell ? String(cell).trim() : '';
-              return cellValue ? `${columnLetter}: ${cellValue}` : `Столбец ${columnLetter}`;
-            });
-            
-            setHeaders(headerRow);
-            
-            const rows = data.slice(1).filter(row => row.some(cell => cell && cell.trim()));
-            const parsedRows = rows.map(row => {
-              const obj: ParsedRow = {};
-              headerRow.forEach((header, index) => {
-                obj[header] = row[index];
-              });
-              return obj;
-            });
-            
-            setParsedData(parsedRows);
-            setupColumnMapping(headerRow);
-            resolve();
-          } else {
-            reject(new Error('Файл пуст'));
-          }
-        },
-        error: (error) => reject(error),
-      });
+  const processCSVFile = (csvText: string) => {
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    
+    const results = Papa.parse(cleanText, {
+      header: false,
+      skipEmptyLines: true,
     });
+    
+    if (results.data && results.data.length > 0) {
+      const data = results.data as string[][];
+      
+      // Get column letters (A, B, C, etc.)
+      const getColumnLetter = (index: number): string => {
+        let letter = '';
+        while (index >= 0) {
+          letter = String.fromCharCode((index % 26) + 65) + letter;
+          index = Math.floor(index / 26) - 1;
+        }
+        return letter;
+      };
+
+      // Create headers with column letters
+      const headerRow = data[0].map((cell: string, index: number) => {
+        const columnLetter = getColumnLetter(index);
+        const cellValue = cell ? String(cell).trim() : '';
+        return cellValue ? `${columnLetter}: ${cellValue}` : `Столбец ${columnLetter}`;
+      });
+      
+      setHeaders(headerRow);
+      
+      const rows = data.slice(1).filter(row => row.some(cell => cell && String(cell).trim()));
+      const parsedRows = rows.map(row => {
+        const obj: ParsedRow = {};
+        headerRow.forEach((header, index) => {
+          obj[header] = row[index];
+        });
+        return obj;
+      });
+      
+      setParsedData(parsedRows);
+      setupColumnMapping(headerRow);
+    }
   };
 
-  const loadExcelWorkbook = async (file: File) => {
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data);
-    setWorkbook(wb);
+  const loadExcelWorkbook = async (arrayBuffer: ArrayBuffer) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    
+    const sheets = new Map<string, { headers: string[]; rows: any[][] }>();
+    const sheetNames: string[] = [];
+    
+    workbook.eachSheet((worksheet) => {
+      sheetNames.push(worksheet.name);
+      const rows: any[][] = [];
+      
+      worksheet.eachRow({ includeEmpty: false }, (row) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          let value = cell.value;
+          if (value && typeof value === 'object') {
+            if ('richText' in value) {
+              value = (value as any).richText.map((rt: any) => rt.text).join('');
+            } else if ('result' in value) {
+              value = (value as any).result;
+            }
+          }
+          rowValues[colNumber - 1] = value;
+        });
+        rows.push(rowValues);
+      });
+      
+      const headers = rows[0]?.map(h => String(h || '').trim()) || [];
+      sheets.set(worksheet.name, { headers, rows });
+    });
+    
+    setWorkbookData({ sheetNames, sheets });
     
     // Auto-select first sheet if only one exists
-    if (wb.SheetNames.length === 1) {
-      setSelectedSheet(wb.SheetNames[0]);
-      await processExcelSheet(wb, wb.SheetNames[0]);
+    if (sheetNames.length === 1) {
+      setSelectedSheet(sheetNames[0]);
+      processExcelSheet(sheets, sheetNames[0]);
       setStep(3);
     }
   };
 
-  const processExcelSheet = async (wb: XLSX.WorkBook, sheetName: string) => {
-    const sheet = wb.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as any[][];
+  const processExcelSheet = (sheets: Map<string, { headers: string[]; rows: any[][] }>, sheetName: string) => {
+    const sheetData = sheets.get(sheetName);
+    if (!sheetData) return;
     
-    if (jsonData.length === 0) {
+    const { rows } = sheetData;
+    
+    if (rows.length === 0) {
       throw new Error('Лист пуст');
     }
 
@@ -167,7 +201,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     };
 
     // Create headers with column letters
-    const headerRow = jsonData[0].map((cell: any, index: number) => {
+    const headerRow = rows[0].map((cell: any, index: number) => {
       const columnLetter = getColumnLetter(index);
       const cellValue = cell ? String(cell).trim() : '';
       return cellValue ? `${columnLetter}: ${cellValue}` : `Столбец ${columnLetter}`;
@@ -175,8 +209,8 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     
     setHeaders(headerRow);
     
-    const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim()));
-    const parsedRows = rows.map(row => {
+    const dataRows = rows.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim()));
+    const parsedRows = dataRows.map(row => {
       const obj: ParsedRow = {};
       headerRow.forEach((header, index) => {
         obj[header] = row[index];
@@ -188,8 +222,8 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     setupColumnMapping(headerRow);
   };
 
-  const handleSheetSelect = async () => {
-    if (!workbook || !selectedSheet) {
+  const handleSheetSelect = () => {
+    if (!workbookData || !selectedSheet) {
       toast({
         title: 'Ошибка',
         description: 'Выберите лист для импорта',
@@ -199,7 +233,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     }
 
     try {
-      await processExcelSheet(workbook, selectedSheet);
+      processExcelSheet(workbookData.sheets, selectedSheet);
       setStep(3);
     } catch (error) {
       console.error('Error processing sheet:', error);
@@ -335,7 +369,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
   const resetDialog = () => {
     setStep(1);
     setFile(null);
-    setWorkbook(null);
+    setWorkbookData(null);
     setSelectedSheet('');
     setParsedData([]);
     setHeaders([]);
@@ -399,12 +433,12 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           </div>
         )}
 
-        {step === 2 && workbook && (
+        {step === 2 && workbookData && (
           <div className="space-y-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Выберите лист для импорта. Найдено листов: {workbook.SheetNames.length}
+                Выберите лист для импорта. Найдено листов: {workbookData.sheetNames.length}
               </AlertDescription>
             </Alert>
 
@@ -415,7 +449,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
                   <SelectValue placeholder="Выберите лист" />
                 </SelectTrigger>
                 <SelectContent className="z-[100] bg-popover">
-                  {workbook.SheetNames.map((sheetName) => (
+                  {workbookData.sheetNames.map((sheetName) => (
                     <SelectItem key={sheetName} value={sheetName}>
                       {sheetName}
                     </SelectItem>

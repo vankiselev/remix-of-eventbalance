@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { WarehouseItemWithStock } from '@/hooks/useWarehouseItems';
 import { generateSKU } from './skuGenerator';
@@ -25,44 +25,43 @@ export interface ExcelParseResult {
 }
 
 // Экспорт товаров в Excel
-export const exportWarehouseItemsToExcel = (
+export const exportWarehouseItemsToExcel = async (
   items: WarehouseItemWithStock[]
 ) => {
-  // Подготовка данных для экспорта
-  const exportData = items.map(item => ({
-    'Артикул (SKU)': item.sku || '',
-    'Название': item.name || '',
-    'Категория': item.category_name || '',
-    'Описание': item.description || '',
-    'Единица измерения': item.unit || 'шт',
-    'Цена за единицу': item.price || 0,
-    'Минимальный остаток': item.min_stock || 0,
-    'Общее количество': item.total_quantity || 0,
-    'Создан': new Date(item.created_at).toLocaleDateString('ru-RU'),
-  }));
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Товары');
 
-  // Создание книги Excel
-  const ws = XLSX.utils.json_to_sheet(exportData);
-  
-  // Настройка ширины колонок
-  ws['!cols'] = [
-    { wch: 15 }, // Артикул
-    { wch: 30 }, // Название
-    { wch: 20 }, // Категория
-    { wch: 40 }, // Описание
-    { wch: 15 }, // Единица
-    { wch: 15 }, // Цена
-    { wch: 15 }, // Мин остаток
-    { wch: 15 }, // Количество
-    { wch: 12 }, // Создан
+  // Определяем колонки
+  worksheet.columns = [
+    { header: 'Артикул (SKU)', key: 'sku', width: 15 },
+    { header: 'Название', key: 'name', width: 30 },
+    { header: 'Категория', key: 'category', width: 20 },
+    { header: 'Описание', key: 'description', width: 40 },
+    { header: 'Единица измерения', key: 'unit', width: 15 },
+    { header: 'Цена за единицу', key: 'price', width: 15 },
+    { header: 'Минимальный остаток', key: 'min_stock', width: 15 },
+    { header: 'Общее количество', key: 'total_quantity', width: 15 },
+    { header: 'Создан', key: 'created_at', width: 12 },
   ];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Товары');
+  // Добавляем данные
+  items.forEach(item => {
+    worksheet.addRow({
+      sku: item.sku || '',
+      name: item.name || '',
+      category: item.category_name || '',
+      description: item.description || '',
+      unit: item.unit || 'шт',
+      price: item.price || 0,
+      min_stock: item.min_stock || 0,
+      total_quantity: item.total_quantity || 0,
+      created_at: new Date(item.created_at).toLocaleDateString('ru-RU'),
+    });
+  });
 
   // Экспорт файла
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { 
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   });
   
@@ -71,46 +70,44 @@ export const exportWarehouseItemsToExcel = (
 };
 
 // Генерация Excel шаблона для импорта
-export const generateImportTemplate = () => {
-  const templateData = [
-    {
-      'Артикул (SKU)': 'КП-1234',
-      'Название': 'Костюм пирата',
-      'Категория': 'Костюмы',
-      'Описание': 'Детский костюм пирата с аксессуарами',
-      'Единица измерения': 'шт',
-      'Цена за единицу': 1500,
-      'Минимальный остаток': 5,
-    },
-    {
-      'Артикул (SKU)': '',
-      'Название': 'Шляпа ковбоя',
-      'Категория': 'Аксессуары',
-      'Описание': '',
-      'Единица измерения': 'шт',
-      'Цена за единицу': 300,
-      'Минимальный остаток': 10,
-    }
+export const generateImportTemplate = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Шаблон импорта');
+
+  // Определяем колонки
+  worksheet.columns = [
+    { header: 'Артикул (SKU)', key: 'sku', width: 15 },
+    { header: 'Название', key: 'name', width: 30 },
+    { header: 'Категория', key: 'category', width: 20 },
+    { header: 'Описание', key: 'description', width: 40 },
+    { header: 'Единица измерения', key: 'unit', width: 15 },
+    { header: 'Цена за единицу', key: 'price', width: 15 },
+    { header: 'Минимальный остаток', key: 'min_stock', width: 15 },
   ];
 
-  const ws = XLSX.utils.json_to_sheet(templateData);
-  
-  // Настройка ширины колонок
-  ws['!cols'] = [
-    { wch: 15 },
-    { wch: 30 },
-    { wch: 20 },
-    { wch: 40 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 },
-  ];
+  // Добавляем примеры
+  worksheet.addRow({
+    sku: 'КП-1234',
+    name: 'Костюм пирата',
+    category: 'Костюмы',
+    description: 'Детский костюм пирата с аксессуарами',
+    unit: 'шт',
+    price: 1500,
+    min_stock: 5,
+  });
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Шаблон импорта');
+  worksheet.addRow({
+    sku: '',
+    name: 'Шляпа ковбоя',
+    category: 'Аксессуары',
+    description: '',
+    unit: 'шт',
+    price: 300,
+    min_stock: 10,
+  });
 
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { 
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
   });
   
@@ -150,13 +147,48 @@ export const parseWarehouseExcelFile = (
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+        const data = e.target?.result as ArrayBuffer;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(data);
+        
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          reject(new Error('Файл не содержит листов'));
+          return;
+        }
+
+        // Получаем заголовки из первой строки
+        const headers: string[] = [];
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell, colNumber) => {
+          headers[colNumber - 1] = String(cell.value || '').trim();
+        });
+
+        if (headers.length === 0) {
+          reject(new Error('Файл пуст или не содержит данных'));
+          return;
+        }
+
+        // Парсим данные
+        const jsonData: any[] = [];
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // Пропускаем заголовок
+          
+          const rowData: any = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header) {
+              rowData[header] = cell.value;
+            }
+          });
+          
+          // Проверяем, что строка не пустая
+          if (Object.values(rowData).some(v => v !== undefined && v !== null && v !== '')) {
+            jsonData.push(rowData);
+          }
+        });
 
         if (jsonData.length === 0) {
           reject(new Error('Файл пуст или не содержит данных'));
@@ -204,6 +236,6 @@ export const parseWarehouseExcelFile = (
       reject(new Error('Ошибка чтения файла'));
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 };

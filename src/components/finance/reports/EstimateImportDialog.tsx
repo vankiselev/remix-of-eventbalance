@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 interface EstimateImportDialogProps {
@@ -75,67 +75,82 @@ export const EstimateImportDialog = ({ open, onOpenChange, onImport }: EstimateI
     return lower.includes('итого') || lower.includes('всего') || lower.includes('total');
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
     setFileName(file.name);
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        
-        const jsonData = XLSX.utils.sheet_to_json<ParsedRow>(worksheet, { header: 1 });
-        
-        let headerRowIndex = 0;
-        for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
-          const row = jsonData[i] as any[];
-          const nonEmptyCells = row?.filter(cell => cell !== undefined && cell !== null && cell !== '').length || 0;
-          if (nonEmptyCells >= 2) {
-            headerRowIndex = i;
-            break;
-          }
-        }
-
-        const headers = (jsonData[headerRowIndex] as any[])?.map((h, i) => String(h || `Колонка ${i + 1}`)) || [];
-        const rows = jsonData.slice(headerRowIndex + 1).map((row: any[]) => {
-          const obj: ParsedRow = {};
-          headers.forEach((header, i) => {
-            obj[header] = row?.[i];
-          });
-          return obj;
-        }).filter(row => Object.values(row).some(v => v !== undefined && v !== null && v !== ''));
-
-        setColumns(headers);
-        setParsedData(rows);
-        
-        // Auto-detect column mapping
-        const lowerHeaders = headers.map(h => h.toLowerCase());
-        const autoMapping = { name: "", amount: "", description: "" };
-        
-        lowerHeaders.forEach((h, i) => {
-          if (h.includes('наименование') || h.includes('название') || h.includes('статья') || h.includes('категор')) {
-            if (!autoMapping.name) autoMapping.name = headers[i];
-          }
-          if (h.includes('стоимость') || h.includes('сумма') || h.includes('цена') || h.includes('итого')) {
-            if (!autoMapping.amount) autoMapping.amount = headers[i];
-          }
-          if (h.includes('описание') || h.includes('примечание') || h.includes('комментарий')) {
-            if (!autoMapping.description) autoMapping.description = headers[i];
-          }
-        });
-        
-        setMapping(autoMapping);
-        setStep('mapping');
-      } catch (error) {
-        console.error('Error parsing Excel:', error);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        console.error('No worksheet found');
+        return;
       }
-    };
-    reader.readAsBinaryString(file);
+
+      // Get all rows as arrays
+      const rows: any[][] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          rowValues[colNumber - 1] = cell.value;
+        });
+        rows.push(rowValues);
+      });
+
+      if (rows.length === 0) {
+        console.error('No data in worksheet');
+        return;
+      }
+
+      // Find header row
+      let headerRowIndex = 0;
+      for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        const row = rows[i];
+        const nonEmptyCells = row?.filter(cell => cell !== undefined && cell !== null && cell !== '').length || 0;
+        if (nonEmptyCells >= 2) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      const headers = (rows[headerRowIndex] || []).map((h, i) => String(h || `Колонка ${i + 1}`));
+      const dataRows = rows.slice(headerRowIndex + 1).map((row: any[]) => {
+        const obj: ParsedRow = {};
+        headers.forEach((header, i) => {
+          obj[header] = row?.[i];
+        });
+        return obj;
+      }).filter(row => Object.values(row).some(v => v !== undefined && v !== null && v !== ''));
+
+      setColumns(headers);
+      setParsedData(dataRows);
+      
+      // Auto-detect column mapping
+      const lowerHeaders = headers.map(h => h.toLowerCase());
+      const autoMapping = { name: "", amount: "", description: "" };
+      
+      lowerHeaders.forEach((h, i) => {
+        if (h.includes('наименование') || h.includes('название') || h.includes('статья') || h.includes('категор')) {
+          if (!autoMapping.name) autoMapping.name = headers[i];
+        }
+        if (h.includes('стоимость') || h.includes('сумма') || h.includes('цена') || h.includes('итого')) {
+          if (!autoMapping.amount) autoMapping.amount = headers[i];
+        }
+        if (h.includes('описание') || h.includes('примечание') || h.includes('комментарий')) {
+          if (!autoMapping.description) autoMapping.description = headers[i];
+        }
+      });
+      
+      setMapping(autoMapping);
+      setStep('mapping');
+    } catch (error) {
+      console.error('Error parsing Excel:', error);
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
