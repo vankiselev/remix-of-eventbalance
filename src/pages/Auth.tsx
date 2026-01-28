@@ -33,8 +33,10 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Check invitation status before redirecting
-        checkInvitationStatus(session.user.id);
+        // Do not call Supabase inside the auth callback (can deadlock). Defer it.
+        setTimeout(() => {
+          checkInvitationStatus(session.user.id);
+        }, 0);
       }
     });
 
@@ -89,8 +91,9 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
 
@@ -144,9 +147,10 @@ const Auth = () => {
 
     try {
       const redirectUrl = `${window.location.origin}/`;
+      const cleanEmail = email.trim().toLowerCase();
       
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           emailRedirectTo: redirectUrl,
@@ -416,7 +420,8 @@ const ForgotPasswordDialog = ({ open, onOpenChange }: { open: boolean, onOpenCha
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const cleanEmail = email.trim().toLowerCase();
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
