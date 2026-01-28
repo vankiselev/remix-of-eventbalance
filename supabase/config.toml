@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.create-test-user]
 verify_jwt = true
+
+[functions.create-tenant]
+verify_jwt = false
