@@ -35,6 +35,7 @@ import AdministrationPage from "./pages/AdministrationPage";
 import TransactionsReviewPage from "./pages/TransactionsReviewPage";
 import SelectCompanyPage from "./pages/SelectCompanyPage";
 import RegisterCompanyPage from "./pages/RegisterCompanyPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 
 import SiriIntegrationPage from "./pages/SiriIntegrationPage";
 import WarehousePage from "./pages/WarehousePage";
@@ -193,6 +194,9 @@ const App = () => {
                     {/* Admin-only routes */}
                     <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
                     <Route path="/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
+                    
+                    {/* Super admin route */}
+                    <Route path="/admin" element={<ProtectedRoute><SuperAdminPage /></ProtectedRoute>} />
                     
                     {/* Tenant-scoped routes (future: /:tenantSlug/dashboard, etc.) */}
                     {/* These will be added in subsequent phases */}
