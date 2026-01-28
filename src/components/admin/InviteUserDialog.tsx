@@ -15,6 +15,7 @@ import { useTenant } from "@/contexts/TenantContext";
 const inviteSchema = z.object({
   email: z.string().email("Введите корректный email"),
   role_id: z.string().min(1, "Выберите роль"),
+  tenant_id: z.string().min(1, "Выберите компанию"),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
 });
@@ -31,12 +32,18 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { roles } = useRoles();
-  const { currentTenant } = useTenant();
+  const { currentTenant, tenantMemberships } = useTenant();
+
+  // Get available tenants from memberships (only active ones where user is owner/admin)
+  const availableTenants = tenantMemberships
+    .filter(m => m.status === 'active' && m.tenant && m.is_owner)
+    .map(m => m.tenant!);
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       role_id: "",
+      tenant_id: currentTenant?.id || "",
       firstName: "",
       lastName: "",
       email: "",
@@ -44,7 +51,9 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
   });
 
   const onSubmit = async (data: InviteFormData) => {
-    if (!currentTenant) {
+    const selectedTenantId = data.tenant_id;
+    
+    if (!selectedTenantId) {
       toast({
         title: "Ошибка",
         description: "Не выбрана компания для приглашения",
@@ -52,6 +61,8 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       });
       return;
     }
+
+    const selectedTenant = availableTenants.find(t => t.id === selectedTenantId);
 
     try {
       setIsSubmitting(true);
@@ -99,7 +110,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
           last_name: data.lastName || null,
           invited_by: (await supabase.auth.getUser()).data.user?.id!,
           token_hash: '', // Will be overridden by trigger
-          tenant_id: currentTenant.id,
+          tenant_id: selectedTenantId,
         })
         .select()
         .single();
@@ -201,6 +212,31 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tenant_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Компания *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите компанию" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableTenants.map((tenant) => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          {tenant.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
