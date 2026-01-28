@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,9 +20,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) {
+      console.error("GOOGLE_AI_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,74 +57,60 @@ serve(async (req) => {
       ? `Текст: "${text}"\nКатегория транзакции: ${category}`
       : `Текст: "${text}"`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          tools: [{
+            functionDeclarations: [{
               name: "report_text_corrections",
               description: "Report spelling and grammar corrections for transaction description",
               parameters: {
-                type: "object",
+                type: "OBJECT",
                 properties: {
                   has_errors: { 
-                    type: "boolean", 
+                    type: "BOOLEAN", 
                     description: "Whether the text has any spelling or grammar errors" 
                   },
                   corrected_text: { 
-                    type: "string", 
+                    type: "STRING", 
                     description: "Corrected version of the text (or original if no errors)" 
                   },
                   errors: {
-                    type: "array",
+                    type: "ARRAY",
                     description: "List of found errors with corrections",
                     items: {
-                      type: "object",
+                      type: "OBJECT",
                       properties: {
-                        original: { type: "string", description: "Original incorrect text" },
-                        correction: { type: "string", description: "Corrected text" },
-                        type: { type: "string", enum: ["spelling", "grammar", "style"], description: "Type of error" }
+                        original: { type: "STRING", description: "Original incorrect text" },
+                        correction: { type: "STRING", description: "Corrected text" },
+                        type: { type: "STRING", description: "Type of error: spelling, grammar, or style" }
                       },
                       required: ["original", "correction", "type"]
                     }
                   }
                 },
-                required: ["has_errors", "corrected_text", "errors"],
-                additionalProperties: false
+                required: ["has_errors", "corrected_text", "errors"]
               }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "report_text_corrections" } }
-      }),
-    });
+            }]
+          }],
+          toolConfig: { functionCallingConfig: { mode: "ANY" } }
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("Google AI API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -138,17 +123,17 @@ serve(async (req) => {
     const data = await response.json();
     console.log("AI response:", JSON.stringify(data, null, 2));
 
-    // Extract tool call result
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      console.error("No tool call in response");
+    // Extract function call result from Gemini response
+    const functionCall = data.candidates?.[0]?.content?.parts?.[0]?.functionCall;
+    if (!functionCall) {
+      console.error("No function call in response");
       return new Response(
         JSON.stringify({ has_errors: false, corrected_text: text, errors: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const result = JSON.parse(toolCall.function.arguments);
+    const result = functionCall.args;
     console.log("Parsed result:", result);
 
     return new Response(
