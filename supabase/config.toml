@@ -1,1 +1,4 @@
 project_id = "azwpdljasbywvlodsqod"
+
+[functions.ai-proxy]
+verify_jwt = false
