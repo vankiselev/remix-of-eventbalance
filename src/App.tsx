@@ -14,6 +14,7 @@ import { InvitePage } from "./pages/InvitePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import DashboardPage from "./pages/DashboardPage";
+import LandingPage from "./pages/LandingPage";
 import FinancesPage from "./pages/FinancesPage";
 import EventsPage from "./pages/EventsPage";
 import CalendarPageWrapper from "./pages/CalendarPageWrapper";
@@ -153,8 +154,8 @@ const App = () => {
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             
-            {/* Redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Public landing page */}
+            <Route path="/" element={<LandingPage />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
