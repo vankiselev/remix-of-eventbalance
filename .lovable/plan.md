@@ -1,159 +1,165 @@
 
-# Миграция с xlsx на exceljs для устранения уязвимости CVE-2023-30533
+# Миграция Edge Functions с Lovable AI Gateway на Google AI API
 
-## Проблема
+## Текущая ситуация
 
-Пакет `xlsx` (SheetJS) версии 0.18.5 содержит критическую уязвимость **Prototype Pollution** (CVE-2023-30533, CVSS 7.8/10). Уязвимость позволяет злоумышленнику выполнить произвольный код при загрузке специально сформированного Excel файла.
+Три Edge Functions используют Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`):
+- `check-transaction-description` - проверка орфографии/грамматики
+- `suggest-transaction-fields` - автоподбор категории и проекта
+- `voice-transaction` - парсинг голосовых команд
 
-Npm-пакет `xlsx` больше не поддерживается - исправленная версия 0.19.3 доступна только через CDN разработчика.
+Поскольку проект использует self-hosted Supabase сервер, `LOVABLE_API_KEY` недоступен - этот ключ работает только на инфраструктуре Lovable.
 
 ---
 
 ## Решение
 
-Заменить `xlsx` на `exceljs` - активно поддерживаемую библиотеку с похожим API.
+Переключить все Edge Functions на прямой Google AI API (Gemini).
 
 ---
 
-## Затрагиваемые файлы (6 файлов)
+## Необходимые действия
 
-| Файл | Функционал |
-|------|-----------|
-| `src/utils/warehouseExcelUtils.ts` | Экспорт/импорт товаров склада |
-| `src/components/ImportDialog.tsx` | Импорт мероприятий |
-| `src/components/EventsImportDialog.tsx` | Расширенный импорт событий |
-| `src/components/finance/FinancesImportDialog.tsx` | Импорт финансовых транзакций |
-| `src/components/finance/reports/EstimateImportDialog.tsx` | Импорт смет |
-| `src/components/reports/ReportsImportDialog.tsx` | Импорт отчётов |
+### 1. Получить API ключ Google AI
+
+1. Перейти на https://aistudio.google.com/apikey
+2. Создать новый API ключ для Gemini
+3. Добавить ключ в секреты Supabase:
+   ```bash
+   supabase secrets set GOOGLE_AI_API_KEY=your_api_key_here
+   ```
+
+### 2. Изменения в Edge Functions
+
+Все функции используют одинаковый паттерн:
+- **Заменить URL**: `https://ai.gateway.lovable.dev/v1/chat/completions` на `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
+- **Заменить ключ**: `LOVABLE_API_KEY` на `GOOGLE_AI_API_KEY`
+- **Адаптировать формат запроса и ответа**
 
 ---
 
 ## Техническая информация
 
-### Изменения в зависимостях
+### Формат запроса - до (Lovable AI Gateway)
+```typescript
+const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+  }),
+});
 
-```json
-// package.json - удалить:
-"xlsx": "^0.18.5"
-
-// package.json - добавить:
-"exceljs": "^4.4.0"
+const data = await response.json();
+const content = data.choices?.[0]?.message?.content;
 ```
 
-### Основные отличия API
-
-| Операция | xlsx | exceljs |
-|----------|------|---------|
-| Чтение файла | `XLSX.read(data, {type: 'binary'})` | `workbook.xlsx.load(arrayBuffer)` |
-| Получение листа | `workbook.Sheets[sheetName]` | `workbook.getWorksheet(sheetName)` |
-| Данные в JSON | `XLSX.utils.sheet_to_json(sheet)` | Итерация по `worksheet.eachRow()` |
-| Создание книги | `XLSX.utils.book_new()` | `new ExcelJS.Workbook()` |
-| Запись в буфер | `XLSX.write(wb, {type: 'array'})` | `workbook.xlsx.writeBuffer()` |
-
-### Пример рефакторинга (warehouseExcelUtils.ts)
-
-До (xlsx):
+### Формат запроса - после (Google AI API)
 ```typescript
-import * as XLSX from 'xlsx';
+const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+const response = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    }),
+  }
+);
 
-const ws = XLSX.utils.json_to_sheet(data);
-const wb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+const data = await response.json();
+const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 ```
 
-После (exceljs):
+### Tool Calling (для check-transaction-description)
 ```typescript
-import ExcelJS from 'exceljs';
+body: JSON.stringify({
+  systemInstruction: { parts: [{ text: systemPrompt }] },
+  contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+  tools: [{
+    functionDeclarations: [{
+      name: "report_text_corrections",
+      description: "Report spelling and grammar corrections",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          has_errors: { type: "BOOLEAN" },
+          corrected_text: { type: "STRING" },
+          errors: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                original: { type: "STRING" },
+                correction: { type: "STRING" },
+                type: { type: "STRING" }
+              }
+            }
+          }
+        },
+        required: ["has_errors", "corrected_text", "errors"]
+      }
+    }]
+  }],
+  toolConfig: { functionCallingConfig: { mode: "ANY" } }
+})
 
-const workbook = new ExcelJS.Workbook();
-const worksheet = workbook.addWorksheet('Sheet1');
-worksheet.columns = Object.keys(data[0]).map(key => ({ header: key, key }));
-data.forEach(row => worksheet.addRow(row));
-const buffer = await workbook.xlsx.writeBuffer();
-```
-
-### Паттерн чтения файла
-
-До (xlsx):
-```typescript
-reader.readAsBinaryString(file);
-reader.onload = (e) => {
-  const workbook = XLSX.read(e.target.result, { type: 'binary' });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(sheet);
-};
-```
-
-После (exceljs):
-```typescript
-reader.readAsArrayBuffer(file);
-reader.onload = async (e) => {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(e.target.result);
-  const worksheet = workbook.worksheets[0];
-  const data = [];
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber > 1) { // Пропуск заголовка
-      const rowData = {};
-      row.eachCell((cell, colNumber) => {
-        rowData[headers[colNumber - 1]] = cell.value;
-      });
-      data.push(rowData);
-    }
-  });
-};
+// Извлечение результата
+const functionCall = data.candidates?.[0]?.content?.parts?.[0]?.functionCall;
+const result = functionCall?.args;
 ```
 
 ---
 
-## План изменений по файлам
+## Изменяемые файлы
 
-### 1. `src/utils/warehouseExcelUtils.ts`
-- Заменить импорт `xlsx` на `exceljs`
-- Переписать `exportWarehouseItemsToExcel()` с использованием `ExcelJS.Workbook`
-- Переписать `generateImportTemplate()` аналогично
-- Переписать `parseWarehouseExcelFile()` с `workbook.xlsx.load()`
+### 1. `supabase/functions/check-transaction-description/index.ts`
+- Заменить Lovable AI Gateway на Google AI API
+- Адаптировать tool calling под формат Gemini
 
-### 2. `src/components/ImportDialog.tsx`
-- Заменить `XLSX.read()` на `workbook.xlsx.load()`
-- Изменить `readAsBinaryString` на `readAsArrayBuffer`
-- Адаптировать парсинг данных через `worksheet.eachRow()`
+### 2. `supabase/functions/suggest-transaction-fields/index.ts`
+- Заменить URL и формат запроса
+- Адаптировать парсинг ответа
 
-### 3. `src/components/EventsImportDialog.tsx`
-- Аналогичные изменения для чтения Excel
-- Сохранить логику определения заголовков
-- Адаптировать обработку объединённых ячеек
-
-### 4. `src/components/finance/FinancesImportDialog.tsx`
-- Переписать `processExcelSheet()` с новым API
-- Сохранить логику автоопределения диапазона
-- Адаптировать парсинг дат из Excel (числовые значения)
-
-### 5. `src/components/finance/reports/EstimateImportDialog.tsx`
-- Переписать `onDrop` обработчик с `exceljs`
-- Сохранить логику автоопределения колонок
-
-### 6. `src/components/reports/ReportsImportDialog.tsx`
-- Переписать `loadExcelWorkbook()` и `processExcelSheet()`
-- Адаптировать работу с листами
+### 3. `supabase/functions/voice-transaction/index.ts`
+- Заменить 4 места с вызовами AI API:
+  - Simple mode parsing (строки ~332-357)
+  - Step 1 parsing (строки ~489-524)
+  - Step 2 project search (строки ~620-647)
+  - Возможно step 3 если есть AI вызовы
 
 ---
 
-## Особые случаи для обработки
+## Преимущества Google AI API
 
-1. **Excel серийные даты** - exceljs автоматически конвертирует даты, но нужно проверить совместимость с текущей логикой `parseDate()`
-
-2. **Объединённые ячейки** - exceljs поддерживает через `worksheet.unMergeCells()`, нужно адаптировать `handleMergedCells()`
-
-3. **Ширина колонок** - в exceljs задаётся через `column.width` вместо `ws['!cols']`
+| Параметр | Lovable AI Gateway | Google AI API |
+|----------|-------------------|---------------|
+| Доступность | Только Lovable infra | Любой сервер |
+| Модель | gemini-2.5-flash | gemini-2.0-flash (новее) |
+| Бесплатный лимит | Через кредиты Lovable | 15 RPM, 1M токенов/мин бесплатно |
+| Контроль | Через Lovable | Прямой доступ |
 
 ---
 
-## Результат
+## Пошаговый процесс
 
-После применения изменений:
-- Устранена уязвимость CVE-2023-30533 (Prototype Pollution)
-- Библиотека `exceljs` активно поддерживается (последний релиз: декабрь 2024)
-- Все функции импорта/экспорта Excel сохранены
-- Улучшена типизация благодаря встроенным TypeScript типам в exceljs
+1. Создать Google AI API ключ на https://aistudio.google.com/apikey
+2. Добавить секрет в Supabase: `supabase secrets set GOOGLE_AI_API_KEY=...`
+3. Обновить три Edge Functions с новым форматом API
+4. Задеплоить функции: `supabase functions deploy`
+5. Протестировать функционал
+
+---
+
+## Важно
+
+После добавления API ключа сообщи мне, и я обновлю все три Edge Functions.
