@@ -23,7 +23,7 @@ import { ru } from "date-fns/locale";
 interface Invitation {
   id: string;
   email: string;
-  role: 'admin' | 'employee';
+  role: string; // Can be any string from DB
   status: string;
   invited_at: string;
   expires_at: string;
@@ -35,6 +35,7 @@ interface Invitation {
   created_at: string;
   updated_at: string;
   invited_by: string;
+  tenant_id?: string;
 }
 
 export function InvitationsManagement() {

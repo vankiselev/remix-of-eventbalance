@@ -146,7 +146,7 @@ export const WarehouseLocationsManagement = () => {
 
   const getEmployeeName = (employeeId: string | null) => {
     if (!employeeId) return null;
-    const profile = profiles.find(p => p.id === employeeId);
+    const profile = (profiles as any[]).find((p: any) => p.id === employeeId);
     return profile ? `${profile.first_name} ${profile.last_name}` : null;
   };
 
@@ -343,7 +343,7 @@ export const WarehouseLocationsManagement = () => {
                     <SelectValue placeholder="Выберите сотрудника" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profiles.filter(p => p.employment_status === 'active').map((profile) => (
+                    {(profiles as any[]).filter((p: any) => p.employment_status === 'active').map((profile: any) => (
                       <SelectItem key={profile.id} value={profile.id}>
                         {profile.first_name} {profile.last_name}
                       </SelectItem>

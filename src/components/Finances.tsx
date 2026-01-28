@@ -160,8 +160,8 @@ const Finances = () => {
       const { supabase } = await import("@/integrations/supabase/client");
       const Papa = (await import("papaparse")).default;
       
-      let query = supabase
-        .from("financial_transactions")
+      let query = (supabase
+        .from("financial_transactions") as any)
         .select(`
           *,
           events:project_id(name),
@@ -172,15 +172,15 @@ const Finances = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const transactions = (data || []).map(transaction => ({
+      const transactions = (data || []).map((transaction: any) => ({
         ...transaction,
         attachments_count: transaction.attachments_count?.[0]?.count || 0
       }));
       
       // Prepare data for CSV export
-      const csvData = transactions.map(transaction => ({
+      const csvData = transactions.map((transaction: any) => ({
         'Дата операции': new Date(transaction.operation_date).toLocaleDateString("ru-RU"),
-        'Проект': transaction.static_project_name || transaction.events?.name || '',
+        'Проект': transaction.static_project_name || (transaction.events as any)?.name || '',
         'Чей проект': transaction.project_owner || '',
         'Описание': transaction.description || '',
         'Траты': transaction.expense_amount || '',
@@ -316,7 +316,7 @@ const Finances = () => {
       if (error) throw error;
 
       if (employeeSummaryData && employeeSummaryData.length > 0) {
-        setSelectedEmployeeSummary(employeeSummaryData[0]);
+        setSelectedEmployeeSummary(employeeSummaryData[0] as any);
       }
     } catch (error: any) {
       console.error("Error fetching employee financial data:", error);
@@ -340,7 +340,7 @@ const Finances = () => {
       if (error) throw error;
 
       if (employeeSummaryData && employeeSummaryData.length > 0) {
-        setSelectedEmployeeSummary(employeeSummaryData[0]);
+        setSelectedEmployeeSummary(employeeSummaryData[0] as any);
       }
     } catch (error: any) {
       console.error("Error refreshing employee summary:", error);

@@ -259,7 +259,7 @@ export const EmployeeProfileDialog = ({
         .limit(20);
 
       if (error) throw error;
-      setEditHistory(data || []);
+      setEditHistory((data as any) || []);
     } catch (error) {
       console.error("Error fetching edit history:", error);
     }
@@ -369,11 +369,12 @@ export const EmployeeProfileDialog = ({
     if (!currentUser || oldValue === newValue) return;
 
     try {
-      await supabase.rpc("log_profile_edit", {
+      await (supabase.rpc as any)("log_profile_edit", {
         p_profile_id: currentUser.id,
         p_field_name: fieldName,
         p_old_value: oldValue?.toString() || null,
         p_new_value: newValue?.toString() || null,
+        p_changes: {},
       });
     } catch (error) {
       console.error("Error logging field change:", error);

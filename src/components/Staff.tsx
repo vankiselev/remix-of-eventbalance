@@ -112,7 +112,7 @@ const Staff = () => {
     });
 
     const cashMap = new Map();
-    cashTotals.forEach((cash: any) => {
+    (cashTotals as any[]).forEach((cash: any) => {
       cashMap.set(cash.user_id, {
         total_cash: cash.total_cash,
         cash_nastya: cash.cash_nastya,
@@ -122,7 +122,7 @@ const Staff = () => {
     });
 
     // Объединяем данные
-    return profiles.map((profile: any) => {
+    return (profiles as any[]).map((profile: any) => {
       const employeeData = employeeMap.get(profile.id);
       const cashData = cashMap.get(profile.id);
       
@@ -180,7 +180,7 @@ const Staff = () => {
         hire_date: formData.hire_date,
       };
 
-      const { error } = await supabase.from("employees").insert(employeeData);
+      const { error } = await (supabase.from("employees") as any).insert(employeeData);
 
       if (error) throw error;
 
@@ -265,8 +265,8 @@ const Staff = () => {
         if (error) throw error;
       } else {
         // Создаем новую запись сотрудника, если её нет
-        const { error } = await supabase
-          .from('employees')
+        const { error } = await (supabase
+          .from('employees') as any)
           .insert({
             user_id: userId,
             position: 'Не указано',
@@ -362,7 +362,7 @@ const Staff = () => {
                       <SelectValue placeholder="Выберите пользователя" />
                     </SelectTrigger>
                     <SelectContent>
-                      {profiles.filter(p => p.employment_status === 'active').map((profile) => (
+                      {(profiles as any[]).filter((p: any) => p.employment_status === 'active').map((profile: any) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.full_name} ({profile.email})
                         </SelectItem>
