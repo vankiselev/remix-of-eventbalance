@@ -1,124 +1,121 @@
 
-# GitHub Actions для автодеплоя Edge Functions на Self-Hosted Supabase
+# План: Посадочная страница EventBalance
 
-## Текущая ситуация
+## Обзор
 
-- Есть `deploy-migrations.yml` для деплоя SQL миграций через Docker exec
-- Self-hosted runner уже настроен и работает
-- 16 Edge Functions в `supabase/functions/`
-- Supabase запущен через Docker Compose на сервере `superbag.eventbalance.ru`
+Создание полноценной маркетинговой посадочной страницы в стиле крупных CRM-систем (Bitrix24, AmoCRM, Salesforce). Публичная страница с описанием продукта и кнопкой входа в панель управления.
 
----
-
-## Решение
-
-Создать новый workflow `.github/workflows/deploy-functions.yml`, который будет деплоить Edge Functions напрямую в контейнер Supabase Edge Runtime.
-
----
-
-## Архитектура деплоя
+## Архитектура
 
 ```text
-GitHub Push --> Self-Hosted Runner --> Docker контейнеры Supabase
-                     |
-                     +--> Копирование функций в volume
-                     +--> Перезапуск edge-runtime контейнера
+Текущая структура:
+/ → redirect → /dashboard (требует авторизации)
+
+Новая структура:
+/ → LandingPage (публичная)
+    ├── Header с "Войти" → /auth
+    ├── Hero секция
+    ├── Функции продукта
+    ├── Скриншоты/Демо
+    ├── Тарифы (опционально)
+    ├── FAQ
+    └── Footer с контактами
+
+/auth → Страница авторизации (без изменений)
+/dashboard → Панель управления (защищённая)
 ```
 
----
+## Секции лендинга
 
-## Файлы для создания
+### 1. Header (Шапка)
+- Логотип EventBalance слева
+- Навигация по секциям (Функции, Тарифы, FAQ)
+- Кнопка "Войти" справа → переход на /auth
+- Sticky при скролле
 
-### `.github/workflows/deploy-functions.yml`
+### 2. Hero (Главный экран)
+- Крупный заголовок: "Управляйте мероприятиями легко"
+- Подзаголовок с ценностным предложением
+- CTA кнопка "Начать работу" → /auth
+- Иллюстрация или скриншот дашборда
 
-Новый workflow со следующей логикой:
+### 3. Features (Функции)
+Карточки с иконками:
+- Мероприятия и календарь
+- Финансовый учёт
+- Управление командой
+- Контакты и клиенты
+- Отчёты и аналитика
+- Склад (coming soon)
 
-1. **Триггеры**:
-   - Push в `main` при изменениях в `supabase/functions/**`
-   - Ручной запуск через `workflow_dispatch`
+### 4. Screenshots (Скриншоты)
+- Галерея скриншотов интерфейса
+- Или интерактивная демо-секция
+- Плейсхолдеры для реальных скриншотов
 
-2. **Шаги деплоя**:
-   - Checkout кода
-   - Определение имени контейнера Edge Runtime (обычно `supabase-edge-functions` или `supabase-functions`)
-   - Копирование функций в Docker volume
-   - Перезапуск контейнера для применения изменений
+### 5. Pricing (Тарифы)
+- Карточки тарифных планов
+- Или блок "Свяжитесь для получения доступа"
 
-3. **Tracking**: Логирование каких функций было задеплоено
+### 6. FAQ
+- Аккордеон с частыми вопросами
+- Как получить доступ?
+- Для каких мероприятий подходит?
+- Безопасность данных
 
----
+### 7. Footer
+- Логотип
+- Контакты
+- Ссылки на соцсети
+- Copyright
 
-## Техническая реализация
+## Технические детали
 
-Workflow будет:
-
-```yaml
-name: Deploy Edge Functions
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/**'
-  workflow_dispatch:
-
-jobs:
-  deploy-functions:
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      
-      - name: Deploy functions to Supabase
-        run: |
-          # Найти контейнер edge-runtime
-          CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'edge|functions' | head -1)
-          
-          # Скопировать функции в volume
-          docker cp supabase/functions/. $CONTAINER:/home/deno/functions/
-          
-          # Перезапустить для применения
-          docker restart $CONTAINER
+### Новые файлы:
+```
+src/pages/LandingPage.tsx           # Главная страница
+src/components/landing/
+  ├── LandingHeader.tsx             # Шапка с навигацией
+  ├── HeroSection.tsx               # Главный экран
+  ├── FeaturesSection.tsx           # Блок функций
+  ├── ScreenshotsSection.tsx        # Галерея скриншотов
+  ├── PricingSection.tsx            # Тарифы
+  ├── FAQSection.tsx                # Вопросы и ответы
+  └── LandingFooter.tsx             # Подвал
 ```
 
----
+### Изменения в существующих файлах:
+1. **src/App.tsx** - изменить роут `/` с redirect на `<LandingPage />`
+2. **src/pages/Auth.tsx** - добавить кнопку "Назад на главную"
 
-## Необходимая информация
+### Стилизация:
+- Использование существующей цветовой схемы (primary blue #2563EB)
+- Плавные анимации при скролле (animate-fade-in)
+- Адаптивный дизайн (mobile-first)
+- Современный градиентный фон для Hero
 
-Для точной настройки мне нужно знать:
+### Навигация:
+- Smooth scroll к секциям по клику на ссылки в Header
+- Кнопка "Войти" ведёт на /auth
+- Авторизованные пользователи автоматически перенаправляются на /dashboard
 
-1. **Имя контейнера Edge Runtime** - как называется контейнер с функциями?
-   Проверь командой: `docker ps | grep -E 'edge|functions'`
+## Этапы реализации
 
-2. **Путь к функциям в контейнере** - куда монтируются функции?
-   Обычно это `/home/deno/functions/` или `/app/functions/`
+1. Создание структуры компонентов landing/
+2. Реализация LandingHeader с навигацией
+3. Реализация HeroSection с CTA
+4. Реализация FeaturesSection с карточками
+5. Реализация ScreenshotsSection (плейсхолдеры)
+6. Реализация PricingSection
+7. Реализация FAQSection с Accordion
+8. Реализация LandingFooter
+9. Сборка LandingPage.tsx
+10. Обновление роутинга в App.tsx
+11. Добавление кнопки "На главную" в Auth.tsx
 
-3. **Структура docker-compose.yml** - как организован сервис edge-functions?
+## Примечания
 
----
-
-## Альтернативный вариант (без перезапуска)
-
-Если Supabase edge-runtime поддерживает hot-reload, достаточно:
-
-```bash
-docker cp supabase/functions/. container:/path/to/functions/
-```
-
-Без перезапуска контейнера.
-
----
-
-## Секреты для GitHub Actions
-
-Добавить в настройках репозитория `Settings > Secrets`:
-
-- `GOOGLE_AI_API_KEY` - для передачи в контейнер (если нужно обновлять секреты)
-
----
-
-## Следующие шаги
-
-1. Узнать имя контейнера Edge Runtime на сервере
-2. Узнать путь монтирования функций
-3. Создать workflow файл
-4. Протестировать деплой
+- Скриншоты можно добавить позже вручную
+- Тексты можно будет легко редактировать
+- Все компоненты будут использовать существующие UI-компоненты (Button, Card, Accordion)
+- Логотип уже есть в public/logo.png
