@@ -37,6 +37,7 @@ interface NavItem {
   badge?: number;
   adminOnly?: boolean;
   financierOnly?: boolean;
+  inDevelopment?: boolean;
 }
 
 interface NavGroup {
@@ -72,7 +73,7 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
         { path: "/events", label: "Мероприятия", icon: CalendarDays },
         { path: "/calendar", label: "Календарь", icon: Calendar },
         { path: "/reports", label: "Отчет по мероприятию", icon: FileText },
-        { path: "/tasks", label: "Мои задачи", icon: ListChecks, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined },
+        { path: "/tasks", label: "Мои задачи", icon: ListChecks, badge: pendingTasksCount > 0 ? pendingTasksCount : undefined, adminOnly: true, inDevelopment: true },
         { path: "/staff", label: "Сотрудники", icon: UsersRound },
         { path: "/birthdays", label: "Дни рождения", icon: Cake },
         { path: "/vacations", label: "Отпуска", icon: Plane },
@@ -146,11 +147,15 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
                     onClick={() => navigate(item.path)}
                     className={cn(
                       "cursor-pointer gap-2",
-                      isActive(item.path) && "bg-primary/10 text-primary font-medium"
+                      isActive(item.path) && "bg-primary/10 text-primary font-medium",
+                      item.inDevelopment && "border border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-600"
                     )}
                   >
                     <Icon className="h-4 w-4" />
                     <span className="flex-1">{item.label}</span>
+                    {item.inDevelopment && (
+                      <span className="text-[10px] text-yellow-600 dark:text-yellow-400">β</span>
+                    )}
                     {item.badge && item.badge > 0 && (
                       <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
                         {item.badge}
@@ -164,19 +169,21 @@ export const TopNavigation = ({ isAdmin }: TopNavigationProps) => {
         );
       })}
 
-      {/* Склад - direct link */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate("/warehouse")}
-        className={cn(
-          "h-9 px-3 font-medium text-sm",
-          isActive("/warehouse") && "bg-accent text-accent-foreground"
-        )}
-      >
-        <Package className="h-4 w-4 mr-1.5" />
-        Склад
-      </Button>
+      {/* Склад - only for admins, in development */}
+      {isAdmin && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/warehouse")}
+          className={cn(
+            "h-9 px-3 font-medium text-sm border border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-600",
+            isActive("/warehouse") && "bg-yellow-200 dark:bg-yellow-900/40"
+          )}
+        >
+          <Package className="h-4 w-4 mr-1.5" />
+          Склад
+        </Button>
+      )}
 
       {/* Админ - only for admins */}
       {isAdmin && (
