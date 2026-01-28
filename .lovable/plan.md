@@ -1,55 +1,74 @@
 
-# План: Исправление отправки приглашений с tenant_id
+# План: Исправление выбора тенанта для legacy маршрутов
 
 ## Проблема
-При отправке приглашения новому сотруднику возникает ошибка:
-```
-null value in column "tenant_id" of relation "invitations" violates not-null constraint
-```
+При переходе на страницу `/administration` (legacy маршрут без tenant slug в URL) система не может определить текущий тенант:
+- URL `/administration` не содержит slug тенанта
+- `TenantContext` возвращает `currentTenant = null`
+- Приглашения не могут быть отправлены без `tenant_id`
 
-Таблица `invitations` требует обязательное поле `tenant_id`, но код в `InviteUserDialog` не передаёт это значение при создании приглашения.
-
-## Решение
-Обновить компонент `InviteUserDialog`, чтобы он:
-1. Использовал хук `useTenant()` для получения текущего тенанта
-2. Передавал `tenant_id` при вставке записи в таблицу `invitations`
-3. Проверял наличие активного тенанта перед отправкой приглашения
-
-## Технические изменения
-
-### Файл: src/components/admin/InviteUserDialog.tsx
-
-1. Добавить импорт `useTenant`:
+## Причина
+В `TenantContext.tsx` на строках 168-173 логика автовыбора тенанта:
 ```typescript
-import { useTenant } from "@/contexts/TenantContext";
-```
-
-2. Получить `currentTenant` в компоненте:
-```typescript
-const { currentTenant } = useTenant();
-```
-
-3. Добавить проверку наличия тенанта в начале функции `onSubmit`:
-```typescript
-if (!currentTenant) {
-  toast({
-    title: "Ошибка",
-    description: "Не выбрана компания для приглашения",
-    variant: "destructive",
-  });
-  return;
+} else if (memberships.length === 1 && memberships[0].tenant) {
+  // Auto-select if user has only one tenant
+  setCurrentTenantState(memberships[0].tenant);
+} else {
+  setCurrentTenantState(null);
 }
 ```
 
-4. Добавить `tenant_id` в запрос на вставку приглашения (строка 85):
+Проблемы:
+1. Автовыбор работает только при ровно 1 членстве
+2. `last_tenant_slug` сохраняется в localStorage, но НЕ восстанавливается при загрузке
+3. Нет fallback для пользователей с несколькими тенантами
+
+## Решение
+Улучшить логику `TenantContext` для поддержки legacy маршрутов:
+
+1. При отсутствии slug в URL - пытаться восстановить из localStorage
+2. Если в localStorage есть `last_tenant_slug` - использовать его
+3. Если нет - автоматически выбирать первый доступный тенант
+4. Показывать предупреждение если тенантов нет
+
+## Технические изменения
+
+### Файл: src/contexts/TenantContext.tsx
+
+Изменить блок кода в `fetchMemberships` (строки 138-173):
+
 ```typescript
-.insert({
-  email: data.email,
-  role: 'employee',
-  first_name: data.firstName || null,
-  last_name: data.lastName || null,
-  invited_by: (await supabase.auth.getUser()).data.user?.id!,
-  token_hash: '',
-  tenant_id: currentTenant.id,  // Добавить эту строку
-})
+// Determine current tenant from URL
+const urlSlug = getTenantSlugFromUrl();
+
+if (urlSlug) {
+  // Existing logic for URL-based tenant selection
+  // ...
+} else {
+  // No tenant in URL - use fallback logic
+  const savedSlug = localStorage.getItem('last_tenant_slug');
+  
+  if (savedSlug) {
+    // Try to restore from localStorage
+    const savedMembership = memberships.find(m => m.tenant?.slug === savedSlug);
+    if (savedMembership?.tenant) {
+      setCurrentTenantState(savedMembership.tenant);
+      return;
+    }
+  }
+  
+  // Fallback: select first available active tenant
+  const firstActiveMembership = memberships.find(m => m.status === 'active' && m.tenant);
+  if (firstActiveMembership?.tenant) {
+    setCurrentTenantState(firstActiveMembership.tenant);
+    localStorage.setItem('last_tenant_slug', firstActiveMembership.tenant.slug);
+  } else {
+    setCurrentTenantState(null);
+  }
+}
 ```
+
+## Ожидаемый результат
+- Пользователи на legacy маршрутах автоматически получат выбранный тенант
+- Последний использованный тенант сохраняется между сессиями
+- Приглашения будут отправляться с корректным `tenant_id`
