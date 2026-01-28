@@ -41,7 +41,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 // Reserved slugs that cannot be used by tenants
-const RESERVED_SLUGS = ['auth', 'register', 'admin', 'api', 'awaiting-invitation'];
+const RESERVED_SLUGS = ['auth', 'register', 'admin', 'api', 'awaiting-invitation', 'administration', 'dashboard', 'settings', 'profile'];
 
 export const useTenant = () => {
   const context = useContext(TenantContext);
