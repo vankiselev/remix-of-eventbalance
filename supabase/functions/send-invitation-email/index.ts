@@ -69,14 +69,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseClient
-      .rpc('get_user_basic_profile')
-      .single();
+    // Check if user has admin role or is tenant owner using RPC
+    const { data: isAdmin, error: roleError } = await supabaseClient
+      .rpc('has_role', { _user_id: user.id, _role: 'admin' });
     
-    if (!profile || profile.role !== 'admin') {
+    // Also check tenant membership for owners
+    const { data: memberships } = await supabaseClient
+      .rpc('get_user_tenant_memberships');
+    
+    const isOwner = Array.isArray(memberships) && memberships.some((m: any) => m.is_owner);
+    
+    if (roleError) {
+      console.error("Role check error:", roleError);
+    }
+    
+    if (!isAdmin && !isOwner) {
       return new Response(
-        JSON.stringify({ error: 'Требуются права администратора' }),
+        JSON.stringify({ error: 'Требуются права администратора или владельца компании' }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
