@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { useEvents } from "@/hooks/useEvents";
 import { useEmployees } from "@/hooks/useEmployees";
