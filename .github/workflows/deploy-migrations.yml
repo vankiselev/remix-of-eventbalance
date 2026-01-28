@@ -81,12 +81,12 @@ jobs:
             echo ""
 
             # Execute migration directly via psql in Docker container
-            if docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration" > /tmp/psql_output.txt 2>&1; then
+            if docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration" > "$RUNNER_TEMP/psql_output.txt" 2>&1; then
               echo "✅ Success: $migration_name"
-              
+
               # Show any notices or output
-              if [ -s /tmp/psql_output.txt ]; then
-                cat /tmp/psql_output.txt | grep -v "^$" | sed 's/^/   /'
+              if [ -s "$RUNNER_TEMP/psql_output.txt" ]; then
+                cat "$RUNNER_TEMP/psql_output.txt" | grep -v "^$" | sed 's/^/   /'
               fi
               
               # Record successful migration
@@ -96,7 +96,7 @@ jobs:
             else
               echo "❌ Failed: $migration_name"
               echo "   Error output:"
-              cat /tmp/psql_output.txt | sed 's/^/   /'
+              cat "$RUNNER_TEMP/psql_output.txt" | sed 's/^/   /'
               echo ""
               echo "Migration file content (first 20 lines):"
               head -n 20 "$migration" | sed 's/^/   /'
