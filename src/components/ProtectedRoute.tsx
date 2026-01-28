@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isPendingInvitation } = useAuth();
 
   if (loading) {
     return (
@@ -19,6 +19,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Редирект для пользователей ожидающих приглашения
+  if (isPendingInvitation) {
+    return <Navigate to="/awaiting-invitation" replace />;
   }
 
   return <>{children}</>;

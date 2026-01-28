@@ -12,6 +12,7 @@ import AdminRoute from "@/components/AdminRoute";
 import Auth from "./pages/Auth";
 import { InvitePage } from "./pages/InvitePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import AwaitingInvitationPage from "./pages/AwaitingInvitationPage";
 import NotFound from "./pages/NotFound";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
@@ -155,6 +156,7 @@ const App = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/awaiting-invitation" element={<AwaitingInvitationPage />} />
             
             {/* Public pages */}
             <Route path="/" element={<LandingPage />} />

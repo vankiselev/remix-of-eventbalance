@@ -22,10 +22,12 @@ interface AuthContextType {
     first_name?: string;
     middle_name?: string;
     avatar_url: string | null;
+    invitation_status?: string;
   } | null;
   rbacRoles: RbacRole[];
   permissions: string[];
   isAdmin: boolean;
+  isPendingInvitation: boolean;
   hasPermission: (code: string) => boolean;
   signOut: () => Promise<void>;
   refetchUserData: () => Promise<void>;
@@ -56,10 +58,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     first_name?: string;
     middle_name?: string;
     avatar_url: string | null;
+    invitation_status?: string;
   } | null>(null);
   const [rbacRoles, setRbacRoles] = useState<RbacRole[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPendingInvitation, setIsPendingInvitation] = useState(false);
 
   // Load cached data immediately
   const loadFromCache = () => {
@@ -143,17 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Set profile data
         if (profileData.profile) {
           const adminStatus = profileData.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
+          const pendingStatus = profileData.profile.invitation_status === 'pending';
+          
           setUserRole(adminStatus ? 'admin' : (profileData.profile.role || 'employee'));
           setUserProfile({
             full_name: formatFullName(profileData.profile),
             last_name: profileData.profile.last_name,
             first_name: profileData.profile.first_name,
             middle_name: profileData.profile.middle_name,
-            avatar_url: profileData.profile.avatar_url || null
+            avatar_url: profileData.profile.avatar_url || null,
+            invitation_status: profileData.profile.invitation_status
           });
           setRbacRoles(profileData.rbac_roles || []);
           setPermissions(profileData.permissions || []);
           setIsAdmin(adminStatus);
+          setIsPendingInvitation(pendingStatus);
           setUserRoleName(profileData.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'));
         }
 
@@ -252,6 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRbacRoles([]);
       setPermissions([]);
       setIsAdmin(false);
+      setIsPendingInvitation(false);
       localStorage.removeItem(CACHE_KEY);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -277,6 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     rbacRoles,
     permissions,
     isAdmin,
+    isPendingInvitation,
     hasPermission,
     signOut,
     refetchUserData,
