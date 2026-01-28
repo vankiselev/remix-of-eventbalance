@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@4.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { getSystemSecrets } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,13 +81,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check environment variables
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const siteUrl = Deno.env.get("SITE_URL");
+    // Get secrets from database
+    const secrets = await getSystemSecrets(['RESEND_API_KEY', 'SITE_URL']);
+    const resendApiKey = secrets['RESEND_API_KEY'];
+    const siteUrl = secrets['SITE_URL'];
 
     if (!resendApiKey) {
-      throw new Error("RESEND_API_KEY is not configured");
+      throw new Error("RESEND_API_KEY is not configured in system_secrets");
     }
+
+    const resend = new Resend(resendApiKey);
 
     const { email, token, firstName, lastName, role, roleName }: InvitationEmailRequest = await req.json();
     

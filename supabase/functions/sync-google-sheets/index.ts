@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getSystemSecret } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,9 +91,9 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
+    const apiKey = await getSystemSecret('GOOGLE_SHEETS_API_KEY');
     if (!apiKey) {
-      throw new Error('Google Sheets API key not configured')
+      throw new Error('Google Sheets API key not configured in system_secrets')
     }
 
     console.log(`Starting sync for ${month} ${year} from sheet ${sheetId}`)

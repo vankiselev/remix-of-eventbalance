@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { getSystemSecrets } from "../_shared/secrets.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,17 +48,18 @@ serve(async (req) => {
   }
 
   try {
-    // Check environment variables
-    const siteUrl = Deno.env.get('SITE_URL');
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    // Get secrets from database
+    const secrets = await getSystemSecrets(['RESEND_API_KEY', 'SITE_URL']);
+    const resendApiKey = secrets['RESEND_API_KEY'];
+    const siteUrl = secrets['SITE_URL'];
     
-    console.log('Environment check:', {
-      hasSiteUrl: !!siteUrl,
+    console.log('Secrets check:', {
       hasResendApiKey: !!resendApiKey,
+      hasSiteUrl: !!siteUrl,
     });
 
     if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY is not configured');
+      throw new Error('RESEND_API_KEY is not configured in system_secrets');
     }
 
     const supabaseClient = createClient(
@@ -183,7 +185,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
         from: 'EventBalance <noreply@eventbalance.ru>',
