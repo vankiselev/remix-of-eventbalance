@@ -1,165 +1,124 @@
 
-# Миграция Edge Functions с Lovable AI Gateway на Google AI API
+# GitHub Actions для автодеплоя Edge Functions на Self-Hosted Supabase
 
 ## Текущая ситуация
 
-Три Edge Functions используют Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`):
-- `check-transaction-description` - проверка орфографии/грамматики
-- `suggest-transaction-fields` - автоподбор категории и проекта
-- `voice-transaction` - парсинг голосовых команд
-
-Поскольку проект использует self-hosted Supabase сервер, `LOVABLE_API_KEY` недоступен - этот ключ работает только на инфраструктуре Lovable.
+- Есть `deploy-migrations.yml` для деплоя SQL миграций через Docker exec
+- Self-hosted runner уже настроен и работает
+- 16 Edge Functions в `supabase/functions/`
+- Supabase запущен через Docker Compose на сервере `superbag.eventbalance.ru`
 
 ---
 
 ## Решение
 
-Переключить все Edge Functions на прямой Google AI API (Gemini).
+Создать новый workflow `.github/workflows/deploy-functions.yml`, который будет деплоить Edge Functions напрямую в контейнер Supabase Edge Runtime.
 
 ---
 
-## Необходимые действия
+## Архитектура деплоя
 
-### 1. Получить API ключ Google AI
-
-1. Перейти на https://aistudio.google.com/apikey
-2. Создать новый API ключ для Gemini
-3. Добавить ключ в секреты Supabase:
-   ```bash
-   supabase secrets set GOOGLE_AI_API_KEY=your_api_key_here
-   ```
-
-### 2. Изменения в Edge Functions
-
-Все функции используют одинаковый паттерн:
-- **Заменить URL**: `https://ai.gateway.lovable.dev/v1/chat/completions` на `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
-- **Заменить ключ**: `LOVABLE_API_KEY` на `GOOGLE_AI_API_KEY`
-- **Адаптировать формат запроса и ответа**
-
----
-
-## Техническая информация
-
-### Формат запроса - до (Lovable AI Gateway)
-```typescript
-const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ],
-  }),
-});
-
-const data = await response.json();
-const content = data.choices?.[0]?.message?.content;
-```
-
-### Формат запроса - после (Google AI API)
-```typescript
-const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-    }),
-  }
-);
-
-const data = await response.json();
-const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-```
-
-### Tool Calling (для check-transaction-description)
-```typescript
-body: JSON.stringify({
-  systemInstruction: { parts: [{ text: systemPrompt }] },
-  contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-  tools: [{
-    functionDeclarations: [{
-      name: "report_text_corrections",
-      description: "Report spelling and grammar corrections",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          has_errors: { type: "BOOLEAN" },
-          corrected_text: { type: "STRING" },
-          errors: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                original: { type: "STRING" },
-                correction: { type: "STRING" },
-                type: { type: "STRING" }
-              }
-            }
-          }
-        },
-        required: ["has_errors", "corrected_text", "errors"]
-      }
-    }]
-  }],
-  toolConfig: { functionCallingConfig: { mode: "ANY" } }
-})
-
-// Извлечение результата
-const functionCall = data.candidates?.[0]?.content?.parts?.[0]?.functionCall;
-const result = functionCall?.args;
+```text
+GitHub Push --> Self-Hosted Runner --> Docker контейнеры Supabase
+                     |
+                     +--> Копирование функций в volume
+                     +--> Перезапуск edge-runtime контейнера
 ```
 
 ---
 
-## Изменяемые файлы
+## Файлы для создания
 
-### 1. `supabase/functions/check-transaction-description/index.ts`
-- Заменить Lovable AI Gateway на Google AI API
-- Адаптировать tool calling под формат Gemini
+### `.github/workflows/deploy-functions.yml`
 
-### 2. `supabase/functions/suggest-transaction-fields/index.ts`
-- Заменить URL и формат запроса
-- Адаптировать парсинг ответа
+Новый workflow со следующей логикой:
 
-### 3. `supabase/functions/voice-transaction/index.ts`
-- Заменить 4 места с вызовами AI API:
-  - Simple mode parsing (строки ~332-357)
-  - Step 1 parsing (строки ~489-524)
-  - Step 2 project search (строки ~620-647)
-  - Возможно step 3 если есть AI вызовы
+1. **Триггеры**:
+   - Push в `main` при изменениях в `supabase/functions/**`
+   - Ручной запуск через `workflow_dispatch`
 
----
+2. **Шаги деплоя**:
+   - Checkout кода
+   - Определение имени контейнера Edge Runtime (обычно `supabase-edge-functions` или `supabase-functions`)
+   - Копирование функций в Docker volume
+   - Перезапуск контейнера для применения изменений
 
-## Преимущества Google AI API
-
-| Параметр | Lovable AI Gateway | Google AI API |
-|----------|-------------------|---------------|
-| Доступность | Только Lovable infra | Любой сервер |
-| Модель | gemini-2.5-flash | gemini-2.0-flash (новее) |
-| Бесплатный лимит | Через кредиты Lovable | 15 RPM, 1M токенов/мин бесплатно |
-| Контроль | Через Lovable | Прямой доступ |
+3. **Tracking**: Логирование каких функций было задеплоено
 
 ---
 
-## Пошаговый процесс
+## Техническая реализация
 
-1. Создать Google AI API ключ на https://aistudio.google.com/apikey
-2. Добавить секрет в Supabase: `supabase secrets set GOOGLE_AI_API_KEY=...`
-3. Обновить три Edge Functions с новым форматом API
-4. Задеплоить функции: `supabase functions deploy`
-5. Протестировать функционал
+Workflow будет:
+
+```yaml
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-functions:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Deploy functions to Supabase
+        run: |
+          # Найти контейнер edge-runtime
+          CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'edge|functions' | head -1)
+          
+          # Скопировать функции в volume
+          docker cp supabase/functions/. $CONTAINER:/home/deno/functions/
+          
+          # Перезапустить для применения
+          docker restart $CONTAINER
+```
 
 ---
 
-## Важно
+## Необходимая информация
 
-После добавления API ключа сообщи мне, и я обновлю все три Edge Functions.
+Для точной настройки мне нужно знать:
+
+1. **Имя контейнера Edge Runtime** - как называется контейнер с функциями?
+   Проверь командой: `docker ps | grep -E 'edge|functions'`
+
+2. **Путь к функциям в контейнере** - куда монтируются функции?
+   Обычно это `/home/deno/functions/` или `/app/functions/`
+
+3. **Структура docker-compose.yml** - как организован сервис edge-functions?
+
+---
+
+## Альтернативный вариант (без перезапуска)
+
+Если Supabase edge-runtime поддерживает hot-reload, достаточно:
+
+```bash
+docker cp supabase/functions/. container:/path/to/functions/
+```
+
+Без перезапуска контейнера.
+
+---
+
+## Секреты для GitHub Actions
+
+Добавить в настройках репозитория `Settings > Secrets`:
+
+- `GOOGLE_AI_API_KEY` - для передачи в контейнер (если нужно обновлять секреты)
+
+---
+
+## Следующие шаги
+
+1. Узнать имя контейнера Edge Runtime на сервере
+2. Узнать путь монтирования функций
+3. Создать workflow файл
+4. Протестировать деплой
