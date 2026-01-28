@@ -15,25 +15,41 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
-      - name: Find Edge Runtime container
-        id: find-container
+      - name: Find Edge Runtime container + functions path
+        id: find-target
         run: |
-          echo "🔍 Looking for Edge Runtime container..."
-          
-          # Try different possible container names
-          CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'supabase-edge-functions|edge-runtime|functions' | head -1)
-          
-          if [ -z "$CONTAINER" ]; then
-            echo "❌ Edge Runtime container not found"
-            echo "Available containers:"
+          echo "🔍 Looking for Edge Runtime container and functions directory..."
+
+          # Candidate containers (self-hosted Supabase names vary)
+          CANDIDATES=$(docker ps --format '{{.Names}}' | grep -E 'supabase|edge|runtime|functions' || true)
+
+          if [ -z "$CANDIDATES" ]; then
+            echo "❌ No candidate containers found"
             docker ps --format '{{.Names}}'
             exit 1
           fi
-          
-          echo "✅ Found container: $CONTAINER"
-          echo "container=$CONTAINER" >> $GITHUB_OUTPUT
+
+          # Known functions mount points
+          PATHS="/home/deno/functions /app/functions /var/lib/supabase/functions"
+
+          for c in $CANDIDATES; do
+            for p in $PATHS; do
+              if docker exec "$c" sh -lc "test -d '$p'" >/dev/null 2>&1; then
+                echo "✅ Using container: $c"
+                echo "✅ Functions path: $p"
+                echo "container=$c" >> $GITHUB_OUTPUT
+                echo "functions_path=$p" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            done
+          done
+
+          echo "❌ Could not find an Edge Runtime container with a functions directory."
+          echo "Candidates were:"
+          echo "$CANDIDATES" | sed 's/^/  - /'
+          exit 1
       
       - name: List functions to deploy
         run: |
@@ -46,13 +62,16 @@ jobs:
       
       - name: Deploy functions to container
         run: |
-          CONTAINER="${{ steps.find-container.outputs.container }}"
+          CONTAINER="${{ steps.find-target.outputs.container }}"
+          TARGET="${{ steps.find-target.outputs.functions_path }}"
           
-          echo "🚀 Deploying functions to $CONTAINER..."
+          echo "🚀 Deploying functions to $CONTAINER -> $TARGET ..."
           
-          # Copy all functions to the container
-          # Standard Supabase path is /home/deno/functions/
-          docker cp supabase/functions/. $CONTAINER:/home/deno/functions/
+          # Ensure target exists
+          docker exec "$CONTAINER" sh -lc "mkdir -p '$TARGET'"
+
+          # Copy all functions to the container (folders + deno.json)
+          docker cp supabase/functions/. "$CONTAINER:$TARGET/"
           
           if [ $? -eq 0 ]; then
             echo "✅ Functions copied successfully"
@@ -63,7 +82,7 @@ jobs:
       
       - name: Restart Edge Runtime
         run: |
-          CONTAINER="${{ steps.find-container.outputs.container }}"
+          CONTAINER="${{ steps.find-target.outputs.container }}"
           
           echo "🔄 Restarting $CONTAINER to apply changes..."
           docker restart $CONTAINER
@@ -82,10 +101,40 @@ jobs:
       
       - name: Verify deployment
         run: |
-          CONTAINER="${{ steps.find-container.outputs.container }}"
+          CONTAINER="${{ steps.find-target.outputs.container }}"
+          TARGET="${{ steps.find-target.outputs.functions_path }}"
           
           echo "🔍 Verifying deployed functions..."
-          docker exec $CONTAINER ls -la /home/deno/functions/ 2>/dev/null || echo "⚠️ Could not list functions in container"
+
+          # Basic listing
+          docker exec "$CONTAINER" sh -lc "ls -la '$TARGET'" 2>/dev/null || echo "⚠️ Could not list functions directory in container"
+
+          # Ensure required entrypoints exist (prevents 'could not find an appropriate entrypoint')
+          REQUIRED_FUNCS="check-transaction-description suggest-transaction-fields voice-transaction"
+          MISSING=0
+          for fn in $REQUIRED_FUNCS; do
+            if ! docker exec "$CONTAINER" sh -lc "test -f '$TARGET/$fn/index.ts'" >/dev/null 2>&1; then
+              echo "❌ Missing entrypoint: $TARGET/$fn/index.ts"
+              MISSING=1
+            else
+              echo "✅ Entrypoint OK: $fn/index.ts"
+            fi
+          done
+
+          # Ensure Google AI key is present (do NOT print the value)
+          if ! docker exec "$CONTAINER" sh -lc "[ -n \"\${GOOGLE_AI_API_KEY:-}\" ]" >/dev/null 2>&1; then
+            echo "❌ GOOGLE_AI_API_KEY is not set in the Edge Runtime container environment"
+            MISSING=1
+          else
+            echo "✅ GOOGLE_AI_API_KEY is set"
+          fi
+
+          if [ "$MISSING" -ne 0 ]; then
+            echo ""
+            echo "🔎 Debug tree (index files):"
+            docker exec "$CONTAINER" sh -lc "find '$TARGET' -maxdepth 2 -type f -name 'index.*' -print" || true
+            exit 1
+          fi
           
           echo ""
           echo "🎉 Edge Functions deployment complete!"
