@@ -16,7 +16,7 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import AwaitingInvitationPage from "./pages/AwaitingInvitationPage";
 import NotFound from "./pages/NotFound";
 import DashboardPage from "./pages/DashboardPage";
-import LandingPage from "./pages/LandingPage";
+
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfUsePage from "./pages/TermsOfUsePage";
 import FinancesPage from "./pages/FinancesPage";
