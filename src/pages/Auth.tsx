@@ -353,9 +353,6 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
-                    minLength={6}
-                  />
-                </div>
                 
                 {/* Согласие с политикой конфиденциальности (ФЗ-152) */}
                 <div className="flex items-start space-x-2">
