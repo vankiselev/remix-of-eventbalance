@@ -163,8 +163,8 @@ const App = () => {
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/awaiting-invitation" element={<AwaitingInvitationPage />} />
                     
-                    {/* Public pages */}
-                    <Route path="/" element={<LandingPage />} />
+                    {/* Root redirects to dashboard (ProtectedRoute will redirect to /auth if not logged in) */}
+                    <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                     <Route path="/terms" element={<TermsOfUsePage />} />
                     
