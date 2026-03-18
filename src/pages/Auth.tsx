@@ -203,15 +203,6 @@ const Auth = () => {
   if (registrationSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        {/* Back to landing button */}
-        <div className="fixed top-4 left-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              На главную
-            </Link>
-          </Button>
-        </div>
 
         <Card className="w-full max-w-md text-center">
           <CardHeader className="space-y-4">
