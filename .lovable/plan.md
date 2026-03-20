@@ -1,41 +1,42 @@
 
 
-## Проблема
+## Управление компаниями в панели администрирования
 
-Хуки `useDescriptionChecker` и `useTransactionSuggestions` вызывают `supabase.functions.invoke(...)`, что отправляет запрос на self-hosted сервер (`superbag.eventbalance.ru`). Но edge-функции на self-hosted сервере не имеют `LOVABLE_API_KEY` для доступа к AI Gateway.
+### Проблема
 
-## Решение
+Сейчас управление компаниями спрятано на отдельной странице `/admin` (Суперадмин панель), а на странице `/administration` нет никакой информации о текущей компании. Пользователь не понимает, в какой "песочнице" он работает, и не может управлять компаниями из основного интерфейса.
 
-Изменить только два хука, чтобы они вызывали AI edge-функции напрямую на Lovable Cloud через `fetch()`. Всё остальное (авторизация, данные, транзакции) продолжает работать через self-hosted сервер как раньше.
+### Решение
 
-```text
-Было:
-  Браузер → supabase.functions.invoke() → self-hosted (нет AI ключа) → ❌
+Добавить вкладку "Компании" в страницу `/administration` со следующим функционалом:
 
-Станет:
-  Браузер → fetch() → Lovable Cloud (есть AI ключ) → AI Gateway → ✅
-  Браузер → supabase (всё остальное) → self-hosted → ✅
-```
+**1. Индикатор текущей компании (вверху страницы)**
+- Показать карточку текущей компании (название, slug, план) прямо на странице администрирования
+- Это сразу даст понять, в контексте какой компании работает админ
 
-### Что меняется
+**2. Новая вкладка "Компании" в AdministrationPage**
+- Список всех компаний (для суперадмина) или только своих (для обычного админа)
+- Карточка каждой компании: название, slug, план, количество участников, статус
+- Кнопка "Создать компанию" — вызывает edge-функцию `create-tenant`
+- Действия: переключиться на компанию, деактивировать, удалить
 
-**1. `src/hooks/useDescriptionChecker.ts`**
-- Заменить `supabase.functions.invoke('check-transaction-description', ...)` на `fetch('https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1/check-transaction-description', ...)`
-- Передать anon key Lovable Cloud в заголовке `apikey`
+**3. Форма создания компании (диалог)**
+- Поля: название компании, slug (адрес)
+- Валидация slug (латиница, цифры, дефисы)
+- Вызов существующей edge-функции `create-tenant`
 
-**2. `src/hooks/useTransactionSuggestions.ts`**
-- Аналогично — заменить `supabase.functions.invoke('suggest-transaction-fields', ...)` на `fetch()` на Lovable Cloud
+### Файлы
 
-**3. `supabase/functions/_shared/ai-proxy-client.ts`**
-- Упростить: оставить только direct mode с `LOVABLE_API_KEY` из env (proxy mode больше не нужен)
+| Файл | Действие |
+|---|---|
+| `src/components/admin/TenantsManagement.tsx` | Создать — компонент управления компаниями |
+| `src/components/admin/CreateTenantDialog.tsx` | Создать — диалог создания компании |
+| `src/pages/AdministrationPage.tsx` | Изменить — добавить вкладку "Компании" и индикатор текущей компании |
 
-**4. Удалить `supabase/functions/ai-proxy/index.ts`**
-- Прокси-функция больше не нужна
+### Техническая деталь
 
-### Что НЕ меняется
-
-- Self-hosted сервер — остаётся как есть
-- Авторизация — через self-hosted
-- Все данные и транзакции — через self-hosted
-- Файл `src/lib/supabase.ts` — без изменений
+- Список компаний загружается через `supabase.from('tenants')` (для суперадмина все, для обычного — через `tenant_memberships`)
+- Создание компании через существующую edge-функцию `create-tenant`
+- Переключение компании через `useTenant().setCurrentTenant()`
+- Страница `/admin` (SuperAdminPage) останется как есть для расширенного управления
 
