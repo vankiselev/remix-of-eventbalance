@@ -2,60 +2,56 @@
 
 ## Проблема
 
-При регистрации по приглашению данные (ФИО, телефон, дата рождения, аватар) не сохраняются в профиле. Две причины:
+Два уведомления не работают:
 
-1. **Триггер блокирует обновление профиля** — в edge function `register-invited-user` используется `adminClient` (service role), но триггер `prevent_unauthorized_profile_updates` проверяет `auth.uid()`, который для service role равен NULL. Триггер выбрасывает исключение, и UPDATE не применяется.
+1. **Админу о новой заявке**: Edge-функция `register-invited-user` ищет приглашение с `status = 'pending'`, но реальный статус в таблице `invitations` — `'sent'`. Из-за этого `invData = null`, и блок отправки уведомлений пропускается.
 
-2. **Аватар не загружается** — на странице `/invite` пользователь ещё не авторизован, а storage policy требует `auth.uid()` для загрузки. Upload тихо падает.
+2. **Пользователю об одобрении**: В `PendingUsersManagement.tsx` после нажатия "Пригласить" отправляется email, но уведомление (запись в таблицу `notifications`) для пользователя не создается.
+
+Дополнительно: avatar_url сохраняется как `http://kong:8000/...` (внутренний Docker URL) вместо публичного URL сервера.
 
 ## Решение
 
-### 1. Передавать данные через user_metadata при создании пользователя
+### 1. Исправить `register-invited-user` — фильтр статуса
 
-Вместо отдельного UPDATE после создания, передавать все поля (first_name, last_name, middle_name, phone, birth_date) в `user_metadata` при вызове `auth.admin.createUser`. Триггер `handle_new_user` уже читает из `raw_user_meta_data` — нужно расширить его, чтобы он также подхватывал phone, birth_date.
+**Файл: `supabase/functions/register-invited-user/index.ts`**
 
-**Файл: `migrations/` — новая миграция для обновления `handle_new_user`**
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user() ...
-  -- добавить: phone, birth_date, avatar_url из raw_user_meta_data
+Строка 105: заменить `.eq("status", "pending")` на `.eq("status", "sent")`
+
+### 2. Добавить уведомление пользователю при одобрении
+
+**Файл: `src/components/admin/PendingUsersManagement.tsx`**
+
+В `handleInviteUser`, после успешного обновления `invitation_status` и назначения роли, вставить уведомление:
+
+```typescript
+// После назначения роли (строка ~150)
+await supabase.from("notifications").insert({
+  user_id: user.id,
+  title: "Доступ одобрен",
+  message: "Ваш аккаунт активирован. Добро пожаловать в EventBalance!",
+  type: "system",
+});
 ```
 
-**Файл: `supabase/functions/register-invited-user/index.ts`**
-- Передать все поля в `user_metadata` при `createUser` (first_name, last_name, middle_name, phone, birth_date, avatar_url)
-- Убрать отдельный `profiles.update()` — данные будут вставлены триггером
-- Оставить `invitation_status` update отдельно (через adminClient, с обработкой ошибки)
-
-### 2. Перенести загрузку аватара в edge function
-
-Сейчас InvitePage пытается загрузить аватар через `supabase.storage` без авторизации — это не работает.
+### 3. Исправить avatar URL в edge function
 
 **Файл: `supabase/functions/register-invited-user/index.ts`**
-- Принимать аватар как base64 в теле запроса
-- Загружать через `adminClient.storage` (обходит RLS)
-- Возвращать publicUrl и сохранять в user_metadata
 
-**Файл: `src/pages/InvitePage.tsx`**
-- Вместо прямой загрузки в storage, конвертировать файл в base64 и передать в edge function
+При формировании `publicUrl` использовать `supabaseUrl` (переменная окружения) вместо внутреннего URL, который возвращает `getPublicUrl()`:
 
-### 3. Обновить триггер handle_new_user
-
-Расширить триггер для чтения дополнительных полей из metadata:
-
-```sql
--- В INSERT VALUES добавить:
-phone = COALESCE(raw_meta ->> 'phone', NULL),
-birth_date = (raw_meta ->> 'birth_date')::date,
-avatar_url = COALESCE(raw_meta ->> 'avatar_url', NULL),
-invitation_status = 'invited'  -- для приглашённых
+```typescript
+const { data: urlData } = adminClient.storage.from('avatars').getPublicUrl(fileName);
+// Заменить внутренний host на публичный
+finalAvatarUrl = urlData.publicUrl.replace(/http:\/\/kong:\d+/, supabaseUrl);
 ```
 
 ### 4. Деплой
 
-Развернуть обновлённый `register-invited-user`.
+Развернуть обновленный `register-invited-user`.
 
 ## Итого изменяемые файлы
 
-- `supabase/functions/register-invited-user/index.ts` — передача данных через metadata + загрузка аватара на сервере
-- `src/pages/InvitePage.tsx` — передача аватара как base64 вместо прямого upload
-- Новая миграция SQL — обновление `handle_new_user` для чтения phone, birth_date, avatar_url
+- `supabase/functions/register-invited-user/index.ts` — фикс фильтра статуса + фикс avatar URL
+- `src/components/admin/PendingUsersManagement.tsx` — добавить уведомление при одобрении
 
