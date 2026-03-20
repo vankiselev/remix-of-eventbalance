@@ -163,7 +163,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         supabase.from("venues").select("*").order("name"),
         supabase.from("animators").select("*").order("name"),
         supabase.from("contractors").select("*").order("name"),
-        supabase.from("profiles").select("id, full_name").eq("employment_status", "active").order("full_name"),
+        supabase.from("profiles").select("id, full_name, avatar_url").eq("employment_status", "active").order("full_name"),
         supabase.from("clients").select("*").order("name"),
       ]);
 
