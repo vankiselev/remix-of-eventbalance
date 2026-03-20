@@ -31,6 +31,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { signOut, user, userProfile, rbacRoles, isAdmin: isAdminRbac } = useAuth();
   const { isFinancier } = useFinancierPermissions();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const location = useLocation();
