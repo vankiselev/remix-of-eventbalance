@@ -1,48 +1,73 @@
 
 
-## Исправление двух падающих миграций
+## План: Расширение регистрации по приглашению + уведомления админам + убрать самостоятельную регистрацию
 
-### Причины ошибок
+### 1. Убрать вкладку «Регистрация» из AuthPage
 
-1. **`20260320_expand_tenants_table.sql`** — ссылается на `public.is_admin_user()`, которая на self-hosted ещё не создана на момент выполнения этой миграции
-2. **`20260320_fix_expand_tenants_prereq.sql`** — функция `is_tenant_owner` использует `AND role = 'owner'`, но в таблице `tenant_memberships` колонка называется `is_owner` (boolean), а не `role` (text)
+**Файл: `src/pages/AuthPage.tsx`**
+- Удалить `Tabs`/`TabsList`/`TabsTrigger` (вход/регистрация) — оставить только форму входа
+- Удалить `handleSignUp`, `registrationSuccess`, `agreedToTerms`, `fullName` и связанный код
+- Оставить форму входа и «Забыли пароль?»
 
-Подтверждение: оригинальная миграция `20260128140002_create_tenant_memberships.sql` создаёт таблицу с `is_owner boolean DEFAULT false`, без колонки `role`.
+### 2. Расширить форму регистрации по приглашению (InvitePage)
 
-### Решение
+**Файл: `src/pages/InvitePage.tsx`**
 
-**Файл 1: `migrations/20260320_expand_tenants_table.sql`**
-- Добавить создание `is_admin_user()` в начало миграции (перед использованием в политике)
-- Исправить `is_tenant_owner()`: заменить `AND role = 'owner'` на `AND is_owner = true`
+Сейчас форма содержит только пароль. Добавить:
+- **Фамилия** (обязательное)
+- **Имя** (обязательное)
+- **Отчество** (обязательное)
+- **Телефон** (обязательное)
+- **Дата рождения** (обязательное)
+- **Фото профиля** (необязательное) — загрузка через `AvatarCropper` или выбор стандартной аватарки
 
-**Файл 2: `migrations/20260320_fix_expand_tenants_prereq.sql`**  
-- Удалить файл — он больше не нужен, т.к. всё будет исправлено в основной миграции
+Обновить zod-схему с валидацией всех полей. Передать данные в edge function `register-invited-user`.
 
-### Итоговая структура `20260320_expand_tenants_table.sql`
+### 3. Стандартные аватарки
 
-```sql
-BEGIN;
+**Файл: `src/pages/InvitePage.tsx`** (или вынести в компонент `DefaultAvatarPicker`)
+- Набор из 8-10 стандартных SVG/PNG аватарок (градиентные инициалы, абстрактные иконки)
+- При выборе стандартной аватарки — URL сохраняется в `avatar_url`
+- При загрузке своего фото — открывается `AvatarCropper`, загрузка в storage bucket `avatars`
 
--- 1) Create is_admin_user() if missing
-CREATE OR REPLACE FUNCTION public.is_admin_user() ...
+### 4. Обновить edge function `register-invited-user`
 
--- 2) Add columns (idempotent DO block — без изменений)
+**Файл: `supabase/functions/register-invited-user/index.ts`**
 
--- 3) Create "Super admins can update tenants" policy (без изменений)
+Принимать дополнительные поля: `first_name`, `last_name`, `middle_name`, `phone`, `birth_date`, `avatar_url`. Записывать их в `profiles` при создании.
 
--- 4) Fix is_tenant_owner: is_owner = true вместо role = 'owner'
-CREATE OR REPLACE FUNCTION public.is_tenant_owner(_tenant_id uuid) ...
-  WHERE ... AND is_owner = true
+### 5. Добавить PendingUsersManagement в AdministrationPage
 
--- 5) Create "Tenant owners can update own tenant" policy (без изменений)
+**Файл: `src/pages/AdministrationPage.tsx`**
+- Импортировать `PendingUsersManagement`
+- Во вкладке «Приглашения» добавить вложенные под-вкладки:
+  - «Ожидающие одобрения» (PendingUsersManagement) — по умолчанию
+  - «Приглашения по email» (InvitationsManagement)
 
-COMMIT;
-```
+### 6. Уведомление админам при регистрации нового пользователя
+
+**Файл: `src/utils/notifications.ts`**
+- Исправить `sendNotificationToAdmins`: запрашивать админов через `user_role_assignments` JOIN `role_definitions` вместо несуществующей колонки `profiles.role`
+
+**Файл: `supabase/functions/register-invited-user/index.ts`**
+- После создания пользователя — вставлять уведомление в таблицу `notifications` для каждого админа (через adminClient, напрямую INSERT, без вызова edge function)
+
+### 7. Миграция БД (при необходимости)
+
+Проверить наличие колонок в `profiles`:
+- `middle_name` — если нет, добавить
+- `phone`, `birth_date`, `first_name`, `last_name` — уже есть в схеме
+
+Добавить RLS для INSERT в `notifications` (сейчас INSERT запрещён для authenticated — нужна политика или делать через service_role в edge function).
 
 ### Файлы
 
 | Файл | Действие |
 |---|---|
-| `migrations/20260320_expand_tenants_table.sql` | Исправить — добавить `is_admin_user()`, заменить `role = 'owner'` на `is_owner = true` |
-| `migrations/20260320_fix_expand_tenants_prereq.sql` | Удалить — дублирует исправленную миграцию |
+| `src/pages/AuthPage.tsx` | Убрать вкладку регистрации, оставить только вход |
+| `src/pages/InvitePage.tsx` | Расширить форму: ФИО, телефон, дата рождения, фото/аватарка |
+| `src/pages/AdministrationPage.tsx` | Добавить PendingUsersManagement во вкладку «Приглашения» |
+| `src/utils/notifications.ts` | Исправить запрос админов |
+| `supabase/functions/register-invited-user/index.ts` | Принимать новые поля, отправлять уведомления админам |
+| Миграция | Добавить `middle_name` в profiles, если отсутствует |
 
