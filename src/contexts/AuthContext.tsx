@@ -121,6 +121,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         const profileData = data as any;
         
+        // If profile doesn't exist — account was deleted
+        if (!profileData.profile) {
+          toast.error('Ваш аккаунт был удалён', { duration: 10000 });
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setUserRoleName(null);
+          setUserProfile(null);
+          setRbacRoles([]);
+          setPermissions([]);
+          setIsAdmin(false);
+          localStorage.removeItem(CACHE_KEY);
+          window.location.href = '/auth';
+          return;
+        }
+
         // Check employment status
         if (profileData.profile?.employment_status === 'terminated') {
           const terminationDate = profileData.profile.termination_date 
@@ -222,11 +239,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => loadUserData(false), 0);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        () => {
+          console.log('[AuthContext] Profile deleted, signing out...');
+          toast.error('Ваш аккаунт был удалён');
+          signOut();
+          window.location.href = '/auth';
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [user]);
+  // Periodic session health check — fallback if realtime misses DELETE
+  useEffect(() => {
+    if (!user) return;
+
+    const checkProfileExists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!error && !data) {
+          console.log('[AuthContext] Profile not found in health check, signing out...');
+          toast.error('Ваш аккаунт был удалён');
+          await signOut();
+          window.location.href = '/auth';
+        }
+      } catch (e) {
+        console.error('[AuthContext] Health check error:', e);
+      }
+    };
+
+    const interval = setInterval(checkProfileExists, 60000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
