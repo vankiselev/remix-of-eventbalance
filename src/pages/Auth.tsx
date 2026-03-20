@@ -13,11 +13,8 @@ import { Loader2, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
