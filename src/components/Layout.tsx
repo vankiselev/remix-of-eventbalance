@@ -363,12 +363,8 @@ const Layout = ({ children }: LayoutProps) => {
         onOpenChange={setShowEventsImportDialog}
         onImportComplete={() => {
           setShowEventsImportDialog(false);
-          toast({
-            title: "Импорт завершен",
-            description: "Мероприятия успешно импортированы",
-          });
-          // Перезагрузка страницы для обновления данных
-          window.location.reload();
+          queryClient.invalidateQueries({ queryKey: ['events'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }}
       />
 
