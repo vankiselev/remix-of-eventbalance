@@ -205,6 +205,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     hasErrors,
     correctedText,
     errors,
+    suppressNextCheck,
+    clearCorrection,
   } = useDescriptionChecker(watchDescription, watchCategory);
 
   // AI-powered transaction suggestions
@@ -214,6 +216,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     confidence: aiConfidence,
     applySuggestions: applyAISuggestions,
     dismissSuggestions,
+    suppressNextAnalysis,
   } = useTransactionSuggestions(watchDescription, (suggestions) => {
     // Apply AI suggestions to form
     if (suggestions.category) {
@@ -238,6 +241,37 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       duration: 3000,
     });
   });
+
+  // Apply correction without triggering re-analysis
+  const handleApplyCorrection = () => {
+    if (!correctedText) return;
+    suppressNextCheck();
+    suppressNextAnalysis();
+    form.setValue("description", correctedText);
+    clearCorrection();
+    toast({
+      title: "Исправление применено",
+      description: "Описание обновлено",
+    });
+  };
+
+  // Apply all AI suggestions at once
+  const handleApplyAll = () => {
+    if (hasErrors && correctedText) {
+      suppressNextCheck();
+      suppressNextAnalysis();
+      form.setValue("description", correctedText);
+      clearCorrection();
+    }
+    if (aiSuggestions && aiConfidence > 0.6) {
+      applyAISuggestions();
+    }
+    toast({
+      title: "Все предложения применены",
+      description: "Описание, категория и проект обновлены",
+      duration: 3000,
+    });
+  };
 
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
