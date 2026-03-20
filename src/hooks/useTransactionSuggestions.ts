@@ -28,6 +28,7 @@ export function useTransactionSuggestions(
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const skipNextRef = useRef(false);
+  const appliedRef = useRef(false);
   const debouncedDescription = useDebounce(description, 500);
 
   useEffect(() => {
