@@ -799,7 +799,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         </Tabs>
 
         {/* Actions Footer */}
-        <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 bg-background">
+        <div className="flex flex-col sm:flex-row justify-between gap-2 px-5 sm:px-6 py-3 border-t flex-shrink-0 bg-muted/20">
           <div className="flex gap-2">
             {event && (
               <>
