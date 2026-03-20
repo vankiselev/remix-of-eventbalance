@@ -1,73 +1,49 @@
 
 
-## План: Расширение регистрации по приглашению + уведомления админам + убрать самостоятельную регистрацию
+## Problem
 
-### 1. Убрать вкладку «Регистрация» из AuthPage
+Migration `20260320_add_middle_name_and_avatars_bucket.sql` fails because PostgreSQL does not support `CREATE POLICY IF NOT EXISTS` syntax. The error:
 
-**Файл: `src/pages/AuthPage.tsx`**
-- Удалить `Tabs`/`TabsList`/`TabsTrigger` (вход/регистрация) — оставить только форму входа
-- Удалить `handleSignUp`, `registrationSuccess`, `agreedToTerms`, `fullName` и связанный код
-- Оставить форму входа и «Забыли пароль?»
+```
+ERROR: syntax error at or near "NOT"
+LINE 1: CREATE POLICY IF NOT EXISTS "Authenticated users can upload ...
+```
 
-### 2. Расширить форму регистрации по приглашению (InvitePage)
+## Fix
 
-**Файл: `src/pages/InvitePage.tsx`**
+Replace all `CREATE POLICY IF NOT EXISTS` with `DROP POLICY IF EXISTS` + `CREATE POLICY` pattern (same approach used in the working `20260320_tenant_logos_bucket.sql`).
 
-Сейчас форма содержит только пароль. Добавить:
-- **Фамилия** (обязательное)
-- **Имя** (обязательное)
-- **Отчество** (обязательное)
-- **Телефон** (обязательное)
-- **Дата рождения** (обязательное)
-- **Фото профиля** (необязательное) — загрузка через `AvatarCropper` или выбор стандартной аватарки
+## Changes
 
-Обновить zod-схему с валидацией всех полей. Передать данные в edge function `register-invited-user`.
+**File: `migrations/20260320_add_middle_name_and_avatars_bucket.sql`**
 
-### 3. Стандартные аватарки
+Replace lines 14-32 with:
 
-**Файл: `src/pages/InvitePage.tsx`** (или вынести в компонент `DefaultAvatarPicker`)
-- Набор из 8-10 стандартных SVG/PNG аватарок (градиентные инициалы, абстрактные иконки)
-- При выборе стандартной аватарки — URL сохраняется в `avatar_url`
-- При загрузке своего фото — открывается `AvatarCropper`, загрузка в storage bucket `avatars`
+```sql
+-- Allow authenticated users to upload avatars
+DROP POLICY IF EXISTS "Authenticated users can upload avatars" ON storage.objects;
+CREATE POLICY "Authenticated users can upload avatars"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'avatars');
 
-### 4. Обновить edge function `register-invited-user`
+-- Allow public read access to avatars
+DROP POLICY IF EXISTS "Public can read avatars" ON storage.objects;
+CREATE POLICY "Public can read avatars"
+ON storage.objects FOR SELECT TO public
+USING (bucket_id = 'avatars');
 
-**Файл: `supabase/functions/register-invited-user/index.ts`**
+-- Allow users to update their own avatars
+DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
+CREATE POLICY "Users can update own avatars"
+ON storage.objects FOR UPDATE TO authenticated
+USING (bucket_id = 'avatars');
 
-Принимать дополнительные поля: `first_name`, `last_name`, `middle_name`, `phone`, `birth_date`, `avatar_url`. Записывать их в `profiles` при создании.
+-- Allow users to delete their own avatars
+DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+CREATE POLICY "Users can delete own avatars"
+ON storage.objects FOR DELETE TO authenticated
+USING (bucket_id = 'avatars');
+```
 
-### 5. Добавить PendingUsersManagement в AdministrationPage
-
-**Файл: `src/pages/AdministrationPage.tsx`**
-- Импортировать `PendingUsersManagement`
-- Во вкладке «Приглашения» добавить вложенные под-вкладки:
-  - «Ожидающие одобрения» (PendingUsersManagement) — по умолчанию
-  - «Приглашения по email» (InvitationsManagement)
-
-### 6. Уведомление админам при регистрации нового пользователя
-
-**Файл: `src/utils/notifications.ts`**
-- Исправить `sendNotificationToAdmins`: запрашивать админов через `user_role_assignments` JOIN `role_definitions` вместо несуществующей колонки `profiles.role`
-
-**Файл: `supabase/functions/register-invited-user/index.ts`**
-- После создания пользователя — вставлять уведомление в таблицу `notifications` для каждого админа (через adminClient, напрямую INSERT, без вызова edge function)
-
-### 7. Миграция БД (при необходимости)
-
-Проверить наличие колонок в `profiles`:
-- `middle_name` — если нет, добавить
-- `phone`, `birth_date`, `first_name`, `last_name` — уже есть в схеме
-
-Добавить RLS для INSERT в `notifications` (сейчас INSERT запрещён для authenticated — нужна политика или делать через service_role в edge function).
-
-### Файлы
-
-| Файл | Действие |
-|---|---|
-| `src/pages/AuthPage.tsx` | Убрать вкладку регистрации, оставить только вход |
-| `src/pages/InvitePage.tsx` | Расширить форму: ФИО, телефон, дата рождения, фото/аватарка |
-| `src/pages/AdministrationPage.tsx` | Добавить PendingUsersManagement во вкладку «Приглашения» |
-| `src/utils/notifications.ts` | Исправить запрос админов |
-| `supabase/functions/register-invited-user/index.ts` | Принимать новые поля, отправлять уведомления админам |
-| Миграция | Добавить `middle_name` в profiles, если отсутствует |
+This is the only failing migration. The `tenant_logos_bucket` migration already succeeded.
 
