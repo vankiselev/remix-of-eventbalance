@@ -44,6 +44,7 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
     slug: '',
