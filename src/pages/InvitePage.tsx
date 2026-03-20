@@ -157,6 +157,15 @@ export function InvitePage() {
     return null;
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const onSubmit = async (data: RegistrationFormData) => {
     if (!invitation) return;
 
@@ -165,20 +174,12 @@ export function InvitePage() {
 
       const fullName = `${data.lastName} ${data.firstName} ${data.middleName}`.trim();
 
-      // Upload avatar if custom file
+      // Prepare avatar: convert file to base64 or use default avatar URL
+      let avatarBase64: string | null = null;
       let avatarUrl: string | null = null;
+      
       if (avatarFile) {
-        const fileName = `invite_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile, { contentType: 'image/jpeg' });
-        
-        if (uploadError) {
-          console.error('Avatar upload error:', uploadError);
-        } else {
-          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
-          avatarUrl = urlData.publicUrl;
-        }
+        avatarBase64 = await fileToBase64(avatarFile);
       } else if (selectedDefaultAvatar) {
         avatarUrl = getDefaultAvatarUrl(selectedDefaultAvatar);
       }
@@ -194,6 +195,7 @@ export function InvitePage() {
           phone: data.phone,
           birth_date: data.birthDate,
           avatar_url: avatarUrl,
+          avatar_base64: avatarBase64,
           role: invitation.role,
           invitation_token: token,
         },

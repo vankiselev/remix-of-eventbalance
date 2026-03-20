@@ -13,7 +13,8 @@ Deno.serve(async (req) => {
   try {
     const { 
       email, password, full_name, role, invitation_token,
-      first_name, last_name, middle_name, phone, birth_date, avatar_url
+      first_name, last_name, middle_name, phone, birth_date, 
+      avatar_url, avatar_base64
     } = await req.json();
 
     if (!email || !password) {
@@ -30,13 +31,50 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Create user with email already confirmed
+    // Upload avatar if base64 provided
+    let finalAvatarUrl = avatar_url || null;
+    if (avatar_base64) {
+      try {
+        const base64Data = avatar_base64.includes(',') 
+          ? avatar_base64.split(',')[1] 
+          : avatar_base64;
+        
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const fileName = `invite_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        const { error: uploadError } = await adminClient.storage
+          .from('avatars')
+          .upload(fileName, bytes, { contentType: 'image/jpeg' });
+        
+        if (!uploadError) {
+          const { data: urlData } = adminClient.storage.from('avatars').getPublicUrl(fileName);
+          finalAvatarUrl = urlData.publicUrl;
+        } else {
+          console.error('Avatar upload error:', uploadError);
+        }
+      } catch (avatarError) {
+        console.error('Avatar processing error:', avatarError);
+      }
+    }
+
+    // Create user - all profile fields go into user_metadata
+    // The handle_new_user trigger will read them and insert into profiles
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         full_name: full_name || email,
+        first_name: first_name || '',
+        last_name: last_name || '',
+        middle_name: middle_name || '',
+        phone: phone || null,
+        birth_date: birth_date || null,
+        avatar_url: finalAvatarUrl,
         role: role || "member",
       },
     });
@@ -50,19 +88,10 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Update profile with all provided fields
-    const profileUpdate: Record<string, any> = {
-      full_name: full_name || email,
-      invitation_status: 'invited',
-    };
-    if (first_name) profileUpdate.first_name = first_name;
-    if (last_name) profileUpdate.last_name = last_name;
-    if (middle_name) profileUpdate.middle_name = middle_name;
-    if (phone) profileUpdate.phone = phone;
-    if (birth_date) profileUpdate.birth_date = birth_date;
-    if (avatar_url) profileUpdate.avatar_url = avatar_url;
-
-    await adminClient.from("profiles").update(profileUpdate).eq("id", userId);
+    // Update invitation_status to 'invited' via direct update (service role bypasses RLS)
+    await adminClient.from("profiles").update({ 
+      invitation_status: 'invited' 
+    }).eq("id", userId);
 
     // Accept invitation if token provided
     let invitedBy: string | null = null;
@@ -106,12 +135,10 @@ Deno.serve(async (req) => {
     try {
       const recipientIds: string[] = [];
 
-      // 1. Notify the person who sent the invitation
       if (invitedBy) {
         recipientIds.push(invitedBy);
       }
 
-      // 2. Notify all tenant owners/admins
       if (invTenantId) {
         const { data: tenantAdmins } = await adminClient
           .from("tenant_memberships")
