@@ -260,8 +260,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       supabase.removeChannel(channel);
     };
   }, [user]);
-
+  // Periodic session health check — fallback if realtime misses DELETE
   useEffect(() => {
+    if (!user) return;
+
+    const checkProfileExists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!error && !data) {
+          console.log('[AuthContext] Profile not found in health check, signing out...');
+          toast.error('Ваш аккаунт был удалён');
+          await signOut();
+          window.location.href = '/auth';
+        }
+      } catch (e) {
+        console.error('[AuthContext] Health check error:', e);
+      }
+    };
+
+    const interval = setInterval(checkProfileExists, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
