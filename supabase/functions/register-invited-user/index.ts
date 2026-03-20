@@ -102,42 +102,45 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send notification to all admins about new registration
+    // Send notification to admins about new registration
     try {
-      const { data: adminAssignments } = await adminClient
-        .from("user_role_assignments")
-        .select("user_id, role_id");
+      const recipientIds: string[] = [];
 
-      if (adminAssignments && adminAssignments.length > 0) {
-        // Get admin role IDs
-        const { data: adminRoles } = await adminClient
-          .from("role_definitions")
-          .select("id")
-          .in("name", ["admin", "super_admin"]);
+      // 1. Notify the person who sent the invitation
+      if (invitedBy) {
+        recipientIds.push(invitedBy);
+      }
 
-        const adminRoleIds = (adminRoles || []).map(r => r.id);
-        const adminUserIds = adminAssignments
-          .filter(a => adminRoleIds.includes(a.role_id))
-          .map(a => a.user_id);
+      // 2. Notify all tenant owners/admins
+      if (invTenantId) {
+        const { data: tenantAdmins } = await adminClient
+          .from("tenant_memberships")
+          .select("user_id")
+          .eq("tenant_id", invTenantId)
+          .in("role", ["owner", "admin"]);
 
-        const uniqueAdminIds = [...new Set(adminUserIds)];
-
-        // Insert notifications directly
-        const notifications = uniqueAdminIds.map(adminId => ({
-          user_id: adminId,
-          title: "Новая регистрация",
-          message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению`,
-          type: "system",
-          data: { user_email: email, user_id: userId },
-        }));
-
-        if (notifications.length > 0) {
-          await adminClient.from("notifications").insert(notifications);
+        if (tenantAdmins) {
+          for (const ta of tenantAdmins) {
+            recipientIds.push(ta.user_id);
+          }
         }
+      }
+
+      const uniqueIds = [...new Set(recipientIds)].filter(id => id !== userId);
+
+      const notifications = uniqueIds.map(adminId => ({
+        user_id: adminId,
+        title: "Новая регистрация",
+        message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению и ожидает одобрения`,
+        type: "system",
+        data: { user_email: email, user_id: userId },
+      }));
+
+      if (notifications.length > 0) {
+        await adminClient.from("notifications").insert(notifications);
       }
     } catch (notifError) {
       console.error("Failed to send admin notifications:", notifError);
-      // Don't fail the registration if notifications fail
     }
 
     return new Response(
