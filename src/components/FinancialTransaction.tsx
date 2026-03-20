@@ -59,6 +59,7 @@ const FinancialTransaction = () => {
   const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const { user } = useAuth();
+  const { currentTenant } = useTenant();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof transactionSchema>>({
