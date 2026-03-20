@@ -828,49 +828,68 @@ const Events = () => {
                         </div>
                       )}
                       
-                      <div className="flex gap-4 p-6">
+                      <div className="flex gap-4 p-4 sm:p-5">
                         {/* Левый блок с датой */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-2xl w-32 h-32 border gap-2">
-                          <div className="text-5xl font-bold">{day}</div>
-                          <div className="text-sm capitalize">{month}</div>
-                          <Separator className="w-16" />
-                          <div className="text-sm font-medium capitalize">{weekday}</div>
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-xl w-20 h-20 sm:w-24 sm:h-24 border gap-1">
+                          <div className="text-2xl sm:text-3xl font-bold leading-none">{day}</div>
+                          <div className="text-xs sm:text-sm capitalize text-muted-foreground">{month}</div>
+                          <div className="text-[10px] sm:text-xs font-medium capitalize text-muted-foreground/70">{weekday}</div>
                         </div>
                         
                         {/* Правый блок с информацией */}
-                        <div className="flex-1 min-w-0 space-y-3">
-                          <h3 className="text-xl font-semibold">{event.name}</h3>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Заголовок + статус */}
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-base sm:text-lg font-semibold leading-tight truncate">{event.name}</h3>
+                            {event.status && (
+                              <Badge 
+                                variant={event.status === 'completed' ? 'default' : event.status === 'in_progress' ? 'secondary' : 'outline'}
+                                className="text-[10px] flex-shrink-0"
+                              >
+                                {event.status === 'completed' ? 'Завершено' : event.status === 'in_progress' ? 'В процессе' : event.status === 'planning' ? 'Планируется' : event.status}
+                              </Badge>
+                            )}
+                          </div>
                           
-                          {event.project_owner && (
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Чей проект: </span>
-                              <span className="font-medium">{event.project_owner}</span>
+                          {/* Бейджи: владелец + менеджеры */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {event.project_owner && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <User className="h-3 w-3" />
+                                {event.project_owner}
+                              </Badge>
+                            )}
+                            {getManagerNames(event) !== '—' && (
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Target className="h-3 w-3" />
+                                {getManagerNames(event)}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Детали: место, время, аниматоры — только если есть */}
+                          {(getLocationDisplay(event) !== '—' || getTimeRange(event) !== '—' || getAnimatorNames(event) !== '—') && (
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-muted-foreground pt-1">
+                              {getLocationDisplay(event) !== '—' && (
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="truncate max-w-[200px]">{getLocationDisplay(event)}</span>
+                                </div>
+                              )}
+                              {getTimeRange(event) !== '—' && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span>{getTimeRange(event)}</span>
+                                </div>
+                              )}
+                              {getAnimatorNames(event) !== '—' && (
+                                <div className="flex items-center gap-1.5">
+                                  <Users className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="truncate max-w-[200px]">{getAnimatorNames(event)}</span>
+                                </div>
+                              )}
                             </div>
                           )}
-                          
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">Менеджеры: </span>
-                            <span className="font-medium">{getManagerNames(event)}</span>
-                          </div>
-                          
-                          <Separator />
-                          
-                          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span>{getLocationDisplay(event)}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span>{getTimeRange(event)}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span>{getAnimatorNames(event)}</span>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </Card>
