@@ -15,7 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2, MapPin, Plus, File } from "lucide-react";
+import { CalendarIcon, Clock, Trash2, MapPin, Plus, File, Users, Camera, Video, FileText, StickyNote, Sparkles } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { EventActionRequestDialog } from "@/components/events/EventActionRequestDialog";
@@ -408,489 +409,546 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             {/* {event && <TabsTrigger value="props">Реквизит</TabsTrigger>} */}
           </TabsList>
 
-          <TabsContent value="details" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4">
-            <div className="space-y-4">
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Название мероприятия *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="start_date">Дата *</Label>
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.start_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.start_date ? (
-                      format(new Date(formData.start_date), "d MMMM yyyy г.", { locale: ru })
-                    ) : (
-                      <span>Выберите дату</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.start_date ? new Date(formData.start_date) : undefined}
-                    onSelect={(date) => {
-                      setFormData({ 
-                        ...formData, 
-                        start_date: date ? format(date, 'yyyy-MM-dd') : '' 
-                      });
-                      setDatePickerOpen(false);
-                    }}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                    locale={ru}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="project_owner">Чей проект</Label>
-              <Select
-                value={formData.project_owner}
-                onValueChange={(value) => setFormData({ ...formData, project_owner: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите владельца" />
-                </SelectTrigger>
-                <SelectContent className="z-[100] bg-background">
-                  <SelectItem value="Ваня">Ваня</SelectItem>
-                  <SelectItem value="Настя">Настя</SelectItem>
-                  <SelectItem value="Лера">Лера</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="client_id">Клиент</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <Select
-                value={formData.client_id}
-                onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите клиента" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="venue_id">Площадка</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=venues', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <Select
-                value={formData.venue_id}
-                onValueChange={(value) => setFormData({ ...formData, venue_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите площадку" />
-                </SelectTrigger>
-                <SelectContent>
-                  {venues.map((venue) => (
-                    <SelectItem key={venue.id} value={venue.id}>
-                      {venue.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="location">Адрес (если не из базы)</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant={showMap ? "default" : "outline"}
-                  size="icon"
-                  onClick={toggleMap}
-                  title="Показать на карте"
-                  disabled={!formData.location && !formData.venue_id}
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-              </div>
-              {showMap && getMapAddress() && (
-                <div className="mt-2 rounded-lg overflow-hidden border">
-                  <iframe
-                    src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(getMapAddress())}&z=16`}
-                    width="100%"
-                    height="300"
-                    frameBorder="0"
-                    allowFullScreen
-                    className="w-full"
-                  />
+          <TabsContent value="details" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4 pb-4">
+            <div className="space-y-6">
+              
+              {/* ═══ Секция 1: Основная информация ═══ */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <CalendarIcon className="h-4 w-4" />
+                  Основная информация
                 </div>
-              )}
-            </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="text-xs">Название мероприятия *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="h-9"
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="event_time">Время начала</Label>
-              <Input
-                id="event_time"
-                type="time"
-                value={formData.event_time ? formData.event_time.substring(0, 5) : ""}
-                onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                className="w-full"
-              />
-            </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="start_date" className="text-xs">Дата *</Label>
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-9",
+                            !formData.start_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.start_date ? (
+                            format(new Date(formData.start_date), "d MMMM yyyy г.", { locale: ru })
+                          ) : (
+                            <span>Выберите дату</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.start_date ? new Date(formData.start_date) : undefined}
+                          onSelect={(date) => {
+                            setFormData({ 
+                              ...formData, 
+                              start_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                            });
+                            setDatePickerOpen(false);
+                          }}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                          locale={ru}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="end_time">Время окончания</Label>
-              <Input
-                id="end_time"
-                type="time"
-                value={formData.end_time ? formData.end_time.substring(0, 5) : ""}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Team Selection */}
-          <div className="space-y-4 border-t pt-4">
-            <h3 className="font-semibold">Команда</h3>
-            
-            <div className="space-y-2">
-              <Label className="text-sm">Ответственные менеджеры</Label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees.map((emp) => {
-                  const hasConflict = vacationConflicts.has(emp.id);
-                  const isSelected = formData.responsible_manager_ids.includes(emp.id);
-                  
-                  return (
-                    <Button
-                      key={emp.id}
-                      type="button"
-                      variant={isSelected ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        "text-xs h-7 px-2 relative",
-                        hasConflict && "border-destructive border-2"
-                      )}
-                      onClick={() => {
-                        if (hasConflict && !isSelected) {
-                          setSelectedConflictEmployee({
-                            id: emp.id,
-                            name: emp.full_name,
-                            conflict: vacationConflicts.get(emp.id)!,
-                            listType: 'responsible_manager_ids',
-                          });
-                        } else {
-                          setFormData({
-                            ...formData,
-                            responsible_manager_ids: toggleArrayItem(
-                              formData.responsible_manager_ids,
-                              emp.id
-                            ),
-                          });
-                        }
-                      }}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="project_owner" className="text-xs">Чей проект</Label>
+                    <Select
+                      value={formData.project_owner}
+                      onValueChange={(value) => setFormData({ ...formData, project_owner: value })}
                     >
-                      <span className="flex items-center gap-1">
-                        {emp.full_name}
-                        {hasConflict && (
-                          <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
-                        )}
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-sm">Менеджеры</Label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {employees.map((emp) => {
-                  const hasConflict = vacationConflicts.has(emp.id);
-                  const isSelected = formData.manager_ids.includes(emp.id);
-                  
-                  return (
-                    <Button
-                      key={emp.id}
-                      type="button"
-                      variant={isSelected ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        "text-xs h-7 px-2 relative",
-                        hasConflict && "border-destructive border-2"
-                      )}
-                      onClick={() => {
-                        if (hasConflict && !isSelected) {
-                          setSelectedConflictEmployee({
-                            id: emp.id,
-                            name: emp.full_name,
-                            conflict: vacationConflicts.get(emp.id)!,
-                            listType: 'manager_ids',
-                          });
-                        } else {
-                          setFormData({
-                            ...formData,
-                            manager_ids: toggleArrayItem(formData.manager_ids, emp.id),
-                          });
-                        }
-                      }}
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Выберите владельца" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100] bg-background">
+                        <SelectItem value="Ваня">Ваня</SelectItem>
+                        <SelectItem value="Настя">Настя</SelectItem>
+                        <SelectItem value="Лера">Лера</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="client_id" className="text-xs">Клиент</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <Select
+                      value={formData.client_id}
+                      onValueChange={(value) => setFormData({ ...formData, client_id: value })}
                     >
-                      <span className="flex items-center gap-1">
-                        {emp.full_name}
-                        {hasConflict && (
-                          <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
-                        )}
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Аниматоры</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=animators', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {animators.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Нет аниматоров</p>
-                ) : (
-                  animators.map((animator) => (
-                    <Button
-                      key={animator.id}
-                      type="button"
-                      variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
-                      size="sm"
-                      className="text-xs h-7 px-2"
-                      onClick={() => setFormData({
-                        ...formData,
-                        animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
-                      })}
-                    >
-                      {animator.name}
-                    </Button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Подрядчики</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=contractors', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {contractors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Нет подрядчиков</p>
-                ) : (
-                  contractors.map((contractor) => (
-                    <Button
-                      key={contractor.id}
-                      type="button"
-                      variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
-                      size="sm"
-                      className="text-xs h-7 px-2"
-                      onClick={() => setFormData({
-                        ...formData,
-                        contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
-                      })}
-                    >
-                      {contractor.name}
-                    </Button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show_program">Шоу программа</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=animators', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <Input
-                id="show_program"
-                value={formData.show_program}
-                onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="photographer_contact_id">Фотограф</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <Select
-                value={formData.photographer_contact_id}
-                onValueChange={(value) => setFormData({ ...formData, photographer_contact_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите фотографа" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="videographer_contact_id">Видеограф</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </div>
-              <Select
-                value={formData.videographer_contact_id}
-                onValueChange={(value) => setFormData({ ...formData, videographer_contact_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите видеографа" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="notes">Примечания</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="estimate_file">Смета</Label>
-              <FileInput
-                id="estimate_file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                maxSize={10}
-                value={estimateFile}
-                onChange={(file) => setEstimateFile(file as File | null)}
-                placeholder="Выберите файл сметы"
-              />
-              {formData.estimate_file_url && !estimateFile && (
-                <div className="flex items-center gap-2 p-3 rounded-lg border bg-card">
-                  <File className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Текущий файл</p>
-                    <a
-                      href={formData.estimate_file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Открыть смету
-                    </a>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Выберите клиента" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              )}
-            </div>
-            </div>
+              </section>
+
+              <Separator />
+
+              {/* ═══ Секция 2: Место и время ═══ */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <MapPin className="h-4 w-4" />
+                  Место и время
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="venue_id" className="text-xs">Площадка</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=venues', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <Select
+                      value={formData.venue_id}
+                      onValueChange={(value) => setFormData({ ...formData, venue_id: value })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Выберите площадку" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {venues.map((venue) => (
+                          <SelectItem key={venue.id} value={venue.id}>
+                            {venue.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="location" className="text-xs">Адрес (если не из базы)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="flex-1 h-9"
+                      />
+                      <Button
+                        type="button"
+                        variant={showMap ? "default" : "outline"}
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={toggleMap}
+                        title="Показать на карте"
+                        disabled={!formData.location && !formData.venue_id}
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {showMap && getMapAddress() && (
+                    <div className="md:col-span-2 rounded-lg overflow-hidden border">
+                      <iframe
+                        src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(getMapAddress())}&z=16`}
+                        width="100%"
+                        height="250"
+                        frameBorder="0"
+                        allowFullScreen
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="event_time" className="text-xs">Время начала</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="event_time"
+                        type="time"
+                        value={formData.event_time ? formData.event_time.substring(0, 5) : ""}
+                        onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="end_time" className="text-xs">Время окончания</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        id="end_time"
+                        type="time"
+                        value={formData.end_time ? formData.end_time.substring(0, 5) : ""}
+                        onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <Separator />
+
+              {/* ═══ Секция 3: Команда ═══ */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <Users className="h-4 w-4" />
+                  Команда
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Ответственные менеджеры</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {employees.map((emp) => {
+                        const hasConflict = vacationConflicts.has(emp.id);
+                        const isSelected = formData.responsible_manager_ids.includes(emp.id);
+                        
+                        return (
+                          <Button
+                            key={emp.id}
+                            type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                              "text-xs h-7 px-2 relative",
+                              hasConflict && "border-destructive border-2"
+                            )}
+                            onClick={() => {
+                              if (hasConflict && !isSelected) {
+                                setSelectedConflictEmployee({
+                                  id: emp.id,
+                                  name: emp.full_name,
+                                  conflict: vacationConflicts.get(emp.id)!,
+                                  listType: 'responsible_manager_ids',
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  responsible_manager_ids: toggleArrayItem(
+                                    formData.responsible_manager_ids,
+                                    emp.id
+                                  ),
+                                });
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              {emp.full_name}
+                              {hasConflict && (
+                                <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
+                              )}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Менеджеры</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {employees.map((emp) => {
+                        const hasConflict = vacationConflicts.has(emp.id);
+                        const isSelected = formData.manager_ids.includes(emp.id);
+                        
+                        return (
+                          <Button
+                            key={emp.id}
+                            type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                              "text-xs h-7 px-2 relative",
+                              hasConflict && "border-destructive border-2"
+                            )}
+                            onClick={() => {
+                              if (hasConflict && !isSelected) {
+                                setSelectedConflictEmployee({
+                                  id: emp.id,
+                                  name: emp.full_name,
+                                  conflict: vacationConflicts.get(emp.id)!,
+                                  listType: 'manager_ids',
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  manager_ids: toggleArrayItem(formData.manager_ids, emp.id),
+                                });
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-1">
+                              {emp.full_name}
+                              {hasConflict && (
+                                <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
+                              )}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Аниматоры</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=animators', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {animators.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Нет аниматоров</p>
+                      ) : (
+                        animators.map((animator) => (
+                          <Button
+                            key={animator.id}
+                            type="button"
+                            variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
+                            size="sm"
+                            className="text-xs h-7 px-2"
+                            onClick={() => setFormData({
+                              ...formData,
+                              animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
+                            })}
+                          >
+                            {animator.name}
+                          </Button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Подрядчики</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=contractors', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {contractors.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Нет подрядчиков</p>
+                      ) : (
+                        contractors.map((contractor) => (
+                          <Button
+                            key={contractor.id}
+                            type="button"
+                            variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
+                            size="sm"
+                            className="text-xs h-7 px-2"
+                            onClick={() => setFormData({
+                              ...formData,
+                              contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
+                            })}
+                          >
+                            {contractor.name}
+                          </Button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_program" className="text-xs">Шоу программа</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=animators', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <Input
+                      id="show_program"
+                      value={formData.show_program}
+                      onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <Separator />
+
+              {/* ═══ Секция 4: Фото/Видео и Доп. информация ═══ */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <StickyNote className="h-4 w-4" />
+                  Дополнительно
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="photographer_contact_id" className="text-xs flex items-center gap-1.5">
+                        <Camera className="h-3 w-3" />
+                        Фотограф
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <Select
+                      value={formData.photographer_contact_id}
+                      onValueChange={(value) => setFormData({ ...formData, photographer_contact_id: value })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Выберите фотографа" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="videographer_contact_id" className="text-xs flex items-center gap-1.5">
+                        <Video className="h-3 w-3" />
+                        Видеограф
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px]"
+                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Создать
+                      </Button>
+                    </div>
+                    <Select
+                      value={formData.videographer_contact_id}
+                      onValueChange={(value) => setFormData({ ...formData, videographer_contact_id: value })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Выберите видеографа" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="notes" className="text-xs">Примечания</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="estimate_file" className="text-xs flex items-center gap-1.5">
+                      <FileText className="h-3 w-3" />
+                      Смета
+                    </Label>
+                    <FileInput
+                      id="estimate_file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      maxSize={10}
+                      value={estimateFile}
+                      onChange={(file) => setEstimateFile(file as File | null)}
+                      placeholder="Выберите файл сметы"
+                    />
+                    {formData.estimate_file_url && !estimateFile && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/50">
+                        <File className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium">Текущий файл</p>
+                          <a
+                            href={formData.estimate_file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Открыть смету
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
             </div>
           </TabsContent>
 
