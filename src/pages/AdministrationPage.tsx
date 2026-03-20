@@ -67,6 +67,10 @@ const AdministrationPage = () => {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="companies" className="mt-6">
+            <TenantsManagement />
+          </TabsContent>
+
           <TabsContent value="roles" className="mt-6">
             <RolesManagement />
           </TabsContent>
