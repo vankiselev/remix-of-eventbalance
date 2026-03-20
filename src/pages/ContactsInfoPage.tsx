@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin, Mail, Send, Building2 } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, Send, Building2 } from "lucide-react";
 
 const ContactsInfoPage = () => {
   return (
