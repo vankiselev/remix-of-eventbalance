@@ -7,7 +7,7 @@ import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PhoneInputRU } from "@/components/ui/phone-input-ru";
+import { PhoneInputRU, toE164, normalizePhone } from "@/components/ui/phone-input-ru";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -193,7 +193,7 @@ export function InvitePage() {
           first_name: data.firstName,
           last_name: data.lastName,
           middle_name: data.middleName,
-          phone: data.phone,
+          phone: toE164(normalizePhone(data.phone)),
           birth_date: data.birthDate,
           avatar_url: avatarUrl,
           avatar_base64: avatarBase64,
@@ -367,7 +367,7 @@ export function InvitePage() {
                     <FormControl>
                       <PhoneInputRU
                         value={field.value}
-                        onChange={(result) => field.onChange(result.e164 || result.display)}
+                        onChange={(result) => field.onChange(result.display)}
                         required
                       />
                     </FormControl>
