@@ -317,7 +317,7 @@ const Layout = ({ children }: LayoutProps) => {
         </>
       ) : (
         /* Mobile Layout */
-        <div className="flex-1 flex flex-col overflow-x-hidden">
+        <div className="flex-1 flex flex-col">
           {/* Mobile Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
             <div className="flex h-14 items-center px-4 justify-between">
