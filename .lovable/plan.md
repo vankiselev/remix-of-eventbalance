@@ -1,24 +1,48 @@
 
 
-## Фикс: приглашённый пользователь попадает в "Ожидание приглашения"
+## Исправление двух падающих миграций
 
-### Проблема
+### Причины ошибок
 
-Edge-функция `register-invited-user` создаёт пользователя и добавляет в тенант, но не ставит `invitation_status = 'invited'` в таблице `profiles`. Триггер создания профиля ставит default значение `'pending'`. Из-за этого `AuthContext` считает пользователя неодобренным и перенаправляет на `/awaiting-invitation`.
+1. **`20260320_expand_tenants_table.sql`** — ссылается на `public.is_admin_user()`, которая на self-hosted ещё не создана на момент выполнения этой миграции
+2. **`20260320_fix_expand_tenants_prereq.sql`** — функция `is_tenant_owner` использует `AND role = 'owner'`, но в таблице `tenant_memberships` колонка называется `is_owner` (boolean), а не `role` (text)
+
+Подтверждение: оригинальная миграция `20260128140002_create_tenant_memberships.sql` создаёт таблицу с `is_owner boolean DEFAULT false`, без колонки `role`.
 
 ### Решение
 
-**1. Обновить `supabase/functions/register-invited-user/index.ts`**
+**Файл 1: `migrations/20260320_expand_tenants_table.sql`**
+- Добавить создание `is_admin_user()` в начало миграции (перед использованием в политике)
+- Исправить `is_tenant_owner()`: заменить `AND role = 'owner'` на `AND is_owner = true`
 
-В блоке обновления профиля добавить `invitation_status: 'invited'`:
+**Файл 2: `migrations/20260320_fix_expand_tenants_prereq.sql`**  
+- Удалить файл — он больше не нужен, т.к. всё будет исправлено в основной миграции
 
-```typescript
-await adminClient.from("profiles").update({
-  full_name: full_name || email,
-  invitation_status: 'invited',  // <-- добавить
-  invited_at: new Date().toISOString(),
-}).eq("id", userId);
+### Итоговая структура `20260320_expand_tenants_table.sql`
+
+```sql
+BEGIN;
+
+-- 1) Create is_admin_user() if missing
+CREATE OR REPLACE FUNCTION public.is_admin_user() ...
+
+-- 2) Add columns (idempotent DO block — без изменений)
+
+-- 3) Create "Super admins can update tenants" policy (без изменений)
+
+-- 4) Fix is_tenant_owner: is_owner = true вместо role = 'owner'
+CREATE OR REPLACE FUNCTION public.is_tenant_owner(_tenant_id uuid) ...
+  WHERE ... AND is_owner = true
+
+-- 5) Create "Tenant owners can update own tenant" policy (без изменений)
+
+COMMIT;
 ```
 
-Одно изменение, один файл. После этого приглашённые пользователи будут сразу попадать в дашборд.
+### Файлы
+
+| Файл | Действие |
+|---|---|
+| `migrations/20260320_expand_tenants_table.sql` | Исправить — добавить `is_admin_user()`, заменить `role = 'owner'` на `is_owner = true` |
+| `migrations/20260320_fix_expand_tenants_prereq.sql` | Удалить — дублирует исправленную миграцию |
 
