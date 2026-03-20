@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { signOut, user, userProfile, rbacRoles, isAdmin: isAdminRbac } = useAuth();
   const { isFinancier } = useFinancierPermissions();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -362,12 +364,8 @@ const Layout = ({ children }: LayoutProps) => {
         onOpenChange={setShowEventsImportDialog}
         onImportComplete={() => {
           setShowEventsImportDialog(false);
-          toast({
-            title: "Импорт завершен",
-            description: "Мероприятия успешно импортированы",
-          });
-          // Перезагрузка страницы для обновления данных
-          window.location.reload();
+          queryClient.invalidateQueries({ queryKey: ['events'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }}
       />
 
