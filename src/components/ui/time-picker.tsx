@@ -7,7 +7,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+// Hours ordered starting from 12 for convenience
+const HOURS_ORDERED = [
+  "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23",
+  "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11",
+];
 const MINUTES = ["00", "30"];
 
 interface TimePickerProps {
@@ -26,13 +30,18 @@ export function TimePicker({ value, onChange, placeholder = "Время", classN
 
   const hourRef = React.useRef<HTMLDivElement>(null);
 
-  // Scroll to selected hour when opening
+  // Scroll to selected hour (or default 12) when opening
   React.useEffect(() => {
-    if (open && hourRef.current && selectedHour) {
-      const idx = HOURS.indexOf(selectedHour);
+    if (open && hourRef.current) {
+      const target = selectedHour || "12";
+      const idx = HOURS_ORDERED.indexOf(target);
       if (idx >= 0) {
-        const el = hourRef.current.children[idx] as HTMLElement;
-        el?.scrollIntoView({ block: "center", behavior: "instant" });
+        requestAnimationFrame(() => {
+          const el = hourRef.current?.children[idx] as HTMLElement;
+          if (el) {
+            el.scrollIntoView({ block: "center", behavior: "instant" });
+          }
+        });
       }
     }
   }, [open, selectedHour]);
@@ -75,8 +84,12 @@ export function TimePicker({ value, onChange, placeholder = "Время", classN
         </div>
         <div className="flex divide-x" style={{ height: 200 }}>
           {/* Hours column */}
-          <div ref={hourRef} className="flex-1 overflow-y-auto scrollbar-thin py-1">
-            {HOURS.map((h) => (
+          <div
+            ref={hourRef}
+            className="flex-1 overflow-y-auto py-1"
+            style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+          >
+            {HOURS_ORDERED.map((h) => (
               <button
                 key={h}
                 type="button"
