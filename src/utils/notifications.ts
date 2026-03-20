@@ -42,18 +42,21 @@ export const sendNotificationToAdmins = async (
   data?: any
 ) => {
   try {
-    // Get all admin users
-    const { data: admins, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('role', 'admin');
+    // Get admin users via role_assignments + role_definitions
+    const { data: adminAssignments, error } = await supabase
+      .from('user_role_assignments')
+      .select('user_id, role_definitions!inner(name)')
+      .or('name.eq.admin,name.eq.super_admin', { referencedTable: 'role_definitions' });
 
     if (error) throw error;
 
+    // Extract unique admin user IDs
+    const adminUserIds = [...new Set((adminAssignments || []).map(a => a.user_id))];
+
     // Send notification to each admin
-    const notificationPromises = (admins || []).map(admin =>
+    const notificationPromises = adminUserIds.map(userId =>
       sendNotification({
-        userId: admin.id,
+        userId,
         title,
         message,
         type,

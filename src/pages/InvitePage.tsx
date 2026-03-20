@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,11 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Camera, X } from "lucide-react";
+import { AvatarCropper } from "@/components/ui/avatar-cropper";
+import { DefaultAvatarPicker, getDefaultAvatarUrl, DEFAULT_AVATARS } from "@/components/invite/DefaultAvatarPicker";
 
-const passwordSchema = z.object({
+const registrationSchema = z.object({
+  lastName: z.string().min(1, "Фамилия обязательна").max(100),
+  firstName: z.string().min(1, "Имя обязательно").max(100),
+  middleName: z.string().min(1, "Отчество обязательно").max(100),
+  phone: z.string().min(5, "Введите корректный телефон").max(20),
+  birthDate: z.string().min(1, "Дата рождения обязательна"),
   password: z
     .string()
     .min(8, "Пароль должен содержать минимум 8 символов")
@@ -23,7 +31,7 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type PasswordFormData = z.infer<typeof passwordSchema>;
+type RegistrationFormData = z.infer<typeof registrationSchema>;
 
 interface InvitationData {
   id: string;
@@ -44,10 +52,23 @@ export function InvitePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Avatar state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedDefaultAvatar, setSelectedDefaultAvatar] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperFile, setCropperFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<RegistrationFormData>({
+    resolver: zodResolver(registrationSchema),
     defaultValues: {
+      lastName: "",
+      firstName: "",
+      middleName: "",
+      phone: "",
+      birthDate: "",
       password: "",
       confirmPassword: "",
     },
@@ -68,7 +89,6 @@ export function InvitePage() {
       }
 
       try {
-        // Use the secure database function to validate invitation
         const { data, error } = await supabase
           .rpc('get_invitation_by_token', { invitation_token: token });
 
@@ -99,31 +119,81 @@ export function InvitePage() {
     validateInvitation();
   }, [token, navigate, toast]);
 
-  const hashToken = async (tokenValue: string): Promise<string> => {
-    // Simple MD5 hash implementation for client-side
-    const encoder = new TextEncoder();
-    const data = encoder.encode(tokenValue);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCropperFile(file);
+      setCropperOpen(true);
+      setSelectedDefaultAvatar(null);
+    }
+    if (e.target) e.target.value = '';
   };
 
-  const onSubmit = async (data: PasswordFormData) => {
+  const handleCropComplete = (blob: Blob) => {
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(blob));
+    setSelectedDefaultAvatar(null);
+  };
+
+  const handleSelectDefaultAvatar = (avatarId: string) => {
+    setSelectedDefaultAvatar(avatarId);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+  };
+
+  const clearAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setSelectedDefaultAvatar(null);
+  };
+
+  const getAvatarDisplay = () => {
+    if (avatarPreview) return avatarPreview;
+    if (selectedDefaultAvatar) {
+      const avatar = DEFAULT_AVATARS.find(a => a.id === selectedDefaultAvatar);
+      return avatar ? null : null; // We'll use the emoji fallback
+    }
+    return null;
+  };
+
+  const onSubmit = async (data: RegistrationFormData) => {
     if (!invitation) return;
 
     try {
       setIsSubmitting(true);
 
-      const fullName = invitation.first_name && invitation.last_name 
-        ? `${invitation.first_name} ${invitation.last_name}` 
-        : invitation.email;
+      const fullName = `${data.lastName} ${data.firstName} ${data.middleName}`.trim();
 
-      // Use edge function to create user with email pre-confirmed (no confirmation email needed)
+      // Upload avatar if custom file
+      let avatarUrl: string | null = null;
+      if (avatarFile) {
+        const fileName = `invite_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile, { contentType: 'image/jpeg' });
+        
+        if (uploadError) {
+          console.error('Avatar upload error:', uploadError);
+        } else {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+          avatarUrl = urlData.publicUrl;
+        }
+      } else if (selectedDefaultAvatar) {
+        avatarUrl = getDefaultAvatarUrl(selectedDefaultAvatar);
+      }
+
       const { data: result, error: fnError } = await supabase.functions.invoke('register-invited-user', {
         body: {
           email: invitation.email,
           password: data.password,
           full_name: fullName,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          middle_name: data.middleName,
+          phone: data.phone,
+          birth_date: data.birthDate,
+          avatar_url: avatarUrl,
           role: invitation.role,
           invitation_token: token,
         },
@@ -137,7 +207,6 @@ export function InvitePage() {
         description: "Ваш аккаунт успешно создан.",
       });
 
-      // Sign in the user
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: invitation.email,
         password: data.password,
@@ -177,30 +246,150 @@ export function InvitePage() {
     );
   }
 
+  const selectedDefaultAvatarData = selectedDefaultAvatar 
+    ? DEFAULT_AVATARS.find(a => a.id === selectedDefaultAvatar) 
+    : null;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Создание пароля</CardTitle>
+          <CardTitle className="text-2xl">Регистрация</CardTitle>
           <p className="text-sm text-muted-foreground">
             Добро пожаловать в EventBalance!<br />
-            {invitation.first_name && invitation.last_name 
-              ? `${invitation.first_name} ${invitation.last_name}` 
-              : invitation.email}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Роль: {invitation.role === 'admin' ? 'Администратор' : 'Сотрудник'}
+            {invitation.email}
           </p>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Avatar section */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-20 w-20">
+                    {avatarPreview ? (
+                      <AvatarImage src={avatarPreview} />
+                    ) : null}
+                    <AvatarFallback className={selectedDefaultAvatarData ? selectedDefaultAvatarData.bg : 'bg-muted'}>
+                      {selectedDefaultAvatarData ? (
+                        <span className="text-3xl">{selectedDefaultAvatarData.emoji}</span>
+                      ) : (
+                        <Camera className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  {(avatarPreview || selectedDefaultAvatar) && (
+                    <button
+                      type="button"
+                      onClick={clearAvatar}
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera className="h-4 w-4 mr-1" />
+                    Загрузить фото
+                  </Button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <DefaultAvatarPicker
+                  selected={selectedDefaultAvatar}
+                  onSelect={handleSelectDefaultAvatar}
+                />
+              </div>
+
+              {/* Name fields */}
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Фамилия *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Иванов" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Имя *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Иван" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="middleName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Отчество *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Иванович" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Телефон *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="tel" placeholder="+7 (999) 123-45-67" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="birthDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Дата рождения *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Password fields */}
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Пароль</FormLabel>
+                    <FormLabel>Пароль *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -215,11 +404,7 @@ export function InvitePage() {
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
                     </FormControl>
@@ -233,7 +418,7 @@ export function InvitePage() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Подтверждение пароля</FormLabel>
+                    <FormLabel>Подтверждение пароля *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -248,11 +433,7 @@ export function InvitePage() {
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
                     </FormControl>
@@ -268,6 +449,13 @@ export function InvitePage() {
           </Form>
         </CardContent>
       </Card>
+
+      <AvatarCropper
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageFile={cropperFile}
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 }
