@@ -600,7 +600,15 @@ const EventsImportDialog = ({
     return { event_time: single, end_time: null };
   };
 
-  const performImport = async () => {
+  const expandOwnerAbbreviation = (value: string): string => {
+    const lower = value.toLowerCase();
+    if (lower === 'н') return 'Настя';
+    if (lower === 'л') return 'Лера';
+    if (lower === 'в') return 'Ваня';
+    return value;
+  };
+
+
     if (!user) return;
     
     setImporting(true);
