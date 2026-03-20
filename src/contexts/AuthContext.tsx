@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               last_name: data.profile.last_name,
               first_name: data.profile.first_name,
               middle_name: data.profile.middle_name,
-              avatar_url: data.profile.avatar_url || null
+              avatar_url: normalizeAvatarUrl(data.profile.avatar_url)
             });
           }
           setRbacRoles(data.rbac_roles || []);
