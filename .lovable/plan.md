@@ -1,38 +1,36 @@
 
 
-## Переработка отображения уведомлений
+## Fix: Import header detection picks up banner row instead of real headers
 
-### Проблема
-Сейчас уведомления показываются в маленьком Popover (w-96, h-400px) с плоским списком. Это тесно, неудобно, и визуально неинформативно -- все типы уведомлений выглядят одинаково, эмодзи вместо иконок, нет группировки.
+### Problem
+The `findHeaderRow` function in `EventsImportDialog.tsx` finds the first row matching a keyword. A merged-cell banner like "Расписание праздников" matches "праздник" and gets selected as the header row. Since merged cells repeat the same value across columns, ALL headers become "Расписание праздников", breaking column mapping.
 
-### Решение
+### Solution
 
-Полностью переработать `NotificationsMenu.tsx` -- заменить тесный Popover на **Sheet (выдвижная панель справа)**, с улучшенным дизайном каждого уведомления.
+Two changes in `EventsImportDialog.tsx`:
 
-### Что изменится
+**1. Skip banner rows in `findHeaderRow`**
+Add a check: if all non-empty cells in a row have the **same value**, it's a banner/title row -- skip it. Real header rows have diverse column names.
 
-**1. Sheet вместо Popover**
-- Заменить `Popover` на `Sheet` (side="right"), шириной ~420px
-- Больше пространства для контента, удобнее на мобильных
+```ts
+// Inside findHeaderRow, after checking keyword hit:
+const uniqueValues = new Set(nonEmpty.map(c => c.toLowerCase()));
+if (uniqueValues.size < 2 && nonEmpty.length > 1) continue; // banner row
+```
 
-**2. Табы для фильтрации**
-- Вверху: "Все", "Непрочитанные", "Переводы", "Система"
-- Быстро найти нужное уведомление
+**2. Deduplicate headers**
+If duplicate header names still slip through, append a suffix (`_2`, `_3`, etc.) so they don't collapse as object keys:
 
-**3. Карточный дизайн каждого уведомления**
-- Lucide-иконки вместо эмодзи (FileText, Wallet, Calendar, Palmtree, ArrowLeftRight, Settings)
-- Цветные иконки в кружках по типу (синий для отчетов, зеленый для денег, и т.д.)
-- Четкая типографика: жирный заголовок, серое тело, мелкая дата
-- Индикатор непрочитанного -- цветная полоска слева (а не точка)
-- Кнопка удаления при hover
+```ts
+// After finding headers, deduplicate:
+const seen = new Map<string, number>();
+const uniqueHeaders = headers.map(h => {
+  const count = seen.get(h) || 0;
+  seen.set(h, count + 1);
+  return count > 0 ? `${h}_${count + 1}` : h;
+});
+```
 
-**4. Money Transfer -- inline-действия**
-- Кнопки "Принять / Отклонить" прямо в карточке (уже есть, оставляем)
-
-**5. Группировка по дате**
-- "Сегодня", "Вчера", "Ранее" -- разделители между группами
-
-### Файлы
-- **Изменить**: `src/components/NotificationsMenu.tsx` -- полная переработка на Sheet + новый дизайн
-- Все остальные файлы (хук, MoneyTransferNotification) -- без изменений
+### Files
+- **Edit**: `src/components/EventsImportDialog.tsx` -- `findHeaderRow` function (lines 80-97) + header dedup after detection
 
