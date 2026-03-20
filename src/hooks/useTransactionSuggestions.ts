@@ -28,6 +28,7 @@ export function useTransactionSuggestions(
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const skipNextRef = useRef(false);
+  const appliedRef = useRef(false);
   const debouncedDescription = useDebounce(description, 500);
 
   useEffect(() => {
@@ -80,12 +81,18 @@ export function useTransactionSuggestions(
     fetchSuggestions();
   }, [debouncedDescription, isDismissed]);
 
+  // Only reset dismissed state if user is typing new text (not after applying suggestions)
   useEffect(() => {
+    if (appliedRef.current) {
+      appliedRef.current = false;
+      return;
+    }
     setIsDismissed(false);
   }, [debouncedDescription]);
 
   const applySuggestions = useCallback(() => {
     if (suggestions && onApply) {
+      appliedRef.current = true;
       onApply(suggestions);
       setSuggestions(null);
       setIsDismissed(true);
