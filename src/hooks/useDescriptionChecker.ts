@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useDebounce } from './useDebounce';
+
+const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
+const CLOUD_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYmJyZ211dmtvcGtqaWpiZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MzA2NzUsImV4cCI6MjA4NTIwNjY3NX0.hKgvQ679v764rIIYWU1CCiwCtgNA_c6N4L9oK5XuxEg';
 
 interface ErrorDetail {
   original: string;
@@ -32,11 +34,9 @@ export function useDescriptionChecker(
   const [errors, setErrors] = useState<ErrorDetail[]>([]);
   const [checkError, setCheckError] = useState<string | null>(null);
 
-  // Debounce the description to avoid too many API calls
   const debouncedDescription = useDebounce(description, 300);
 
   useEffect(() => {
-    // Reset state if description is empty or too short
     if (!debouncedDescription || debouncedDescription.trim().length < 3) {
       setHasErrors(false);
       setCorrectedText(null);
@@ -50,15 +50,21 @@ export function useDescriptionChecker(
       setCheckError(null);
 
       try {
-        const { data, error } = await supabase.functions.invoke('check-transaction-description', {
-          body: { 
+        const response = await fetch(`${CLOUD_FUNCTIONS_URL}/check-transaction-description`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CLOUD_ANON_KEY,
+            'Authorization': `Bearer ${CLOUD_ANON_KEY}`,
+          },
+          body: JSON.stringify({
             text: debouncedDescription,
-            category: category || undefined
-          }
+            category: category || undefined,
+          }),
         });
 
-        if (error) {
-          console.error('Error checking description:', error);
+        if (!response.ok) {
+          console.error('Error checking description:', response.status);
           setCheckError('Не удалось проверить текст');
           setHasErrors(false);
           setCorrectedText(null);
@@ -66,12 +72,11 @@ export function useDescriptionChecker(
           return;
         }
 
-        const result = data as CheckResult;
-        
+        const result: CheckResult = await response.json();
+
         setHasErrors(result.has_errors);
         setCorrectedText(result.has_errors ? result.corrected_text : null);
         setErrors(result.errors || []);
-
       } catch (err) {
         console.error('Exception checking description:', err);
         setCheckError('Ошибка при проверке текста');

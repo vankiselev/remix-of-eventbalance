@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
-import { supabase } from '@/integrations/supabase/client';
+
+const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
+const CLOUD_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYmJyZ211dmtvcGtqaWpiZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MzA2NzUsImV4cCI6MjA4NTIwNjY3NX0.hKgvQ679v764rIIYWU1CCiwCtgNA_c6N4L9oK5XuxEg';
 
 interface TransactionSuggestions {
   category: string | null;
@@ -28,7 +30,6 @@ export function useTransactionSuggestions(
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      // Don't analyze if description is too short, empty, or dismissed
       if (!debouncedDescription || debouncedDescription.length < 5 || isDismissed) {
         setSuggestions(null);
         return;
@@ -37,15 +38,23 @@ export function useTransactionSuggestions(
       setIsAnalyzing(true);
 
       try {
-        const { data, error } = await supabase.functions.invoke('suggest-transaction-fields', {
-          body: { description: debouncedDescription }
+        const response = await fetch(`${CLOUD_FUNCTIONS_URL}/suggest-transaction-fields`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CLOUD_ANON_KEY,
+            'Authorization': `Bearer ${CLOUD_ANON_KEY}`,
+          },
+          body: JSON.stringify({ description: debouncedDescription }),
         });
 
-        if (error) {
-          console.error('Error fetching suggestions:', error);
+        if (!response.ok) {
+          console.error('Error fetching suggestions:', response.status);
           setSuggestions(null);
           return;
         }
+
+        const data = await response.json();
 
         if (data?.suggestions && data.confidence > 0.6) {
           setSuggestions(data.suggestions);
@@ -63,7 +72,6 @@ export function useTransactionSuggestions(
     fetchSuggestions();
   }, [debouncedDescription, isDismissed]);
 
-  // Reset dismissed state when description changes significantly
   useEffect(() => {
     setIsDismissed(false);
   }, [debouncedDescription]);
