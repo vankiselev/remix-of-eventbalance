@@ -23,8 +23,12 @@ const AdministrationPage = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="roles" className="w-full">
+        <Tabs defaultValue="companies" className="w-full">
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="companies" className="flex items-center gap-2 whitespace-nowrap">
+              <Building2 className="h-4 w-4" />
+              Компании
+            </TabsTrigger>
             <TabsTrigger value="roles" className="flex items-center gap-2 whitespace-nowrap">
               <Shield className="h-4 w-4" />
               Выдача прав
