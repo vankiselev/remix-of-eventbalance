@@ -308,9 +308,9 @@ const Layout = ({ children }: LayoutProps) => {
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <p>© 2025 EventBalance. Все права защищены.</p>
                   <div className="flex items-center gap-4">
-                    <a href="#" className="hover:text-foreground transition-colors">О компании</a>
-                    <a href="#" className="hover:text-foreground transition-colors">Поддержка</a>
-                    <a href="#" className="hover:text-foreground transition-colors">Контакты</a>
+                    <a href="/about" className="hover:text-foreground transition-colors">О компании</a>
+                    <a href="/support" className="hover:text-foreground transition-colors">Поддержка</a>
+                    <a href="/contacts-info" className="hover:text-foreground transition-colors">Контакты</a>
                   </div>
                 </div>
               </div>
