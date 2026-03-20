@@ -1,46 +1,24 @@
 
 
-## Fix: Infinite Recursion in `tenant_memberships` RLS Policies
+## Фикс: приглашённый пользователь попадает в "Ожидание приглашения"
 
-### Problem
+### Проблема
 
-The migration `20260128140002_create_tenant_memberships.sql` created policies that query `tenant_memberships` inside their own USING clauses:
-- "Users can view memberships in their tenants" — subquery on `tenant_memberships`
-- "Tenant owners can manage memberships" — subquery on `tenant_memberships`
+Edge-функция `register-invited-user` создаёт пользователя и добавляет в тенант, но не ставит `invitation_status = 'invited'` в таблице `profiles`. Триггер создания профиля ставит default значение `'pending'`. Из-за этого `AuthContext` считает пользователя неодобренным и перенаправляет на `/awaiting-invitation`.
 
-This causes PostgreSQL to enter infinite recursion when evaluating any query on the table.
+### Решение
 
-### Solution
+**1. Обновить `supabase/functions/register-invited-user/index.ts`**
 
-1. **Create two `SECURITY DEFINER` functions** that bypass RLS:
-   - `is_tenant_member(p_user_id uuid, p_tenant_id uuid)` — checks if user belongs to a tenant
-   - `is_tenant_owner(p_user_id uuid, p_tenant_id uuid)` — checks if user is owner of a tenant
+В блоке обновления профиля добавить `invitation_status: 'invited'`:
 
-2. **Drop and recreate the problematic policies** to use these functions instead of subqueries
-
-### Migration SQL (single file)
-
-```sql
--- Create helper functions (SECURITY DEFINER bypasses RLS)
-CREATE OR REPLACE FUNCTION public.is_tenant_member(...)
-CREATE OR REPLACE FUNCTION public.is_tenant_owner(...)
-
--- Drop recursive policies
-DROP POLICY "Users can view memberships in their tenants" ...
-DROP POLICY "Tenant owners can manage memberships" ...
-
--- Recreate using functions
-CREATE POLICY ... USING (public.is_tenant_member(auth.uid(), tenant_id))
-CREATE POLICY ... USING (public.is_tenant_owner(auth.uid(), tenant_id))
+```typescript
+await adminClient.from("profiles").update({
+  full_name: full_name || email,
+  invitation_status: 'invited',  // <-- добавить
+  invited_at: new Date().toISOString(),
+}).eq("id", userId);
 ```
 
-Also fix the "Tenant owners can update their tenant" policy on `tenants` table which has the same self-referencing issue.
-
-### Files
-
-| File | Action |
-|---|---|
-| Migration SQL | Create — fix recursive RLS policies |
-
-No code changes needed — only database migration.
+Одно изменение, один файл. После этого приглашённые пользователи будут сразу попадать в дашборд.
 
