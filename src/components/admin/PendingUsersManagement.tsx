@@ -150,6 +150,15 @@ export function PendingUsersManagement() {
       if (roleError) throw roleError;
 
       toast.success(`Пользователь ${user.email} приглашен в систему`);
+
+      // Send approval email (fire-and-forget)
+      try {
+        await supabase.functions.invoke('send-approval-email', {
+          body: { email: user.email, firstName: user.first_name, lastName: user.last_name }
+        });
+      } catch (emailError) {
+        console.error("Failed to send approval email:", emailError);
+      }
       
       // Удаляем из локального состояния
       setPendingUsers(prev => prev.filter(u => u.id !== user.id));
