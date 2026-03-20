@@ -568,7 +568,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Начало</Label>
-                    <TimeSelect
+                    <TimePicker
                       value={formData.event_time}
                       onChange={(v) => setFormData({ ...formData, event_time: v })}
                       placeholder="Время начала"
@@ -577,7 +577,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Окончание</Label>
-                    <TimeSelect
+                    <TimePicker
                       value={formData.end_time}
                       onChange={(v) => setFormData({ ...formData, end_time: v })}
                       placeholder="Время окончания"
