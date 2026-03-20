@@ -69,6 +69,25 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
     }
   }, [tenant]);
 
+  const generateSlug = (value: string) => {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 30);
+  };
+
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  const handleNameChange = (value: string) => {
+    update('name', value);
+    if (!slugManuallyEdited) {
+      update('slug', generateSlug(value));
+    }
+  };
+
   const handleSave = async () => {
     if (!tenant) return;
     if (!form.name.trim() || !form.slug.trim()) {
@@ -137,11 +156,11 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Название *</Label>
-              <Input value={form.name} onChange={(e) => update('name', e.target.value)} />
+              <Input value={form.name} onChange={(e) => handleNameChange(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Slug (адрес) *</Label>
-              <Input value={form.slug} onChange={(e) => update('slug', e.target.value)} />
+              <Input value={form.slug} onChange={(e) => { setSlugManuallyEdited(true); update('slug', generateSlug(e.target.value)); }} />
             </div>
           </div>
 
