@@ -2,7 +2,18 @@
 
 BEGIN;
 
--- Add new columns (IF NOT EXISTS via DO block for safety)
+-- 1) Create is_admin_user() wrapper (needed for policy below)
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.has_role(auth.uid(), 'admin')
+$$;
+
+-- 2) Add new columns (IF NOT EXISTS via DO block for safety)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='tenants' AND column_name='logo_url') THEN
@@ -37,7 +48,7 @@ BEGIN
   END IF;
 END$$;
 
--- RLS: Super admins can update tenants
+-- 3) RLS: Super admins can update tenants
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenants' AND policyname = 'Super admins can update tenants') THEN
@@ -49,7 +60,7 @@ BEGIN
   END IF;
 END$$;
 
--- RLS: Tenant owners can update their own tenant
+-- 4) Tenant owner check function (uses is_owner boolean column)
 CREATE OR REPLACE FUNCTION public.is_tenant_owner(_tenant_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -61,10 +72,11 @@ AS $$
     SELECT 1 FROM public.tenant_memberships
     WHERE user_id = auth.uid()
       AND tenant_id = _tenant_id
-      AND role = 'owner'
+      AND is_owner = true
   )
 $$;
 
+-- 5) RLS: Tenant owners can update their own tenant
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenants' AND policyname = 'Tenant owners can update own tenant') THEN
