@@ -13,6 +13,7 @@ import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, M
 import { formatDate } from "@/utils/dateFormat";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Separator } from "@/components/ui/separator";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface ReportWithEmployee {
   id: string;
