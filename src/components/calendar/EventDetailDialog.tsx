@@ -599,7 +599,8 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Ответственные менеджеры</Label>
                     <SearchableMultiSelect
-                      options={employees.map((e) => ({ id: e.id, label: e.full_name }))}
+                      options={employees.map((e) => ({ id: e.id, label: e.full_name, avatarUrl: e.avatar_url }))}
+                      showAvatars
                       selected={formData.responsible_manager_ids}
                       onChange={(ids) => setFormData({ ...formData, responsible_manager_ids: ids })}
                       placeholder="Поиск менеджеров..."
