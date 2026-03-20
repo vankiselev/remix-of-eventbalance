@@ -19,6 +19,9 @@ import DashboardPage from "./pages/DashboardPage";
 
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfUsePage from "./pages/TermsOfUsePage";
+import AboutPage from "./pages/AboutPage";
+import SupportPage from "./pages/SupportPage";
+import ContactsInfoPage from "./pages/ContactsInfoPage";
 import FinancesPage from "./pages/FinancesPage";
 import EventsPage from "./pages/EventsPage";
 import CalendarPageWrapper from "./pages/CalendarPageWrapper";
@@ -167,6 +170,9 @@ const App = () => {
                     <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                     <Route path="/terms" element={<TermsOfUsePage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/support" element={<SupportPage />} />
+                    <Route path="/contacts-info" element={<ContactsInfoPage />} />
                     
                     {/* Company selection and registration */}
                     <Route path="/select-company" element={<ProtectedRoute><SelectCompanyPage /></ProtectedRoute>} />
