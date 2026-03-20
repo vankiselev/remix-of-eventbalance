@@ -365,7 +365,11 @@ export function InvitePage() {
                   <FormItem>
                     <FormLabel>Телефон *</FormLabel>
                     <FormControl>
-                      <Input {...field} type="tel" placeholder="+7 (999) 123-45-67" />
+                      <PhoneInputRU
+                        value={field.value}
+                        onChange={(result) => field.onChange(result.e164 || result.display)}
+                        required
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
