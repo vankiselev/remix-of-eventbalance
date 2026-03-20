@@ -2,48 +2,49 @@
 
 ## Problem
 
-Migration `20260320_add_middle_name_and_avatars_bucket.sql` fails because PostgreSQL does not support `CREATE POLICY IF NOT EXISTS` syntax. The error:
+When an admin deletes an employee via `delete_employee_permanently`, the deleted user's browser session remains active because:
 
-```
-ERROR: syntax error at or near "NOT"
-LINE 1: CREATE POLICY IF NOT EXISTS "Authenticated users can upload ...
-```
+1. The realtime subscription only listens for `UPDATE` on profiles, not `DELETE`
+2. The JWT token remains valid until it naturally expires
+3. No periodic session validation exists
 
-## Fix
+The deleted user can continue navigating the app until their token expires or they refresh.
 
-Replace all `CREATE POLICY IF NOT EXISTS` with `DROP POLICY IF EXISTS` + `CREATE POLICY` pattern (same approach used in the working `20260320_tenant_logos_bucket.sql`).
+## Solution
+
+Two-layer protection:
+
+### 1. Listen for profile DELETE events (instant)
+
+In `AuthContext.tsx`, add a `DELETE` event listener on the `profiles` table. When the profile row is deleted, immediately sign the user out.
+
+### 2. Periodic session health check (fallback)
+
+Add an interval (every 60 seconds) that verifies the user's profile still exists in the database. If the profile is gone, force sign-out. This catches cases where the realtime event is missed.
 
 ## Changes
 
-**File: `migrations/20260320_add_middle_name_and_avatars_bucket.sql`**
+**File: `src/contexts/AuthContext.tsx`**
 
-Replace lines 14-32 with:
+1. In the realtime subscription (line ~194), add a listener for `DELETE` events on the `profiles` table:
+   - When a DELETE event matches the current user's id, call `signOut()` and show a toast message
+   
+2. Add a `useEffect` with a 60-second interval that runs a lightweight query (`select id from profiles where id = user.id`) to confirm the profile exists. If not found, force sign-out with a message.
 
-```sql
--- Allow authenticated users to upload avatars
-DROP POLICY IF EXISTS "Authenticated users can upload avatars" ON storage.objects;
-CREATE POLICY "Authenticated users can upload avatars"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (bucket_id = 'avatars');
+3. In `loadUserData`, add a check: if the profile query returns no data (null/empty), treat it the same as terminated — sign out and redirect.
 
--- Allow public read access to avatars
-DROP POLICY IF EXISTS "Public can read avatars" ON storage.objects;
-CREATE POLICY "Public can read avatars"
-ON storage.objects FOR SELECT TO public
-USING (bucket_id = 'avatars');
+## Technical Details
 
--- Allow users to update their own avatars
-DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
-CREATE POLICY "Users can update own avatars"
-ON storage.objects FOR UPDATE TO authenticated
-USING (bucket_id = 'avatars');
+```text
+Realtime channel update:
+  Current:  UPDATE on profiles (filter: id=eq.user.id)
+  Add:      DELETE on profiles (filter: id=eq.user.id)
 
--- Allow users to delete their own avatars
-DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
-CREATE POLICY "Users can delete own avatars"
-ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id = 'avatars');
+New interval check:
+  Every 60s → SELECT id FROM profiles WHERE id = user.id
+  If no rows → signOut() + toast "Ваш аккаунт был удалён"
+  
+loadUserData guard:
+  If profile is null after RPC call → signOut + redirect
 ```
-
-This is the only failing migration. The `tenant_logos_bucket` migration already succeeded.
 
