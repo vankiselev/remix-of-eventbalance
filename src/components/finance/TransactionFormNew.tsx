@@ -366,7 +366,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         const projectValue = editTransaction.static_project_name || editTransaction.project_id;
         
         // Initialize money transfer state for edit mode
-        const isTransferCategory = editTransaction.category === 'Передано или получено от сотрудника';
+        const isTransferCategory = MONEY_TRANSFER_CATEGORIES.includes(editTransaction.category);
         if (isTransferCategory) {
           setIsMoneyTransfer(true);
           setTransferToUserId(editTransaction.transfer_to_user_id || "");
