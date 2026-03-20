@@ -359,7 +359,7 @@ const FinancialReportPage = () => {
         </div>
 
         {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1 min-h-0">
           {/* Plan (estimate items) */}
           <Card className="flex flex-col overflow-hidden lg:col-span-3">
             <CardHeader className="py-3 flex-shrink-0">
