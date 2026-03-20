@@ -83,7 +83,7 @@ export const TenantLogoUpload: React.FC<TenantLogoUploadProps> = ({
       >
         <Avatar className="h-20 w-20 border-2 border-border shadow-sm">
           {logoUrl ? (
-            <AvatarImage src={logoUrl} alt={tenantName} className="object-cover" />
+            <AvatarImage src={logoUrl} alt={tenantName} className="object-contain p-1" />
           ) : null}
           <AvatarFallback className="text-lg font-semibold bg-muted text-muted-foreground">
             {initials}
