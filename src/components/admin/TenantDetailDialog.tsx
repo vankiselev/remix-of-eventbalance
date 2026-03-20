@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { TenantLogoUpload } from './TenantLogoUpload';
 
 export interface TenantProfile {
   id: string;
@@ -43,6 +44,7 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
     slug: '',
@@ -56,6 +58,7 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
 
   useEffect(() => {
     if (tenant) {
+      setLogoUrl(tenant.logo_url || null);
       setForm({
         name: tenant.name || '',
         slug: tenant.slug || '',
@@ -153,6 +156,15 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {tenant && (
+            <TenantLogoUpload
+              tenantId={tenant.id}
+              logoUrl={logoUrl}
+              tenantName={form.name || tenant.name}
+              onUploaded={(url) => setLogoUrl(url)}
+            />
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Название *</Label>
