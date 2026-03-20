@@ -650,7 +650,7 @@ const EventsImportDialog = ({
           const eventData: Record<string, any> = {
             start_date: dateStr,
             name: String(mappedRow.title).trim(),
-            project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
+            project_owner: mappedRow.project_owner ? expandOwnerAbbreviation(String(mappedRow.project_owner).trim()) : null,
             managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
             location: mappedRow.place ? String(mappedRow.place).trim() : null,
             event_time: event_time,
