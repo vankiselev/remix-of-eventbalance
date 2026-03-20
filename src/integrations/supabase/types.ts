@@ -856,6 +856,7 @@ export type Database = {
           full_name: string | null
           id: string
           last_name: string | null
+          middle_name: string | null
           phone: string | null
           temp_password: string | null
           tenant_id: string | null
@@ -871,6 +872,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_name?: string | null
+          middle_name?: string | null
           phone?: string | null
           temp_password?: string | null
           tenant_id?: string | null
@@ -886,6 +888,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_name?: string | null
+          middle_name?: string | null
           phone?: string | null
           temp_password?: string | null
           tenant_id?: string | null
