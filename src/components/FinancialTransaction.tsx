@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,7 @@ const FinancialTransaction = () => {
   const [allProjects, setAllProjects] = useState<(Event | { id: string; name: string; isStatic: boolean })[]>([]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const { user } = useAuth();
+  const { currentTenant } = useTenant();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof transactionSchema>>({
@@ -110,6 +112,14 @@ const FinancialTransaction = () => {
 
   const onSubmit = async (values: z.infer<typeof transactionSchema>) => {
     if (!user) return;
+    if (!currentTenant?.id) {
+      toast({
+        variant: 'destructive',
+        title: 'Ошибка',
+        description: 'Тенант не определён. Попробуйте обновить страницу.',
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -128,6 +138,7 @@ const FinancialTransaction = () => {
           expense_amount: expense || 0,
           income_amount: income || 0,
           category: values.category,
+          tenant_id: currentTenant.id,
         });
 
       if (error) throw error;

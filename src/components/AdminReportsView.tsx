@@ -13,6 +13,7 @@ import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, M
 import { formatDate } from "@/utils/dateFormat";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Separator } from "@/components/ui/separator";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface ReportWithEmployee {
   id: string;
@@ -38,6 +39,7 @@ interface ReportWithEmployee {
 
 const AdminReportsView = () => {
   const { toast } = useToast();
+  const { currentTenant } = useTenant();
   const [reports, setReports] = useState<ReportWithEmployee[]>([]);
   const [filteredReports, setFilteredReports] = useState<ReportWithEmployee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,6 +199,7 @@ const AdminReportsView = () => {
           cash_type: walletType,
           static_project_name: report.project_name,
           created_by: (await supabase.auth.getUser()).data.user?.id,
+          tenant_id: currentTenant?.id || null,
         });
 
       if (error) throw error;
