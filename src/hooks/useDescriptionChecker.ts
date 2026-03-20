@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 
 const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
@@ -22,6 +22,8 @@ interface UseDescriptionCheckerResult {
   correctedText: string | null;
   errors: ErrorDetail[];
   checkError: string | null;
+  suppressNextCheck: () => void;
+  clearCorrection: () => void;
 }
 
 export function useDescriptionChecker(
@@ -33,6 +35,7 @@ export function useDescriptionChecker(
   const [correctedText, setCorrectedText] = useState<string | null>(null);
   const [errors, setErrors] = useState<ErrorDetail[]>([]);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const skipNextRef = useRef(false);
 
   const debouncedDescription = useDebounce(description, 300);
 
@@ -42,6 +45,12 @@ export function useDescriptionChecker(
       setCorrectedText(null);
       setErrors([]);
       setCheckError(null);
+      return;
+    }
+
+    // Skip this check if correction was just applied
+    if (skipNextRef.current) {
+      skipNextRef.current = false;
       return;
     }
 
@@ -91,11 +100,23 @@ export function useDescriptionChecker(
     checkDescription();
   }, [debouncedDescription, category]);
 
+  const suppressNextCheck = useCallback(() => {
+    skipNextRef.current = true;
+  }, []);
+
+  const clearCorrection = useCallback(() => {
+    setHasErrors(false);
+    setCorrectedText(null);
+    setErrors([]);
+  }, []);
+
   return {
     isChecking,
     hasErrors,
     correctedText,
     errors,
     checkError,
+    suppressNextCheck,
+    clearCorrection,
   };
 }

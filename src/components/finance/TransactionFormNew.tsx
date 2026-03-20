@@ -205,6 +205,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     hasErrors,
     correctedText,
     errors,
+    suppressNextCheck,
+    clearCorrection,
   } = useDescriptionChecker(watchDescription, watchCategory);
 
   // AI-powered transaction suggestions
@@ -214,6 +216,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     confidence: aiConfidence,
     applySuggestions: applyAISuggestions,
     dismissSuggestions,
+    suppressNextAnalysis,
   } = useTransactionSuggestions(watchDescription, (suggestions) => {
     // Apply AI suggestions to form
     if (suggestions.category) {
@@ -238,6 +241,37 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       duration: 3000,
     });
   });
+
+  // Apply correction without triggering re-analysis
+  const handleApplyCorrection = () => {
+    if (!correctedText) return;
+    suppressNextCheck();
+    suppressNextAnalysis();
+    form.setValue("description", correctedText);
+    clearCorrection();
+    toast({
+      title: "Исправление применено",
+      description: "Описание обновлено",
+    });
+  };
+
+  // Apply all AI suggestions at once
+  const handleApplyAll = () => {
+    if (hasErrors && correctedText) {
+      suppressNextCheck();
+      suppressNextAnalysis();
+      form.setValue("description", correctedText);
+      clearCorrection();
+    }
+    if (aiSuggestions && aiConfidence > 0.6) {
+      applyAISuggestions();
+    }
+    toast({
+      title: "Все предложения применены",
+      description: "Описание, категория и проект обновлены",
+      duration: 3000,
+    });
+  };
 
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
@@ -914,17 +948,26 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          form.setValue("description", correctedText);
-                          toast({
-                            title: "Исправление применено",
-                            description: "Описание обновлено",
-                          });
-                        }}
+                        onClick={handleApplyCorrection}
                         className="mt-2 h-10 min-h-[44px]"
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Применить исправление
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Apply All button - shown when both correction and suggestions are available */}
+                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                    <div className="mt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleApplyAll}
+                        className="w-full h-10 min-h-[44px]"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Применить все предложения
                       </Button>
                     </div>
                   )}
