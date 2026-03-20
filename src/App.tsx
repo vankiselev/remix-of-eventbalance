@@ -19,6 +19,9 @@ import DashboardPage from "./pages/DashboardPage";
 
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfUsePage from "./pages/TermsOfUsePage";
+import AboutPage from "./pages/AboutPage";
+import SupportPage from "./pages/SupportPage";
+import ContactsInfoPage from "./pages/ContactsInfoPage";
 import FinancesPage from "./pages/FinancesPage";
 import EventsPage from "./pages/EventsPage";
 import CalendarPageWrapper from "./pages/CalendarPageWrapper";
