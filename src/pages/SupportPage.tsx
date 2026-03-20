@@ -30,8 +30,8 @@ const SupportPage = () => {
               <p className="text-sm">
                 Напишите нам на почту, и мы ответим в течение рабочего дня.
               </p>
-              <a href="mailto:support@eventbalance.ru" className="text-sm text-primary hover:underline font-medium">
-                support@eventbalance.ru
+              <a href="mailto:ikiselev@me.com" className="text-sm text-primary hover:underline font-medium">
+                ikiselev@me.com
               </a>
             </div>
 

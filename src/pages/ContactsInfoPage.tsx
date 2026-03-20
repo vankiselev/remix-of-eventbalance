@@ -27,8 +27,8 @@ const ContactsInfoPage = () => {
                 <Mail className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-semibold text-foreground">Email</h3>
-              <a href="mailto:info@eventbalance.ru" className="text-sm text-primary hover:underline">
-                info@eventbalance.ru
+              <a href="mailto:ikiselev@me.com" className="text-sm text-primary hover:underline">
+                ikiselev@me.com
               </a>
             </div>
 
