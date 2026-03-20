@@ -1157,8 +1157,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       onValueChange={(value) => {
                         field.onChange(value);
                         // Automatically enable money transfer for employee transfer category
-                        if (value === 'Передано или получено от сотрудника') {
+                        if (MONEY_TRANSFER_CATEGORIES.includes(value)) {
                           setIsMoneyTransfer(true);
+                          setIsDescriptionAutoFilled(true);
+                          form.setValue('no_receipt', true);
+                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+                          form.setValue('income_amount', undefined);
                           setIsDescriptionAutoFilled(true);
                           // Auto-set no_receipt for money transfers
                           form.setValue('no_receipt', true);
