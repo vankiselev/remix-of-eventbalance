@@ -89,10 +89,22 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Update invitation_status to 'invited' via direct update (service role bypasses RLS)
-    await adminClient.from("profiles").update({ 
-      invitation_status: 'invited' 
-    }).eq("id", userId);
+    // Explicitly update profile fields that the trigger might not handle
+    // This is a safety net for self-hosted where the trigger may be outdated
+    const profileUpdate: Record<string, any> = {};
+    if (finalAvatarUrl) profileUpdate.avatar_url = finalAvatarUrl;
+    if (phone) profileUpdate.phone = phone;
+    if (birth_date) profileUpdate.birth_date = birth_date;
+    if (first_name) profileUpdate.first_name = first_name;
+    if (last_name) profileUpdate.last_name = last_name;
+    if (middle_name) profileUpdate.middle_name = middle_name;
+    if (full_name) profileUpdate.full_name = full_name;
+
+    if (Object.keys(profileUpdate).length > 0) {
+      await adminClient.from("profiles")
+        .update(profileUpdate)
+        .eq("id", userId);
+    }
 
     // Accept invitation if token provided
     let invitedBy: string | null = null;
