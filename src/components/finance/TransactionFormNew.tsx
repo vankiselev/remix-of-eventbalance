@@ -859,7 +859,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   <FormControl>
                     <Textarea
                       placeholder={
-                        form.watch("category") === "Передано или получено от сотрудника"
+                        MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))
                           ? "Например: Передал на наличные расходы по проекту"
                           : "Опишите операцию..."
                       }
@@ -1287,7 +1287,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             />
 
             {/* Money Transfer Section - Show when category is employee transfer */}
-            {form.watch("category") === "Передано или получено от сотрудника" && (
+            {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
               <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">💸</span>
@@ -1444,7 +1444,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   <FormItem>
                     <FormLabel>
                       Сумма Траты
-                      {form.watch("category") === "Передано или получено от сотрудника" && (
+                      {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
                         <span className="ml-2 text-xs text-primary font-normal">
                           ← Заполните это поле
                         </span>
@@ -1460,7 +1460,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder={
-                          form.watch("category") === "Передано или получено от сотрудника"
+                          MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))
                             ? "Сумма передачи сотруднику"
                             : "Введите сумму"
                         }
@@ -1487,10 +1487,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder="Введите сумму"
-                        disabled={form.watch("category") === "Передано или получено от сотрудника"}
+                        disabled={MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))}
                       />
                     </FormControl>
-                    {form.watch("category") === "Передано или получено от сотрудника" && (
+                    {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
                       <FormDescription className="text-xs">
                         При передаче денег не заполняется
                       </FormDescription>
