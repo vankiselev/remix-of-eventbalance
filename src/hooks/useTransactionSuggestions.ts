@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 
 const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
@@ -17,6 +17,7 @@ interface UseTransactionSuggestionsResult {
   confidence: number;
   applySuggestions: () => void;
   dismissSuggestions: () => void;
+  suppressNextAnalysis: () => void;
 }
 
 export function useTransactionSuggestions(
@@ -26,12 +27,19 @@ export function useTransactionSuggestions(
   const [suggestions, setSuggestions] = useState<TransactionSuggestions | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const skipNextRef = useRef(false);
   const debouncedDescription = useDebounce(description, 500);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (!debouncedDescription || debouncedDescription.length < 5 || isDismissed) {
         setSuggestions(null);
+        return;
+      }
+
+      // Skip if suppressed (e.g., after applying correction)
+      if (skipNextRef.current) {
+        skipNextRef.current = false;
         return;
       }
 
@@ -76,18 +84,22 @@ export function useTransactionSuggestions(
     setIsDismissed(false);
   }, [debouncedDescription]);
 
-  const applySuggestions = () => {
+  const applySuggestions = useCallback(() => {
     if (suggestions && onApply) {
       onApply(suggestions);
       setSuggestions(null);
       setIsDismissed(true);
     }
-  };
+  }, [suggestions, onApply]);
 
-  const dismissSuggestions = () => {
+  const dismissSuggestions = useCallback(() => {
     setSuggestions(null);
     setIsDismissed(true);
-  };
+  }, []);
+
+  const suppressNextAnalysis = useCallback(() => {
+    skipNextRef.current = true;
+  }, []);
 
   return {
     suggestions,
@@ -95,5 +107,6 @@ export function useTransactionSuggestions(
     confidence: suggestions?.confidence || 0,
     applySuggestions,
     dismissSuggestions,
+    suppressNextAnalysis,
   };
 }
