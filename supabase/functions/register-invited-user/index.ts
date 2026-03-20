@@ -65,15 +65,21 @@ Deno.serve(async (req) => {
     await adminClient.from("profiles").update(profileUpdate).eq("id", userId);
 
     // Accept invitation if token provided
+    let invitedBy: string | null = null;
+    let invTenantId: string | null = null;
+
     if (invitation_token) {
       const { data: invData } = await adminClient
         .from("invitations")
-        .select("id, tenant_id")
+        .select("id, tenant_id, invited_by")
         .eq("token", invitation_token)
         .eq("status", "pending")
         .single();
 
       if (invData) {
+        invitedBy = invData.invited_by;
+        invTenantId = invData.tenant_id;
+
         await adminClient.from("invitations").update({
           status: "accepted",
           accepted_at: new Date().toISOString(),
