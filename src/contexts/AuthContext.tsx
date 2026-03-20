@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatFullName } from '@/utils/formatName';
+import { normalizeAvatarUrl } from '@/utils/normalizeAvatarUrl';
 
 interface RbacRole {
   name: string;
@@ -80,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               last_name: data.profile.last_name,
               first_name: data.profile.first_name,
               middle_name: data.profile.middle_name,
-              avatar_url: data.profile.avatar_url || null
+              avatar_url: normalizeAvatarUrl(data.profile.avatar_url)
             });
           }
           setRbacRoles(data.rbac_roles || []);
@@ -172,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             last_name: profileData.profile.last_name,
             first_name: profileData.profile.first_name,
             middle_name: profileData.profile.middle_name,
-            avatar_url: profileData.profile.avatar_url || null,
+            avatar_url: normalizeAvatarUrl(profileData.profile.avatar_url),
             invitation_status: profileData.profile.invitation_status
           });
           setRbacRoles(profileData.rbac_roles || []);

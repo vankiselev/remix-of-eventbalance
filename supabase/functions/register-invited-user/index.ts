@@ -31,6 +31,10 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Compute public base URL from the request origin (not SUPABASE_URL which may be internal)
+    const reqUrl = new URL(req.url);
+    const publicBaseUrl = `${reqUrl.protocol}//${reqUrl.host}`;
+
     // Upload avatar if base64 provided
     let finalAvatarUrl = avatar_url || null;
     if (avatar_base64) {
@@ -50,15 +54,23 @@ Deno.serve(async (req) => {
           .from('avatars')
           .upload(fileName, bytes, { contentType: 'image/jpeg' });
         
-        if (!uploadError) {
-          const { data: urlData } = adminClient.storage.from('avatars').getPublicUrl(fileName);
-          // Replace internal Docker URL (http://kong:8000) with public Supabase URL
-          finalAvatarUrl = urlData.publicUrl.replace(/http:\/\/kong:\d+/, supabaseUrl);
-        } else {
+        if (uploadError) {
           console.error('Avatar upload error:', uploadError);
+          return new Response(
+            JSON.stringify({ error: `Avatar upload failed: ${uploadError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
+
+        // Build public URL manually to avoid internal Docker host (kong:8000)
+        finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
+        console.log('Avatar uploaded, public URL:', finalAvatarUrl);
       } catch (avatarError) {
         console.error('Avatar processing error:', avatarError);
+        return new Response(
+          JSON.stringify({ error: `Avatar processing failed: ${avatarError.message}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 

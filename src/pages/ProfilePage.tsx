@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload, Loader2, LogOut } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { normalizeAvatarUrl } from "@/utils/normalizeAvatarUrl";
 
 const profileSchema = z.object({
   last_name: z.string().min(1, "Фамилия обязательна"),
@@ -85,7 +86,7 @@ const ProfilePage = () => {
 
       if (data) {
         setProfile(data);
-        setAvatarUrl(data.user_avatar_url);
+        setAvatarUrl(normalizeAvatarUrl(data.user_avatar_url));
         
         form.reset({
           last_name: data.user_last_name || "",
