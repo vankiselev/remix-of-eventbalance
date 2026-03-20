@@ -8,8 +8,9 @@ import { WarehouseSettingsManagement } from "@/components/admin/WarehouseSetting
 import { WarehouseCategoriesManagement } from "@/components/admin/WarehouseCategoriesManagement";
 import { WarehouseLocationsManagement } from "@/components/admin/WarehouseLocationsManagement";
 import { TestDataManagement } from "@/components/admin/TestDataManagement";
+import { TenantsManagement } from "@/components/admin/TenantsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2 } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
