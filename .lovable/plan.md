@@ -2,52 +2,60 @@
 
 ## Проблема
 
-Миграция `20260320_seed_role_definitions.sql` падает на self-hosted сервере с ошибкой:
-```
-ERROR: column "display_name" of relation "role_definitions" does not exist
-```
+При регистрации по приглашению данные (ФИО, телефон, дата рождения, аватар) не сохраняются в профиле. Две причины:
 
-Таблица `role_definitions` на self-hosted базе не содержит колонку `display_name`, в то время как в Lovable Cloud эта колонка есть.
+1. **Триггер блокирует обновление профиля** — в edge function `register-invited-user` используется `adminClient` (service role), но триггер `prevent_unauthorized_profile_updates` проверяет `auth.uid()`, который для service role равен NULL. Триггер выбрасывает исключение, и UPDATE не применяется.
+
+2. **Аватар не загружается** — на странице `/invite` пользователь ещё не авторизован, а storage policy требует `auth.uid()` для загрузки. Upload тихо падает.
 
 ## Решение
 
-Обновить миграцию, чтобы она сначала добавляла недостающие колонки (если их нет), а потом вставляла данные. Это сделает миграцию совместимой с обеими базами.
+### 1. Передавать данные через user_metadata при создании пользователя
 
-## Изменения
+Вместо отдельного UPDATE после создания, передавать все поля (first_name, last_name, middle_name, phone, birth_date) в `user_metadata` при вызове `auth.admin.createUser`. Триггер `handle_new_user` уже читает из `raw_user_meta_data` — нужно расширить его, чтобы он также подхватывал phone, birth_date.
 
-### 1. Обновить `migrations/20260320_seed_role_definitions.sql`
-
-Добавить перед INSERT'ами:
+**Файл: `migrations/` — новая миграция для обновления `handle_new_user`**
 ```sql
--- Ensure required columns exist (for self-hosted compatibility)
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
+CREATE OR REPLACE FUNCTION public.handle_new_user() ...
+  -- добавить: phone, birth_date, avatar_url из raw_user_meta_data
 ```
 
-Полный файл:
+**Файл: `supabase/functions/register-invited-user/index.ts`**
+- Передать все поля в `user_metadata` при `createUser` (first_name, last_name, middle_name, phone, birth_date, avatar_url)
+- Убрать отдельный `profiles.update()` — данные будут вставлены триггером
+- Оставить `invitation_status` update отдельно (через adminClient, с обработкой ошибки)
+
+### 2. Перенести загрузку аватара в edge function
+
+Сейчас InvitePage пытается загрузить аватар через `supabase.storage` без авторизации — это не работает.
+
+**Файл: `supabase/functions/register-invited-user/index.ts`**
+- Принимать аватар как base64 в теле запроса
+- Загружать через `adminClient.storage` (обходит RLS)
+- Возвращать publicUrl и сохранять в user_metadata
+
+**Файл: `src/pages/InvitePage.tsx`**
+- Вместо прямой загрузки в storage, конвертировать файл в base64 и передать в edge function
+
+### 3. Обновить триггер handle_new_user
+
+Расширить триггер для чтения дополнительных полей из metadata:
+
 ```sql
--- Ensure required columns exist (for self-hosted compatibility)
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
-ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
-
--- Seed role_definitions with standard roles
-INSERT INTO role_definitions (name, display_name, code, is_admin_role)
-VALUES 
-  ('admin', 'Администратор', 'admin', true),
-  ('super_admin', 'Супер-администратор', 'super_admin', true),
-  ('member', 'Сотрудник', 'member', false)
-ON CONFLICT DO NOTHING;
-
--- Assign admin role to all tenant owners
-INSERT INTO user_role_assignments (user_id, role_id)
-SELECT tm.user_id, rd.id
-FROM tenant_memberships tm
-JOIN role_definitions rd ON rd.name = 'admin'
-WHERE tm.role = 'owner'
-ON CONFLICT DO NOTHING;
+-- В INSERT VALUES добавить:
+phone = COALESCE(raw_meta ->> 'phone', NULL),
+birth_date = (raw_meta ->> 'birth_date')::date,
+avatar_url = COALESCE(raw_meta ->> 'avatar_url', NULL),
+invitation_status = 'invited'  -- для приглашённых
 ```
 
-Это единственное изменение — добавить 3 строки `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` в начало файла.
+### 4. Деплой
+
+Развернуть обновлённый `register-invited-user`.
+
+## Итого изменяемые файлы
+
+- `supabase/functions/register-invited-user/index.ts` — передача данных через metadata + загрузка аватара на сервере
+- `src/pages/InvitePage.tsx` — передача аватара как base64 вместо прямого upload
+- Новая миграция SQL — обновление `handle_new_user` для чтения phone, birth_date, avatar_url
 
