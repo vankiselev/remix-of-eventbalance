@@ -1,36 +1,27 @@
 
 
-## Problem
+## Проблема
 
-Transaction creation fails with "Тенант не определён" because `currentTenant` is always `null`. Root cause chain:
+При скролле страницы шапка (header) исчезает, хотя у неё стоит `sticky top-0`.
 
-1. `TenantContext` calls RPC `get_user_tenant_memberships` which **doesn't exist** in the database
-2. The call fails, memberships array stays empty, `currentTenant` remains `null`
-3. The `tenants` table is empty — no default tenant was created
-4. The `tenant_memberships` table has no records
-5. The actual DB schema is simpler than what the migrations defined (missing columns like `is_owner`, `plan`, `settings`, etc.)
+**Причина**: на корневом `div` (строка 162 в `Layout.tsx`) установлен класс `overflow-x-hidden`. Это известная CSS-проблема — любой `overflow: hidden` (даже только по оси X) на предке ломает `position: sticky`, превращая его в обычный `relative`.
 
-## Solution
+## Решение
 
-### 1. Create the RPC function + seed default tenant (SQL migration)
+### 1. Layout.tsx — убрать overflow-x-hidden с корневого div
 
-- Create `get_user_tenant_memberships()` RPC that returns tenant memberships with tenant data joined
-- Insert a default tenant into `tenants` table
-- Insert memberships for all existing users (from `profiles`) into `tenant_memberships`
-- Adapt to the actual DB schema (which has simpler columns: `id, tenant_id, user_id, role, created_at` for memberships and `id, name, slug, created_at, updated_at` for tenants)
+- Строка 162: убрать `overflow-x-hidden` из корневого контейнера `div.min-h-screen`.
+- Вместо этого добавить `overflow-x: hidden` на `<body>` или `<html>` через CSS (в `index.css` или `App.css`), чтобы горизонтальный скролл по-прежнему не появлялся, но `sticky` работал корректно.
 
-### 2. Update TenantContext to work with actual schema
+### 2. index.css / App.css — overflow на body
 
-- Update `TenantContext.tsx` to handle the simpler tenant/membership structure (no `is_owner`, `status`, `settings` etc.)
-- Set sensible defaults for missing fields so the rest of the app doesn't break
-- Add a direct query fallback: if RPC fails, query `tenant_memberships` + `tenants` tables directly
+- Добавить `html, body { overflow-x: hidden; }` — это не влияет на sticky, потому что sticky работает относительно viewport для элементов внутри body.
 
-### 3. Hide AI suggestions after applying
+### 3. Также проверить десктопный main
 
-- In `useTransactionSuggestions.ts`, also set `isDismissed = true` inside `applySuggestions` so the card disappears immediately after click
+- Строка 298: `main` имеет `overflow-hidden` — это может обрезать контент. Если дочерние страницы предполагают прокрутку через document scroll, нужно убрать `overflow-hidden` и с main тоже.
 
-### Files to edit
-- **New migration**: Create RPC function + seed data
-- `src/contexts/TenantContext.tsx`: Adapt to actual DB schema, add direct-query fallback
-- `src/hooks/useTransactionSuggestions.ts`: Fix dismiss on apply
+### Файлы
+- `src/components/Layout.tsx` — убрать `overflow-x-hidden` с корневого div и `overflow-hidden` с main
+- `src/index.css` (или `src/App.css`) — добавить `overflow-x: hidden` на `html, body`
 
