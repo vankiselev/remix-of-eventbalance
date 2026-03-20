@@ -1,35 +1,26 @@
 
-Цель: закрыть проблему “аватар снова не подтянулся при регистрации” так, чтобы она не повторялась.
 
-1) Подтверждённая причина
-- В данных профиля уже есть битый формат: `avatar_url = http://kong:8000/...` (видно в сетевых ответах).
-- Текущий фикс в `register-invited-user` делает `replace(..., supabaseUrl)`, но в self-hosted окружении `SUPABASE_URL` может быть тем же внутренним адресом, поэтому замена не помогает.
+## Проблема
 
-2) Исправление edge-функции регистрации (главный фикс)
-- Файл: `supabase/functions/register-invited-user/index.ts`
-- Сделать формирование публичного URL аватара без зависимости от внутреннего `SUPABASE_URL`:
-  - вычислять публичную базу из `req.url` (origin + project path до `/functions/...`);
-  - собирать URL вручную: `.../storage/v1/object/public/avatars/${fileName}`.
-- Убрать текущую логику `replace(/http:\/\/kong.../, supabaseUrl)`.
-- Ужесточить обработку ошибок:
-  - если `avatar_base64` передан, но upload не удался — возвращать ошибку регистрации, а не продолжать “тихо” без аватара;
-  - проверять ошибку апдейта `profiles` и логировать понятную причину.
+Ошибка: `null value in column "tenant_id" of relation "financial_transactions" violates not-null constraint`.
 
-3) Разовая миграция для уже сломанных аватаров
-- Новый SQL migration в `migrations/`:
-  - обновить `public.profiles.avatar_url`, где хост `http://kong:8000`, на публичный self-hosted URL проекта.
-- Это сразу починит уже зарегистрированных пользователей (которые сейчас без фото в UI).
+Колонка `tenant_id` обязательна (NOT NULL), но при создании транзакции значение `currentTenant?.id` может быть `null` (если тенант ещё не загрузился). Плюс в двух других местах `tenant_id` вообще не передаётся.
 
-4) Дополнительная страховка на клиенте
-- Добавить небольшой normalizer для avatar URL (замена `http://kong:8000` -> публичный URL) и применить как минимум в:
-  - `src/pages/ProfilePage.tsx`
-  - `src/contexts/AuthContext.tsx`
-- Это даст корректное отображение даже при старом кеше/остаточных данных.
+## Решение
 
-5) Проверка “окончательно”
-- Пройти E2E сценарий:
-  1. Регистрация по приглашению с загрузкой фото.
-  2. Проверить в БД `profiles.avatar_url` — только публичный URL, без `kong`.
-  3. Проверить отображение в шапке и на странице профиля сразу после входа.
-  4. Проверить, что у старых пользователей (после миграции) фото тоже появилось.
-- Отдельно проверить негативный сценарий: если upload аватара падает, пользователь получает понятную ошибку, а не “успешную” регистрацию без фото.
+### 1. `src/components/finance/TransactionFormNew.tsx`
+- Строка 530: заменить `tenant_id: currentTenant?.id || null` на `tenant_id: currentTenant?.id`.
+- Добавить проверку перед отправкой: если `currentTenant` не загружен — показать ошибку и не отправлять форму.
+
+### 2. `src/components/FinancialTransaction.tsx`
+- Добавить `useTenant()` и передавать `tenant_id: currentTenant?.id` в insert (строка ~121).
+- Аналогичная проверка на наличие тенанта перед сабмитом.
+
+### 3. `src/components/AdminReportsView.tsx`
+- Добавить `useTenant()` и передавать `tenant_id: currentTenant?.id` в insert (строка ~190).
+
+### Итого файлы
+- `src/components/finance/TransactionFormNew.tsx`
+- `src/components/FinancialTransaction.tsx`
+- `src/components/AdminReportsView.tsx`
+
