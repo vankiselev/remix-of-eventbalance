@@ -1,156 +1,41 @@
 
-# План: Гибридная архитектура Lovable AI + Self-hosted Supabase
 
 ## Проблема
-Self-hosted Supabase не имеет доступа к Lovable AI Gateway. Ключ `LOVABLE_API_KEY` автоматически предоставляется только в Lovable Cloud.
 
-## Решение
-Создать **AI-прокси Edge Function** на Lovable Cloud, которую будет вызывать твой self-hosted Supabase.
+AI-функции (проверка орфографии и автоподбор категории/проекта) не работают из-за сложной прокси-архитектуры, которая сломана:
 
-```text
-┌─────────────────┐    ┌───────────────────────┐    ┌─────────────────────┐
-│    Frontend     │───>│  Self-hosted Supabase │───>│    Lovable Cloud    │
-│                 │    │   (твоя база/auth)    │    │   (AI Gateway)      │
-└─────────────────┘    └───────────────────────┘    └─────────────────────┘
-                              │                              │
-                              ▼                              ▼
-                       База данных                   Lovable AI Gateway
-                       Аутентификация               (LOVABLE_API_KEY auto)
-                       Бизнес-логика                 google/gemini-3-flash
-```
+1. Edge-функции `check-transaction-description` и `suggest-transaction-fields` вызывают `callAIProxy()` из `_shared/ai-proxy-client.ts`
+2. `ai-proxy-client.ts` пытается получить секреты `LOVABLE_CLOUD_URL` и `AI_PROXY_KEY` из таблицы `system_secrets`
+3. **Этих секретов нет в таблице** — там только `RESEND_API_KEY`, `VAPID_*`, `CRON_SECRET`
+4. Без них клиент возвращает `null`, и функции падают с ошибкой "AI proxy not configured"
 
----
+## Решение — упростить архитектуру
 
-## Как это работает
+Все edge-функции деплоятся на Lovable Cloud, где уже есть `LOVABLE_API_KEY`. Прокси-цепочка (self-hosted → ai-proxy → AI Gateway) избыточна. Нужно убрать промежуточное звено и вызывать AI Gateway напрямую.
 
-### Шаг 1: Lovable Cloud AI Proxy
+### Шаг 1: Переписать `_shared/ai-proxy-client.ts`
 
-Создаём **одну** Edge Function на Lovable Cloud:
+Заменить логику получения секретов из БД на прямой вызов `LOVABLE_API_KEY` из env. Вместо `fetch(proxyUrl/functions/v1/ai-proxy)` вызывать `https://ai.gateway.lovable.dev/v1/chat/completions` напрямую:
 
-**`supabase/functions/ai-proxy/index.ts`** (деплоится на Lovable Cloud)
+- Убрать `getSecrets()` и зависимость от `system_secrets`
+- Использовать `Deno.env.get("LOVABLE_API_KEY")` 
+- Вызывать gateway напрямую с `Authorization: Bearer ${LOVABLE_API_KEY}`
+- Модель: `google/gemini-3-flash-preview`
 
-```typescript
-// Принимает запросы от self-hosted Supabase
-// Проксирует их в Lovable AI Gateway
-// Возвращает ответ обратно
+### Шаг 2: Удалить `ai-proxy` edge function
 
-POST /ai-proxy
-Body: {
-  action: "check-description" | "suggest-fields" | "parse-voice",
-  payload: { ... }
-}
-```
+Функция `ai-proxy/index.ts` больше не нужна — она была промежуточным звеном. Удалить её.
 
-### Шаг 2: Self-hosted функции вызывают прокси
+### Шаг 3: Убрать `_shared/secrets.ts` (если больше не используется)
 
-Твои Edge Functions на self-hosted Supabase будут вызывать Lovable Cloud:
+Проверить, используется ли где-то ещё, и удалить если нет.
 
-```typescript
-// Вместо:
-const response = await fetch('https://generativelanguage.googleapis.com/...')
+### Шаг 4: Задеплоить и протестировать
 
-// Станет:
-const response = await fetch('https://<lovable-project>.supabase.co/functions/v1/ai-proxy', {
-  body: { action: 'check-description', payload: { text, category } }
-})
-```
+- Задеплоить обновлённые `check-transaction-description` и `suggest-transaction-fields`
+- Протестировать вызовом curl
 
-### Шаг 3: Секрет для авторизации между серверами
+### Результат
 
-В `system_secrets` добавляем ключ `LOVABLE_AI_PROXY_KEY` — это будет секрет для авторизации запросов от твоего Supabase к Lovable Cloud.
+Обе AI-функции (орфография + автоподбор) заработают, архитектура упростится с 3 звеньев до 2 (edge function → AI Gateway).
 
----
-
-## Техническая реализация
-
-### 1. Включаем Lovable Cloud
-Это активирует `LOVABLE_API_KEY` и позволит деплоить AI-прокси функцию.
-
-### 2. Создаём AI-прокси функцию на Lovable Cloud
-
-```text
-supabase/functions/
-  ai-proxy/
-    index.ts   ← Деплоится ТОЛЬКО на Lovable Cloud
-```
-
-Функция:
-- Проверяет секретный ключ в заголовке `X-AI-Proxy-Key`
-- Проксирует запрос в `https://ai.gateway.lovable.dev/v1/chat/completions`
-- Поддерживает все 3 действия: check-description, suggest-fields, parse-voice
-
-### 3. Обновляем self-hosted функции
-
-Заменяем прямые вызовы Google AI на вызовы AI-прокси:
-
-**`check-transaction-description/index.ts`**:
-```typescript
-// Было: fetch('https://generativelanguage.googleapis.com/...')
-// Стало:
-const response = await callAIProxy('check-description', { text, category });
-```
-
-### 4. Shared helper для вызова прокси
-
-**`_shared/ai-proxy.ts`**:
-```typescript
-export async function callAIProxy(action: string, payload: any) {
-  const LOVABLE_CLOUD_URL = await getSystemSecret('LOVABLE_CLOUD_URL');
-  const AI_PROXY_KEY = await getSystemSecret('AI_PROXY_KEY');
-  
-  const response = await fetch(`${LOVABLE_CLOUD_URL}/functions/v1/ai-proxy`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-AI-Proxy-Key': AI_PROXY_KEY
-    },
-    body: JSON.stringify({ action, payload })
-  });
-  
-  return response.json();
-}
-```
-
----
-
-## Что нужно настроить
-
-### В system_secrets (твой Supabase):
-| Ключ | Значение |
-|------|----------|
-| `LOVABLE_CLOUD_URL` | URL твоего Lovable Cloud проекта |
-| `AI_PROXY_KEY` | Секретный ключ для авторизации (генерируем) |
-
-### В Lovable Cloud Secrets:
-| Ключ | Значение |
-|------|----------|
-| `AI_PROXY_KEY` | Тот же секретный ключ |
-
----
-
-## Преимущества
-
-1. **Не нужен Google AI API key** — используем Lovable AI Gateway бесплатно
-2. **Единая точка входа** — одна прокси-функция для всех AI-запросов
-3. **Твоя база остаётся на self-hosted** — данные не уходят в Lovable Cloud
-4. **Просто масштабировать** — добавить новое AI-действие = добавить кейс в прокси
-
----
-
-## План работ
-
-1. Включить Lovable Cloud
-2. Создать `ai-proxy` Edge Function на Lovable Cloud
-3. Создать `_shared/ai-proxy.ts` helper на self-hosted Supabase
-4. Обновить 3 AI-функции:
-   - `check-transaction-description`
-   - `suggest-transaction-fields`
-   - `voice-transaction`
-5. Добавить секреты в обе системы
-6. Задеплоить и протестировать
-
----
-
-## Альтернатива (если не хочешь Lovable Cloud)
-
-Можно сделать проще — добавить OpenAI API key в `system_secrets` и использовать OpenAI API напрямую. Это один ключ, $5-10/месяц, работает стабильно.
