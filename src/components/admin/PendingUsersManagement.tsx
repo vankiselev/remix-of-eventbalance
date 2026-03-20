@@ -149,6 +149,14 @@ export function PendingUsersManagement() {
 
       if (roleError) throw roleError;
 
+      // Создаем уведомление для пользователя об одобрении
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        title: "Доступ одобрен",
+        message: "Ваш аккаунт активирован. Добро пожаловать в EventBalance!",
+        type: "system",
+      } as any);
+
       toast.success(`Пользователь ${user.email} приглашен в систему`);
 
       // Send approval email (fire-and-forget)

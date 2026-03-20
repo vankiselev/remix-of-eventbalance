@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
         
         if (!uploadError) {
           const { data: urlData } = adminClient.storage.from('avatars').getPublicUrl(fileName);
-          finalAvatarUrl = urlData.publicUrl;
+          // Replace internal Docker URL (http://kong:8000) with public Supabase URL
+          finalAvatarUrl = urlData.publicUrl.replace(/http:\/\/kong:\d+/, supabaseUrl);
         } else {
           console.error('Avatar upload error:', uploadError);
         }
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
         .from("invitations")
         .select("id, tenant_id, invited_by")
         .eq("token", invitation_token)
-        .eq("status", "pending")
+        .in("status", ["pending", "sent"])
         .single();
 
       if (invData) {
