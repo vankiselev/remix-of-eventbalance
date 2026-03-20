@@ -53,7 +53,25 @@ export function InvitationsManagement() {
         .order("invited_at", { ascending: false });
 
       if (error) throw error;
-      setInvitations(data || []);
+
+      // Check if invited users have already registered by looking up profiles
+      const emails = (data || []).map(i => i.email);
+      const { data: registeredProfiles } = await supabase
+        .from("profiles")
+        .select("email")
+        .in("email", emails);
+
+      const registeredEmails = new Set((registeredProfiles || []).map(p => p.email));
+
+      // Update status to 'accepted' for users who have already registered
+      const enrichedInvitations = (data || []).map(inv => {
+        if (registeredEmails.has(inv.email) && inv.status !== 'accepted') {
+          return { ...inv, status: 'accepted' };
+        }
+        return inv;
+      });
+
+      setInvitations(enrichedInvitations);
     } catch (error: any) {
       console.error("Error fetching invitations:", error);
       toast({
