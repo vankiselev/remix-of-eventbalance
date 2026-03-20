@@ -2,26 +2,40 @@
 
 ## Проблема
 
-При скролле страницы шапка (header) исчезает, хотя у неё стоит `sticky top-0`.
+Ошибка: `null value in column "tenant_id" violates not-null constraint` при нажатии "Принять" на перевод денег.
 
-**Причина**: на корневом `div` (строка 162 в `Layout.tsx`) установлен класс `overflow-x-hidden`. Это известная CSS-проблема — любой `overflow: hidden` (даже только по оси X) на предке ломает `position: sticky`, превращая его в обычный `relative`.
+**Корень**: функция `accept_money_transfer` создает зеркальную income-транзакцию, но **не включает `tenant_id`** в INSERT. Столбец `tenant_id` был добавлен позже (миграция `20260128`) с NOT NULL, а функция не обновлялась.
+
+Из network logs видно точно:
+```
+Failing row contains (..., null).
+message: null value in column "tenant_id" ... violates not-null constraint
+```
 
 ## Решение
 
-### 1. Layout.tsx — убрать overflow-x-hidden с корневого div
+### 1. SQL миграция — обновить `accept_money_transfer`
 
-- Строка 162: убрать `overflow-x-hidden` из корневого контейнера `div.min-h-screen`.
-- Вместо этого добавить `overflow-x: hidden` на `<body>` или `<html>` через CSS (в `index.css` или `App.css`), чтобы горизонтальный скролл по-прежнему не появлялся, но `sticky` работал корректно.
+Добавить `tenant_id` в INSERT, копируя его из исходной транзакции (`tx.tenant_id`):
 
-### 2. index.css / App.css — overflow на body
+```sql
+INSERT INTO public.financial_transactions (
+    created_by, operation_date, income_amount, expense_amount,
+    category, cash_type, description, project_owner, static_project_name,
+    transfer_from_user_id, linked_transaction_id,
+    no_receipt, no_receipt_reason,
+    tenant_id  -- <-- ДОБАВЛЯЕМ
+) VALUES (
+    auth.uid(), CURRENT_DATE, tx.expense_amount, 0,
+    ...,
+    tx.tenant_id  -- <-- ИЗ ОРИГИНАЛА
+);
+```
 
-- Добавить `html, body { overflow-x: hidden; }` — это не влияет на sticky, потому что sticky работает относительно viewport для элементов внутри body.
+### 2. Никаких изменений в коде фронтенда
 
-### 3. Также проверить десктопный main
-
-- Строка 298: `main` имеет `overflow-hidden` — это может обрезать контент. Если дочерние страницы предполагают прокрутку через document scroll, нужно убрать `overflow-hidden` и с main тоже.
+Проблема полностью на стороне SQL-функции. Фронтенд вызывает RPC корректно.
 
 ### Файлы
-- `src/components/Layout.tsx` — убрать `overflow-x-hidden` с корневого div и `overflow-hidden` с main
-- `src/index.css` (или `src/App.css`) — добавить `overflow-x: hidden` на `html, body`
+- **Новая SQL миграция**: `CREATE OR REPLACE FUNCTION accept_money_transfer` с `tenant_id`
 
