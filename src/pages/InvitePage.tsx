@@ -114,60 +114,27 @@ export function InvitePage() {
     try {
       setIsSubmitting(true);
 
-      // Sign up the user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password: data.password,
-        options: {
-          data: {
-            full_name: invitation.first_name && invitation.last_name 
-              ? `${invitation.first_name} ${invitation.last_name}` 
-              : invitation.email,
-            role: invitation.role,
-          },
+      const fullName = invitation.first_name && invitation.last_name 
+        ? `${invitation.first_name} ${invitation.last_name}` 
+        : invitation.email;
+
+      // Use edge function to create user with email pre-confirmed (no confirmation email needed)
+      const { data: result, error: fnError } = await supabase.functions.invoke('register-invited-user', {
+        body: {
+          email: invitation.email,
+          password: data.password,
+          full_name: fullName,
+          role: invitation.role,
+          invitation_token: token,
         },
       });
 
-      if (signUpError) throw signUpError;
-
-      if (!authData.user) {
-        throw new Error("Не удалось создать пользователя");
-      }
-
-      // Update the user's profile with role
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ 
-          role: invitation.role as any,
-          full_name: invitation.first_name && invitation.last_name 
-            ? `${invitation.first_name} ${invitation.last_name}` 
-            : invitation.email,
-        })
-        .eq("id", authData.user.id);
-
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-      }
-
-      // Mark invitation as accepted using secure function
-      const { error: invitationError } = await supabase
-        .rpc('accept_invitation', { invitation_token: token });
-
-      if (invitationError) {
-        console.error("Error updating invitation:", invitationError);
-      }
-
-      // Log audit event
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: invitation.id,
-        user_id: authData.user.id,
-        action: "accepted",
-        details: { email: invitation.email },
-      });
+      if (fnError) throw fnError;
+      if (result?.error) throw new Error(result.error);
 
       toast({
         title: "Добро пожаловать!",
-        description: "Ваш аккаунт успешно создан. Теперь вы можете войти в систему.",
+        description: "Ваш аккаунт успешно создан.",
       });
 
       // Sign in the user
