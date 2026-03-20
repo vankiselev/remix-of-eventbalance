@@ -894,13 +894,13 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             </div>
           </TabsContent>
 
-          <TabsContent value="props" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4">
+          {/* <TabsContent value="props" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4">
             <EventPropsTab
               eventId={event?.id || null}
               eventName={formData.name}
               eventDate={formData.start_date}
             />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
 
         {/* Actions Footer */}
