@@ -367,7 +367,7 @@ export function InvitePage() {
                     <FormControl>
                       <PhoneInputRU
                         value={field.value}
-                        onChange={(result) => field.onChange(result.e164 || result.display)}
+                        onChange={(result) => field.onChange(result.display)}
                         required
                       />
                     </FormControl>
