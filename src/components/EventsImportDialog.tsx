@@ -608,7 +608,7 @@ const EventsImportDialog = ({
     return value;
   };
 
-
+  const performImport = async () => {
     if (!user) return;
     
     setImporting(true);
