@@ -112,6 +112,14 @@ const FinancialTransaction = () => {
 
   const onSubmit = async (values: z.infer<typeof transactionSchema>) => {
     if (!user) return;
+    if (!currentTenant?.id) {
+      toast({
+        variant: 'destructive',
+        title: 'Ошибка',
+        description: 'Тенант не определён. Попробуйте обновить страницу.',
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -130,6 +138,7 @@ const FinancialTransaction = () => {
           expense_amount: expense || 0,
           income_amount: income || 0,
           category: values.category,
+          tenant_id: currentTenant.id,
         });
 
       if (error) throw error;

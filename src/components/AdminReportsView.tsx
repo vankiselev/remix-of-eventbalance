@@ -199,6 +199,7 @@ const AdminReportsView = () => {
           cash_type: walletType,
           static_project_name: report.project_name,
           created_by: (await supabase.auth.getUser()).data.user?.id,
+          tenant_id: currentTenant?.id || null,
         });
 
       if (error) throw error;
