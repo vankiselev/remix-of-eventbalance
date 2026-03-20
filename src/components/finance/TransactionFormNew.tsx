@@ -1496,14 +1496,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder="Введите сумму"
-                        disabled={MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))}
                       />
                     </FormControl>
-                    {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
-                      <FormDescription className="text-xs">
-                        При передаче денег не заполняется
-                      </FormDescription>
-                    )}
                     <FormMessage />
                   </FormItem>
                 )}
