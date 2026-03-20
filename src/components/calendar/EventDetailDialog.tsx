@@ -511,8 +511,8 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
               {/* ═══ Место и время ═══ */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5" />
+                <h3 className="text-sm font-bold text-foreground tracking-wide flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
                   Место и время
                 </h3>
                 
