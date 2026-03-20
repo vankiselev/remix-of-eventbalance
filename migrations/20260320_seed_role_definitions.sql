@@ -3,6 +3,9 @@ ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
 ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
 ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
 
+-- Ensure tenant_memberships has role column
+ALTER TABLE tenant_memberships ADD COLUMN IF NOT EXISTS role text DEFAULT 'member';
+
 -- Seed role_definitions with standard roles
 INSERT INTO role_definitions (name, display_name, code, is_admin_role)
 VALUES 
