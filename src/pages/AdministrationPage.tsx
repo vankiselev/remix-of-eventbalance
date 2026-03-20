@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RolesManagement } from "@/components/roles/RolesManagement";
 import { InvitationsManagement } from "@/components/admin/InvitationsManagement";
+import { PendingUsersManagement } from "@/components/admin/PendingUsersManagement";
 import { CategoryIconsManagement } from "@/components/admin/CategoryIconsManagement";
 import { TransactionCategoriesManagement } from "@/components/admin/TransactionCategoriesManagement";
 import { TransactionProjectsManagement } from "@/components/admin/TransactionProjectsManagement";
@@ -76,7 +77,18 @@ const AdministrationPage = () => {
           </TabsContent>
 
           <TabsContent value="invitations" className="mt-6">
-            <InvitationsManagement />
+            <Tabs defaultValue="pending" className="w-full">
+              <TabsList>
+                <TabsTrigger value="pending">Ожидающие одобрения</TabsTrigger>
+                <TabsTrigger value="email">Приглашения по email</TabsTrigger>
+              </TabsList>
+              <TabsContent value="pending" className="mt-4">
+                <PendingUsersManagement />
+              </TabsContent>
+              <TabsContent value="email" className="mt-4">
+                <InvitationsManagement />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="categories" className="mt-6">
