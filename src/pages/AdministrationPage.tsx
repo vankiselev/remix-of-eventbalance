@@ -8,8 +8,9 @@ import { WarehouseSettingsManagement } from "@/components/admin/WarehouseSetting
 import { WarehouseCategoriesManagement } from "@/components/admin/WarehouseCategoriesManagement";
 import { WarehouseLocationsManagement } from "@/components/admin/WarehouseLocationsManagement";
 import { TestDataManagement } from "@/components/admin/TestDataManagement";
+import { TenantsManagement } from "@/components/admin/TenantsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2 } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -22,8 +23,12 @@ const AdministrationPage = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="roles" className="w-full">
+        <Tabs defaultValue="companies" className="w-full">
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="companies" className="flex items-center gap-2 whitespace-nowrap">
+              <Building2 className="h-4 w-4" />
+              Компании
+            </TabsTrigger>
             <TabsTrigger value="roles" className="flex items-center gap-2 whitespace-nowrap">
               <Shield className="h-4 w-4" />
               Выдача прав
@@ -61,6 +66,10 @@ const AdministrationPage = () => {
               Тестирование
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="companies" className="mt-6">
+            <TenantsManagement />
+          </TabsContent>
 
           <TabsContent value="roles" className="mt-6">
             <RolesManagement />
