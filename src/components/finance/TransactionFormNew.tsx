@@ -1223,7 +1223,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 if (firstResult) {
                                   field.onChange(firstResult);
                                   // Handle category selection logic
-                                   if (firstResult === 'Передано или получено от сотрудника') {
+                                   if (MONEY_TRANSFER_CATEGORIES.includes(firstResult)) {
                                      setIsMoneyTransfer(true);
                                      setIsDescriptionAutoFilled(true);
                                      form.setValue('no_receipt', true);
