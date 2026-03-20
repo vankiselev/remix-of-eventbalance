@@ -528,6 +528,78 @@ const EventsImportDialog = ({
     return mapped;
   };
 
+  // --- Time parsing helpers (ported from edge function) ---
+  const pad2 = (n: number) => n.toString().padStart(2, '0');
+  const toHM = (hours: number, minutes: number) => {
+    const h = Math.max(0, Math.min(23, Math.floor(hours)));
+    const m = Math.max(0, Math.min(59, Math.round(minutes)));
+    return `${pad2(h)}:${pad2(m)}`;
+  };
+
+  const parseSingleTime = (raw?: string | number | null): string | null => {
+    if (raw === null || raw === undefined) return null;
+    let s = typeof raw === 'number' ? String(raw) : String(raw).trim();
+    if (s === '') return null;
+    s = s.replace(/,/g, '.');
+
+    // Handle Date objects from Excel (e.g. 1899-12-30T16:00:00.000Z)
+    if (s.includes('T') && s.includes(':')) {
+      try {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return toHM(d.getUTCHours(), d.getUTCMinutes());
+      } catch { /* fall through */ }
+    }
+
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      const num = parseFloat(s);
+      if (!isFinite(num)) return null;
+      if (num >= 0 && num < 24) {
+        const h = Math.floor(num);
+        const m = (num - h) * 60;
+        return toHM(h, m);
+      }
+      const frac = num % 1;
+      if (frac > 0) {
+        const totalHours = frac * 24;
+        const h = Math.floor(totalHours);
+        const m = (totalHours - h) * 60;
+        return toHM(h, m);
+      }
+      return null;
+    }
+
+    if (/^\d{1,2}$/.test(s)) {
+      const h = parseInt(s, 10);
+      if (h >= 0 && h < 24) return toHM(h, 0);
+    }
+
+    const m1 = s.match(/^(\d{1,2})[:.](\d{1,2})$/);
+    if (m1) {
+      const h = parseInt(m1[1], 10);
+      const min = parseInt(m1[2], 10);
+      if (h >= 0 && h < 24 && min >= 0 && min < 60) return toHM(h, min);
+    }
+
+    return null;
+  };
+
+  const parseTimeRange = (input?: string | number | null): { event_time: string | null; end_time: string | null } => {
+    if (input === null || input === undefined) return { event_time: null, end_time: null };
+    let s = typeof input === 'number' ? String(input) : String(input).trim();
+    if (!s) return { event_time: null, end_time: null };
+    s = s.replace(/,/g, '.');
+
+    const sepMatch = s.match(/(.+?)[–\-](.+)/);
+    if (sepMatch) {
+      const start = parseSingleTime(sepMatch[1].trim());
+      const end = parseSingleTime(sepMatch[2].trim());
+      return { event_time: start, end_time: end };
+    }
+
+    const single = parseSingleTime(s);
+    return { event_time: single, end_time: null };
+  };
+
   const performImport = async () => {
     if (!user) return;
     
@@ -535,69 +607,102 @@ const EventsImportDialog = ({
     setImportProgress(0);
 
     try {
-      // Process data in chunks
+      // Get tenant_id
+      let tenantId: string | null = null;
+      const { data: membership } = await supabase
+        .from('tenant_memberships')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+      if (membership) tenantId = membership.tenant_id;
+
       const validRows = parsedData.filter(row => {
         const mappedRow = mapRow(row);
         const finalDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
         return mappedRow.title && finalDate;
       });
 
-      // Normalize data
-      const normalizedRows = validRows.map(row => {
-        const mappedRow = mapRow(row);
-        const parsedDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
-        
-        return {
-          event_date: parsedDate,
-          title: String(mappedRow.title || '').trim(),
-          project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
-          managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
-          place: mappedRow.place ? String(mappedRow.place).trim() : null,
-          time_range: mappedRow.time_range ? String(mappedRow.time_range).trim() : null,
-          animators: mappedRow.animators ? String(mappedRow.animators).trim() : null,
-          show_program: mappedRow.show_program ? String(mappedRow.show_program).trim() : null,
-          contractors: mappedRow.contractors ? String(mappedRow.contractors).trim() : null,
-          photo: mappedRow.photo ? String(mappedRow.photo).trim() : null,
-          video: mappedRow.video ? String(mappedRow.video).trim() : null,
-          notes: mappedRow.notes ? String(mappedRow.notes).trim() : null,
-          source_event_id: mappedRow.source_event_id || null,
-        };
-      });
-
-      // Process in chunks of 500
-      const CHUNK_SIZE = 500;
-      let totalResult: ImportResult = {
-        total: normalizedRows.length,
+      const totalResult: ImportResult = {
+        total: validRows.length,
         inserted: 0,
         updated: 0,
         failed: 0,
         errors: []
       };
 
-      for (let i = 0; i < normalizedRows.length; i += CHUNK_SIZE) {
-        const chunk = normalizedRows.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < validRows.length; i++) {
+        const row = validRows[i];
+        const mappedRow = mapRow(row);
+        const parsedDate = parseDateFromTitle(mappedRow.title) || parseDate(mappedRow.event_date);
         
-        const { data, error } = await supabase.functions.invoke('events-import', {
-          body: {
-            rows: chunk,
-            user_id: user.id
-          }
-        });
-
-        if (error) {
-          throw new Error(error.message);
+        if (!parsedDate || !mappedRow.title) {
+          totalResult.failed++;
+          totalResult.errors.push({ row: i + 1, reason: 'Missing date or title' });
+          continue;
         }
 
-        if (data) {
-          totalResult.inserted += data.inserted || 0;
-          totalResult.updated += data.updated || 0;
-          totalResult.failed += data.failed || 0;
-          totalResult.errors.push(...(data.errors || []));
+        try {
+          const dateStr = new Date(parsedDate).toISOString().split('T')[0];
+          const { event_time, end_time } = parseTimeRange(mappedRow.time_range);
+          const photoVideo = [mappedRow.photo, mappedRow.video].filter(Boolean).map(v => String(v).trim()).join(', ').trim() || null;
+
+          const eventData: Record<string, any> = {
+            start_date: dateStr,
+            name: String(mappedRow.title).trim(),
+            project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
+            managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
+            location: mappedRow.place ? String(mappedRow.place).trim() : null,
+            event_time: event_time,
+            end_time: end_time,
+            animators: mappedRow.animators ? String(mappedRow.animators).trim() : null,
+            show_program: mappedRow.show_program ? String(mappedRow.show_program).trim() : null,
+            contractors: mappedRow.contractors ? String(mappedRow.contractors).trim() : null,
+            photo_video: photoVideo,
+            notes: mappedRow.notes ? String(mappedRow.notes).trim() : null,
+            created_by: user.id,
+            updated_at: new Date().toISOString()
+          };
+
+          if (tenantId) eventData.tenant_id = tenantId;
+
+          // Check if exists by date + name
+          const { data: existing } = await supabase
+            .from('events')
+            .select('id')
+            .eq('start_date', dateStr)
+            .ilike('name', String(mappedRow.title).trim())
+            .maybeSingle();
+
+          if (existing) {
+            const { error: updateError } = await supabase
+              .from('events')
+              .update(eventData)
+              .eq('id', existing.id);
+            if (updateError) {
+              totalResult.failed++;
+              totalResult.errors.push({ row: i + 1, reason: `Update: ${updateError.message}` });
+            } else {
+              totalResult.updated++;
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('events')
+              .insert(eventData);
+            if (insertError) {
+              totalResult.failed++;
+              totalResult.errors.push({ row: i + 1, reason: `Insert: ${insertError.message}` });
+            } else {
+              totalResult.inserted++;
+            }
+          }
+        } catch (rowError: any) {
+          totalResult.failed++;
+          totalResult.errors.push({ row: i + 1, reason: rowError.message || 'Unknown error' });
         }
 
         // Update progress
-        const progress = Math.min(((i + CHUNK_SIZE) / normalizedRows.length) * 100, 100);
-        setImportProgress(progress);
+        setImportProgress(Math.min(((i + 1) / validRows.length) * 100, 100));
       }
 
       setImportResult(totalResult);
