@@ -275,6 +275,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     });
   };
 
+  // Money transfer categories that require employee selection
+  const MONEY_TRANSFER_CATEGORIES = [
+    "Передано или получено от Леры/Насти/Вани",
+    "Передано или получено от сотрудника"
+  ];
+
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
     watchCategory === "Передано или получено от Леры/Насти/Вани";
