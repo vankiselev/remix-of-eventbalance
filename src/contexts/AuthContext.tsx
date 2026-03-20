@@ -222,6 +222,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => loadUserData(false), 0);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        () => {
+          console.log('[AuthContext] Profile deleted, signing out...');
+          toast.error('Ваш аккаунт был удалён');
+          signOut();
+          window.location.href = '/auth';
+        }
+      )
       .subscribe();
 
     return () => {
