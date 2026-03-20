@@ -6,7 +6,7 @@ const PrivacyPolicyPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border bg-card/50">
+      <div className="sticky top-0 z-50 border-b border-border bg-card/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/">
