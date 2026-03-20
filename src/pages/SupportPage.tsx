@@ -43,8 +43,8 @@ const SupportPage = () => {
               <p className="text-sm">
                 Быстрая связь через Telegram для оперативных вопросов.
               </p>
-              <a href="https://t.me/eventbalance_support" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline font-medium">
-                @eventbalance_support
+              <a href="https://t.me/IvanKiselev" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline font-medium">
+                @IvanKiselev
               </a>
             </div>
 
