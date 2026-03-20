@@ -173,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             last_name: profileData.profile.last_name,
             first_name: profileData.profile.first_name,
             middle_name: profileData.profile.middle_name,
-            avatar_url: profileData.profile.avatar_url || null,
+            avatar_url: normalizeAvatarUrl(profileData.profile.avatar_url),
             invitation_status: profileData.profile.invitation_status
           });
           setRbacRoles(profileData.rbac_roles || []);

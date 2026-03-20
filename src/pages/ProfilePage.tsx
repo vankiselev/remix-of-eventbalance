@@ -86,7 +86,7 @@ const ProfilePage = () => {
 
       if (data) {
         setProfile(data);
-        setAvatarUrl(data.user_avatar_url);
+        setAvatarUrl(normalizeAvatarUrl(data.user_avatar_url));
         
         form.reset({
           last_name: data.user_last_name || "",
