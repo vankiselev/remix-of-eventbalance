@@ -691,7 +691,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Шоу программа</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'animator' })}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -720,7 +720,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       <Label className="text-xs font-medium flex items-center gap-1.5">
                         <Camera className="h-3 w-3" /> Фотограф
                       </Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -739,7 +739,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       <Label className="text-xs font-medium flex items-center gap-1.5">
                         <Video className="h-3 w-3" /> Видеограф
                       </Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
