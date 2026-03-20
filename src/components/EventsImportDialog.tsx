@@ -602,11 +602,7 @@ const EventsImportDialog = ({
   };
 
   const expandOwnerAbbreviation = (value: string): string => {
-    const lower = value.toLowerCase();
-    if (lower === 'н') return 'Настя';
-    if (lower === 'л') return 'Лера';
-    if (lower === 'в') return 'Ваня';
-    return value;
+    return normalizeProjectOwner(value) || value;
   };
 
   const performImport = async () => {
