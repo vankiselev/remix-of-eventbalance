@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeProjectOwner } from "@/utils/normalizeOwner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -601,11 +602,7 @@ const EventsImportDialog = ({
   };
 
   const expandOwnerAbbreviation = (value: string): string => {
-    const lower = value.toLowerCase();
-    if (lower === 'н') return 'Настя';
-    if (lower === 'л') return 'Лера';
-    if (lower === 'в') return 'Ваня';
-    return value;
+    return normalizeProjectOwner(value) || value;
   };
 
   const performImport = async () => {

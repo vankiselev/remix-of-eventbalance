@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeProjectOwner } from "@/utils/normalizeOwner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -292,7 +293,7 @@ const ImportDialog = ({
             const cleanEventData = {
               name: String(mappedRow.name || '').trim(),
               start_date: parsedDate,
-              project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
+              project_owner: normalizeProjectOwner(mappedRow.project_owner ? String(mappedRow.project_owner) : null),
               managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
               location: mappedRow.location ? String(mappedRow.location).trim() : null,
               event_time: mappedRow.event_time ? String(mappedRow.event_time).trim() : null,
