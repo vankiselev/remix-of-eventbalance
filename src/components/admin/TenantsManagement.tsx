@@ -3,16 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant, Tenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateTenantDialog } from './CreateTenantDialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TenantDetailDialog, TenantProfile } from './TenantDetailDialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, ArrowRight, Loader2, Check } from 'lucide-react';
+import { Building2, Users, ArrowRight, Loader2, Check, Pencil, Mail, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface TenantWithMembers {
-  id: string;
-  name: string;
-  slug: string;
+interface TenantWithMembers extends TenantProfile {
   created_at: string | null;
   memberCount: number;
 }
@@ -23,18 +21,18 @@ export const TenantsManagement: React.FC = () => {
   const { toast } = useToast();
   const [tenants, setTenants] = useState<TenantWithMembers[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editTenant, setEditTenant] = useState<TenantProfile | null>(null);
 
   const fetchTenants = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: tenantsData, error } = await supabase
+      const { data: tenantsData, error } = await (supabase
         .from('tenants')
-        .select('id, name, slug, created_at')
-        .order('created_at', { ascending: false });
+        .select('*')
+        .order('created_at', { ascending: false }) as any);
 
       if (error) throw error;
 
-      // Fetch member counts
       const { data: memberships } = await supabase
         .from('tenant_memberships')
         .select('tenant_id');
@@ -45,8 +43,20 @@ export const TenantsManagement: React.FC = () => {
       });
 
       setTenants(
-        (tenantsData || []).map((t) => ({
-          ...t,
+        (tenantsData || []).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+          description: t.description || null,
+          inn: t.inn || null,
+          legal_name: t.legal_name || null,
+          address: t.address || null,
+          phone: t.phone || null,
+          email: t.email || null,
+          logo_url: t.logo_url || null,
+          is_active: t.is_active ?? true,
+          plan: t.plan || 'trial',
+          created_at: t.created_at,
           memberCount: countMap[t.id] || 0,
         }))
       );
@@ -62,15 +72,14 @@ export const TenantsManagement: React.FC = () => {
   }, [fetchTenants]);
 
   const handleSwitch = async (tenant: TenantWithMembers) => {
-    // Build a full Tenant object from available data
     const fullTenant: Tenant = {
       id: tenant.id,
       slug: tenant.slug,
       name: tenant.name,
-      logo_url: null,
+      logo_url: tenant.logo_url,
       settings: {},
-      is_active: true,
-      plan: 'trial',
+      is_active: tenant.is_active ?? true,
+      plan: tenant.plan || 'trial',
       trial_ends_at: null,
       created_at: tenant.created_at || '',
     };
@@ -105,9 +114,7 @@ export const TenantsManagement: React.FC = () => {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          Все компании ({tenants.length})
-        </h2>
+        <h2 className="text-lg font-semibold">Все компании ({tenants.length})</h2>
         {isSuperAdmin && <CreateTenantDialog onCreated={fetchTenants} />}
       </div>
 
@@ -123,43 +130,77 @@ export const TenantsManagement: React.FC = () => {
           {tenants.map((tenant) => {
             const isCurrent = currentTenant?.id === tenant.id;
             return (
-              <Card
-                key={tenant.id}
-                className={isCurrent ? 'border-primary/40' : ''}
-              >
-                <CardContent className="flex items-center gap-4 py-4">
-                  <Building2 className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{tenant.name}</p>
-                      {isCurrent && (
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          <Check className="h-3 w-3 mr-1" />
-                          Текущая
-                        </Badge>
+              <Card key={tenant.id} className={isCurrent ? 'border-primary/40' : ''}>
+                <CardContent className="py-4">
+                  <div className="flex items-start gap-4">
+                    <Building2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium truncate">{tenant.name}</p>
+                        {isCurrent && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            <Check className="h-3 w-3 mr-1" />
+                            Текущая
+                          </Badge>
+                        )}
+                        {tenant.plan && (
+                          <Badge variant="secondary" className="text-xs">
+                            {tenant.plan}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">/{tenant.slug}</p>
+                      {tenant.legal_name && (
+                        <p className="text-xs text-muted-foreground mt-1">{tenant.legal_name}</p>
+                      )}
+                      <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                        {tenant.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" /> {tenant.email}
+                          </span>
+                        )}
+                        {tenant.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {tenant.phone}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" /> {tenant.memberCount}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditTenant(tenant)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {!isCurrent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSwitch(tenant)}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">/{tenant.slug}</p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
-                    <Users className="h-4 w-4" />
-                    {tenant.memberCount}
-                  </div>
-                  {!isCurrent && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSwitch(tenant)}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
       )}
+
+      <TenantDetailDialog
+        tenant={editTenant}
+        open={!!editTenant}
+        onOpenChange={(open) => { if (!open) setEditTenant(null); }}
+        onSaved={fetchTenants}
+      />
     </div>
   );
 };
