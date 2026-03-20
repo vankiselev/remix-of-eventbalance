@@ -1,6 +1,11 @@
--- Fix accept_money_transfer: add tenant_id to the income transaction INSERT
-CREATE OR REPLACE FUNCTION public.accept_money_transfer(p_transaction_id uuid)
-RETURNS boolean
+-- Root fix for accept_money_transfer on self-hosted backend:
+-- 1) normalize function signature to RETURNS void (compatible with current frontend)
+-- 2) ensure tenant_id is always set when creating mirrored income transaction
+
+DROP FUNCTION IF EXISTS public.accept_money_transfer(uuid);
+
+CREATE FUNCTION public.accept_money_transfer(p_transaction_id uuid)
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
@@ -8,6 +13,8 @@ AS $$
 DECLARE
   tx RECORD;
   sender_name text;
+  sender_tenant_id uuid;
+  recipient_tenant_id uuid;
   income_tx_id uuid;
 BEGIN
   -- Load original transaction
@@ -29,10 +36,16 @@ BEGIN
     RAISE EXCEPTION 'Transfer already processed';
   END IF;
 
-  -- Get sender's full name
-  SELECT full_name INTO sender_name
+  -- Sender display name and tenant fallback sources
+  SELECT full_name, tenant_id INTO sender_name, sender_tenant_id
   FROM public.profiles
-  WHERE id = tx.created_by;
+  WHERE id = tx.created_by
+  LIMIT 1;
+
+  SELECT tenant_id INTO recipient_tenant_id
+  FROM public.profiles
+  WHERE id = auth.uid()
+  LIMIT 1;
 
   -- Create income transaction for recipient
   INSERT INTO public.financial_transactions (
@@ -64,7 +77,7 @@ BEGIN
     tx.id,
     true,
     'Внутренняя передача денег между сотрудниками',
-    tx.tenant_id
+    COALESCE(tx.tenant_id, sender_tenant_id, recipient_tenant_id)
   ) RETURNING id INTO income_tx_id;
 
   -- Update original transaction status and link
@@ -73,7 +86,5 @@ BEGIN
       linked_transaction_id = income_tx_id,
       updated_at = now()
   WHERE id = p_transaction_id;
-
-  RETURN true;
 END;
 $$;
