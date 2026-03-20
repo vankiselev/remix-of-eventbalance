@@ -600,7 +600,15 @@ const EventsImportDialog = ({
     return { event_time: single, end_time: null };
   };
 
-  const performImport = async () => {
+  const expandOwnerAbbreviation = (value: string): string => {
+    const lower = value.toLowerCase();
+    if (lower === 'н') return 'Настя';
+    if (lower === 'л') return 'Лера';
+    if (lower === 'в') return 'Ваня';
+    return value;
+  };
+
+
     if (!user) return;
     
     setImporting(true);
@@ -650,7 +658,7 @@ const EventsImportDialog = ({
           const eventData: Record<string, any> = {
             start_date: dateStr,
             name: String(mappedRow.title).trim(),
-            project_owner: mappedRow.project_owner ? String(mappedRow.project_owner).trim() : null,
+            project_owner: mappedRow.project_owner ? expandOwnerAbbreviation(String(mappedRow.project_owner).trim()) : null,
             managers: mappedRow.managers ? String(mappedRow.managers).trim() : null,
             location: mappedRow.place ? String(mappedRow.place).trim() : null,
             event_time: event_time,
