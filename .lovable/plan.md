@@ -2,56 +2,47 @@
 
 ## Проблема
 
-Два уведомления не работают:
+Аватар, загруженный при регистрации, не отображается в профиле. Наиболее вероятная причина: миграция `20260320_fix_handle_new_user_profile_fields.sql` упала на self-hosted сервере (об этом говорил ранее workflow #22). Это значит, что триггер `handle_new_user` на self-hosted — **старая версия**, которая не читает `avatar_url` из `user_metadata`.
 
-1. **Админу о новой заявке**: Edge-функция `register-invited-user` ищет приглашение с `status = 'pending'`, но реальный статус в таблице `invitations` — `'sent'`. Из-за этого `invData = null`, и блок отправки уведомлений пропускается.
-
-2. **Пользователю об одобрении**: В `PendingUsersManagement.tsx` после нажатия "Пригласить" отправляется email, но уведомление (запись в таблицу `notifications`) для пользователя не создается.
-
-Дополнительно: avatar_url сохраняется как `http://kong:8000/...` (внутренний Docker URL) вместо публичного URL сервера.
+Даже если триггер починить — нет гарантии, что он отработает сразу. Надёжнее добавить **явный UPDATE профиля** в edge function после создания пользователя.
 
 ## Решение
 
-### 1. Исправить `register-invited-user` — фильтр статуса
+### 1. Edge function: явно обновлять avatar_url в profiles
 
 **Файл: `supabase/functions/register-invited-user/index.ts`**
 
-Строка 105: заменить `.eq("status", "pending")` на `.eq("status", "sent")`
-
-### 2. Добавить уведомление пользователю при одобрении
-
-**Файл: `src/components/admin/PendingUsersManagement.tsx`**
-
-В `handleInviteUser`, после успешного обновления `invitation_status` и назначения роли, вставить уведомление:
+После создания пользователя (строка ~90) добавить явный UPDATE avatar_url, phone, birth_date в profiles через `adminClient` (service role обходит RLS):
 
 ```typescript
-// После назначения роли (строка ~150)
-await supabase.from("notifications").insert({
-  user_id: user.id,
-  title: "Доступ одобрен",
-  message: "Ваш аккаунт активирован. Добро пожаловать в EventBalance!",
-  type: "system",
-});
+// After user creation, explicitly update profile fields
+// This is a safety net in case the trigger doesn't extract all metadata
+if (finalAvatarUrl || phone || birth_date) {
+  const profileUpdate: Record<string, any> = {};
+  if (finalAvatarUrl) profileUpdate.avatar_url = finalAvatarUrl;
+  if (phone) profileUpdate.phone = phone;
+  if (birth_date) profileUpdate.birth_date = birth_date;
+  
+  await adminClient.from("profiles")
+    .update(profileUpdate)
+    .eq("id", userId);
+}
 ```
 
-### 3. Исправить avatar URL в edge function
+Это обходит проблему с триггером и с `prevent_unauthorized_profile_updates` (service role не блокируется).
 
-**Файл: `supabase/functions/register-invited-user/index.ts`**
+### 2. Миграция: обновить handle_new_user для self-hosted
 
-При формировании `publicUrl` использовать `supabaseUrl` (переменная окружения) вместо внутреннего URL, который возвращает `getPublicUrl()`:
+**Файл: `migrations/20260320_fix_handle_new_user_profile_fields.sql`**
 
-```typescript
-const { data: urlData } = adminClient.storage.from('avatars').getPublicUrl(fileName);
-// Заменить внутренний host на публичный
-finalAvatarUrl = urlData.publicUrl.replace(/http:\/\/kong:\d+/, supabaseUrl);
-```
+Убрать ссылки на колонки, которых может не быть на self-hosted (`invitation_status`, `invited_at`, `invited_by`, `role`), чтобы миграция не падала. Сделать INSERT более безопасным — только с колонками, которые точно существуют.
 
-### 4. Деплой
+### 3. Деплой
 
-Развернуть обновленный `register-invited-user`.
+Развернуть обновлённый `register-invited-user`.
 
 ## Итого изменяемые файлы
 
-- `supabase/functions/register-invited-user/index.ts` — фикс фильтра статуса + фикс avatar URL
-- `src/components/admin/PendingUsersManagement.tsx` — добавить уведомление при одобрении
+- `supabase/functions/register-invited-user/index.ts` — добавить явный UPDATE avatar_url/phone/birth_date
+- `migrations/20260320_fix_handle_new_user_profile_fields.sql` — сделать совместимым с self-hosted
 
