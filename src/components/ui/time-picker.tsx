@@ -7,12 +7,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// Hours ordered starting from 12 for convenience
+// 12 in the middle: 11→00 descending above, then 12, then 13→23 ascending below
 const HOURS_ORDERED = [
-  "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23",
-  "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11",
+  "11","10","09","08","07","06","05","04","03","02","01","00",
+  "12",
+  "13","14","15","16","17","18","19","20","21","22","23",
 ];
 const MINUTES = ["00", "30"];
+
+const CENTER_HOUR = "12";
+const CENTER_IDX = HOURS_ORDERED.indexOf(CENTER_HOUR);
 
 interface TimePickerProps {
   value: string;
@@ -30,21 +34,22 @@ export function TimePicker({ value, onChange, placeholder = "Время", classN
 
   const hourRef = React.useRef<HTMLDivElement>(null);
 
-  // Scroll to selected hour (or default 12) when opening
+  // Scroll to 12 (center) when opening
   React.useEffect(() => {
     if (open && hourRef.current) {
-      const target = selectedHour || "12";
-      const idx = HOURS_ORDERED.indexOf(target);
-      if (idx >= 0) {
+      const container = hourRef.current;
+      const el = container.children[CENTER_IDX] as HTMLElement;
+      if (el) {
         requestAnimationFrame(() => {
-          const el = hourRef.current?.children[idx] as HTMLElement;
-          if (el) {
-            el.scrollIntoView({ block: "center", behavior: "instant" });
-          }
+          requestAnimationFrame(() => {
+            const containerH = container.clientHeight;
+            const elH = el.offsetHeight;
+            container.scrollTop = el.offsetTop - (containerH / 2) + (elH / 2);
+          });
         });
       }
     }
-  }, [open, selectedHour]);
+  }, [open]);
 
   const selectHour = (h: string) => {
     const min = selectedMinute || "00";
@@ -82,19 +87,18 @@ export function TimePicker({ value, onChange, placeholder = "Время", classN
             Минуты
           </div>
         </div>
-        <div className="flex divide-x" style={{ height: 200 }}>
+        <div className="flex divide-x h-[200px]">
           {/* Hours column */}
           <div
             ref={hourRef}
-            className="flex-1 overflow-y-auto py-1"
-            style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+            className="flex-1 overflow-y-scroll overscroll-contain py-1"
           >
             {HOURS_ORDERED.map((h) => (
               <button
                 key={h}
                 type="button"
                 className={cn(
-                  "w-full py-1.5 text-center text-sm transition-colors rounded-sm mx-auto",
+                  "w-full py-1.5 text-center text-sm transition-colors rounded-sm",
                   selectedHour === h
                     ? "bg-primary text-primary-foreground font-semibold"
                     : "hover:bg-accent"
