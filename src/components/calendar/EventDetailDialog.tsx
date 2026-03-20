@@ -906,6 +906,36 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
           }
         }}
       />
+
+      {/* Quick Create Dialog */}
+      <QuickCreateDialog
+        type={quickCreate.type}
+        open={quickCreate.open}
+        onOpenChange={(open) => setQuickCreate({ ...quickCreate, open })}
+        onCreated={(entity) => {
+          // Refresh data and auto-select the new entity
+          loadData().then(() => {
+            switch (quickCreate.type) {
+              case 'client':
+                setFormData((prev) => ({ ...prev, client_id: entity.id }));
+                setClients((prev) => [...prev, entity]);
+                break;
+              case 'venue':
+                setFormData((prev) => ({ ...prev, venue_id: entity.id }));
+                setVenues((prev) => [...prev, entity]);
+                break;
+              case 'animator':
+                setFormData((prev) => ({ ...prev, animator_ids: [...prev.animator_ids, entity.id] }));
+                setAnimators((prev) => [...prev, entity]);
+                break;
+              case 'contractor':
+                setFormData((prev) => ({ ...prev, contractor_ids: [...prev.contractor_ids, entity.id] }));
+                setContractors((prev) => [...prev, entity]);
+                break;
+            }
+          });
+        }}
+      />
     </Dialog>
   );
 };
