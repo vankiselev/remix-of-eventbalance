@@ -948,17 +948,26 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          form.setValue("description", correctedText);
-                          toast({
-                            title: "Исправление применено",
-                            description: "Описание обновлено",
-                          });
-                        }}
+                        onClick={handleApplyCorrection}
                         className="mt-2 h-10 min-h-[44px]"
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Применить исправление
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Apply All button - shown when both correction and suggestions are available */}
+                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                    <div className="mt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleApplyAll}
+                        className="w-full h-10 min-h-[44px]"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Применить все предложения
                       </Button>
                     </div>
                   )}
