@@ -503,6 +503,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       return;
     }
 
+    if (!currentTenant?.id) {
+      toast({
+        title: "Ошибка",
+        description: "Тенант не определён. Попробуйте обновить страницу.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
