@@ -18,7 +18,8 @@ import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Trash2, MapPin, Plus, File, Users, Camera, Video, FileText, StickyNote, Sparkles, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
-import { TimeSelect } from "@/components/ui/time-select";
+import { TimePicker } from "@/components/ui/time-picker";
+import { QuickCreateDialog } from "@/components/ui/quick-create-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
@@ -72,6 +73,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [uploadingFile, setUploadingFile] = useState(false);
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [quickCreate, setQuickCreate] = useState<{ open: boolean; type: 'client' | 'venue' | 'animator' | 'contractor' }>({ open: false, type: 'client' });
   const [actionRequestDialog, setActionRequestDialog] = useState<{ open: boolean; type: 'delete' | 'cancel' | null }>({
     open: false,
     type: null,
@@ -161,7 +163,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         supabase.from("venues").select("*").order("name"),
         supabase.from("animators").select("*").order("name"),
         supabase.from("contractors").select("*").order("name"),
-        supabase.from("profiles").select("id, full_name").eq("employment_status", "active").order("full_name"),
+        supabase.from("profiles").select("id, full_name, avatar_url").eq("employment_status", "active").order("full_name"),
         supabase.from("clients").select("*").order("name"),
       ]);
 
@@ -489,7 +491,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Клиент</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -518,7 +520,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Площадка</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=venues', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'venue' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -566,7 +568,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Начало</Label>
-                    <TimeSelect
+                    <TimePicker
                       value={formData.event_time}
                       onChange={(v) => setFormData({ ...formData, event_time: v })}
                       placeholder="Время начала"
@@ -575,7 +577,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Окончание</Label>
-                    <TimeSelect
+                    <TimePicker
                       value={formData.end_time}
                       onChange={(v) => setFormData({ ...formData, end_time: v })}
                       placeholder="Время окончания"
@@ -597,7 +599,8 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Ответственные менеджеры</Label>
                     <SearchableMultiSelect
-                      options={employees.map((e) => ({ id: e.id, label: e.full_name }))}
+                      options={employees.map((e) => ({ id: e.id, label: e.full_name, avatarUrl: e.avatar_url }))}
+                      showAvatars
                       selected={formData.responsible_manager_ids}
                       onChange={(ids) => setFormData({ ...formData, responsible_manager_ids: ids })}
                       placeholder="Поиск менеджеров..."
@@ -626,7 +629,8 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <Label className="text-xs font-medium">Менеджеры</Label>
                     <SearchableMultiSelect
-                      options={employees.map((e) => ({ id: e.id, label: e.full_name }))}
+                      options={employees.map((e) => ({ id: e.id, label: e.full_name, avatarUrl: e.avatar_url }))}
+                      showAvatars
                       selected={formData.manager_ids}
                       onChange={(ids) => setFormData({ ...formData, manager_ids: ids })}
                       placeholder="Поиск менеджеров..."
@@ -655,7 +659,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Аниматоры</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=animators', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'animator' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -671,7 +675,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Подрядчики</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=contractors', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -687,7 +691,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Шоу программа</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=animators', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'animator' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -716,7 +720,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       <Label className="text-xs font-medium flex items-center gap-1.5">
                         <Camera className="h-3 w-3" /> Фотограф
                       </Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -735,7 +739,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       <Label className="text-xs font-medium flex items-center gap-1.5">
                         <Video className="h-3 w-3" /> Видеограф
                       </Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
@@ -900,6 +904,36 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
             
             setSelectedConflictEmployee(null);
           }
+        }}
+      />
+
+      {/* Quick Create Dialog */}
+      <QuickCreateDialog
+        type={quickCreate.type}
+        open={quickCreate.open}
+        onOpenChange={(open) => setQuickCreate({ ...quickCreate, open })}
+        onCreated={(entity) => {
+          // Refresh data and auto-select the new entity
+          loadData().then(() => {
+            switch (quickCreate.type) {
+              case 'client':
+                setFormData((prev) => ({ ...prev, client_id: entity.id }));
+                setClients((prev) => [...prev, entity]);
+                break;
+              case 'venue':
+                setFormData((prev) => ({ ...prev, venue_id: entity.id }));
+                setVenues((prev) => [...prev, entity]);
+                break;
+              case 'animator':
+                setFormData((prev) => ({ ...prev, animator_ids: [...prev.animator_ids, entity.id] }));
+                setAnimators((prev) => [...prev, entity]);
+                break;
+              case 'contractor':
+                setFormData((prev) => ({ ...prev, contractor_ids: [...prev.contractor_ids, entity.id] }));
+                setContractors((prev) => [...prev, entity]);
+                break;
+            }
+          });
         }}
       />
     </Dialog>
