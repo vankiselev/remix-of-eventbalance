@@ -83,6 +83,9 @@ const EventsImportDialog = ({
       const row = (rows[i] || []).map(v => String(v ?? '').trim());
       const nonEmpty = row.filter(Boolean);
       if (nonEmpty.length < 2) continue;
+      // Skip banner/title rows where all cells have the same value (merged cells)
+      const uniqueValues = new Set(nonEmpty.map(c => c.toLowerCase()));
+      if (uniqueValues.size < 2) continue;
       const hit = nonEmpty.some(cell => {
         const lc = cell.toLowerCase();
         return headerKeywords.some(k => lc.includes(k));
@@ -91,15 +94,30 @@ const EventsImportDialog = ({
     }
     for (let i = 0; i < limit; i++) {
       const row = (rows[i] || []).map(v => String(v ?? '').trim());
-      if (row.filter(Boolean).length >= 2) return { index: i, headers: row };
+      const nonEmpty = row.filter(Boolean);
+      if (nonEmpty.length < 2) continue;
+      const uniqueValues = new Set(nonEmpty.map(c => c.toLowerCase()));
+      if (uniqueValues.size < 2) continue;
+      return { index: i, headers: row };
     }
     return { index: 0, headers: (rows[0] || []).map(v => String(v ?? '').trim()) };
   };
 
+  const deduplicateHeaders = (headers: string[]): string[] => {
+    const seen = new Map<string, number>();
+    return headers.map(h => {
+      const key = h.toLowerCase();
+      const count = seen.get(key) || 0;
+      seen.set(key, count + 1);
+      return count > 0 ? `${h}_${count + 1}` : h;
+    });
+  };
+
   const buildObjectsFromRows = (rows: any[][], headerIndex: number, headersRow: string[]) => {
+    const uniqueHeaders = deduplicateHeaders(headersRow);
     const objects = rows.slice(headerIndex + 1).map((row) => {
       const obj: ParsedRow = {};
-      headersRow.forEach((header, idx) => {
+      uniqueHeaders.forEach((header, idx) => {
         obj[header] = row[idx] ?? '';
       });
       return obj;
