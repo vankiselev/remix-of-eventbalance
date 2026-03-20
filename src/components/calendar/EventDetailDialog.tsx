@@ -399,10 +399,10 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-3xl h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0">
-          <DialogTitle className="text-base sm:text-lg">
-            {event ? "Редактировать мероприятие" : "Создать мероприятие"}
+       <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 sm:px-6 py-4 border-b flex-shrink-0 bg-muted/30">
+          <DialogTitle className="text-lg font-semibold">
+            {event ? "Редактировать мероприятие" : "Новое мероприятие"}
           </DialogTitle>
         </DialogHeader>
 
