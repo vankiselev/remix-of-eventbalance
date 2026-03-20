@@ -1,41 +1,53 @@
 
 
-## Problem
+## Проблема
 
-When an admin approves a pending employee (changes `invitation_status` from `pending` to `invited`), the employee only sees the status change via realtime subscription. No email is sent to notify them they can start using the system.
-
-## Solution
-
-Create a new edge function `send-approval-email` that sends an email via Resend, and call it from `PendingUsersManagement.tsx` after the approval succeeds.
-
-## Changes
-
-### 1. New edge function: `supabase/functions/send-approval-email/index.ts`
-
-- Accepts `{ email, firstName, lastName }` in the request body
-- Uses the existing pattern from `send-invitation-email` (Resend via `system_secrets`, same `from` address)
-- Sends an HTML email with subject "Доступ одобрен — EventBalance" telling the user their account is activated and they can log in
-- Includes a link to the login page (`${siteUrl}/auth`)
-
-### 2. Update `src/components/admin/PendingUsersManagement.tsx`
-
-After the successful approval (line ~152, after `toast.success`), invoke the new edge function:
-
-```typescript
-await supabase.functions.invoke('send-approval-email', {
-  body: { email: user.email, firstName: user.first_name, lastName: user.last_name }
-});
+Миграция `20260320_seed_role_definitions.sql` падает на self-hosted сервере с ошибкой:
+```
+ERROR: column "display_name" of relation "role_definitions" does not exist
 ```
 
-This is a fire-and-forget call — if the email fails, the approval still succeeds (wrapped in try/catch with console.error).
+Таблица `role_definitions` на self-hosted базе не содержит колонку `display_name`, в то время как в Lovable Cloud эта колонка есть.
 
-### 3. Deploy the edge function
+## Решение
 
-Deploy `send-approval-email` so it's available immediately.
+Обновить миграцию, чтобы она сначала добавляла недостающие колонки (если их нет), а потом вставляла данные. Это сделает миграцию совместимой с обеими базами.
 
-## Technical Details
+## Изменения
 
-- Reuses the existing Resend integration and `getSystemSecrets` shared utility
-- Same CORS headers and email sender (`EventBalance <noreply@eventbalance.ru>`)
-- Email content: congratulations message, explanation that the account is active, CTA button to log in
+### 1. Обновить `migrations/20260320_seed_role_definitions.sql`
+
+Добавить перед INSERT'ами:
+```sql
+-- Ensure required columns exist (for self-hosted compatibility)
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
+```
+
+Полный файл:
+```sql
+-- Ensure required columns exist (for self-hosted compatibility)
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
+
+-- Seed role_definitions with standard roles
+INSERT INTO role_definitions (name, display_name, code, is_admin_role)
+VALUES 
+  ('admin', 'Администратор', 'admin', true),
+  ('super_admin', 'Супер-администратор', 'super_admin', true),
+  ('member', 'Сотрудник', 'member', false)
+ON CONFLICT DO NOTHING;
+
+-- Assign admin role to all tenant owners
+INSERT INTO user_role_assignments (user_id, role_id)
+SELECT tm.user_id, rd.id
+FROM tenant_memberships tm
+JOIN role_definitions rd ON rd.name = 'admin'
+WHERE tm.role = 'owner'
+ON CONFLICT DO NOTHING;
+```
+
+Это единственное изменение — добавить 3 строки `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` в начало файла.
 
