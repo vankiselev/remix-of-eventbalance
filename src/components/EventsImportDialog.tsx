@@ -113,12 +113,19 @@ const EventsImportDialog = ({
     });
   };
 
+  const safeCellValue = (v: any): string => {
+    if (v == null) return '';
+    if (v instanceof Date) return v.toISOString();
+    if (typeof v === 'object') return v.text ?? v.result ?? JSON.stringify(v);
+    return String(v);
+  };
+
   const buildObjectsFromRows = (rows: any[][], headerIndex: number, headersRow: string[]) => {
     const uniqueHeaders = deduplicateHeaders(headersRow);
     const objects = rows.slice(headerIndex + 1).map((row) => {
       const obj: ParsedRow = {};
       uniqueHeaders.forEach((header, idx) => {
-        obj[header] = row[idx] ?? '';
+        obj[header] = safeCellValue(row[idx]);
       });
       return obj;
     }).filter(row => Object.values(row).some(v => v !== '' && v !== null && v !== undefined));
