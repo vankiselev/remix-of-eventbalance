@@ -197,9 +197,23 @@ const App = () => {
                     
                     {/* Super admin route */}
                     <Route path="/admin" element={<ProtectedRoute><SuperAdminPage /></ProtectedRoute>} />
-                    
-                    {/* Tenant-scoped routes (future: /:tenantSlug/dashboard, etc.) */}
-                    {/* These will be added in subsequent phases */}
+
+
+                    {/* Tenant-scoped routes */}
+                    <Route path="/:tenantSlug/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
+                    <Route path="/:tenantSlug/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
                     
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
