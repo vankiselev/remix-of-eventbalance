@@ -93,6 +93,7 @@ export function useTransactionSuggestions(
   const applySuggestions = useCallback(() => {
     if (suggestions && onApply) {
       appliedRef.current = true;
+      skipNextRef.current = true;
       onApply(suggestions);
       setSuggestions(null);
       setIsDismissed(true);

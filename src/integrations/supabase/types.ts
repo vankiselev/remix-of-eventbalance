@@ -1569,6 +1569,7 @@ export type Database = {
       }
       get_current_user_role: { Args: never; Returns: string }
       get_system_secret: { Args: { secret_key: string }; Returns: string }
+      get_tenant_by_slug: { Args: { _slug: string }; Returns: Json }
       get_user_basic_profile: {
         Args: { p_user_id: string }
         Returns: {
@@ -1578,6 +1579,7 @@ export type Database = {
           id: string
         }[]
       }
+      get_user_tenant_memberships: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       log_profile_edit:
