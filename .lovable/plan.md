@@ -1,49 +1,46 @@
 
 
-## Карточка компании с редактированием + маршрутизация
+## Fix: Infinite Recursion in `tenant_memberships` RLS Policies
 
-### Подход к URL
+### Problem
 
-Используем path-based маршрутизацию: `eventbalance.ru/fantasy-kids/dashboard`. Это проще субдоменов (не нужна wildcard DNS, SSL на каждый субдомен). TenantContext уже умеет извлекать slug из URL.
+The migration `20260128140002_create_tenant_memberships.sql` created policies that query `tenant_memberships` inside their own USING clauses:
+- "Users can view memberships in their tenants" — subquery on `tenant_memberships`
+- "Tenant owners can manage memberships" — subquery on `tenant_memberships`
 
-### Что нужно сделать
+This causes PostgreSQL to enter infinite recursion when evaluating any query on the table.
 
-**1. Расширить таблицу tenants (миграция)**
+### Solution
 
-Добавить колонки для полноценной карточки компании:
-- `logo_url` (text) — логотип
-- `description` (text) — описание
-- `inn` (text) — ИНН
-- `legal_name` (text) — юридическое название
-- `address` (text) — адрес
-- `phone` (text) — телефон
-- `email` (text) — email
-- `is_active` (boolean, default true)
-- `plan` (text, default 'trial')
-- `settings` (jsonb, default '{}')
+1. **Create two `SECURITY DEFINER` functions** that bypass RLS:
+   - `is_tenant_member(p_user_id uuid, p_tenant_id uuid)` — checks if user belongs to a tenant
+   - `is_tenant_owner(p_user_id uuid, p_tenant_id uuid)` — checks if user is owner of a tenant
 
-Добавить RLS политику UPDATE для суперадминов и владельцев тенанта.
+2. **Drop and recreate the problematic policies** to use these functions instead of subqueries
 
-**2. Создать `TenantDetailDialog.tsx`**
+### Migration SQL (single file)
 
-Диалог редактирования компании с полями: название, slug, описание, ИНН, юр. название, адрес, телефон, email. Сохранение через `supabase.from('tenants').update(...)`.
+```sql
+-- Create helper functions (SECURITY DEFINER bypasses RLS)
+CREATE OR REPLACE FUNCTION public.is_tenant_member(...)
+CREATE OR REPLACE FUNCTION public.is_tenant_owner(...)
 
-**3. Обновить `TenantsManagement.tsx`**
+-- Drop recursive policies
+DROP POLICY "Users can view memberships in their tenants" ...
+DROP POLICY "Tenant owners can manage memberships" ...
 
-- Карточки компаний показывают больше информации (email, телефон, статус)
-- Кнопка "Редактировать" открывает `TenantDetailDialog`
-- Подтягивать новые поля из БД
+-- Recreate using functions
+CREATE POLICY ... USING (public.is_tenant_member(auth.uid(), tenant_id))
+CREATE POLICY ... USING (public.is_tenant_owner(auth.uid(), tenant_id))
+```
 
-**4. Добавить tenant-scoped маршруты в `App.tsx`**
+Also fix the "Tenant owners can update their tenant" policy on `tenants` table which has the same self-referencing issue.
 
-Добавить маршруты вида `/:tenantSlug/dashboard`, `/:tenantSlug/finances` и т.д. — они будут использовать те же компоненты, но TenantContext автоматически подхватит slug из URL.
+### Files
 
-### Файлы
-
-| Файл | Действие |
+| File | Action |
 |---|---|
-| Миграция | Создать — расширить таблицу tenants + RLS UPDATE |
-| `src/components/admin/TenantDetailDialog.tsx` | Создать — форма редактирования компании |
-| `src/components/admin/TenantsManagement.tsx` | Изменить — расширенные карточки + кнопка редактирования |
-| `src/App.tsx` | Изменить — добавить `/:tenantSlug/*` маршруты |
+| Migration SQL | Create — fix recursive RLS policies |
+
+No code changes needed — only database migration.
 
