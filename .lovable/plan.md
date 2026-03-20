@@ -2,40 +2,40 @@
 
 ## Проблема
 
-AI-функции (проверка орфографии и автоподбор категории/проекта) не работают из-за сложной прокси-архитектуры, которая сломана:
+Хуки `useDescriptionChecker` и `useTransactionSuggestions` вызывают `supabase.functions.invoke(...)`, что отправляет запрос на self-hosted сервер (`superbag.eventbalance.ru`). Но edge-функции на self-hosted сервере не имеют `LOVABLE_API_KEY` для доступа к AI Gateway.
 
-1. Edge-функции `check-transaction-description` и `suggest-transaction-fields` вызывают `callAIProxy()` из `_shared/ai-proxy-client.ts`
-2. `ai-proxy-client.ts` пытается получить секреты `LOVABLE_CLOUD_URL` и `AI_PROXY_KEY` из таблицы `system_secrets`
-3. **Этих секретов нет в таблице** — там только `RESEND_API_KEY`, `VAPID_*`, `CRON_SECRET`
-4. Без них клиент возвращает `null`, и функции падают с ошибкой "AI proxy not configured"
+## Решение
 
-## Решение — упростить архитектуру
+Изменить только два хука, чтобы они вызывали AI edge-функции напрямую на Lovable Cloud через `fetch()`. Всё остальное (авторизация, данные, транзакции) продолжает работать через self-hosted сервер как раньше.
 
-Все edge-функции деплоятся на Lovable Cloud, где уже есть `LOVABLE_API_KEY`. Прокси-цепочка (self-hosted → ai-proxy → AI Gateway) избыточна. Нужно убрать промежуточное звено и вызывать AI Gateway напрямую.
+```text
+Было:
+  Браузер → supabase.functions.invoke() → self-hosted (нет AI ключа) → ❌
 
-### Шаг 1: Переписать `_shared/ai-proxy-client.ts`
+Станет:
+  Браузер → fetch() → Lovable Cloud (есть AI ключ) → AI Gateway → ✅
+  Браузер → supabase (всё остальное) → self-hosted → ✅
+```
 
-Заменить логику получения секретов из БД на прямой вызов `LOVABLE_API_KEY` из env. Вместо `fetch(proxyUrl/functions/v1/ai-proxy)` вызывать `https://ai.gateway.lovable.dev/v1/chat/completions` напрямую:
+### Что меняется
 
-- Убрать `getSecrets()` и зависимость от `system_secrets`
-- Использовать `Deno.env.get("LOVABLE_API_KEY")` 
-- Вызывать gateway напрямую с `Authorization: Bearer ${LOVABLE_API_KEY}`
-- Модель: `google/gemini-3-flash-preview`
+**1. `src/hooks/useDescriptionChecker.ts`**
+- Заменить `supabase.functions.invoke('check-transaction-description', ...)` на `fetch('https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1/check-transaction-description', ...)`
+- Передать anon key Lovable Cloud в заголовке `apikey`
 
-### Шаг 2: Удалить `ai-proxy` edge function
+**2. `src/hooks/useTransactionSuggestions.ts`**
+- Аналогично — заменить `supabase.functions.invoke('suggest-transaction-fields', ...)` на `fetch()` на Lovable Cloud
 
-Функция `ai-proxy/index.ts` больше не нужна — она была промежуточным звеном. Удалить её.
+**3. `supabase/functions/_shared/ai-proxy-client.ts`**
+- Упростить: оставить только direct mode с `LOVABLE_API_KEY` из env (proxy mode больше не нужен)
 
-### Шаг 3: Убрать `_shared/secrets.ts` (если больше не используется)
+**4. Удалить `supabase/functions/ai-proxy/index.ts`**
+- Прокси-функция больше не нужна
 
-Проверить, используется ли где-то ещё, и удалить если нет.
+### Что НЕ меняется
 
-### Шаг 4: Задеплоить и протестировать
-
-- Задеплоить обновлённые `check-transaction-description` и `suggest-transaction-fields`
-- Протестировать вызовом curl
-
-### Результат
-
-Обе AI-функции (орфография + автоподбор) заработают, архитектура упростится с 3 звеньев до 2 (edge function → AI Gateway).
+- Self-hosted сервер — остаётся как есть
+- Авторизация — через self-hosted
+- Все данные и транзакции — через self-hosted
+- Файл `src/lib/supabase.ts` — без изменений
 
