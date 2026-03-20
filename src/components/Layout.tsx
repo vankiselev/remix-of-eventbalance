@@ -159,7 +159,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full overflow-x-hidden">
+    <div className="min-h-screen bg-background flex flex-col w-full">
       {!isMobile ? (
         <>
           {/* Desktop Header */}
