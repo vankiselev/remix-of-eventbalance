@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         .from("invitations")
         .select("id, tenant_id, invited_by")
         .eq("token", invitation_token)
-        .eq("status", "pending")
+        .in("status", ["pending", "sent"])
         .single();
 
       if (invData) {
