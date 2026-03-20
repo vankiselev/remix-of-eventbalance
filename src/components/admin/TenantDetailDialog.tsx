@@ -156,6 +156,15 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {tenant && (
+            <TenantLogoUpload
+              tenantId={tenant.id}
+              logoUrl={logoUrl}
+              tenantName={form.name || tenant.name}
+              onUploaded={(url) => setLogoUrl(url)}
+            />
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Название *</Label>
