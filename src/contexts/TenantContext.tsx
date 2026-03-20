@@ -40,7 +40,36 @@ interface TenantContextType {
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
-const RESERVED_SLUGS = ['auth', 'register', 'admin', 'api', 'awaiting-invitation', 'administration', 'dashboard', 'settings', 'profile'];
+const RESERVED_SLUGS = [
+  'auth',
+  'invite',
+  'reset-password',
+  'awaiting-invitation',
+  'privacy',
+  'terms',
+  'select-company',
+  'register',
+  'dashboard',
+  'finances',
+  'events',
+  'calendar',
+  'transaction',
+  'staff',
+  'birthdays',
+  'vacations',
+  'contacts',
+  'reports',
+  'profile',
+  'settings',
+  'transactions-review',
+  'siri-integration',
+  'warehouse',
+  'tasks',
+  'administration',
+  'invitations',
+  'admin',
+  'api',
+];
 
 export const useTenant = () => {
   const context = useContext(TenantContext);
@@ -116,7 +145,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const getTenantSlugFromUrl = useCallback(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
-    if (pathParts.length > 0) {
+    if (pathParts.length >= 2) {
       const potentialSlug = pathParts[0];
       if (!RESERVED_SLUGS.includes(potentialSlug)) {
         return potentialSlug;
@@ -194,7 +223,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const savedMembership = memberships.find(m => m.tenant?.slug === savedSlug && m.status === 'active');
           if (savedMembership?.tenant) {
             setCurrentTenantState(savedMembership.tenant);
-            setIsLoadingTenant(false);
+            setTenantError(null);
             return;
           }
         }
@@ -202,9 +231,25 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const firstActive = memberships.find(m => m.status === 'active' && m.tenant);
         if (firstActive?.tenant) {
           setCurrentTenantState(firstActive.tenant);
+          setTenantError(null);
           localStorage.setItem('last_tenant_slug', firstActive.tenant.slug);
         } else {
-          setCurrentTenantState(null);
+          const { data: fallbackTenant, error: fallbackError } = await supabase
+            .from('tenants')
+            .select('*')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (!fallbackError && fallbackTenant) {
+            const builtTenant = buildTenantFromRow(fallbackTenant);
+            setCurrentTenantState(builtTenant);
+            setTenantError(null);
+            localStorage.setItem('last_tenant_slug', builtTenant.slug);
+          } else {
+            setCurrentTenantState(null);
+            setTenantError('Компания не найдена');
+          }
         }
       }
     } catch (error) {
