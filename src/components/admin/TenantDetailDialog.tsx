@@ -78,16 +78,38 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
 
     setSaving(true);
     try {
-      const { error } = await (supabase.from('tenants') as any).update({
+      // Build update object with only non-empty fields
+      // Start with fields that definitely exist in schema
+      const updateData: Record<string, any> = {
         name: form.name.trim(),
         slug: form.slug.trim(),
-        description: form.description.trim() || null,
-        inn: form.inn.trim() || null,
-        legal_name: form.legal_name.trim() || null,
-        address: form.address.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
-      }).eq('id', tenant.id);
+      };
+
+      // Try to include extended fields (may not exist if migration not applied yet)
+      const extendedFields: Record<string, string> = {
+        description: form.description.trim(),
+        inn: form.inn.trim(),
+        legal_name: form.legal_name.trim(),
+        address: form.address.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+      };
+
+      // First try with all fields
+      let { error } = await (supabase.from('tenants') as any)
+        .update({ ...updateData, ...Object.fromEntries(
+          Object.entries(extendedFields).map(([k, v]) => [k, v || null])
+        ) })
+        .eq('id', tenant.id);
+
+      // If error mentions column not found, retry with basic fields only
+      if (error?.message?.includes('column') && error?.message?.includes('schema cache')) {
+        console.warn('Extended tenant fields not available, saving basic fields only');
+        const retryResult = await (supabase.from('tenants') as any)
+          .update(updateData)
+          .eq('id', tenant.id);
+        error = retryResult.error;
+      }
 
       if (error) throw error;
 
