@@ -132,7 +132,17 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
 
-    console.log(`Starting import of ${rows.length} rows for user ${user_id}`);
+    // Get user's tenant_id
+    let tenantId: string | null = null;
+    const { data: membership } = await supabase
+      .from('tenant_memberships')
+      .select('tenant_id')
+      .eq('user_id', user_id)
+      .limit(1)
+      .single();
+    if (membership) tenantId = membership.tenant_id;
+
+    console.log(`Starting import of ${rows.length} rows for user ${user_id}, tenant ${tenantId}`);
 
     const result: ImportResult = {
       total: rows.length,
@@ -142,133 +152,98 @@ serve(async (req) => {
       errors: []
     };
 
-    // Process rows in chunks of 50 to avoid timeouts
-    const CHUNK_SIZE = 50;
-    
-    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-      const chunk = rows.slice(i, i + CHUNK_SIZE);
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] as ImportRow;
       
-      for (let j = 0; j < chunk.length; j++) {
-        const rowIndex = i + j;
-        const row = chunk[j] as ImportRow;
-        
-        try {
-          // Validate required fields
-          if (!row.event_date || !row.title) {
-            result.failed++;
-            result.errors.push({
-              row: rowIndex + 1,
-              reason: 'Missing required fields (event_date or title)',
-              data: row
-            });
-            continue;
-          }
-
-          // Parse and validate date
-          const eventDate = new Date(row.event_date);
-          if (isNaN(eventDate.getTime())) {
-            result.failed++;
-            result.errors.push({
-              row: rowIndex + 1,
-              reason: 'Invalid date format',
-              data: row
-            });
-            continue;
-          }
-
-          // Prepare data for upsert
-          const { event_time, end_time, normalized } = parseTimeRange(row.time_range);
-          const eventData = {
-            start_date: row.event_date,
-            name: row.title.trim(),
-            project_owner: row.project_owner?.trim() || null,
-            managers: row.managers?.trim() || null,
-            place: row.place?.trim() || null,
-            location: row.place?.trim() || null, // Keep both for compatibility
-            time_range: normalized ?? (row.time_range?.trim() || null),
-            event_time: event_time, // normalized start time HH:mm or null
-            end_time: end_time,     // normalized end time HH:mm or null
-            animators: row.animators?.trim() || null,
-            show_program: row.show_program?.trim() || null,
-            contractors: row.contractors?.trim() || null,
-            photo: row.photo?.trim() || null,
-            video: row.video?.trim() || null,
-            notes: row.notes?.trim() || null,
-            source_event_id: row.source_event_id || null,
-            created_by: user_id,
-            updated_at: new Date().toISOString()
-          };
-
-          // Check if record exists
-          let existingRecord = null;
-          
-          if (row.source_event_id) {
-            // Try to find by source_event_id first
-            const { data: sourceData } = await supabase
-              .from('events')
-              .select('id')
-              .eq('source_event_id', row.source_event_id)
-              .single();
-            existingRecord = sourceData;
-          }
-          
-          if (!existingRecord) {
-            // Fallback to date + name lookup
-            const { data: nameData } = await supabase
-              .from('events')
-              .select('id')
-              .eq('start_date', row.event_date)
-              .ilike('name', row.title.trim())
-              .single();
-            existingRecord = nameData;
-          }
-
-          if (existingRecord) {
-            // Update existing record
-            const { error: updateError } = await supabase
-              .from('events')
-              .update(eventData)
-              .eq('id', existingRecord.id);
-
-            if (updateError) {
-              console.error('Update error:', updateError);
-              result.failed++;
-              result.errors.push({
-                row: rowIndex + 1,
-                reason: `Update failed: ${updateError.message}`,
-                data: row
-              });
-            } else {
-              result.updated++;
-            }
-          } else {
-            // Insert new record
-            const { error: insertError } = await supabase
-              .from('events')
-              .insert(eventData);
-
-            if (insertError) {
-              console.error('Insert error:', insertError);
-              result.failed++;
-              result.errors.push({
-                row: rowIndex + 1,
-                reason: `Insert failed: ${insertError.message}`,
-                data: row
-              });
-            } else {
-              result.inserted++;
-            }
-          }
-
-        } catch (rowError: any) {
-          console.error(`Error processing row ${rowIndex + 1}:`, rowError);
+      try {
+        if (!row.event_date || !row.title) {
           result.failed++;
           result.errors.push({
-            row: rowIndex + 1,
-            reason: rowError.message || 'Unknown error',
+            row: i + 1,
+            reason: 'Missing required fields (event_date or title)',
             data: row
           });
+          continue;
         }
+
+        const eventDate = new Date(row.event_date);
+        if (isNaN(eventDate.getTime())) {
+          result.failed++;
+          result.errors.push({
+            row: i + 1,
+            reason: `Invalid date format: ${row.event_date}`,
+            data: row
+          });
+          continue;
+        }
+
+        const dateStr = eventDate.toISOString().split('T')[0];
+        const { event_time, end_time } = parseTimeRange(row.time_range);
+        
+        // Combine photo + video into photo_video field
+        const photoVideo = [row.photo, row.video].filter(Boolean).join(', ').trim() || null;
+
+        // Only use columns that exist in the events table
+        const eventData: Record<string, any> = {
+          start_date: dateStr,
+          name: row.title.trim(),
+          project_owner: row.project_owner?.trim() || null,
+          managers: row.managers?.trim() || null,
+          location: row.place?.trim() || null,
+          event_time: event_time,
+          end_time: end_time,
+          animators: row.animators?.trim() || null,
+          show_program: row.show_program?.trim() || null,
+          contractors: row.contractors?.trim() || null,
+          photo_video: photoVideo,
+          notes: row.notes?.trim() || null,
+          created_by: user_id,
+          updated_at: new Date().toISOString()
+        };
+
+        if (tenantId) {
+          eventData.tenant_id = tenantId;
+        }
+
+        // Check if record exists by date + name
+        const { data: existing } = await supabase
+          .from('events')
+          .select('id')
+          .eq('start_date', dateStr)
+          .ilike('name', row.title.trim())
+          .maybeSingle();
+
+        if (existing) {
+          const { error: updateError } = await supabase
+            .from('events')
+            .update(eventData)
+            .eq('id', existing.id);
+
+          if (updateError) {
+            console.error('Update error:', updateError);
+            result.failed++;
+            result.errors.push({ row: i + 1, reason: `Update failed: ${updateError.message}`, data: row });
+          } else {
+            result.updated++;
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('events')
+            .insert(eventData);
+
+          if (insertError) {
+            console.error('Insert error:', insertError);
+            result.failed++;
+            result.errors.push({ row: i + 1, reason: `Insert failed: ${insertError.message}`, data: row });
+          } else {
+            result.inserted++;
+          }
+        }
+
+      } catch (rowError: any) {
+        console.error(`Error processing row ${i + 1}:`, rowError);
+        result.failed++;
+        result.errors.push({ row: i + 1, reason: rowError.message || 'Unknown error', data: row });
       }
     }
 
@@ -283,11 +258,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Unknown error',
-        total: 0,
-        inserted: 0,
-        updated: 0,
-        failed: 0,
-        errors: []
+        total: 0, inserted: 0, updated: 0, failed: 0, errors: []
       }), 
       {
         status: 500,
