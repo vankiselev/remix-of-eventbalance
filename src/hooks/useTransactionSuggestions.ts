@@ -81,7 +81,12 @@ export function useTransactionSuggestions(
     fetchSuggestions();
   }, [debouncedDescription, isDismissed]);
 
+  // Only reset dismissed state if user is typing new text (not after applying suggestions)
   useEffect(() => {
+    if (appliedRef.current) {
+      appliedRef.current = false;
+      return;
+    }
     setIsDismissed(false);
   }, [debouncedDescription]);
 
