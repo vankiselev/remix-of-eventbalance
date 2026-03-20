@@ -1163,12 +1163,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           form.setValue('no_receipt', true);
                           form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
                           form.setValue('income_amount', undefined);
-                          setIsDescriptionAutoFilled(true);
-                          // Auto-set no_receipt for money transfers
-                          form.setValue('no_receipt', true);
-                          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-                          // Clear income amount for money transfers
-                          form.setValue('income_amount', undefined);
                           
                           // Auto-hide the indicator after 3 seconds
                           setTimeout(() => {
