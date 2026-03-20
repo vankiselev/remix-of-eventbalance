@@ -22,6 +22,7 @@ import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
 import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
   DialogContent,
