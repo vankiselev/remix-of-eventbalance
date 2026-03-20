@@ -22,6 +22,7 @@ import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
 import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
   DialogContent,
@@ -99,6 +100,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRbacRoles();
+  const { currentTenant } = useTenant();
   const { categories: transactionCategories } = useTransactionCategories();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
@@ -519,6 +521,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
         created_by: user.id,
+        tenant_id: currentTenant?.id || null,
         verification_status: 'pending',
         requires_verification: true,
         // Money transfer fields
