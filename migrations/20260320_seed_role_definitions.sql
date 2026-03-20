@@ -1,3 +1,8 @@
+-- Ensure required columns exist (for self-hosted compatibility)
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS display_name text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS code text;
+ALTER TABLE role_definitions ADD COLUMN IF NOT EXISTS is_admin_role boolean DEFAULT false;
+
 -- Seed role_definitions with standard roles
 INSERT INTO role_definitions (name, display_name, code, is_admin_role)
 VALUES 
