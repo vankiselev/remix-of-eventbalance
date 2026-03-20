@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
@@ -36,63 +34,30 @@ interface AIProxyResponse {
 }
 
 /**
- * Get secrets from system_secrets table
- */
-async function getSecrets(): Promise<{ proxyUrl: string; proxyKey: string } | null> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('[getSecrets] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return null;
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  // Get both secrets in parallel
-  const [proxyUrlResult, proxyKeyResult] = await Promise.all([
-    supabase.rpc('get_system_secret', { secret_key: 'LOVABLE_CLOUD_URL' }),
-    supabase.rpc('get_system_secret', { secret_key: 'AI_PROXY_KEY' }),
-  ]);
-
-  if (proxyUrlResult.error || proxyKeyResult.error) {
-    console.error('[getSecrets] Error fetching secrets:', proxyUrlResult.error, proxyKeyResult.error);
-    return null;
-  }
-
-  if (!proxyUrlResult.data || !proxyKeyResult.data) {
-    console.error('[getSecrets] Missing LOVABLE_CLOUD_URL or AI_PROXY_KEY in system_secrets');
-    return null;
-  }
-
-  return {
-    proxyUrl: proxyUrlResult.data,
-    proxyKey: proxyKeyResult.data,
-  };
-}
-
-/**
- * Call AI through Lovable Cloud proxy
+ * Call AI through Lovable AI Gateway directly using LOVABLE_API_KEY
  */
 export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyResponse> {
-  const secrets = await getSecrets();
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
   
-  if (!secrets) {
-    throw new Error("AI proxy not configured. Add LOVABLE_CLOUD_URL and AI_PROXY_KEY to system_secrets.");
+  if (!apiKey) {
+    throw new Error("LOVABLE_API_KEY is not configured");
   }
 
-  const response = await fetch(`${secrets.proxyUrl}/functions/v1/ai-proxy`, {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-AI-Proxy-Key": secrets.proxyKey,
+      "Authorization": `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      ...request,
+    }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("AI Proxy error:", response.status, errorText);
+    console.error("AI Gateway error:", response.status, errorText);
     
     if (response.status === 429) {
       throw new Error("Rate limit exceeded. Please try again later.");
@@ -101,7 +66,7 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
       throw new Error("Payment required. Please add credits.");
     }
     if (response.status === 401) {
-      throw new Error("Unauthorized. Check AI_PROXY_KEY configuration.");
+      throw new Error("Unauthorized. Check LOVABLE_API_KEY configuration.");
     }
     
     throw new Error(`AI service error: ${response.status}`);
