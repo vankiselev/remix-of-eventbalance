@@ -34,11 +34,11 @@ const ContactsInfoPage = () => {
 
             <div className="rounded-lg border bg-card p-6 space-y-3 text-center">
               <div className="mx-auto w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Send className="h-5 w-5 text-primary" />
+                <Phone className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="font-semibold text-foreground">Telegram</h3>
-              <a href="https://t.me/eventbalance_support" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
-                @eventbalance_support
+              <h3 className="font-semibold text-foreground">Телефон</h3>
+              <a href="tel:+79152903377" className="text-sm text-primary hover:underline">
+                +7 (915) 290-33-77
               </a>
             </div>
 
