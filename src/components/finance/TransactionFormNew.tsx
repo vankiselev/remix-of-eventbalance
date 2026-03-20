@@ -275,6 +275,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     });
   };
 
+  // Money transfer categories that require employee selection
+  const MONEY_TRANSFER_CATEGORIES = [
+    "Передано или получено от Леры/Насти/Вани",
+    "Передано или получено от сотрудника"
+  ];
+
   // Check if this is an internal money transfer (not requiring receipt)
   const isInternalMoneyTransfer = watchProjectId === "Передача денег" && 
     watchCategory === "Передано или получено от Леры/Насти/Вани";
@@ -360,7 +366,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         const projectValue = editTransaction.static_project_name || editTransaction.project_id;
         
         // Initialize money transfer state for edit mode
-        const isTransferCategory = editTransaction.category === 'Передано или получено от сотрудника';
+        const isTransferCategory = MONEY_TRANSFER_CATEGORIES.includes(editTransaction.category);
         if (isTransferCategory) {
           setIsMoneyTransfer(true);
           setTransferToUserId(editTransaction.transfer_to_user_id || "");
@@ -853,7 +859,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   <FormControl>
                     <Textarea
                       placeholder={
-                        form.watch("category") === "Передано или получено от сотрудника"
+                        MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))
                           ? "Например: Передал на наличные расходы по проекту"
                           : "Опишите операцию..."
                       }
@@ -1151,13 +1157,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       onValueChange={(value) => {
                         field.onChange(value);
                         // Automatically enable money transfer for employee transfer category
-                        if (value === 'Передано или получено от сотрудника') {
+                        if (MONEY_TRANSFER_CATEGORIES.includes(value)) {
                           setIsMoneyTransfer(true);
                           setIsDescriptionAutoFilled(true);
-                          // Auto-set no_receipt for money transfers
                           form.setValue('no_receipt', true);
                           form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-                          // Clear income amount for money transfers
                           form.setValue('income_amount', undefined);
                           
                           // Auto-hide the indicator after 3 seconds
@@ -1219,7 +1223,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 if (firstResult) {
                                   field.onChange(firstResult);
                                   // Handle category selection logic
-                                   if (firstResult === 'Передано или получено от сотрудника') {
+                                   if (MONEY_TRANSFER_CATEGORIES.includes(firstResult)) {
                                      setIsMoneyTransfer(true);
                                      setIsDescriptionAutoFilled(true);
                                      form.setValue('no_receipt', true);
@@ -1283,7 +1287,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             />
 
             {/* Money Transfer Section - Show when category is employee transfer */}
-            {form.watch("category") === "Передано или получено от сотрудника" && (
+            {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
               <div className="space-y-4 p-4 border-2 rounded-lg bg-primary/5 border-primary/20">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">💸</span>
@@ -1440,7 +1444,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   <FormItem>
                     <FormLabel>
                       Сумма Траты
-                      {form.watch("category") === "Передано или получено от сотрудника" && (
+                      {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
                         <span className="ml-2 text-xs text-primary font-normal">
                           ← Заполните это поле
                         </span>
@@ -1456,7 +1460,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder={
-                          form.watch("category") === "Передано или получено от сотрудника"
+                          MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))
                             ? "Сумма передачи сотруднику"
                             : "Введите сумму"
                         }
@@ -1483,10 +1487,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                           }
                         }}
                         placeholder="Введите сумму"
-                        disabled={form.watch("category") === "Передано или получено от сотрудника"}
+                        disabled={MONEY_TRANSFER_CATEGORIES.includes(form.watch("category"))}
                       />
                     </FormControl>
-                    {form.watch("category") === "Передано или получено от сотрудника" && (
+                    {MONEY_TRANSFER_CATEGORIES.includes(form.watch("category")) && (
                       <FormDescription className="text-xs">
                         При передаче денег не заполняется
                       </FormDescription>
