@@ -47,9 +47,10 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Update profile
+    // Update profile with invitation_status so user bypasses awaiting screen
     await adminClient.from("profiles").update({
       full_name: full_name || email,
+      invitation_status: 'invited',
     }).eq("id", userId);
 
     // Accept invitation if token provided
