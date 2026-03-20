@@ -73,6 +73,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
   const [uploadingFile, setUploadingFile] = useState(false);
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [quickCreate, setQuickCreate] = useState<{ open: boolean; type: 'client' | 'venue' | 'animator' | 'contractor' }>({ open: false, type: 'client' });
   const [actionRequestDialog, setActionRequestDialog] = useState<{ open: boolean; type: 'delete' | 'cancel' | null }>({
     open: false,
     type: null,
