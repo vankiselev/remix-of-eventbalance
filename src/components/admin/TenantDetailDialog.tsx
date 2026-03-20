@@ -58,6 +58,7 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
 
   useEffect(() => {
     if (tenant) {
+      setLogoUrl(tenant.logo_url || null);
       setForm({
         name: tenant.name || '',
         slug: tenant.slug || '',
