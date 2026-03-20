@@ -425,7 +425,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                   <div className="space-y-1">
-                    <Label htmlFor="name" className="text-xs font-medium">Название *</Label>
+                    <Label htmlFor="name" className="text-sm font-medium">Название *</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -437,7 +437,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Дата *</Label>
+                    <Label className="text-sm font-medium">Дата *</Label>
                     <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -472,7 +472,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Чей проект</Label>
+                    <Label className="text-sm font-medium">Чей проект</Label>
                     <Select
                       value={formData.project_owner}
                       onValueChange={(value) => setFormData({ ...formData, project_owner: value })}
@@ -490,7 +490,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Клиент</Label>
+                      <Label className="text-sm font-medium">Клиент</Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'client' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
@@ -519,7 +519,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Площадка</Label>
+                      <Label className="text-sm font-medium">Площадка</Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'venue' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
@@ -535,7 +535,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Адрес</Label>
+                    <Label className="text-sm font-medium">Адрес</Label>
                     <div className="flex gap-2">
                       <Input
                         value={formData.location}
@@ -567,7 +567,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   )}
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Начало</Label>
+                    <Label className="text-sm font-medium">Начало</Label>
                     <TimePicker
                       value={formData.event_time}
                       onChange={(v) => setFormData({ ...formData, event_time: v })}
@@ -576,7 +576,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Окончание</Label>
+                    <Label className="text-sm font-medium">Окончание</Label>
                     <TimePicker
                       value={formData.end_time}
                       onChange={(v) => setFormData({ ...formData, end_time: v })}
@@ -597,7 +597,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Ответственные менеджеры</Label>
+                    <Label className="text-sm font-medium">Ответственные менеджеры</Label>
                     <SearchableMultiSelect
                       options={employees.map((e) => ({ id: e.id, label: e.full_name, avatarUrl: e.avatar_url }))}
                       showAvatars
@@ -627,7 +627,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
                   
                   <div className="space-y-1">
-                    <Label className="text-xs font-medium">Менеджеры</Label>
+                    <Label className="text-sm font-medium">Менеджеры</Label>
                     <SearchableMultiSelect
                       options={employees.map((e) => ({ id: e.id, label: e.full_name, avatarUrl: e.avatar_url }))}
                       showAvatars
@@ -658,7 +658,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Аниматоры</Label>
+                      <Label className="text-sm font-medium">Аниматоры</Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'animator' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
@@ -674,7 +674,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Подрядчики</Label>
+                      <Label className="text-sm font-medium">Подрядчики</Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
@@ -690,7 +690,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Шоу программа</Label>
+                      <Label className="text-sm font-medium">Шоу программа</Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
                         <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
@@ -717,7 +717,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
                         <Camera className="h-3 w-3" /> Фотограф
                       </Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
@@ -736,7 +736,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
                         <Video className="h-3 w-3" /> Видеограф
                       </Label>
                       <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setQuickCreate({ open: true, type: 'contractor' })}>
@@ -754,7 +754,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <Label className="text-xs font-medium">Примечания</Label>
+                    <Label className="text-sm font-medium">Примечания</Label>
                     <Textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -765,7 +765,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
                       <FileText className="h-3 w-3" /> Смета
                     </Label>
                     <FileInput
