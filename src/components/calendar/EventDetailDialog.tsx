@@ -15,8 +15,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2, MapPin, Plus, File, Users, Camera, Video, FileText, StickyNote, Sparkles } from "lucide-react";
+import { CalendarIcon, Clock, Trash2, MapPin, Plus, File, Users, Camera, Video, FileText, StickyNote, Sparkles, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
+import { TimeSelect } from "@/components/ui/time-select";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { EventActionRequestDialog } from "@/components/events/EventActionRequestDialog";
@@ -396,43 +399,43 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-3xl h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0">
-          <DialogTitle className="text-base sm:text-lg">
-            {event ? "Редактировать мероприятие" : "Создать мероприятие"}
+       <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 sm:px-6 py-4 border-b flex-shrink-0 bg-muted/30">
+          <DialogTitle className="text-lg font-semibold">
+            {event ? "Редактировать мероприятие" : "Новое мероприятие"}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-4 sm:mx-6 mt-2">
+          <TabsList className="mx-5 sm:mx-6 mt-3 mb-1">
             <TabsTrigger value="details">Основное</TabsTrigger>
-            {/* {event && <TabsTrigger value="props">Реквизит</TabsTrigger>} */}
           </TabsList>
 
-          <TabsContent value="details" className="flex-1 overflow-y-auto px-4 sm:px-6 mt-4 pb-4">
-            <div className="space-y-6">
+          <TabsContent value="details" className="flex-1 overflow-y-auto px-5 sm:px-6 pb-6">
+            <div className="space-y-5 pt-2">
               
-              {/* ═══ Секция 1: Основная информация ═══ */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <CalendarIcon className="h-4 w-4" />
+              {/* ═══ Основная информация ═══ */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CalendarIcon className="h-3.5 w-3.5" />
                   Основная информация
-                </div>
+                </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-xs">Название мероприятия *</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="name" className="text-xs font-medium">Название *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      placeholder="Название мероприятия"
                       className="h-9"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="start_date" className="text-xs">Дата *</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Дата *</Label>
                     <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -455,10 +458,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                           mode="single"
                           selected={formData.start_date ? new Date(formData.start_date) : undefined}
                           onSelect={(date) => {
-                            setFormData({ 
-                              ...formData, 
-                              start_date: date ? format(date, 'yyyy-MM-dd') : '' 
-                            });
+                            setFormData({ ...formData, start_date: date ? format(date, 'yyyy-MM-dd') : '' });
                             setDatePickerOpen(false);
                           }}
                           initialFocus
@@ -469,14 +469,14 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                     </Popover>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="project_owner" className="text-xs">Чей проект</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Чей проект</Label>
                     <Select
                       value={formData.project_owner}
                       onValueChange={(value) => setFormData({ ...formData, project_owner: value })}
                     >
                       <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Выберите владельца" />
+                        <SelectValue placeholder="Владелец" />
                       </SelectTrigger>
                       <SelectContent className="z-[100] bg-background">
                         <SelectItem value="Ваня">Ваня</SelectItem>
@@ -486,32 +486,18 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="client_id" className="text-xs">Клиент</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Label className="text-xs font-medium">Клиент</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <Select
-                      value={formData.client_id}
-                      onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Выберите клиента" />
-                      </SelectTrigger>
+                    <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Выберите клиента" /></SelectTrigger>
                       <SelectContent>
                         {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
+                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -519,61 +505,47 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                 </div>
               </section>
 
-              <Separator />
+              <Separator className="my-1" />
 
-              {/* ═══ Секция 2: Место и время ═══ */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <MapPin className="h-4 w-4" />
+              {/* ═══ Место и время ═══ */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5" />
                   Место и время
-                </div>
+                </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="venue_id" className="text-xs">Площадка</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=venues', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Label className="text-xs font-medium">Площадка</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=venues', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <Select
-                      value={formData.venue_id}
-                      onValueChange={(value) => setFormData({ ...formData, venue_id: value })}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Выберите площадку" />
-                      </SelectTrigger>
+                    <Select value={formData.venue_id} onValueChange={(value) => setFormData({ ...formData, venue_id: value })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Выберите площадку" /></SelectTrigger>
                       <SelectContent>
                         {venues.map((venue) => (
-                          <SelectItem key={venue.id} value={venue.id}>
-                            {venue.name}
-                          </SelectItem>
+                          <SelectItem key={venue.id} value={venue.id}>{venue.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="location" className="text-xs">Адрес (если не из базы)</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Адрес</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="location"
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="Или введите адрес вручную"
                         className="flex-1 h-9"
                       />
                       <Button
                         type="button"
                         variant={showMap ? "default" : "outline"}
                         size="icon"
-                        className="h-9 w-9"
+                        className="h-9 w-9 flex-shrink-0"
                         onClick={toggleMap}
                         title="Показать на карте"
                         disabled={!formData.location && !formData.venue_id}
@@ -587,339 +559,210 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                     <div className="md:col-span-2 rounded-lg overflow-hidden border">
                       <iframe
                         src={`https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(getMapAddress())}&z=16`}
-                        width="100%"
-                        height="250"
-                        frameBorder="0"
-                        allowFullScreen
-                        className="w-full"
+                        width="100%" height="220" frameBorder="0" allowFullScreen className="w-full"
                       />
                     </div>
                   )}
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="event_time" className="text-xs">Время начала</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        id="event_time"
-                        type="time"
-                        value={formData.event_time ? formData.event_time.substring(0, 5) : ""}
-                        onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                        className="pl-9 h-9"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Начало</Label>
+                    <TimeSelect
+                      value={formData.event_time}
+                      onChange={(v) => setFormData({ ...formData, event_time: v })}
+                      placeholder="Время начала"
+                    />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="end_time" className="text-xs">Время окончания</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        id="end_time"
-                        type="time"
-                        value={formData.end_time ? formData.end_time.substring(0, 5) : ""}
-                        onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                        className="pl-9 h-9"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Окончание</Label>
+                    <TimeSelect
+                      value={formData.end_time}
+                      onChange={(v) => setFormData({ ...formData, end_time: v })}
+                      placeholder="Время окончания"
+                    />
                   </div>
                 </div>
               </section>
 
-              <Separator />
+              <Separator className="my-1" />
 
-              {/* ═══ Секция 3: Команда ═══ */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <Users className="h-4 w-4" />
+              {/* ═══ Команда ═══ */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5" />
                   Команда
-                </div>
+                </h3>
                 
                 <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Ответственные менеджеры</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {employees.map((emp) => {
-                        const hasConflict = vacationConflicts.has(emp.id);
-                        const isSelected = formData.responsible_manager_ids.includes(emp.id);
-                        
-                        return (
-                          <Button
-                            key={emp.id}
-                            type="button"
-                            variant={isSelected ? "default" : "outline"}
-                            size="sm"
-                            className={cn(
-                              "text-xs h-7 px-2 relative",
-                              hasConflict && "border-destructive border-2"
-                            )}
-                            onClick={() => {
-                              if (hasConflict && !isSelected) {
-                                setSelectedConflictEmployee({
-                                  id: emp.id,
-                                  name: emp.full_name,
-                                  conflict: vacationConflicts.get(emp.id)!,
-                                  listType: 'responsible_manager_ids',
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  responsible_manager_ids: toggleArrayItem(
-                                    formData.responsible_manager_ids,
-                                    emp.id
-                                  ),
-                                });
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              {emp.full_name}
-                              {hasConflict && (
-                                <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
-                              )}
-                            </span>
-                          </Button>
-                        );
-                      })}
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Ответственные менеджеры</Label>
+                    <SearchableMultiSelect
+                      options={employees.map((e) => ({ id: e.id, label: e.full_name }))}
+                      selected={formData.responsible_manager_ids}
+                      onChange={(ids) => setFormData({ ...formData, responsible_manager_ids: ids })}
+                      placeholder="Поиск менеджеров..."
+                      emptyText="Нет сотрудников"
+                      renderOptionExtra={(opt) => {
+                        const conflict = vacationConflicts.get(opt.id);
+                        return conflict ? <VacationConflictBadge conflict={conflict} /> : null;
+                      }}
+                      getOptionClassName={(opt) => vacationConflicts.has(opt.id) ? "border-l-2 border-l-destructive" : ""}
+                      onConflictClick={(opt) => {
+                        const conflict = vacationConflicts.get(opt.id);
+                        if (conflict) {
+                          setSelectedConflictEmployee({
+                            id: opt.id,
+                            name: opt.label,
+                            conflict,
+                            listType: 'responsible_manager_ids',
+                          });
+                          return true;
+                        }
+                        return false;
+                      }}
+                    />
                   </div>
                   
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Менеджеры</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {employees.map((emp) => {
-                        const hasConflict = vacationConflicts.has(emp.id);
-                        const isSelected = formData.manager_ids.includes(emp.id);
-                        
-                        return (
-                          <Button
-                            key={emp.id}
-                            type="button"
-                            variant={isSelected ? "default" : "outline"}
-                            size="sm"
-                            className={cn(
-                              "text-xs h-7 px-2 relative",
-                              hasConflict && "border-destructive border-2"
-                            )}
-                            onClick={() => {
-                              if (hasConflict && !isSelected) {
-                                setSelectedConflictEmployee({
-                                  id: emp.id,
-                                  name: emp.full_name,
-                                  conflict: vacationConflicts.get(emp.id)!,
-                                  listType: 'manager_ids',
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  manager_ids: toggleArrayItem(formData.manager_ids, emp.id),
-                                });
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-1">
-                              {emp.full_name}
-                              {hasConflict && (
-                                <VacationConflictBadge conflict={vacationConflicts.get(emp.id)!} />
-                              )}
-                            </span>
-                          </Button>
-                        );
-                      })}
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Менеджеры</Label>
+                    <SearchableMultiSelect
+                      options={employees.map((e) => ({ id: e.id, label: e.full_name }))}
+                      selected={formData.manager_ids}
+                      onChange={(ids) => setFormData({ ...formData, manager_ids: ids })}
+                      placeholder="Поиск менеджеров..."
+                      emptyText="Нет сотрудников"
+                      renderOptionExtra={(opt) => {
+                        const conflict = vacationConflicts.get(opt.id);
+                        return conflict ? <VacationConflictBadge conflict={conflict} /> : null;
+                      }}
+                      getOptionClassName={(opt) => vacationConflicts.has(opt.id) ? "border-l-2 border-l-destructive" : ""}
+                      onConflictClick={(opt) => {
+                        const conflict = vacationConflicts.get(opt.id);
+                        if (conflict) {
+                          setSelectedConflictEmployee({
+                            id: opt.id,
+                            name: opt.label,
+                            conflict,
+                            listType: 'manager_ids',
+                          });
+                          return true;
+                        }
+                        return false;
+                      }}
+                    />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs">Аниматоры</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=animators', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Label className="text-xs font-medium">Аниматоры</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=animators', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {animators.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Нет аниматоров</p>
-                      ) : (
-                        animators.map((animator) => (
-                          <Button
-                            key={animator.id}
-                            type="button"
-                            variant={formData.animator_ids.includes(animator.id) ? "default" : "outline"}
-                            size="sm"
-                            className="text-xs h-7 px-2"
-                            onClick={() => setFormData({
-                              ...formData,
-                              animator_ids: toggleArrayItem(formData.animator_ids, animator.id)
-                            })}
-                          >
-                            {animator.name}
-                          </Button>
-                        ))
-                      )}
-                    </div>
+                    <SearchableMultiSelect
+                      options={animators.map((a) => ({ id: a.id, label: a.name }))}
+                      selected={formData.animator_ids}
+                      onChange={(ids) => setFormData({ ...formData, animator_ids: ids })}
+                      placeholder="Поиск аниматоров..."
+                      emptyText="Нет аниматоров"
+                    />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs">Подрядчики</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=contractors', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Label className="text-xs font-medium">Подрядчики</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=contractors', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {contractors.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Нет подрядчиков</p>
-                      ) : (
-                        contractors.map((contractor) => (
-                          <Button
-                            key={contractor.id}
-                            type="button"
-                            variant={formData.contractor_ids.includes(contractor.id) ? "default" : "outline"}
-                            size="sm"
-                            className="text-xs h-7 px-2"
-                            onClick={() => setFormData({
-                              ...formData,
-                              contractor_ids: toggleArrayItem(formData.contractor_ids, contractor.id)
-                            })}
-                          >
-                            {contractor.name}
-                          </Button>
-                        ))
-                      )}
-                    </div>
+                    <SearchableMultiSelect
+                      options={contractors.map((c) => ({ id: c.id, label: c.name }))}
+                      selected={formData.contractor_ids}
+                      onChange={(ids) => setFormData({ ...formData, contractor_ids: ids })}
+                      placeholder="Поиск подрядчиков..."
+                      emptyText="Нет подрядчиков"
+                    />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="show_program" className="text-xs">Шоу программа</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=animators', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Label className="text-xs font-medium">Шоу программа</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=animators', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
                     <Input
-                      id="show_program"
                       value={formData.show_program}
                       onChange={(e) => setFormData({ ...formData, show_program: e.target.value })}
+                      placeholder="Описание шоу программы"
                       className="h-9"
                     />
                   </div>
                 </div>
               </section>
 
-              <Separator />
+              <Separator className="my-1" />
 
-              {/* ═══ Секция 4: Фото/Видео и Доп. информация ═══ */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <StickyNote className="h-4 w-4" />
+              {/* ═══ Дополнительно ═══ */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <StickyNote className="h-3.5 w-3.5" />
                   Дополнительно
-                </div>
+                </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="photographer_contact_id" className="text-xs flex items-center gap-1.5">
-                        <Camera className="h-3 w-3" />
-                        Фотограф
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <Camera className="h-3 w-3" /> Фотограф
                       </Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <Select
-                      value={formData.photographer_contact_id}
-                      onValueChange={(value) => setFormData({ ...formData, photographer_contact_id: value })}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Выберите фотографа" />
-                      </SelectTrigger>
+                    <Select value={formData.photographer_contact_id} onValueChange={(value) => setFormData({ ...formData, photographer_contact_id: value })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Выберите фотографа" /></SelectTrigger>
                       <SelectContent>
                         {contacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.name}
-                          </SelectItem>
+                          <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="videographer_contact_id" className="text-xs flex items-center gap-1.5">
-                        <Video className="h-3 w-3" />
-                        Видеограф
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <Video className="h-3 w-3" /> Видеограф
                       </Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-1.5 text-[10px]"
-                        onClick={() => window.open('/contacts?tab=clients', '_blank')}
-                      >
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        Создать
+                      <Button type="button" variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground" onClick={() => window.open('/contacts?tab=clients', '_blank')}>
+                        <Plus className="h-3 w-3 mr-0.5" /> Создать
                       </Button>
                     </div>
-                    <Select
-                      value={formData.videographer_contact_id}
-                      onValueChange={(value) => setFormData({ ...formData, videographer_contact_id: value })}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Выберите видеографа" />
-                      </SelectTrigger>
+                    <Select value={formData.videographer_contact_id} onValueChange={(value) => setFormData({ ...formData, videographer_contact_id: value })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Выберите видеографа" /></SelectTrigger>
                       <SelectContent>
                         {contacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.name}
-                          </SelectItem>
+                          <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="notes" className="text-xs">Примечания</Label>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label className="text-xs font-medium">Примечания</Label>
                     <Textarea
-                      id="notes"
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
-                      className="resize-none"
+                      placeholder="Любые заметки..."
+                      className="resize-none text-sm"
                     />
                   </div>
 
-                  <div className="space-y-1.5 md:col-span-2">
-                    <Label htmlFor="estimate_file" className="text-xs flex items-center gap-1.5">
-                      <FileText className="h-3 w-3" />
-                      Смета
+                  <div className="space-y-1 md:col-span-2">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <FileText className="h-3 w-3" /> Смета
                     </Label>
                     <FileInput
                       id="estimate_file"
@@ -930,17 +773,11 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       placeholder="Выберите файл сметы"
                     />
                     {formData.estimate_file_url && !estimateFile && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/50">
-                        <File className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/40">
+                        <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium">Текущий файл</p>
-                          <a
-                            href={formData.estimate_file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Открыть смету
+                          <a href={formData.estimate_file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">
+                            Открыть текущую смету →
                           </a>
                         </div>
                       </div>
@@ -962,7 +799,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         </Tabs>
 
         {/* Actions Footer */}
-        <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 bg-background">
+        <div className="flex flex-col sm:flex-row justify-between gap-2 px-5 sm:px-6 py-3 border-t flex-shrink-0 bg-muted/20">
           <div className="flex gap-2">
             {event && (
               <>
