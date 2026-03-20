@@ -193,7 +193,7 @@ export function InvitePage() {
           first_name: data.firstName,
           last_name: data.lastName,
           middle_name: data.middleName,
-          phone: data.phone,
+          phone: toE164(normalizePhone(data.phone)),
           birth_date: data.birthDate,
           avatar_url: avatarUrl,
           avatar_base64: avatarBase64,
