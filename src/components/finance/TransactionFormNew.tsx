@@ -100,6 +100,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRbacRoles();
+  const { currentTenant } = useTenant();
   const { categories: transactionCategories } = useTransactionCategories();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
