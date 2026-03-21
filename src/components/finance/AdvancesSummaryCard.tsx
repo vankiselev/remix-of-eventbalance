@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Banknote, Plus, Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { Banknote, Plus, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export const AdvancesSummaryCard = () => {
   const { isAdmin } = useUserRbacRoles();
@@ -18,6 +22,22 @@ export const AdvancesSummaryCard = () => {
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | undefined>();
   const [editingAmount, setEditingAmount] = useState<number>(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = async (employeeId: string, name: string) => {
+    try {
+      const { error } = await (supabase.from('profiles') as any)
+        .update({ advance_balance: 0 })
+        .eq('id', employeeId);
+      if (error) throw error;
+      toast({ title: "Аванс удалён", description: `Аванс у ${name} обнулён` });
+      queryClient.invalidateQueries({ queryKey: ['all-advances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-advance'] });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    }
+  };
 
   const handleAddNew = () => {
     setEditingEmployeeId(undefined);
@@ -102,6 +122,31 @@ export const AdvancesSummaryCard = () => {
                         >
                           <Pencil className="h-3 w-3" />
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Удалить аванс?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Аванс у {employee.full_name} ({formatCurrency(employee.advance_balance)}) будет обнулён.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Отмена</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(employee.id, employee.full_name)}>
+                                Удалить
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   ))}

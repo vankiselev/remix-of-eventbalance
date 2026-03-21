@@ -847,6 +847,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          advance_balance: number | null
           avatar_url: string | null
           birth_date: string | null
           birthday: string | null
@@ -863,6 +864,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          advance_balance?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           birthday?: string | null
@@ -879,6 +881,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          advance_balance?: number | null
           avatar_url?: string | null
           birth_date?: string | null
           birthday?: string | null
