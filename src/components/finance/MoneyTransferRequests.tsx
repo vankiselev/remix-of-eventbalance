@@ -81,19 +81,38 @@ export const MoneyTransferRequests = () => {
       
       // Check if profile has a different user_id mapping
       try {
-        const { data: profileData } = await (supabase.from('profiles') as any)
+        const { data: profileData, error: profileError } = await (supabase.from('profiles') as any)
           .select('id, user_id')
           .or(`user_id.eq.${user!.id},id.eq.${user!.id}`)
           .limit(2);
-        
-        if (profileData) {
+
+        if (!profileError && profileData) {
           for (const p of profileData) {
             if (p.id && !userIds.includes(p.id)) userIds.push(p.id);
             if (p.user_id && !userIds.includes(p.user_id)) userIds.push(p.user_id);
           }
+        } else if (user?.email) {
+          // Fallback for schemas without profiles.user_id: match by email and include profile.id
+          const { data: profileByEmail } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', user.email)
+            .maybeSingle();
+          if (profileByEmail?.id && !userIds.includes(profileByEmail.id)) {
+            userIds.push(profileByEmail.id);
+          }
         }
       } catch (e) {
-        // user_id column might not exist, ignore
+        if (user?.email) {
+          const { data: profileByEmail } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', user.email)
+            .maybeSingle();
+          if (profileByEmail?.id && !userIds.includes(profileByEmail.id)) {
+            userIds.push(profileByEmail.id);
+          }
+        }
       }
 
       console.log('🔍 Fetching pending transfers for user IDs:', userIds);
