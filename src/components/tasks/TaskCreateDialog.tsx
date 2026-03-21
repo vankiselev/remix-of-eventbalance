@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Plus, Trash2, Phone, Users, CheckSquare, Bell, RefreshCw, MoreHorizontal, Package, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDisplayName } from "@/utils/formatName";
 import { useTasks, CreateTaskInput, Task, TaskType, TaskItem } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useClients } from "@/hooks/useClients";
