@@ -117,6 +117,7 @@ export const MoneyTransferRequests = () => {
 
       console.log('🔍 Fetching pending transfers for user IDs:', userIds);
 
+      // Primary query: by transfer_to_user_id
       const { data, error } = await supabase
         .from('financial_transactions')
         .select('*')
@@ -126,10 +127,46 @@ export const MoneyTransferRequests = () => {
 
       if (error) throw error;
 
-      console.log('📋 Found pending transfers:', data?.length || 0);
+      let allTransferIds = new Set((data || []).map(t => t.id));
+      let mergedData = [...(data || [])];
+
+      // Fallback: also check notifications for any transfers we might have missed
+      // (handles legacy records where transfer_to_user_id was stored incorrectly)
+      try {
+        const { data: notifs } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('user_id', user!.id)
+          .eq('type', 'money_transfer')
+          .eq('read', false);
+
+        if (notifs && notifs.length > 0) {
+          const notifTransactionIds = notifs
+            .map(n => (n.data as any)?.transaction_id)
+            .filter(Boolean)
+            .filter(id => !allTransferIds.has(id));
+
+          if (notifTransactionIds.length > 0) {
+            const { data: extraTransfers } = await supabase
+              .from('financial_transactions')
+              .select('*')
+              .in('id', notifTransactionIds)
+              .eq('transfer_status', 'pending');
+
+            if (extraTransfers) {
+              console.log('📬 Found', extraTransfers.length, 'additional transfers via notifications fallback');
+              mergedData = [...mergedData, ...extraTransfers];
+            }
+          }
+        }
+      } catch (notifErr) {
+        console.warn('⚠️ Notification fallback query failed:', notifErr);
+      }
+
+      console.log('📋 Found pending transfers:', mergedData.length);
 
       // Fetch sender profiles (try both id and user_id columns)
-      const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
+      const senderIds = [...new Set(mergedData.map(t => t.created_by).filter(Boolean))];
       
       if (senderIds.length > 0) {
         // Try to find profiles by user_id first (self-hosted), then by id
@@ -164,7 +201,7 @@ export const MoneyTransferRequests = () => {
           }
         }
 
-        const enrichedData = (data || []).map(t => ({
+        const enrichedData = mergedData.map(t => ({
           id: t.id,
           operation_date: t.operation_date,
           description: t.description,
@@ -176,7 +213,7 @@ export const MoneyTransferRequests = () => {
 
         setPendingTransfers(enrichedData);
       } else {
-        setPendingTransfers((data || []).map(t => ({
+        setPendingTransfers(mergedData.map(t => ({
           id: t.id,
           operation_date: t.operation_date,
           description: t.description,

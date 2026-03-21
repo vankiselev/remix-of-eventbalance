@@ -138,6 +138,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (!currentUser.user) return;
 
       const loadFromProfilesFallback = async () => {
+        // Even in fallback, try to map profiles to auth uids via tenant_memberships
+        const { data: allMembers } = await supabase
+          .from('tenant_memberships')
+          .select('user_id');
+        const memberUids = new Set((allMembers || []).map((m: any) => m.user_id));
+
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('profiles')
           .select('id, full_name, email')
@@ -146,11 +152,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
         if (fallbackError) throw fallbackError;
 
-        return ((fallbackData || []) as any[]).map((p: any) => ({
-          id: p.id,
-          full_name: p.full_name || 'Сотрудник',
-          email: p.email || '',
-        }));
+        return ((fallbackData || []) as any[])
+          .filter((p: any) => memberUids.has(p.id)) // Only include users who are tenant members
+          .map((p: any) => ({
+            id: p.id, // In Lovable Cloud, profiles.id == auth.uid
+            full_name: p.full_name || 'Сотрудник',
+            email: p.email || '',
+          }));
       };
 
       let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
@@ -631,11 +639,32 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       // Handle project_id - if it's a static project (string), store it in static_project_name, otherwise it's an event ID
       const projectId = data.project_id;
       const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
+
+      // Resolve recipient auth uid BEFORE building transaction data
+      let resolvedTransferToUserId: string | null = null;
+      if (isMoneyTransfer && transferToUserId) {
+        try {
+          const { data: resolvedId, error: resolveError } = await (supabase.rpc as any)('resolve_transfer_recipient', {
+            p_selected_id: transferToUserId,
+            p_tenant_id: currentTenant.id,
+          });
+          if (!resolveError && resolvedId) {
+            resolvedTransferToUserId = resolvedId;
+            console.log('🔄 Resolved recipient:', transferToUserId, '->', resolvedTransferToUserId);
+          } else {
+            console.warn('⚠️ resolve_transfer_recipient returned null/error, using original ID:', resolveError?.message);
+            resolvedTransferToUserId = transferToUserId;
+          }
+        } catch (resolveErr) {
+          console.warn('⚠️ resolve_transfer_recipient RPC unavailable, using original ID');
+          resolvedTransferToUserId = transferToUserId;
+        }
+      }
       
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
-        project_id: isStaticProject ? null : (projectId || null), // Only store UUID for events, null for static projects
-        static_project_name: isStaticProject ? projectId : null, // Store static project name
+        project_id: isStaticProject ? null : (projectId || null),
+        static_project_name: isStaticProject ? projectId : null,
         project_owner: data.whose_project,
         description: data.description,
         expense_amount: data.expense_amount || 0,
@@ -648,8 +677,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         tenant_id: currentTenant.id,
         verification_status: 'pending',
         requires_verification: true,
-        // Money transfer fields
-        transfer_to_user_id: isMoneyTransfer ? transferToUserId : null,
+        // Money transfer fields — always use resolved auth uid
+        transfer_to_user_id: resolvedTransferToUserId,
         transfer_status: isMoneyTransfer ? 'pending' : null,
       };
 
@@ -774,10 +803,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           }]);
 
         // If this is a money transfer, send notification to recipient
-        if (isMoneyTransfer && transferToUserId) {
+        if (isMoneyTransfer && resolvedTransferToUserId) {
+          const resolvedRecipientId = resolvedTransferToUserId;
+
           console.log('💸 Money transfer details:', {
             transactionId: transaction.id,
-            recipientId: transferToUserId,
+            selectedRecipientId: transferToUserId,
+            resolvedRecipientId: resolvedRecipientId,
             senderId: user.id,
             amount: data.expense_amount,
           });
@@ -811,7 +843,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           // Use SECURITY DEFINER RPC to bypass RLS for notification delivery
           try {
             const { error: rpcError } = await (supabase.rpc as any)('notify_money_transfer', {
-              p_recipient_user_id: transferToUserId,
+              p_recipient_user_id: resolvedRecipientId,
               p_title: notifTitle,
               p_message: notifMessage,
               p_data: notifData,
@@ -822,7 +854,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               const { error: notifError } = await supabase
                 .from('notifications')
                 .insert({
-                  user_id: transferToUserId,
+                  user_id: resolvedRecipientId,
                   title: notifTitle,
                   message: notifMessage,
                   type: 'money_transfer',
@@ -844,7 +876,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           try {
             await supabase.functions.invoke('send-push-notification', {
               body: {
-                user_id: transferToUserId,
+                user_id: resolvedRecipientId,
                 title: notifTitle,
                 message: notifMessage,
                 type: 'money_transfer',
