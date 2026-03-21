@@ -302,6 +302,38 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
     const userId = userData.user.id;
 
+    let tenantId = currentTenant?.id || null;
+    if (!tenantId) {
+      const { data: membership, error: membershipError } = await supabase
+        .from('tenant_memberships')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (membershipError) {
+        toast({
+          title: 'Ошибка',
+          description: membershipError.message,
+          variant: 'destructive',
+        });
+        setImporting(false);
+        return;
+      }
+
+      tenantId = membership?.tenant_id || null;
+    }
+
+    if (!tenantId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не выбрана компания: tenant_id не найден',
+        variant: 'destructive',
+      });
+      setImporting(false);
+      return;
+    }
+
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i];
       
@@ -325,6 +357,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           .from('event_reports')
           .insert({
             user_id: userId,
+            tenant_id: tenantId,
             project_name: projectName,
             preparation_work: preparationWork || '',
             onsite_work: onsiteWork || '',
