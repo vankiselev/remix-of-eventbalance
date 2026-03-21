@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/utils/formatName";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
 import { format } from "date-fns";
