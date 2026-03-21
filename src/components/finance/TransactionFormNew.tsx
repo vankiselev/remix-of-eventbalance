@@ -544,14 +544,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     submitLockRef.current = true;
     if (submitting) { submitLockRef.current = false; return; }
 
-    // Validate money transfer
-    if (isMoneyTransfer) {
+    const isTransferCategorySelected = MONEY_TRANSFER_CATEGORIES.includes(data.category);
+
+    // Validate money transfer based on selected category (not transient UI state)
+    if (isTransferCategorySelected) {
       if (!transferToUserId) {
         toast({
           title: "Ошибка",
           description: "Выберите получателя денег",
           variant: "destructive",
         });
+        submitLockRef.current = false;
         return;
       }
 
@@ -561,6 +564,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           description: "Укажите сумму передачи (должна быть больше 0)",
           variant: "destructive",
         });
+        submitLockRef.current = false;
         return;
       }
 
@@ -570,6 +574,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           description: "При передаче денег заполняйте только поле 'Трата'",
           variant: "destructive",
         });
+        submitLockRef.current = false;
         return;
       }
     }
@@ -585,19 +590,21 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         description: "При отсутствии чека необходимо указать причину (минимум 10 символов)",
         variant: "destructive",
       });
+      submitLockRef.current = false;
       return;
     }
 
     // Validate files and no_receipt logic
     // For regular users, require files OR no_receipt with reason
     // For money transfers and internal transfers, files are optional
-    if (!isAdmin && !isMoneyTransfer && !isInternalTransfer) {
+    if (!isAdmin && !isTransferCategorySelected && !isInternalTransfer) {
       if (!data.no_receipt && files.length === 0) {
         toast({
           title: "Ошибка",
           description: "Загрузите чек или отметьте 'Чека нет' с указанием причины",
           variant: "destructive",
         });
+        submitLockRef.current = false;
         return;
       }
     }
@@ -609,6 +616,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         description: "Нельзя одновременно прикрепить файлы и отметить 'Чека нет'",
         variant: "destructive",
       });
+      submitLockRef.current = false;
       return;
     }
 
@@ -618,6 +626,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         description: "Тенант не определён. Попробуйте обновить страницу.",
         variant: "destructive",
       });
+      submitLockRef.current = false;
       return;
     }
 
@@ -634,7 +643,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
       // Resolve recipient auth uid BEFORE building transaction data
       let resolvedTransferToUserId: string | null = null;
-      if (isMoneyTransfer && transferToUserId) {
+      if (isTransferCategorySelected && transferToUserId) {
         try {
           const { data: resolvedId, error: resolveError } = await (supabase.rpc as any)('resolve_transfer_recipient', {
             p_selected_id: transferToUserId,
@@ -651,6 +660,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           console.warn('⚠️ resolve_transfer_recipient RPC unavailable, using original ID');
           resolvedTransferToUserId = transferToUserId;
         }
+      }
+
+      if (isTransferCategorySelected && !resolvedTransferToUserId) {
+        throw new Error('Не удалось определить получателя перевода');
       }
       
       const transactionData = {
@@ -671,7 +684,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         requires_verification: true,
         // Money transfer fields — always use resolved auth uid
         transfer_to_user_id: resolvedTransferToUserId,
-        transfer_status: isMoneyTransfer ? 'pending' : null,
+        transfer_status: isTransferCategorySelected ? 'pending' : null,
       };
 
       let transactionResult;
