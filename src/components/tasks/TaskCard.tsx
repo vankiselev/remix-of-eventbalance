@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { formatDisplayName } from "@/utils/formatName";
 import { TaskWithDetails, Task, TaskType, getStatusLabel, isWarehouseTask } from "@/hooks/useTasks";
 
 interface TaskCardProps {
