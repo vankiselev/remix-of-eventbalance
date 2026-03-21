@@ -34,7 +34,7 @@ if [ "$MODE" = "send" ]; then
     --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
     --data-urlencode "text=${MESSAGE}")"
 
-  ruby -rjson -e 'puts JSON.parse(STDIN.read).dig("result", "message_id")' <<<"$RESPONSE"
+  printf '%s' "$RESPONSE" | sed -n 's/.*"message_id":\([0-9][0-9]*\).*/\1/p'
   exit 0
 fi
 
