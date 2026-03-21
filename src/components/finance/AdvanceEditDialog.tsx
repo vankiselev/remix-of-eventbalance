@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatDisplayName } from "@/utils/formatName";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AdvanceEditDialogProps {
