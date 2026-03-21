@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { getOwnerColor } from "./CalendarMonthView";
+import { Clock, MapPin, User } from "lucide-react";
 
 interface Event {
   id: string;
@@ -21,65 +23,55 @@ const CalendarDayView = ({ date, events, onEventClick }: CalendarDayViewProps) =
   const dateStr = format(date, 'yyyy-MM-dd');
   const dayEvents = events.filter(event => event.start_date === dateStr);
 
-  const getOwnerColor = (owner: string | null) => {
-    if (!owner) return "bg-gray-500";
-    if (owner.toLowerCase().includes("настя")) return "bg-pink-500";
-    if (owner.toLowerCase().includes("лера")) return "bg-purple-500";
-    if (owner.toLowerCase().includes("ваня")) return "bg-blue-500";
-    return "bg-gray-500";
-  };
-
   return (
-    <div className="w-full space-y-3 sm:space-y-4">
+    <div className="w-full space-y-4">
       <div className="text-center">
-        <h2 className="text-xl sm:text-2xl font-bold">
+        <h2 className="text-xl font-bold">
           {format(date, 'd MMMM yyyy', { locale: ru })}
         </h2>
-        <p className="text-sm sm:text-base text-muted-foreground capitalize">
+        <p className="text-sm text-muted-foreground capitalize">
           {format(date, 'EEEE', { locale: ru })}
         </p>
       </div>
 
-      <div className="space-y-2 sm:space-y-3">
+      <div className="space-y-2">
         {dayEvents.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 text-sm sm:text-base text-muted-foreground">
+          <div className="text-center py-12 text-sm text-muted-foreground">
             На этот день нет запланированных мероприятий
           </div>
         ) : (
-          dayEvents.map((event) => (
-            <div
-              key={event.id}
-              className="p-3 sm:p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-              onClick={() => onEventClick(event)}
-            >
-              <div className="flex items-start gap-2 sm:gap-3">
-                <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full mt-1 flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg truncate">{event.name}</h3>
-                  <div className="flex flex-wrap gap-2 sm:gap-4 mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
-                    {event.event_time && (
-                      <span className="flex items-center gap-1">
-                        <span>⏰</span>
-                        <span>{event.event_time}{event.end_time && ` - ${event.end_time}`}</span>
-                      </span>
-                    )}
-                    {event.location && (
-                      <span className="truncate flex items-center gap-1">
-                        <span>📍</span>
-                        <span>{event.location}</span>
-                      </span>
-                    )}
-                    {event.project_owner && (
-                      <span className="flex items-center gap-1">
-                        <span>👤</span>
-                        <span>{event.project_owner}</span>
-                      </span>
-                    )}
-                  </div>
+          dayEvents.map((event) => {
+            const colors = getOwnerColor(event.project_owner);
+            return (
+              <div
+                key={event.id}
+                className={`p-3 rounded-lg border-l-[3px] hover:shadow-md cursor-pointer transition-all ${colors.border} ${colors.bg}`}
+                onClick={() => onEventClick(event)}
+              >
+                <h3 className={`font-semibold text-sm mb-1.5 ${colors.text}`}>{event.name}</h3>
+                <div className="space-y-1">
+                  {event.event_time && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{event.event_time.substring(0, 5)}{event.end_time ? ` — ${event.end_time.substring(0, 5)}` : ''}</span>
+                    </div>
+                  )}
+                  {event.location && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
+                  )}
+                  {event.project_owner && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span>{event.project_owner}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
