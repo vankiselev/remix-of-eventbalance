@@ -7,6 +7,7 @@ import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
 import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
 import { TransactionFilter } from "./TransactionFilter";
+import { CollapsibleFilters } from "./CollapsibleFilters";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useQuery } from "@tanstack/react-query";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";

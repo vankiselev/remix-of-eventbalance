@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TransactionFilter } from "./TransactionFilter";
+import { CollapsibleFilters } from "./CollapsibleFilters";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
