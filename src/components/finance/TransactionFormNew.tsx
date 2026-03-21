@@ -844,7 +844,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           // Use SECURITY DEFINER RPC to bypass RLS for notification delivery
           try {
             const { error: rpcError } = await (supabase.rpc as any)('notify_money_transfer', {
-              p_recipient_user_id: transferToUserId,
+              p_recipient_user_id: resolvedRecipientId,
               p_title: notifTitle,
               p_message: notifMessage,
               p_data: notifData,
