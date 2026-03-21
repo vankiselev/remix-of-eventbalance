@@ -117,6 +117,7 @@ export const MoneyTransferRequests = () => {
 
       console.log('🔍 Fetching pending transfers for user IDs:', userIds);
 
+      // Primary query: by transfer_to_user_id
       const { data, error } = await supabase
         .from('financial_transactions')
         .select('*')
@@ -125,6 +126,42 @@ export const MoneyTransferRequests = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      let allTransferIds = new Set((data || []).map(t => t.id));
+      let mergedData = [...(data || [])];
+
+      // Fallback: also check notifications for any transfers we might have missed
+      // (handles legacy records where transfer_to_user_id was stored incorrectly)
+      try {
+        const { data: notifs } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('user_id', user!.id)
+          .eq('type', 'money_transfer')
+          .eq('read', false);
+
+        if (notifs && notifs.length > 0) {
+          const notifTransactionIds = notifs
+            .map(n => (n.data as any)?.transaction_id)
+            .filter(Boolean)
+            .filter(id => !allTransferIds.has(id));
+
+          if (notifTransactionIds.length > 0) {
+            const { data: extraTransfers } = await supabase
+              .from('financial_transactions')
+              .select('*')
+              .in('id', notifTransactionIds)
+              .eq('transfer_status', 'pending');
+
+            if (extraTransfers) {
+              console.log('📬 Found', extraTransfers.length, 'additional transfers via notifications fallback');
+              mergedData = [...mergedData, ...extraTransfers];
+            }
+          }
+        }
+      } catch (notifErr) {
+        console.warn('⚠️ Notification fallback query failed:', notifErr);
+      }
 
       console.log('📋 Found pending transfers:', data?.length || 0);
 
