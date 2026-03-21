@@ -37,7 +37,7 @@ jobs:
           Автор: ${{ github.actor }}
           Ссылка: ${RUN_URL}
           EOF
-          .github/scripts/send-telegram.sh send "$RUNNER_TEMP/telegram_start.txt" > "$RUNNER_TEMP/telegram_message_id.txt"
+          .github/scripts/send-telegram.sh "$RUNNER_TEMP/telegram_start.txt"
       
       - name: Find Edge Runtime container + functions path
         id: find-target
@@ -240,7 +240,7 @@ jobs:
           EOF
           fi
 
-          .github/scripts/send-telegram.sh edit "$RUNNER_TEMP/telegram_finish.txt" "$RUNNER_TEMP/telegram_message_id.txt"
+          .github/scripts/send-telegram.sh "$RUNNER_TEMP/telegram_finish.txt"
 
           if [ "$STATUS" != "success" ]; then
             exit 1
