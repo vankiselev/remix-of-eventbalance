@@ -138,6 +138,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (!currentUser.user) return;
 
       const loadFromProfilesFallback = async () => {
+        // Even in fallback, try to map profiles to auth uids via tenant_memberships
+        const { data: allMembers } = await supabase
+          .from('tenant_memberships')
+          .select('user_id');
+        const memberUids = new Set((allMembers || []).map((m: any) => m.user_id));
+
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('profiles')
           .select('id, full_name, email')
@@ -146,11 +152,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
         if (fallbackError) throw fallbackError;
 
-        return ((fallbackData || []) as any[]).map((p: any) => ({
-          id: p.id,
-          full_name: p.full_name || 'Сотрудник',
-          email: p.email || '',
-        }));
+        return ((fallbackData || []) as any[])
+          .filter((p: any) => memberUids.has(p.id)) // Only include users who are tenant members
+          .map((p: any) => ({
+            id: p.id, // In Lovable Cloud, profiles.id == auth.uid
+            full_name: p.full_name || 'Сотрудник',
+            email: p.email || '',
+          }));
       };
 
       let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
