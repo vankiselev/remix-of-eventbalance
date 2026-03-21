@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdvanceEditDialogProps {
   open: boolean;
@@ -23,8 +24,8 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  // Sync props to state when dialog opens or props change
   useEffect(() => {
     if (open) {
       setSelectedEmployeeId(employeeId || "");
@@ -32,7 +33,6 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
     }
   }, [open, employeeId, currentAmount]);
 
-  // Load profiles for the dropdown
   useEffect(() => {
     if (open) {
       supabase
@@ -48,29 +48,25 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
 
   const handleSave = async () => {
     if (!selectedEmployeeId) {
-      toast({
-        title: "Ошибка",
-        description: "Выберите сотрудника",
-        variant: "destructive",
-      });
+      toast({ title: "Ошибка", description: "Выберите сотрудника", variant: "destructive" });
       return;
     }
 
     const numAmount = parseFloat(amount) || 0;
     if (numAmount < 0) {
-      toast({
-        title: "Ошибка",
-        description: "Сумма не может быть отрицательной",
-        variant: "destructive",
-      });
+      toast({ title: "Ошибка", description: "Сумма не может быть отрицательной", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
+      const updateData: any = numAmount > 0
+        ? { advance_balance: numAmount, advance_issued_by: user?.id, advance_issued_at: new Date().toISOString() }
+        : { advance_balance: 0, advance_issued_by: null, advance_issued_at: null };
+
       const { error } = await (supabase
         .from('profiles') as any)
-        .update({ advance_balance: numAmount })
+        .update(updateData)
         .eq('id', selectedEmployeeId);
 
       if (error) throw error;
@@ -86,11 +82,7 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
       
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Ошибка",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

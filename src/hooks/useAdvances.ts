@@ -14,6 +14,12 @@ interface AdvancesData {
   total: number;
 }
 
+export interface AdvanceInfo {
+  amount: number;
+  issuedByName: string | null;
+  issuedAt: string | null;
+}
+
 // Hook for admin to get all employees with advances
 export const useAllAdvances = () => {
   const { isAdmin } = useUserRbacRoles();
@@ -38,27 +44,43 @@ export const useAllAdvances = () => {
   });
 };
 
-// Hook for employee to get their own advance
-export const useMyAdvance = () => {
+// Hook to get advance info for a specific user (self or target)
+export const useMyAdvance = (targetUserId?: string) => {
   const { user } = useAuth();
+  const userId = targetUserId || user?.id;
   
-  return useQuery({
-    queryKey: ['my-advance', user?.id],
+  return useQuery<AdvanceInfo>({
+    queryKey: ['my-advance', userId],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!userId) return { amount: 0, issuedByName: null, issuedAt: null };
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('advance_balance')
-        .eq('id', user.id)
+      const { data, error } = await (supabase
+        .from('profiles') as any)
+        .select('advance_balance, advance_issued_by, advance_issued_at')
+        .eq('id', userId)
         .single();
       
       if (error) throw error;
       
-      return data?.advance_balance || 0;
+      const amount = data?.advance_balance || 0;
+      const issuedBy = data?.advance_issued_by;
+      const issuedAt = data?.advance_issued_at || null;
+      
+      let issuedByName: string | null = null;
+      if (issuedBy) {
+        const { data: issuerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', issuedBy)
+          .single();
+        issuedByName = issuerProfile?.full_name || null;
+      }
+      
+      return { amount, issuedByName, issuedAt };
     },
-    enabled: !!user?.id,
-    staleTime: 2 * 60 * 1000,
+    enabled: !!userId,
+    staleTime: 0,
+    refetchOnMount: 'always',
     gcTime: 10 * 60 * 1000,
   });
 };

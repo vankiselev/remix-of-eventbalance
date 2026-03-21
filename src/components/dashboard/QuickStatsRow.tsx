@@ -22,7 +22,7 @@ export const QuickStatsRow = () => {
   const cashLabel = isAdmin ? "Всего на руках" : "Мои деньги";
   
   // Determine which advance data to show
-  const advanceAmount = isAdmin ? allAdvances?.total : myAdvance;
+  const advanceAmount = isAdmin ? allAdvances?.total : (myAdvance?.amount || 0);
   const advanceLabel = isAdmin ? "Выданные авансы" : "Мой аванс";
   const showAdvance = advanceAmount && advanceAmount > 0;
 

@@ -8,10 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const AdvancesDashboardCard = () => {
   const { isAdmin } = useUserRbacRoles();
   const { data: allAdvances, isLoading: isLoadingAll } = useAllAdvances();
-  const { data: myAdvance, isLoading: isLoadingMy } = useMyAdvance();
+  const { data: advanceInfo, isLoading: isLoadingMy } = useMyAdvance();
 
   // Don't render for non-admin users without advances
-  if (!isAdmin && !isLoadingMy && (!myAdvance || myAdvance === 0)) {
+  if (!isAdmin && !isLoadingMy && (!advanceInfo || advanceInfo.amount === 0)) {
     return null;
   }
 
@@ -76,7 +76,7 @@ export const AdvancesDashboardCard = () => {
   }
 
   // Employee view
-  if (myAdvance && myAdvance > 0) {
+  if (advanceInfo && advanceInfo.amount > 0) {
     return (
       <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200 dark:border-amber-800">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -87,10 +87,12 @@ export const AdvancesDashboardCard = () => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-            {formatCurrency(myAdvance)}
+            {formatCurrency(advanceInfo.amount)}
           </div>
           <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-            Выдано администратором
+            {advanceInfo.issuedByName
+              ? `Выдал(а): ${advanceInfo.issuedByName}`
+              : "Выдано"}
           </p>
         </CardContent>
       </Card>
