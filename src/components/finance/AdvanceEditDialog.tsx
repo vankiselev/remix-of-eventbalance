@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useProfiles } from "@/hooks/useProfiles";
 
 interface AdvanceEditDialogProps {
   open: boolean;
@@ -20,10 +19,32 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employeeId || "");
   const [amount, setAmount] = useState<string>(currentAmount.toString());
   const [isLoading, setIsLoading] = useState(false);
+  const [profiles, setProfiles] = useState<any[]>([]);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: profiles } = useProfiles();
+
+  // Sync props to state when dialog opens or props change
+  useEffect(() => {
+    if (open) {
+      setSelectedEmployeeId(employeeId || "");
+      setAmount(currentAmount.toString());
+    }
+  }, [open, employeeId, currentAmount]);
+
+  // Load profiles for the dropdown
+  useEffect(() => {
+    if (open) {
+      supabase
+        .from('profiles')
+        .select('id, full_name')
+        .not('full_name', 'is', null)
+        .order('full_name')
+        .then(({ data }) => {
+          setProfiles(data || []);
+        });
+    }
+  }, [open]);
 
   const handleSave = async () => {
     if (!selectedEmployeeId) {
@@ -56,7 +77,7 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
 
       toast({
         title: "Успешно",
-        description: "Аванс обновлён",
+        description: numAmount === 0 ? "Аванс удалён" : "Аванс обновлён",
       });
 
       queryClient.invalidateQueries({ queryKey: ['all-advances'] });
@@ -64,8 +85,6 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       
       onOpenChange(false);
-      setSelectedEmployeeId("");
-      setAmount("0");
     } catch (error: any) {
       toast({
         title: "Ошибка",
@@ -81,7 +100,9 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Редактировать аванс</DialogTitle>
+          <DialogTitle>
+            {employeeId ? "Редактировать аванс" : "Выдать аванс"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -96,9 +117,9 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
                 <SelectValue placeholder="Выберите сотрудника" />
               </SelectTrigger>
               <SelectContent>
-                {(profiles as any)?.filter((p: any) => p.employment_status === 'active').map((profile: any) => (
+                {profiles.map((profile: any) => (
                   <SelectItem key={profile.id} value={profile.id}>
-                    {profile.full_name}
+                    {profile.full_name || 'Без имени'}
                   </SelectItem>
                 ))}
               </SelectContent>
