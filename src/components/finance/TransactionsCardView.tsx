@@ -433,7 +433,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
           transaction={selectedTransaction}
           isOpen={!!selectedTransaction}
           onClose={() => setSelectedTransaction(null)}
-          canEdit={isAdmin || selectedTransaction.created_by === user?.id}
+          canEdit={isAdmin || (selectedTransaction.created_by === user?.id && selectedTransaction.verification_status !== 'approved')}
           onEdit={onEdit}
         />
       )}

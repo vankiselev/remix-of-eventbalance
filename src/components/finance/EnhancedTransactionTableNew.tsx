@@ -264,8 +264,12 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   };
 
   const canEditTransaction = (transaction: Transaction) => {
-    // Admins can edit any transaction, users can edit their own
-    return isAdmin || transaction.created_by === user?.id;
+    // Admins can always edit; employees can only edit own non-approved transactions
+    if (isAdmin) return true;
+    if (transaction.created_by !== user?.id) return false;
+    // Block editing if approved by financier
+    if (transaction.verification_status === 'approved') return false;
+    return true;
   };
 
   const handleSort = (field: keyof Transaction) => {
