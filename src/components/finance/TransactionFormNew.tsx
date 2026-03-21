@@ -690,8 +690,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           }
         }
 
-        // Send notification to admins for large transactions (over 10000)
-        // But only if user is not admin themselves
+      }
+
+      // Upload files if any — do this BEFORE notifications so files are saved even if notifications fail
+      if (files.length > 0) {
+        await uploadFiles(transactionResult.id, user.id);
+      }
+
+      // Send notification to admins for large transactions (over 10000)
+      // But only if user is not admin themselves
+      // Wrapped in try-catch so notification failure doesn't affect the transaction
+      try {
         const amount = data.expense_amount || data.income_amount || 0;
         if (amount >= 10000 && !isMoneyTransfer && !isAdmin) {
           const { sendNotificationToAdmins } = await import('@/utils/notifications');
@@ -713,11 +722,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             }
           );
         }
-      }
-
-      // Upload files if any
-      if (files.length > 0) {
-        await uploadFiles(transactionResult.id, user.id);
+      } catch (notifyErr) {
+        console.error('Failed to send admin notification:', notifyErr);
       }
 
       toast({
