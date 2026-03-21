@@ -808,7 +808,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           }]);
 
         // If this is a money transfer, send notification to recipient
-        if (isMoneyTransfer && resolvedTransferToUserId) {
+        if (isTransferCategorySelected && resolvedTransferToUserId) {
           const resolvedRecipientId = resolvedTransferToUserId;
 
           console.log('💸 Money transfer details:', {
