@@ -1027,9 +1027,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
                   {hasErrors && correctedText && !isChecking && (
                     <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <div className="flex items-start gap-2 mb-2">
+                      <div className="flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                             Найдены ошибки в описании
                           </p>
@@ -1037,17 +1037,17 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             Исправленный вариант: <strong>{correctedText}</strong>
                           </p>
                         </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleApplyCorrection}
+                          className="h-10 min-h-[44px] flex-shrink-0"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Применить
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleApplyCorrection}
-                        className="mt-2 h-10 min-h-[44px]"
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        Применить исправление
-                      </Button>
                     </div>
                   )}
 
