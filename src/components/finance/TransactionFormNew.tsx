@@ -759,10 +759,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         .from('receipts')
         .upload(storagePath, fileItem.file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(uploadError.message || 'Не удалось загрузить файл чека');
+      }
 
-      const { error: dbError } = await supabase
-        .from('financial_attachments')
+      // Primary schema (used by this app)
+      const { error: financialAttachmentError } = await (supabase
+        .from('financial_attachments') as any)
         .insert([
           {
             transaction_id: transactionId,
@@ -774,9 +778,33 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           },
         ]);
 
-      if (dbError) {
-        console.error('DB Error for attachment:', dbError);
-        throw dbError;
+      if (!financialAttachmentError) return;
+
+      console.warn('financial_attachments insert failed, trying fallback schema:', financialAttachmentError);
+
+      // Fallback schema for environments where attachments are stored in transaction_attachments
+      const { data: signedData } = await supabase.storage
+        .from('receipts')
+        .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+
+      const { error: transactionAttachmentError } = await (supabase
+        .from('transaction_attachments') as any)
+        .insert([
+          {
+            transaction_id: transactionId,
+            file_url: signedData?.signedUrl || storagePath,
+            file_name: fileItem.file.name,
+            file_type: fileItem.file.type,
+            file_size: fileItem.file.size,
+          },
+        ]);
+
+      if (transactionAttachmentError) {
+        console.error('Attachment DB write failed for both schemas:', {
+          financialAttachmentError,
+          transactionAttachmentError,
+        });
+        throw new Error(financialAttachmentError.message || transactionAttachmentError.message || 'Не удалось сохранить чек в базе');
       }
     });
 
