@@ -1,58 +1,54 @@
 
 
-## Диагностика проблемы с загрузкой чеков
+## Diagnosis
 
-### Корневая причина
+I identified two issues causing the transfer invisibility for the recipient:
 
-Проблема не в размере файла (1.78 МБ в пределах лимита). Изучив код и конфигурацию:
+### Issue 1: Notification INSERT blocked by RLS
 
-1. **Все запросы идут к self-hosted Supabase** (`superbag.eventbalance.ru`), а не к Lovable Cloud
-2. Бакет `receipts` создан через миграцию как **приватный** (`public = false`)
-3. В Safari ошибка "Load failed" — это известная проблема с CORS на storage-эндпоинтах Supabase (GitHub issue #20982). Safari строже проверяет preflight-запросы к storage API
-4. Текущий код пытается загрузить файл в storage bucket, и при любой ошибке сети — полностью блокирует сохранение транзакции
-5. Таблица `financial_transactions` уже имеет колонку `receipt_images` (ARRAY), которая не используется
+The `notifications` table has an RLS policy from migration `20260119173000` that restricts INSERT to `user_id = auth.uid()` (users can only insert notifications for themselves). The fix migration `20260320_allow_notifications_insert.sql` has a non-standard filename that the GitHub Actions workflow likely didn't pick up for the self-hosted DB.
 
-### Решение — хранение чеков как сжатых base64 в БД
+Result: When employee Petr tries to insert a notification for admin Ivan, the INSERT silently fails.
 
-Полностью обойти storage bucket и хранить чеки прямо в колонке `receipt_images` на `financial_transactions`. Это устраняет зависимость от CORS, bucket-политик и storage RLS.
+### Issue 2: Pending transfer not visible
 
-### Шаги реализации
+The `MoneyTransferRequests` component queries `transfer_to_user_id = user.id` (auth.uid()). If `loadEmployees` selects `profiles.id` as the employee identifier (because `user_id` column may not exist or behaves differently on the self-hosted DB), the stored `transfer_to_user_id` might not match the recipient's `auth.uid()`.
 
-**Шаг 1. Утилита сжатия изображений** (`src/utils/imageCompressor.ts`)
-- Функция `compressImage(file, maxWidth=1200, quality=0.7)` → возвращает base64 data URL
-- Для изображений: resize через Canvas + JPEG-сжатие (~100-300 КБ вместо 1-3 МБ)
-- Для не-изображений (PDF): конвертация в base64 напрямую (до 5 МБ)
-- Если файл слишком большой после конвертации — выдать понятную ошибку
+Additionally, the notification INSERT failure means the recipient has no way to discover the pending transfer.
 
-**Шаг 2. Переписать `uploadFiles` в `TransactionFormNew.tsx`**
-- Убрать storage upload, retry-логику и fallback-таблицы
-- Вместо этого: сжать каждый файл → собрать массив base64 data URLs → UPDATE транзакцию, записав в `receipt_images`
-- Если UPDATE не удался — выбросить ошибку (транзакция не сохраняется, как выбрано)
+## Plan
 
-**Шаг 3. Обновить `AttachmentsView.tsx`**
-- Читать `receipt_images` из данных транзакции (передаётся как проп)
-- Для обратной совместимости: также проверять `financial_attachments` (для старых записей)
-- Рендерить base64-изображения напрямую через `<img src={dataUrl} />`
+### Step 1: Create a properly-named migration for notification INSERT RLS
 
-**Шаг 4. Обновить `TransactionDetailDialog` / карточки**
-- Передавать `receipt_images` в `AttachmentsView`
+Create `migrations/20260321234000_<uuid>.sql` that adds a permissive INSERT policy allowing any authenticated user to insert notifications for any other user. This ensures the GitHub Actions workflow picks it up.
 
-### Технические детали
+### Step 2: Add diagnostic logging to transfer submission
+
+In `TransactionFormNew.tsx`, add `console.log` statements before the transaction INSERT and notification INSERT showing:
+- `transferToUserId` being stored
+- Employee list with IDs
+- Notification insert result (error or success)
+
+### Step 3: Make MoneyTransferRequests query more robust
+
+In `MoneyTransferRequests.tsx`, after the primary query by `user.id`, also check if there's a profile with a different `id` vs `user_id` and query with the alternate ID. This handles the self-hosted DB scenario where `profiles.id` may differ from `auth.uid()`.
+
+### Step 4: Add fallback in transfer notification delivery
+
+Create a server-side SQL function `notify_money_transfer` (SECURITY DEFINER) that inserts the notification, bypassing RLS entirely. Call this function via RPC from the form submission instead of direct table INSERT.
+
+### Technical Details
 
 ```text
-Текущий flow:
-  File → Storage Upload (CORS FAIL) → DB Insert → ERROR
-
-Новый flow:  
-  File → Canvas Compress → base64 → UPDATE receipt_images[] → OK
+Current flow (broken for non-admin senders):
+  Petr (employee) → INSERT notification → RLS BLOCKS (user_id ≠ auth.uid())
+  
+Fixed flow:
+  Petr (employee) → RPC notify_money_transfer() → SECURITY DEFINER bypasses RLS → notification created
 ```
 
-- Колонка `receipt_images` (TEXT[]) уже существует в `financial_transactions`
-- Каждый элемент массива = `data:image/jpeg;base64,...` (сжатый)
-- Средний размер после сжатия: 100-300 КБ на файл
-- До 5 файлов = max ~1.5 МБ в базе — допустимо для PostgreSQL
-
-### Обратная совместимость
-- Старые записи с `financial_attachments` продолжат работать
-- Новые записи будут использовать `receipt_images` — без зависимости от storage
+Files to modify:
+- `src/components/finance/TransactionFormNew.tsx` — use RPC for notification, add logging
+- `src/components/finance/MoneyTransferRequests.tsx` — robust ID matching
+- New migration — RPC function + RLS fix
 
