@@ -456,7 +456,6 @@ export function TransactionDetailDialog({
               noReceipt={transaction.no_receipt}
               noReceiptReason={transaction.no_receipt_reason}
               canDelete={canEdit}
-              receiptImages={(transaction as any).receipt_images}
               onAttachmentsChange={() => {
                 // Refresh parent component if needed
               }}

@@ -662,7 +662,6 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
                           attachmentsCount={transaction.attachments_count}
                           noReceipt={transaction.no_receipt}
                           noReceiptReason={transaction.no_receipt_reason}
-                          receiptImages={(transaction as any).receipt_images}
                         />
                       </td>
                       <td className="border border-border p-2 text-center align-middle bg-white">

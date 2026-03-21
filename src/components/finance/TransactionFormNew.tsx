@@ -692,9 +692,23 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
       }
 
-      // Upload files if any — do this BEFORE notifications so files are saved even if notifications fail
+      // Upload files if any. For new transactions keep strict atomic behavior: if receipt save fails, remove transaction.
       if (files.length > 0) {
-        await uploadFiles(transactionResult.id, user.id);
+        try {
+          await uploadFiles(transactionResult.id, user.id);
+        } catch (uploadError) {
+          if (!editTransaction) {
+            const { error: rollbackError } = await supabase
+              .from('financial_transactions')
+              .delete()
+              .eq('id', transactionResult.id);
+
+            if (rollbackError) {
+              console.error('Rollback failed after receipt upload error:', rollbackError);
+            }
+          }
+          throw uploadError;
+        }
       }
 
       // Send notification to admins for large transactions (over 10000)
@@ -750,32 +764,92 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   };
 
   const uploadFiles = async (transactionId: string, userId: string) => {
-    // New approach: compress images to base64 and store in receipt_images column
     const { compressAndConvertToBase64 } = await import('@/utils/imageCompressor');
 
-    const base64Results: string[] = [];
+    const isMissingRelationError = (err: any, relationName: string) => {
+      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
+      return err?.code === '42P01' || (text.includes('relation') && text.includes(relationName.toLowerCase()) && text.includes('does not exist'));
+    };
 
-    for (const fileItem of files) {
-      try {
-        const base64 = await compressAndConvertToBase64(fileItem.file);
-        base64Results.push(base64);
-      } catch (err: any) {
-        throw new Error(err?.message || `Ошибка обработки файла "${fileItem.file.name}"`);
-      }
-    }
+    const isMissingColumnError = (err: any, columnName: string) => {
+      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
+      return err?.code === '42703' || (text.includes('column') && text.includes(columnName.toLowerCase()) && text.includes('does not exist'));
+    };
 
-    // Update transaction with receipt images
-    const { error: updateError } = await supabase
-      .from('financial_transactions')
-      .update({
-        receipt_images: base64Results,
-        attachments_count: base64Results.length,
+    const formatDbError = (err: any) => {
+      return err?.message || err?.details || err?.hint || 'неизвестная ошибка базы данных';
+    };
+
+    const preparedFiles = await Promise.all(
+      files.map(async (fileItem) => {
+        const dataUrl = await compressAndConvertToBase64(fileItem.file);
+        return { fileItem, dataUrl };
       })
-      .eq('id', transactionId);
+    );
 
-    if (updateError) {
-      console.error('Failed to save receipt images:', updateError);
-      throw new Error('Не удалось сохранить чеки в базе данных');
+    for (const { fileItem, dataUrl } of preparedFiles) {
+      let { error: financialAttachmentError } = await (supabase
+        .from('financial_attachments') as any)
+        .insert([
+          {
+            transaction_id: transactionId,
+            storage_path: dataUrl,
+            original_filename: fileItem.file.name,
+            mime_type: fileItem.file.type || 'application/octet-stream',
+            size_bytes: fileItem.file.size,
+            created_by: userId,
+          },
+        ]);
+
+      // Backward compatibility: some DBs have financial_attachments with legacy column names
+      if (financialAttachmentError && (
+        isMissingColumnError(financialAttachmentError, 'storage_path') ||
+        isMissingColumnError(financialAttachmentError, 'original_filename') ||
+        isMissingColumnError(financialAttachmentError, 'mime_type') ||
+        isMissingColumnError(financialAttachmentError, 'size_bytes')
+      )) {
+        const legacyInsert = await (supabase
+          .from('financial_attachments') as any)
+          .insert([
+            {
+              transaction_id: transactionId,
+              file_url: dataUrl,
+              file_name: fileItem.file.name,
+              file_type: fileItem.file.type || 'application/octet-stream',
+              file_size: fileItem.file.size,
+              created_by: userId,
+            },
+          ]);
+
+        financialAttachmentError = legacyInsert.error;
+      }
+
+      if (!financialAttachmentError) {
+        continue;
+      }
+
+      if (!isMissingRelationError(financialAttachmentError, 'financial_attachments')) {
+        console.error('financial_attachments insert failed:', financialAttachmentError);
+        throw new Error(`Не удалось сохранить чеки в базе данных: ${formatDbError(financialAttachmentError)}`);
+      }
+
+      // Fallback for older schema
+      const { error: transactionAttachmentError } = await (supabase
+        .from('transaction_attachments') as any)
+        .insert([
+          {
+            transaction_id: transactionId,
+            file_url: dataUrl,
+            file_name: fileItem.file.name,
+            file_type: fileItem.file.type || 'application/octet-stream',
+            file_size: fileItem.file.size,
+          },
+        ]);
+
+      if (transactionAttachmentError) {
+        console.error('transaction_attachments fallback insert failed:', transactionAttachmentError);
+        throw new Error(`Не удалось сохранить чеки в базе данных: ${formatDbError(transactionAttachmentError)}`);
+      }
     }
   };
 
