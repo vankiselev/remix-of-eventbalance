@@ -217,11 +217,47 @@ const Reports = () => {
     };
   }, []);
 
+  const formatReportError = (error: unknown) => {
+    if (!error || typeof error !== "object") return "Не удалось создать отчет";
+
+    const dbError = error as { message?: string; code?: string };
+
+    if (dbError.code === "23502" && dbError.message?.includes("tenant_id")) {
+      return "Не выбрана компания: tenant_id пустой. Переключитесь на компанию и повторите.";
+    }
+
+    return dbError.message || "Не удалось создать отчет";
+  };
+
+  const resolveTenantId = async (userId: string) => {
+    if (currentTenant?.id) return currentTenant.id;
+
+    const { data, error } = await supabase
+      .from("tenant_memberships")
+      .select("tenant_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.tenant_id ?? null;
+  };
+
   const onSubmit = async (data: ReportFormData) => {
     setSubmitting(true);
     try {
       const userData = await supabase.auth.getUser();
-      
+      const userId = userData.data.user?.id;
+
+      if (!userId) {
+        throw new Error("Пользователь не авторизован");
+      }
+
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) {
+        throw new Error("Не выбрана компания: tenant_id не найден");
+      }
+
       const basePayload: Record<string, unknown> = {
         project_name: data.project_name,
         start_time: data.start_time,
@@ -230,7 +266,8 @@ const Reports = () => {
         onsite_work: data.onsite_work,
         car_kilometers: data.car_kilometers || null,
         without_car: data.without_car || false,
-        user_id: userData.data.user?.id,
+        user_id: userId,
+        tenant_id: tenantId,
       };
 
       let { error } = await supabase
@@ -238,7 +275,7 @@ const Reports = () => {
         .insert(basePayload as any);
 
       // Fallback: if columns don't exist yet, retry without car fields
-      if (error && (error.message?.includes('car_kilometers') || error.message?.includes('without_car') || error.code === '42703')) {
+      if (error && (error.message?.includes("car_kilometers") || error.message?.includes("without_car") || error.code === "42703")) {
         const { car_kilometers, without_car, ...fallbackPayload } = basePayload;
         const result = await supabase
           .from("event_reports")
@@ -249,17 +286,17 @@ const Reports = () => {
       if (error) throw error;
 
       // Send notification to admins
-      const { sendNotificationToAdmins } = await import('@/utils/notifications');
+      const { sendNotificationToAdmins } = await import("@/utils/notifications");
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userData.data.user?.id)
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
         .single();
 
       await sendNotificationToAdmins(
-        'Новый отчет',
-        `${profile?.full_name || 'Сотрудник'} создал отчет по проекту "${data.project_name}"`,
-        'report',
+        "Новый отчет",
+        `${profile?.full_name || "Сотрудник"} создал отчет по проекту "${data.project_name}"`,
+        "report",
         { project_name: data.project_name }
       );
 
@@ -275,7 +312,7 @@ const Reports = () => {
       console.error("Error creating report:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось создать отчет",
+        description: formatReportError(error),
         variant: "destructive",
       });
     } finally {
