@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Banknote, Plus, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
