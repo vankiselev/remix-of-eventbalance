@@ -750,21 +750,47 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   };
 
   const uploadFiles = async (transactionId: string, userId: string) => {
+    const isRlsError = (err: any) => {
+      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
+      return err?.code === '42501' || text.includes('row-level security');
+    };
+
+    const isMissingRelationError = (err: any, relationName: string) => {
+      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
+      return err?.code === '42P01' || (text.includes('relation') && text.includes(relationName.toLowerCase()) && text.includes('does not exist'));
+    };
+
     const uploadPromises = files.map(async (fileItem) => {
       const fileExtension = fileItem.file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExtension}`;
-      const storagePath = `${userId}/${transactionId}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      // Primary path: supports policies where auth uid is in first folder segment
+      let storagePath = `${userId}/${transactionId}/${fileName}`;
+      let { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(storagePath, fileItem.file);
+
+      // Fallback path: supports legacy policies where auth uid is in second segment
+      if (uploadError && isRlsError(uploadError)) {
+        const legacyPath = `${transactionId}/${userId}/${fileName}`;
+        const legacyUpload = await supabase.storage
+          .from('receipts')
+          .upload(legacyPath, fileItem.file);
+
+        if (!legacyUpload.error) {
+          storagePath = legacyPath;
+          uploadError = null;
+        } else {
+          uploadError = legacyUpload.error;
+        }
+      }
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
         throw new Error(uploadError.message || 'Не удалось загрузить файл чека');
       }
 
-      // Primary schema (used by this app)
+      // Primary schema (current app structure)
       const { error: financialAttachmentError } = await (supabase
         .from('financial_attachments') as any)
         .insert([
@@ -780,9 +806,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
       if (!financialAttachmentError) return;
 
-      console.warn('financial_attachments insert failed, trying fallback schema:', financialAttachmentError);
+      // Use legacy fallback table only when primary table does not exist
+      if (!isMissingRelationError(financialAttachmentError, 'financial_attachments')) {
+        console.error('financial_attachments insert failed:', financialAttachmentError);
+        throw new Error(financialAttachmentError.message || 'Не удалось сохранить чек в базе');
+      }
 
-      // Fallback schema for environments where attachments are stored in transaction_attachments
+      console.warn('financial_attachments relation not found, trying transaction_attachments fallback');
+
       const { data: signedData } = await supabase.storage
         .from('receipts')
         .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
@@ -800,11 +831,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         ]);
 
       if (transactionAttachmentError) {
-        console.error('Attachment DB write failed for both schemas:', {
-          financialAttachmentError,
-          transactionAttachmentError,
-        });
-        throw new Error(financialAttachmentError.message || transactionAttachmentError.message || 'Не удалось сохранить чек в базе');
+        console.error('transaction_attachments fallback insert failed:', transactionAttachmentError);
+        throw new Error(transactionAttachmentError.message || 'Не удалось сохранить чек в базе');
       }
     });
 
