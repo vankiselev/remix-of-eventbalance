@@ -4,6 +4,7 @@ import { Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseISO, isToday, isSameWeek, format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 
 interface BirthdayEmployee {
   id: string;
