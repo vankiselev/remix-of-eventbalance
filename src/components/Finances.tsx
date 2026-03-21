@@ -478,7 +478,7 @@ const Finances = () => {
 
       <div className="sticky top-0 z-10 bg-background pb-2 space-y-4 w-full">
         <div className="grid gap-4 md:grid-cols-2 w-full">
-          <AdvancesSummaryCard />
+          <AdvancesSummaryCard employeeId={selectedEmployee?.id} />
           <FinanceSummaryCards 
             summary={selectedEmployee ? selectedEmployeeSummary : userSummary} 
             isLoading={false} 

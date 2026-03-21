@@ -78,6 +78,8 @@ export const useRealtimeUpdates = () => {
           console.log('[Realtime] Profile update:', payload);
           queryClient.invalidateQueries({ queryKey: ['profiles'] });
           queryClient.invalidateQueries({ queryKey: ['employees'] });
+          queryClient.invalidateQueries({ queryKey: ['all-advances'] });
+          queryClient.invalidateQueries({ queryKey: ['my-advance'] });
         }
       )
       // Vacations updates
