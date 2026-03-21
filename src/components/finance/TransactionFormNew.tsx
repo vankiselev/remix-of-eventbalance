@@ -706,9 +706,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
         // If this is a money transfer, send notification to recipient
         if (isMoneyTransfer && transferToUserId) {
-          console.log('💸 Sending money transfer notification...', {
+          console.log('💸 Money transfer details:', {
             transactionId: transaction.id,
             recipientId: transferToUserId,
+            senderId: user.id,
+            amount: data.expense_amount,
           });
 
           // Get sender's info (try user_id first for self-hosted DB)
@@ -737,24 +739,36 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             description: data.description,
           };
 
-          // Always insert notification directly into DB to guarantee delivery
+          // Use SECURITY DEFINER RPC to bypass RLS for notification delivery
           try {
-            const { error: notifError } = await supabase
-              .from('notifications')
-              .insert({
-                user_id: transferToUserId,
-                title: notifTitle,
-                message: notifMessage,
-                type: 'money_transfer',
-                data: notifData,
-              });
-            if (notifError) {
-              console.error('❌ Failed to insert notification:', notifError);
+            const { error: rpcError } = await (supabase.rpc as any)('notify_money_transfer', {
+              p_recipient_user_id: transferToUserId,
+              p_title: notifTitle,
+              p_message: notifMessage,
+              p_data: notifData,
+            });
+            if (rpcError) {
+              console.error('❌ RPC notify_money_transfer failed, falling back to direct insert:', rpcError);
+              // Fallback to direct insert
+              const { error: notifError } = await supabase
+                .from('notifications')
+                .insert({
+                  user_id: transferToUserId,
+                  title: notifTitle,
+                  message: notifMessage,
+                  type: 'money_transfer',
+                  data: notifData,
+                });
+              if (notifError) {
+                console.error('❌ Direct notification insert also failed:', notifError);
+              } else {
+                console.log('✅ Notification inserted via direct insert fallback');
+              }
             } else {
-              console.log('✅ Money transfer notification inserted into DB');
+              console.log('✅ Money transfer notification inserted via RPC');
             }
           } catch (dbNotifErr) {
-            console.error('❌ DB notification insert failed:', dbNotifErr);
+            console.error('❌ Notification delivery failed:', dbNotifErr);
           }
 
           // Also try edge function for push notifications (best-effort)
