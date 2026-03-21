@@ -19,11 +19,6 @@ export const AdvancesSummaryCard = () => {
   const [editingAmount, setEditingAmount] = useState<number>(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Don't render for non-admin users without advances
-  if (!isAdmin && !isLoadingMy && (!myAdvance || myAdvance === 0)) {
-    return null;
-  }
-
   const handleAddNew = () => {
     setEditingEmployeeId(undefined);
     setEditingAmount(0);
@@ -130,14 +125,15 @@ export const AdvancesSummaryCard = () => {
     );
   }
 
-  // Employee view
-  if (myAdvance && myAdvance > 0) {
+  // Employee view — show their advance
+  if (!isAdmin && myAdvance && myAdvance > 0) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Мой аванс
+            Выданный мне аванс
           </CardTitle>
+          <Banknote className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
