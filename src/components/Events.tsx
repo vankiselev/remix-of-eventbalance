@@ -130,7 +130,7 @@ const Events = () => {
     // Если есть manager_ids (новое поле), используем его
     if (event.manager_ids && event.manager_ids.length > 0) {
       const names = event.manager_ids
-        .map(id => employees.find(emp => emp.id === id)?.full_name)
+        .map(id => formatDisplayName(employees.find(emp => emp.id === id)?.full_name))
         .filter(Boolean)
         .join(", ");
       if (names) return names;
