@@ -61,6 +61,19 @@ const queryClient = new QueryClient({
   },
 });
 
+// Persist React Query cache to localStorage for instant loads
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'eb-query-cache',
+});
+
+// Loading fallback for lazy routes
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+  </div>
+);
+
 const RealtimeSync = () => {
   const queryClient = useQueryClient();
 
