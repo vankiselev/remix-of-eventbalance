@@ -132,7 +132,7 @@ export function TransactionDetailDialog({
           changed_by: log.changed_by,
           changed_at: log.changed_at,
           change_description: log.change_description,
-          user_name: (log.profiles as any)?.full_name || 'Неизвестный пользователь'
+          user_name: formatDisplayName((log.profiles as any)?.full_name) || 'Неизвестный пользователь'
         }));
 
         setAuditHistory(enrichedLogs);
