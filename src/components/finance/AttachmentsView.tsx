@@ -5,18 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Eye, Download, Trash2, Paperclip, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { FilePreviewModal } from './FilePreviewModal';
-
-interface FileAttachment {
-  id: string;
-  storage_path: string;
-  original_filename: string;
-  mime_type: string;
-  size_bytes: number;
-  created_by: string;
-  created_at: string;
-  preview_url?: string;
-}
 
 interface AttachmentsViewProps {
   transactionId: string;
@@ -24,6 +12,7 @@ interface AttachmentsViewProps {
   noReceiptReason?: string;
   canDelete?: boolean;
   onAttachmentsChange?: () => void;
+  receiptImages?: string[] | null;
 }
 
 export function AttachmentsView({ 
@@ -31,171 +20,77 @@ export function AttachmentsView({
   noReceipt, 
   noReceiptReason,
   canDelete = false,
-  onAttachmentsChange 
+  onAttachmentsChange,
+  receiptImages,
 }: AttachmentsViewProps) {
-  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<FileAttachment | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (transactionId) {
-      fetchAttachments();
+    if (receiptImages && receiptImages.length > 0) {
+      setImages(receiptImages);
+    } else if (transactionId) {
+      // Try loading from receipt_images column
+      loadReceiptImages();
     }
-  }, [transactionId]);
+  }, [transactionId, receiptImages]);
 
-  const fetchAttachments = async () => {
+  const loadReceiptImages = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase
-        .from('financial_attachments') as any)
-        .select('*')
-        .eq('transaction_id', transactionId)
-        .order('created_at', { ascending: true });
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('receipt_images')
+        .eq('id', transactionId)
+        .single();
 
       if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        setAttachments([]);
-        return;
+
+      if (data?.receipt_images && data.receipt_images.length > 0) {
+        setImages(data.receipt_images);
       }
-      
-      // Batch load preview URLs for all images at once
-      const imagePaths = data
-        .filter((file: any) => file.mime_type?.startsWith('image/'))
-        .map((file: any) => file.storage_path);
-      
-      let previewUrlMap = new Map<string, string>();
-      
-      if (imagePaths.length > 0) {
-        try {
-          // Use createSignedUrls (batch) instead of individual requests
-          const { data: urlsData, error: urlError } = await supabase.storage
-            .from('receipts')
-            .createSignedUrls(imagePaths, 3600);
-          
-          if (urlError) throw urlError;
-          
-          // Create map of path -> signed URL
-          urlsData?.forEach((item, index) => {
-            if (item.signedUrl) {
-              previewUrlMap.set(imagePaths[index], item.signedUrl);
-            }
-          });
-        } catch (err) {
-          console.error('Error batch loading previews:', err);
-        }
-      }
-      
-      // Apply preview URLs to attachments
-      const attachmentsWithPreviews = data.map((file: any) => ({
-        ...file,
-        preview_url: file.mime_type?.startsWith('image/') 
-          ? previewUrlMap.get(file.storage_path) 
-          : undefined
-      }));
-      
-      setAttachments(attachmentsWithPreviews as any);
     } catch (error) {
-      console.error('Error fetching attachments:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить вложения",
-        variant: "destructive"
-      });
+      console.error('Error loading receipt images:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileClick = (file: FileAttachment) => {
-    setSelectedFile(file);
-    setPreviewOpen(true);
-  };
-
-  const handleDownload = async (file: FileAttachment) => {
+  const handleDelete = async (index: number) => {
     try {
-      const { data, error } = await supabase.storage
-        .from('receipts')
-        .createSignedUrl(file.storage_path, 3600);
+      const updated = images.filter((_, i) => i !== index);
+      
+      const { error } = await supabase
+        .from('financial_transactions')
+        .update({ 
+          receipt_images: updated.length > 0 ? updated : null,
+          attachments_count: updated.length,
+        })
+        .eq('id', transactionId);
 
       if (error) throw error;
 
-      const response = await fetch(data.signedUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.original_filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось скачать файл",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDelete = async (fileId: string) => {
-    try {
-      const file = attachments.find(f => f.id === fileId);
-      if (!file) return;
-
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('receipts')
-        .remove([file.storage_path]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
-      const { error: dbError } = await (supabase
-        .from('financial_attachments') as any)
-        .delete()
-        .eq('id', fileId);
-
-      if (dbError) throw dbError;
-
-      setAttachments(prev => prev.filter(a => a.id !== fileId));
+      setImages(updated);
       onAttachmentsChange?.();
-      
-      toast({
-        title: "Успешно",
-        description: "Файл удален"
-      });
+      toast({ title: "Успешно", description: "Файл удален" });
     } catch (error) {
-      console.error('Error deleting file:', error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось удалить файл",
-        variant: "destructive"
-      });
+      console.error('Error deleting attachment:', error);
+      toast({ title: "Ошибка", description: "Не удалось удалить файл", variant: "destructive" });
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Б';
-    const k = 1024;
-    const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const handleDownload = (dataUrl: string, index: number) => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `receipt_${index + 1}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) {
-      return '🖼️';
-    }
-    if (mimeType === 'application/pdf') {
-      return '📄';
-    }
-    return '📎';
-  };
+  const showNoReceiptInfo = noReceipt && noReceiptReason;
 
   if (loading) {
     return (
@@ -205,10 +100,9 @@ export function AttachmentsView({
     );
   }
 
-  const hasAttachments = attachments.length > 0;
-  const showNoReceiptInfo = noReceipt && noReceiptReason;
+  const hasImages = images.length > 0;
 
-  if (!hasAttachments && !showNoReceiptInfo) {
+  if (!hasImages && !showNoReceiptInfo) {
     return (
       <div className="text-center py-4 text-gray-500">
         Нет вложений
@@ -233,73 +127,55 @@ export function AttachmentsView({
         </div>
       )}
 
-      {/* File Attachments */}
-      {hasAttachments && (
+      {/* Receipt Images */}
+      {hasImages && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Paperclip className="h-4 w-4 text-gray-500" />
             <span className="text-sm font-medium">
-              Вложения ({attachments.length})
+              Вложения ({images.length})
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            {attachments.map((file) => {
-              const isImage = file.mime_type.startsWith('image/');
+            {images.map((dataUrl, index) => {
+              const isImage = dataUrl.startsWith('data:image/');
               
               return (
                 <div
-                  key={file.id}
+                  key={index}
                   className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  {/* Image Preview */}
-                  {isImage && file.preview_url ? (
-                    <div className="relative">
+                  {isImage && (
+                    <div className="relative cursor-pointer" onClick={() => setFullscreenIndex(index)}>
                       <img 
-                        src={file.preview_url} 
-                        alt={file.original_filename}
-                        className="w-full h-auto max-h-96 object-contain bg-gray-50 cursor-pointer"
-                        onClick={() => handleFileClick(file)}
+                        src={dataUrl} 
+                        alt={`Чек ${index + 1}`}
+                        className="w-full h-auto max-h-96 object-contain bg-gray-50"
                       />
                     </div>
-                  ) : null}
+                  )}
                   
-                  {/* File Info and Actions */}
                   <div className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {!isImage && <span className="text-xl">{getFileIcon(file.mime_type)}</span>}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" title={file.original_filename}>
-                          {file.original_filename}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatFileSize(file.size_bytes)} • {file.mime_type}
-                        </p>
-                      </div>
+                      <span className="text-xl">{isImage ? '🖼️' : '📎'}</span>
+                      <p className="text-sm font-medium">Чек {index + 1}</p>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleFileClick(file)}
-                        title="Открыть"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(file)}
-                        title="Скачать"
-                      >
+                      {isImage && (
+                        <Button variant="ghost" size="icon" onClick={() => setFullscreenIndex(index)} title="Открыть">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleDownload(dataUrl, index)} title="Скачать">
                         <Download className="h-4 w-4" />
                       </Button>
                       {canDelete && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(file.id)}
+                          onClick={() => handleDelete(index)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                           title="Удалить"
                         >
@@ -315,21 +191,26 @@ export function AttachmentsView({
         </div>
       )}
 
-      {/* File Preview Modal */}
-      <FilePreviewModal
-        isOpen={previewOpen}
-        onClose={() => {
-          setPreviewOpen(false);
-          setSelectedFile(null);
-        }}
-        file={selectedFile}
-        canDelete={canDelete}
-        onDelete={(fileId) => {
-          handleDelete(fileId);
-          setAttachments(prev => prev.filter(a => a.id !== fileId));
-          onAttachmentsChange?.();
-        }}
-      />
+      {/* Fullscreen Preview */}
+      {fullscreenIndex !== null && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setFullscreenIndex(null)}
+        >
+          <img 
+            src={images[fullscreenIndex]} 
+            alt="Просмотр чека"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button 
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl"
+            onClick={() => setFullscreenIndex(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -750,130 +750,33 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   };
 
   const uploadFiles = async (transactionId: string, userId: string) => {
-    const isRlsError = (err: any) => {
-      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
-      return err?.code === '42501' || text.includes('row-level security');
-    };
+    // New approach: compress images to base64 and store in receipt_images column
+    const { compressAndConvertToBase64 } = await import('@/utils/imageCompressor');
 
-    const isMissingRelationError = (err: any, relationName: string) => {
-      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
-      return err?.code === '42P01' || (text.includes('relation') && text.includes(relationName.toLowerCase()) && text.includes('does not exist'));
-    };
+    const base64Results: string[] = [];
 
-    const isNetworkLoadError = (err: any) => {
-      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
-      return text.includes('load failed') || text.includes('failed to fetch') || text.includes('network');
-    };
-
-    const uploadWithRetry = async (path: string, file: File, retries = 2) => {
-      let lastError: any = null;
-
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        const { error } = await supabase.storage
-          .from('receipts')
-          .upload(path, file);
-
-        if (!error) return { path, error: null };
-
-        lastError = error;
-        if (!isNetworkLoadError(error) || attempt === retries) {
-          break;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+    for (const fileItem of files) {
+      try {
+        const base64 = await compressAndConvertToBase64(fileItem.file);
+        base64Results.push(base64);
+      } catch (err: any) {
+        throw new Error(err?.message || `Ошибка обработки файла "${fileItem.file.name}"`);
       }
+    }
 
-      return { path, error: lastError };
-    };
+    // Update transaction with receipt images
+    const { error: updateError } = await supabase
+      .from('financial_transactions')
+      .update({
+        receipt_images: base64Results,
+        attachments_count: base64Results.length,
+      })
+      .eq('id', transactionId);
 
-    const uploadPromises = files.map(async (fileItem) => {
-      const fileExtension = fileItem.file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExtension}`;
-
-      const candidatePaths = [
-        `${userId}/${transactionId}/${fileName}`,
-        `${transactionId}/${userId}/${fileName}`,
-      ];
-
-      let storagePath = candidatePaths[0];
-      let lastUploadError: any = null;
-
-      for (let i = 0; i < candidatePaths.length; i++) {
-        const candidatePath = candidatePaths[i];
-        const uploadResult = await uploadWithRetry(candidatePath, fileItem.file);
-
-        if (!uploadResult.error) {
-          storagePath = candidatePath;
-          lastUploadError = null;
-          break;
-        }
-
-        lastUploadError = uploadResult.error;
-
-        // Continue trying next path only for RLS mismatches
-        if (!isRlsError(lastUploadError) || i === candidatePaths.length - 1) {
-          break;
-        }
-      }
-
-      if (lastUploadError) {
-        console.error('Storage upload error:', {
-          fileName: fileItem.file.name,
-          fileSize: fileItem.file.size,
-          fileType: fileItem.file.type,
-          error: lastUploadError,
-        });
-
-        if (isNetworkLoadError(lastUploadError)) {
-          throw new Error('Сбой сети при загрузке чека. Попробуйте еще раз (файл меньше 10 МБ).');
-        }
-
-        throw new Error(lastUploadError.message || 'Не удалось загрузить файл чека');
-      }
-
-      // Primary schema (current app structure)
-      const { error: financialAttachmentError } = await (supabase
-        .from('financial_attachments') as any)
-        .insert([
-          {
-            transaction_id: transactionId,
-            storage_path: storagePath,
-            original_filename: fileItem.file.name,
-            mime_type: fileItem.file.type,
-            size_bytes: fileItem.file.size,
-            created_by: userId,
-          },
-        ]);
-
-      if (!financialAttachmentError) return;
-
-      // Use legacy fallback table only when primary table does not exist
-      if (!isMissingRelationError(financialAttachmentError, 'financial_attachments')) {
-        console.error('financial_attachments insert failed:', financialAttachmentError);
-        throw new Error(financialAttachmentError.message || 'Не удалось сохранить чек в базе');
-      }
-
-      console.warn('financial_attachments relation not found, trying transaction_attachments fallback');
-
-      const { error: transactionAttachmentError } = await (supabase
-        .from('transaction_attachments') as any)
-        .insert([
-          {
-            transaction_id: transactionId,
-            file_url: storagePath,
-            file_name: fileItem.file.name,
-            file_type: fileItem.file.type,
-            file_size: fileItem.file.size,
-          },
-        ]);
-
-      if (transactionAttachmentError) {
-        console.error('transaction_attachments fallback insert failed:', transactionAttachmentError);
-        throw new Error(transactionAttachmentError.message || 'Не удалось сохранить чек в базе');
-      }
-    });
-
-    await Promise.all(uploadPromises);
+    if (updateError) {
+      console.error('Failed to save receipt images:', updateError);
+      throw new Error('Не удалось сохранить чеки в базе данных');
+    }
   };
 
 
