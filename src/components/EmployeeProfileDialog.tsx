@@ -735,7 +735,7 @@ export const EmployeeProfileDialog = ({
                 <Avatar className="w-20 h-20">
                   <AvatarImage src={currentUser.avatar_url} />
                   <AvatarFallback>
-                    {currentUser.full_name.split(' ').map(n => n[0]).join('')}
+                    {formatDisplayName(currentUser.full_name).split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 {/* Overlay on hover */}
