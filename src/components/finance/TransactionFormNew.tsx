@@ -877,7 +877,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           try {
             await supabase.functions.invoke('send-push-notification', {
               body: {
-                user_id: transferToUserId,
+                user_id: resolvedRecipientId,
                 title: notifTitle,
                 message: notifMessage,
                 type: 'money_transfer',
