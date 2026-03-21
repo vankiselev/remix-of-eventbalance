@@ -135,116 +135,148 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const loadEmployees = async () => {
     try {
       const { data: currentUser } = await supabase.auth.getUser();
-      if (!currentUser.user) return;
-
-      const loadFromProfilesFallback = async () => {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .neq('id', currentUser.user.id)
-          .order('full_name');
-
-        if (fallbackError) throw fallbackError;
-
-        return ((fallbackData || []) as any[]).map((p: any) => ({
-          id: p.id,
-          full_name: p.full_name || 'Сотрудник',
-          email: p.email || '',
-        }));
-      };
-
-      let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
-
-      // Primary source of recipient IDs: tenant_memberships.user_id (auth uid)
-      // This guarantees transfer_to_user_id is stored as auth uid, not profiles.id
-      let membershipsQuery: any = supabase
-        .from('tenant_memberships')
-        .select('tenant_id, user_id');
-
-      if (currentTenant?.id) {
-        membershipsQuery = membershipsQuery.eq('tenant_id', currentTenant.id);
+      if (!currentUser.user) {
+        console.warn('❌ loadEmployees: no current user');
+        return;
       }
 
-      const { data: memberships, error: membershipsError } = await membershipsQuery;
+      const myAuthId = currentUser.user.id;
+      let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
 
-      if (membershipsError) {
-        console.warn('Failed to load tenant memberships, fallback to profiles:', membershipsError.message);
-        employeeList = await loadFromProfilesFallback();
-      } else {
-        const rows = memberships || [];
-        let recipientAuthIds: string[] = [];
+      // Strategy 1: Try tenant_memberships to get auth UIDs of co-workers
+      let recipientAuthIds: string[] = [];
+      try {
+        let membershipsQuery: any = supabase
+          .from('tenant_memberships')
+          .select('tenant_id, user_id');
 
         if (currentTenant?.id) {
-          recipientAuthIds = rows
-            .filter((m: any) => m.user_id && m.user_id !== currentUser.user.id)
-            .map((m: any) => m.user_id);
-        } else {
-          const myTenantIds = new Set(
-            rows
-              .filter((m: any) => m.user_id === currentUser.user.id)
-              .map((m: any) => m.tenant_id)
-              .filter(Boolean)
-          );
-
-          recipientAuthIds = rows
-            .filter((m: any) => m.user_id && m.user_id !== currentUser.user.id && myTenantIds.has(m.tenant_id))
-            .map((m: any) => m.user_id);
+          membershipsQuery = membershipsQuery.eq('tenant_id', currentTenant.id);
         }
 
-        recipientAuthIds = [...new Set(recipientAuthIds)];
+        const { data: memberships, error: membershipsError } = await membershipsQuery;
 
-        if (recipientAuthIds.length === 0) {
-          employeeList = await loadFromProfilesFallback();
+        if (membershipsError) {
+          console.warn('⚠️ tenant_memberships query failed:', membershipsError.message);
         } else {
-          const profileMap = new Map<string, { full_name: string; email: string }>();
+          const rows = memberships || [];
+          console.log('📋 tenant_memberships rows:', rows.length);
 
-          try {
-            const { data: profilesByUserId, error: profilesByUserIdError } = await (supabase
-              .from('profiles') as any)
-              .select('id, user_id, full_name, email')
-              .in('user_id', recipientAuthIds);
+          if (currentTenant?.id) {
+            recipientAuthIds = rows
+              .filter((m: any) => m.user_id && m.user_id !== myAuthId)
+              .map((m: any) => m.user_id);
+          } else {
+            const myTenantIds = new Set(
+              rows
+                .filter((m: any) => m.user_id === myAuthId)
+                .map((m: any) => m.tenant_id)
+                .filter(Boolean)
+            );
+            recipientAuthIds = rows
+              .filter((m: any) => m.user_id && m.user_id !== myAuthId && myTenantIds.has(m.tenant_id))
+              .map((m: any) => m.user_id);
+          }
+          recipientAuthIds = [...new Set(recipientAuthIds)];
+          console.log('🔑 recipientAuthIds from memberships:', recipientAuthIds.length);
+        }
+      } catch (e) {
+        console.warn('⚠️ memberships strategy failed:', e);
+      }
 
-            if (profilesByUserIdError) throw profilesByUserIdError;
+      // Strategy 2: If memberships gave us IDs, resolve profiles
+      if (recipientAuthIds.length > 0) {
+        const profileMap = new Map<string, { full_name: string; email: string }>();
 
-            (profilesByUserId || []).forEach((p: any) => {
-              if (p.user_id) {
-                profileMap.set(p.user_id, {
-                  full_name: p.full_name || 'Сотрудник',
-                  email: p.email || '',
-                });
-              }
-            });
-          } catch {
-            const { data: profilesById } = await supabase
-              .from('profiles')
-              .select('id, full_name, email')
-              .in('id', recipientAuthIds);
+        // Try profiles.user_id first (self-hosted), then profiles.id (Cloud)
+        try {
+          const { data: profilesByUserId, error: err1 } = await (supabase
+            .from('profiles') as any)
+            .select('id, user_id, full_name, email')
+            .in('user_id', recipientAuthIds);
 
-            (profilesById || []).forEach((p: any) => {
-              profileMap.set(p.id, {
+          if (err1) throw err1;
+          (profilesByUserId || []).forEach((p: any) => {
+            if (p.user_id) {
+              profileMap.set(p.user_id, {
                 full_name: p.full_name || 'Сотрудник',
                 email: p.email || '',
               });
+            }
+          });
+          console.log('✅ Resolved via profiles.user_id:', profileMap.size);
+        } catch {
+          const { data: profilesById } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', recipientAuthIds);
+
+          (profilesById || []).forEach((p: any) => {
+            profileMap.set(p.id, {
+              full_name: p.full_name || 'Сотрудник',
+              email: p.email || '',
             });
+          });
+          console.log('✅ Resolved via profiles.id:', profileMap.size);
+        }
+
+        employeeList = recipientAuthIds
+          .map((authId) => {
+            const profile = profileMap.get(authId);
+            return {
+              id: authId,
+              full_name: profile?.full_name || 'Сотрудник',
+              email: profile?.email || '',
+            };
+          })
+          .filter(e => e.full_name !== 'Сотрудник' || e.email)
+          .sort((a, b) => a.full_name.localeCompare(b.full_name, 'ru'));
+      }
+
+      // Strategy 3: Fallback — load all profiles except current user
+      if (employeeList.length === 0) {
+        console.log('⚠️ No employees from memberships, falling back to all profiles');
+        const { data: allProfiles, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .neq('id', myAuthId)
+          .order('full_name');
+
+        if (fallbackError) {
+          console.error('❌ Fallback profiles query failed:', fallbackError);
+        } else {
+          // On self-hosted, profiles.id might not be auth uid
+          // Try also excluding by user_id column
+          let filteredProfiles = allProfiles || [];
+          
+          // Also try to get profiles that have user_id != current user
+          try {
+            const { data: profilesWithUserId } = await (supabase
+              .from('profiles') as any)
+              .select('id, user_id, full_name, email')
+              .neq('user_id', myAuthId)
+              .order('full_name');
+            
+            if (profilesWithUserId && profilesWithUserId.length > 0) {
+              filteredProfiles = profilesWithUserId;
+              console.log('✅ Fallback using user_id filter:', filteredProfiles.length);
+            }
+          } catch {
+            console.log('ℹ️ No user_id column, using id filter');
           }
 
-          employeeList = recipientAuthIds
-            .map((authId) => {
-              const profile = profileMap.get(authId);
-              return {
-                id: authId,
-                full_name: profile?.full_name || 'Сотрудник',
-                email: profile?.email || '',
-              };
-            })
-            .sort((a, b) => a.full_name.localeCompare(b.full_name, 'ru'));
+          employeeList = filteredProfiles.map((p: any) => ({
+            id: p.user_id || p.id,
+            full_name: p.full_name || 'Сотрудник',
+            email: p.email || '',
+          }));
         }
       }
-      
-      console.log('👥 Loaded transfer recipients:', employeeList.map((e) => ({ id: e.id, email: e.email })));
+
+      console.log('👥 Final employee list:', employeeList.length, employeeList.map((e) => ({ id: e.id, name: e.full_name })));
       setEmployees(employeeList);
     } catch (error) {
-      console.error('Error loading employees:', error);
+      console.error('❌ Error loading employees:', error);
     }
   };
 
