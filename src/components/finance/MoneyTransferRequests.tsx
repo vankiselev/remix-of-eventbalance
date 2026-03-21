@@ -225,7 +225,7 @@ export const MoneyTransferRequests = () => {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {transfer.transfer_from_user?.full_name || transfer.transfer_from_user?.email || 'Сотрудник'}
+                        {formatDisplayName(transfer.transfer_from_user?.full_name) || transfer.transfer_from_user?.email || 'Сотрудник'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(transfer.operation_date), 'd MMMM', { locale: ru })}

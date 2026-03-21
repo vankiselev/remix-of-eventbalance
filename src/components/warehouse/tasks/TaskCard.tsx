@@ -7,6 +7,7 @@ import { WarehouseTaskWithDetails } from "@/hooks/useWarehouseTasks";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 
 interface TaskCardProps {
   task: WarehouseTaskWithDetails;

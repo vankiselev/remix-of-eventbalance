@@ -377,7 +377,7 @@ export function TransactionDetailDialog({
                   )}
                   {transaction.transfer_from_user && (
                     <p className="text-sm text-muted-foreground">
-                      Отправитель: {transaction.transfer_from_user.full_name}
+                      Отправитель: {formatDisplayName(transaction.transfer_from_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_status === 'rejected' && transaction.transfer_rejection_reason && (

@@ -121,7 +121,7 @@ const Birthdays = () => {
           )}
         </div>
         <div className="flex-1">
-          <h3 className="font-medium text-foreground">{employee.full_name}</h3>
+          <h3 className="font-medium text-foreground">{formatDisplayName(employee.full_name)}</h3>
           <div className="mt-1">
             <RoleBadges roles={roles} />
           </div>

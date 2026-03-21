@@ -95,7 +95,7 @@ const TodayBirthdaysCard = () => {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-foreground text-sm truncate">{employee.full_name}</h4>
+        <h4 className="font-medium text-foreground text-sm truncate">{formatDisplayName(employee.full_name)}</h4>
         <p className="text-xs text-muted-foreground">
           {showDate ? `${formatBirthday(employee.birth_date)} · ` : ""}
           {calculateAge(employee.birth_date)} лет
