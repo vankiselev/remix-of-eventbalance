@@ -78,18 +78,31 @@ export function FilePreviewModal({
   };
 
   const handleDownload = async () => {
-    if (!file || !fileUrl) return;
+    if (!file) return;
 
     try {
-      const response = await fetch(fileUrl);
+      const url = fileUrl || file.storage_path;
+      if (!url) return;
+
+      if (isDataUrl(url)) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.original_filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      const response = await fetch(url);
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = file.original_filename;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading file:', error);
