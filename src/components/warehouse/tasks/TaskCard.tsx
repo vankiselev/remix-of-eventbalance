@@ -64,7 +64,7 @@ export const TaskCard = ({ task }: TaskCardProps) => {
           {task.assigned_to_profile && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <User className="h-4 w-4" />
-              <span>{task.assigned_to_profile.full_name}</span>
+              <span>{formatDisplayName(task.assigned_to_profile.full_name)}</span>
             </div>
           )}
 

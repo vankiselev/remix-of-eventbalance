@@ -54,7 +54,7 @@ export const TaskComments = ({ task }: TaskCommentsProps) => {
 
   const getProfileName = (userId: string) => {
     const profile = profiles.find(p => p.id === userId);
-    return profile?.full_name || 'Пользователь';
+    return formatDisplayName(profile?.full_name) || 'Пользователь';
   };
 
   const getProfileAvatar = (userId: string) => {

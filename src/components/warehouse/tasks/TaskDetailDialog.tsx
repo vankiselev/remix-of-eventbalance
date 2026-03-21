@@ -61,7 +61,7 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                 {task.assigned_to_profile && (
                   <div className="flex items-center gap-1">
                     <User className="h-4 w-4" />
-                    <span>{task.assigned_to_profile.full_name}</span>
+                    <span>{formatDisplayName(task.assigned_to_profile.full_name)}</span>
                   </div>
                 )}
                 {task.due_date && (
