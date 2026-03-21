@@ -760,34 +760,75 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       return err?.code === '42P01' || (text.includes('relation') && text.includes(relationName.toLowerCase()) && text.includes('does not exist'));
     };
 
+    const isNetworkLoadError = (err: any) => {
+      const text = `${err?.message || ''} ${err?.details || ''}`.toLowerCase();
+      return text.includes('load failed') || text.includes('failed to fetch') || text.includes('network');
+    };
+
+    const uploadWithRetry = async (path: string, file: File, retries = 2) => {
+      let lastError: any = null;
+
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        const { error } = await supabase.storage
+          .from('receipts')
+          .upload(path, file);
+
+        if (!error) return { path, error: null };
+
+        lastError = error;
+        if (!isNetworkLoadError(error) || attempt === retries) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+      }
+
+      return { path, error: lastError };
+    };
+
     const uploadPromises = files.map(async (fileItem) => {
       const fileExtension = fileItem.file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExtension}`;
 
-      // Primary path: supports policies where auth uid is in first folder segment
-      let storagePath = `${userId}/${transactionId}/${fileName}`;
-      let { error: uploadError } = await supabase.storage
-        .from('receipts')
-        .upload(storagePath, fileItem.file);
+      const candidatePaths = [
+        `${userId}/${transactionId}/${fileName}`,
+        `${transactionId}/${userId}/${fileName}`,
+      ];
 
-      // Fallback path: supports legacy policies where auth uid is in second segment
-      if (uploadError && isRlsError(uploadError)) {
-        const legacyPath = `${transactionId}/${userId}/${fileName}`;
-        const legacyUpload = await supabase.storage
-          .from('receipts')
-          .upload(legacyPath, fileItem.file);
+      let storagePath = candidatePaths[0];
+      let lastUploadError: any = null;
 
-        if (!legacyUpload.error) {
-          storagePath = legacyPath;
-          uploadError = null;
-        } else {
-          uploadError = legacyUpload.error;
+      for (let i = 0; i < candidatePaths.length; i++) {
+        const candidatePath = candidatePaths[i];
+        const uploadResult = await uploadWithRetry(candidatePath, fileItem.file);
+
+        if (!uploadResult.error) {
+          storagePath = candidatePath;
+          lastUploadError = null;
+          break;
+        }
+
+        lastUploadError = uploadResult.error;
+
+        // Continue trying next path only for RLS mismatches
+        if (!isRlsError(lastUploadError) || i === candidatePaths.length - 1) {
+          break;
         }
       }
 
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        throw new Error(uploadError.message || 'Не удалось загрузить файл чека');
+      if (lastUploadError) {
+        console.error('Storage upload error:', {
+          fileName: fileItem.file.name,
+          fileSize: fileItem.file.size,
+          fileType: fileItem.file.type,
+          error: lastUploadError,
+        });
+
+        if (isNetworkLoadError(lastUploadError)) {
+          throw new Error('Сбой сети при загрузке чека. Попробуйте еще раз (файл меньше 10 МБ).');
+        }
+
+        throw new Error(lastUploadError.message || 'Не удалось загрузить файл чека');
       }
 
       // Primary schema (current app structure)
@@ -814,16 +855,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
       console.warn('financial_attachments relation not found, trying transaction_attachments fallback');
 
-      const { data: signedData } = await supabase.storage
-        .from('receipts')
-        .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
-
       const { error: transactionAttachmentError } = await (supabase
         .from('transaction_attachments') as any)
         .insert([
           {
             transaction_id: transactionId,
-            file_url: signedData?.signedUrl || storagePath,
+            file_url: storagePath,
             file_name: fileItem.file.name,
             file_type: fileItem.file.type,
             file_size: fileItem.file.size,
