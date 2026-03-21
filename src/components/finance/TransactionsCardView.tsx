@@ -7,6 +7,7 @@ import { ExpensesBreakdownDialog } from "./ExpensesBreakdownDialog";
 import { IncomesBreakdownDialog } from "./IncomesBreakdownDialog";
 import { TransactionDetailDialog } from "./TransactionDetailDialog";
 import { TransactionFilter } from "./TransactionFilter";
+import { CollapsibleFilters } from "./CollapsibleFilters";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useQuery } from "@tanstack/react-query";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";
@@ -310,70 +311,66 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
   return (
     <div className="space-y-4">
       {/* Compact Filter Buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pt-4">
-        <TransactionFilter
-          column="date"
-          title={selectedDates.length > 0 ? `Дата: ${selectedDates.length}` : "Дата"}
-          options={availableDates}
-          selectedValues={selectedDates}
-          onFilterChange={setSelectedDates}
-          onReset={() => setSelectedDates([])}
-        />
-
-        <TransactionFilter
-          column="project"
-          title={selectedProjects.length > 0 ? `Проект: ${selectedProjects.length}` : "Проект"}
-          options={availableProjects}
-          selectedValues={selectedProjects}
-          onFilterChange={setSelectedProjects}
-          onReset={() => setSelectedProjects([])}
-        />
-
-        <TransactionFilter
-          column="wallet"
-          title={selectedWallets.length > 0 ? `Кошельки: ${selectedWallets.length}` : "Кошельки"}
-          options={allWallets}
-          selectedValues={selectedWallets}
-          onFilterChange={setSelectedWallets}
-          onReset={() => setSelectedWallets([])}
-        />
-
-        <TransactionFilter
-          column="expense"
-          title={selectedExpenses.length > 0 ? `Трата: ${selectedExpenses.length}` : "Трата"}
-          options={uniqueExpenses}
-          selectedValues={selectedExpenses}
-          onFilterChange={setSelectedExpenses}
-          onReset={() => setSelectedExpenses([])}
-        />
-
-        <TransactionFilter
-          column="income"
-          title={selectedIncomes.length > 0 ? `Приход: ${selectedIncomes.length}` : "Приход"}
-          options={uniqueIncomes}
-          selectedValues={selectedIncomes}
-          onFilterChange={setSelectedIncomes}
-          onReset={() => setSelectedIncomes([])}
-        />
-
-        <TransactionFilter
-          column="category"
-          title={selectedCategories.length > 0 ? `Категория: ${selectedCategories.length}` : "Категория"}
-          options={allCategories}
-          selectedValues={selectedCategories}
-          onFilterChange={setSelectedCategories}
-          onReset={() => setSelectedCategories([])}
-        />
-
-        <TransactionFilter
-          column="period"
-          title={selectedPeriods.length > 0 ? `Период: ${selectedPeriods.length}` : "Период"}
-          options={availablePeriods}
-          selectedValues={selectedPeriods}
-          onFilterChange={setSelectedPeriods}
-          onReset={() => setSelectedPeriods([])}
-        />
-      </div>
+      <CollapsibleFilters activeCount={[selectedDates, selectedProjects, selectedWallets, selectedExpenses, selectedIncomes, selectedCategories, selectedPeriods].filter(a => a.length > 0).length}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pt-4">
+          <TransactionFilter
+            column="date"
+            title={selectedDates.length > 0 ? `Дата: ${selectedDates.length}` : "Дата"}
+            options={availableDates}
+            selectedValues={selectedDates}
+            onFilterChange={setSelectedDates}
+            onReset={() => setSelectedDates([])}
+          />
+          <TransactionFilter
+            column="project"
+            title={selectedProjects.length > 0 ? `Проект: ${selectedProjects.length}` : "Проект"}
+            options={availableProjects}
+            selectedValues={selectedProjects}
+            onFilterChange={setSelectedProjects}
+            onReset={() => setSelectedProjects([])}
+          />
+          <TransactionFilter
+            column="wallet"
+            title={selectedWallets.length > 0 ? `Кошельки: ${selectedWallets.length}` : "Кошельки"}
+            options={allWallets}
+            selectedValues={selectedWallets}
+            onFilterChange={setSelectedWallets}
+            onReset={() => setSelectedWallets([])}
+          />
+          <TransactionFilter
+            column="expense"
+            title={selectedExpenses.length > 0 ? `Трата: ${selectedExpenses.length}` : "Трата"}
+            options={uniqueExpenses}
+            selectedValues={selectedExpenses}
+            onFilterChange={setSelectedExpenses}
+            onReset={() => setSelectedExpenses([])}
+          />
+          <TransactionFilter
+            column="income"
+            title={selectedIncomes.length > 0 ? `Приход: ${selectedIncomes.length}` : "Приход"}
+            options={uniqueIncomes}
+            selectedValues={selectedIncomes}
+            onFilterChange={setSelectedIncomes}
+            onReset={() => setSelectedIncomes([])}
+          />
+          <TransactionFilter
+            column="category"
+            title={selectedCategories.length > 0 ? `Категория: ${selectedCategories.length}` : "Категория"}
+            options={allCategories}
+            selectedValues={selectedCategories}
+            onFilterChange={setSelectedCategories}
+            onReset={() => setSelectedCategories([])}
+          />
+          <TransactionFilter
+            column="period"
+            title={selectedPeriods.length > 0 ? `Период: ${selectedPeriods.length}` : "Период"}
+            options={availablePeriods}
+            selectedValues={selectedPeriods}
+            onFilterChange={setSelectedPeriods}
+            onReset={() => setSelectedPeriods([])}
+          />
+        </div>
+      </CollapsibleFilters>
 
       <div className="border-b"></div>
 
