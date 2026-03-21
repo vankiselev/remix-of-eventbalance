@@ -701,7 +701,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         console.log('🔍 Edit transaction check:', {
           isEdit: true,
           originalStatus: editTransaction.transfer_status,
-          isMoneyTransfer,
+          isMoneyTransfer: isTransferCategorySelected,
           recipientId,
           wasRejectedTransfer,
         });
