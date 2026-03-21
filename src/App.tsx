@@ -165,7 +165,7 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 10 * 60 * 1000 }}>
       <BrowserRouter>
         <AuthProvider>
           <TenantProvider>
@@ -175,77 +175,71 @@ const App = () => {
                   <RealtimeSync />
                   <Toaster />
                   <Sonner />
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/invite" element={<InvitePage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    <Route path="/awaiting-invitation" element={<AwaitingInvitationPage />} />
-                    
-                    {/* Root redirects to dashboard (ProtectedRoute will redirect to /auth if not logged in) */}
-                    <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                    <Route path="/terms" element={<TermsOfUsePage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/support" element={<SupportPage />} />
-                    <Route path="/contacts-info" element={<ContactsInfoPage />} />
-                    
-                    {/* Company selection and registration */}
-                    <Route path="/select-company" element={<ProtectedRoute><SelectCompanyPage /></ProtectedRoute>} />
-                    <Route path="/register" element={<RegisterCompanyPage />} />
-                    
-                    {/* Legacy routes (redirect to default tenant) */}
-                    <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                    <Route path="/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
-                    <Route path="/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
-                    <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
-                    <Route path="/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
-                    <Route path="/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
-                    <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
-                    <Route path="/birthdays" element={<ProtectedRoute><BirthdaysPage /></ProtectedRoute>} />
-                    <Route path="/vacations" element={<ProtectedRoute><VacationsPage /></ProtectedRoute>} />
-                    <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
-                    <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-                    <Route path="/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
-                    <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
-                    <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
-                    <Route path="/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
-                    
-                    {/* Admin-only routes */}
-                    <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
-                    <Route path="/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
-                    
-                    {/* Super admin route */}
-                    <Route path="/admin" element={<ProtectedRoute><SuperAdminPage /></ProtectedRoute>} />
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/invite" element={<InvitePage />} />
+                      <Route path="/reset-password" element={<ResetPasswordPage />} />
+                      <Route path="/awaiting-invitation" element={<AwaitingInvitationPage />} />
+                      
+                      <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                      <Route path="/terms" element={<TermsOfUsePage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/support" element={<SupportPage />} />
+                      <Route path="/contacts-info" element={<ContactsInfoPage />} />
+                      
+                      <Route path="/select-company" element={<ProtectedRoute><SelectCompanyPage /></ProtectedRoute>} />
+                      <Route path="/register" element={<RegisterCompanyPage />} />
+                      
+                      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                      <Route path="/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
+                      <Route path="/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
+                      <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+                      <Route path="/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
+                      <Route path="/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
+                      <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
+                      <Route path="/birthdays" element={<ProtectedRoute><BirthdaysPage /></ProtectedRoute>} />
+                      <Route path="/vacations" element={<ProtectedRoute><VacationsPage /></ProtectedRoute>} />
+                      <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+                      <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                      <Route path="/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
+                      <Route path="/siri-integration" element={<ProtectedRoute><SiriIntegrationPage /></ProtectedRoute>} />
+                      <Route path="/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
+                      <Route path="/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
+                      
+                      <Route path="/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
+                      <Route path="/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
+                      
+                      <Route path="/admin" element={<ProtectedRoute><SuperAdminPage /></ProtectedRoute>} />
 
-
-                    {/* Tenant-scoped routes */}
-                    <Route path="/:tenantSlug/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
-                    <Route path="/:tenantSlug/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
-                    
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                      <Route path="/:tenantSlug/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/finances" element={<ProtectedRoute><FinancesPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/finances/report/:id" element={<ProtectedRoute><FinancialReportPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/calendar" element={<ProtectedRoute><CalendarPageWrapper /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/transaction" element={<ProtectedRoute><TransactionPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/warehouse" element={<ProtectedRoute><WarehousePage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/tasks" element={<ProtectedRoute><CRMTasksPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/transactions-review" element={<ProtectedRoute><TransactionsReviewPage /></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/administration" element={<ProtectedRoute><AdminRoute><AdministrationPage /></AdminRoute></ProtectedRoute>} />
+                      <Route path="/:tenantSlug/invitations" element={<ProtectedRoute><AdminRoute><InvitationsPage /></AdminRoute></ProtectedRoute>} />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
                 </TooltipProvider>
               </ImportProgressProvider>
             </FinancesActionsProvider>
           </TenantProvider>
         </AuthProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 };
 
