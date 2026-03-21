@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, ArrowUpDown, Search, X, MapPin, Clock, Users, Trash2, Filter, Check, ChevronsUpDown, User, Target } from "lucide-react";
+import { formatDisplayName } from "@/utils/formatName";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
