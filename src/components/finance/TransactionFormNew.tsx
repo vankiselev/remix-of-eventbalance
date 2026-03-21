@@ -695,7 +695,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         
         // Check if this is a rejected money transfer being re-sent
         const wasRejectedTransfer = editTransaction.transfer_status === 'rejected' && 
-                                   isMoneyTransfer && 
+                                   isTransferCategorySelected && 
                                    recipientId;
 
         console.log('🔍 Edit transaction check:', {
