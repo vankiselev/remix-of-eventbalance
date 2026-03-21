@@ -8,6 +8,10 @@ import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export const AdvancesSummaryCard = () => {
   const { isAdmin } = useUserRbacRoles();
