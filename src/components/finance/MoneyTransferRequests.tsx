@@ -131,7 +131,7 @@ export const MoneyTransferRequests = () => {
         }
 
         // Also try by id for any missing
-        const missingSenderIds = senderIds.filter(id => !profileMap.has(id));
+        const missingSenderIds = senderIds.filter((id: string) => !profileMap.has(id));
         if (missingSenderIds.length > 0) {
           const { data: profilesById } = await supabase
             .from('profiles')
