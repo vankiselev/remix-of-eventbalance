@@ -137,15 +137,43 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       const { data: currentUser } = await supabase.auth.getUser();
       if (!currentUser.user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
+      // Try selecting user_id (self-hosted DB has separate user_id = auth.uid())
+      // Fall back to id if user_id column doesn't exist
+      let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
+      
+      const { data, error } = await (supabase
+        .from('profiles') as any)
+        .select('id, user_id, full_name, email')
         .eq('employment_status', 'active')
-        .neq('id', currentUser.user.id)
         .order('full_name');
 
-      if (error) throw error;
-      setEmployees(data || []);
+      if (error) {
+        // Fallback: try without user_id column
+        console.warn('Failed to load with user_id, falling back:', error.message);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .neq('id', currentUser.user.id)
+          .order('full_name');
+        
+        if (fallbackError) throw fallbackError;
+        employeeList = (fallbackData || []) as any;
+      } else {
+        // Use user_id as the employee identifier (matches auth.uid())
+        // Filter out current user by both id and user_id
+        employeeList = (data || [])
+          .filter((p: any) => {
+            const uid = p.user_id || p.id;
+            return uid !== currentUser.user!.id && p.id !== currentUser.user!.id;
+          })
+          .map((p: any) => ({
+            id: p.user_id || p.id, // Prefer user_id (auth.uid()) over profile id
+            full_name: p.full_name,
+            email: p.email,
+          }));
+      }
+      
+      setEmployees(employeeList);
     } catch (error) {
       console.error('Error loading employees:', error);
     }
