@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Banknote } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { Skeleton } from "@/components/ui/skeleton";
