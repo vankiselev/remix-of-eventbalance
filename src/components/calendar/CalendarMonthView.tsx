@@ -1,10 +1,12 @@
-import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface Event {
   id: string;
   name: string;
   start_date: string;
   project_owner: string | null;
+  event_time: string | null;
 }
 
 interface CalendarMonthViewProps {
@@ -13,18 +15,26 @@ interface CalendarMonthViewProps {
   events: Event[];
   onEventClick: (event: Event) => void;
   onDateSelect: (date: Date) => void;
+  selectedDate?: Date;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: CalendarMonthViewProps) => {
+export const getOwnerColor = (owner: string | null) => {
+  if (!owner) return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
+  const o = owner.toLowerCase();
+  if (o.includes("настя")) return { bg: "bg-violet-50 dark:bg-violet-950/30", dot: "bg-violet-500", border: "border-violet-400", text: "text-violet-700 dark:text-violet-300" };
+  if (o.includes("лера")) return { bg: "bg-orange-50 dark:bg-orange-950/30", dot: "bg-orange-500", border: "border-orange-400", text: "text-orange-700 dark:text-orange-300" };
+  if (o.includes("ваня") || o.includes("иван")) return { bg: "bg-yellow-50 dark:bg-yellow-950/30", dot: "bg-yellow-500", border: "border-yellow-400", text: "text-yellow-700 dark:text-yellow-300" };
+  return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
+};
+
+const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate }: CalendarMonthViewProps) => {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
   
-  // Get the day of week (0 = Sunday, 1 = Monday, etc.)
   let startingDayOfWeek = firstDay.getDay();
-  // Convert Sunday (0) to 7 for our purposes (Monday = 1)
   if (startingDayOfWeek === 0) startingDayOfWeek = 7;
   
   const getEventsForDate = (day: number) => {
@@ -32,60 +42,72 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
     return events.filter(event => event.start_date === dateStr);
   };
 
-  const getOwnerColor = (owner: string | null) => {
-    if (!owner) return "bg-gray-500";
-    if (owner.toLowerCase().includes("настя")) return "bg-pink-500";
-    if (owner.toLowerCase().includes("лера")) return "bg-purple-500";
-    if (owner.toLowerCase().includes("ваня")) return "bg-blue-500";
-    return "bg-gray-500";
+  const isSelected = (day: number) => {
+    if (!selectedDate) return false;
+    return selectedDate.getDate() === day && selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
+  };
+
+  const isToday = (day: number) => {
+    const now = new Date();
+    return now.getDate() === day && now.getMonth() === month && now.getFullYear() === year;
   };
 
   const renderCalendarDays = () => {
     const days = [];
     
-    // Empty cells before the first day
     for (let i = 1; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="min-h-12 sm:min-h-20 md:min-h-24 p-1 sm:p-2 border border-border bg-muted/20" />);
+      days.push(
+        <div key={`empty-${i}`} className="min-h-[72px] md:min-h-[88px] p-1.5 border-b border-r border-border/50" />
+      );
     }
     
-    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dayEvents = getEventsForDate(day);
-      const isToday = new Date().getDate() === day && 
-                      new Date().getMonth() === month && 
-                      new Date().getFullYear() === year;
+      const selected = isSelected(day);
+      const today = isToday(day);
+      const hasEvents = dayEvents.length > 0;
       
       days.push(
         <div
           key={day}
-          className={`min-h-12 sm:min-h-20 md:min-h-24 p-1 sm:p-2 border border-border hover:bg-accent/50 cursor-pointer transition-colors ${
-            isToday ? 'bg-accent' : 'bg-background'
-          }`}
+          className={`min-h-[72px] md:min-h-[88px] p-1.5 border-b border-r border-border/50 cursor-pointer transition-all duration-150 group
+            ${selected ? 'bg-primary/5 ring-2 ring-primary/30 ring-inset' : 'hover:bg-accent/30'}
+          `}
           onClick={() => onDateSelect(new Date(year, month, day))}
         >
-          <div className={`text-[10px] sm:text-xs md:text-sm font-medium mb-0.5 sm:mb-1 ${isToday ? 'text-primary' : ''}`}>
-            {day}
+          <div className="flex items-center justify-between mb-1">
+            <span className={`text-xs md:text-sm font-medium inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors
+              ${today ? 'bg-primary text-primary-foreground' : ''}
+              ${selected && !today ? 'text-primary font-bold' : ''}
+            `}>
+              {day}
+            </span>
+            {hasEvents && (
+              <span className="text-[10px] text-muted-foreground font-medium">
+                {dayEvents.length}
+              </span>
+            )}
           </div>
-          <div className="space-y-0.5 sm:space-y-1 overflow-y-auto max-h-8 sm:max-h-16 md:max-h-20">
-            {dayEvents.slice(0, 3).map((event, idx) => (
-              <div
-                key={event.id}
-                className="text-[8px] sm:text-[10px] md:text-xs p-0.5 sm:p-1 rounded cursor-pointer hover:opacity-80 transition-opacity truncate bg-primary/10 text-primary border-l-2 border-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEventClick(event);
-                }}
-                title={event.name}
-              >
-                <div className="flex items-center gap-0.5 sm:gap-1">
-                  <div className={`w-1 h-1 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
-                  <span className="truncate">{event.name}</span>
+          <div className="space-y-0.5 overflow-hidden max-h-[48px] md:max-h-[56px]">
+            {dayEvents.slice(0, 3).map((event) => {
+              const colors = getOwnerColor(event.project_owner);
+              return (
+                <div
+                  key={event.id}
+                  className={`text-[9px] md:text-[11px] leading-tight px-1.5 py-0.5 rounded-sm truncate cursor-pointer transition-opacity hover:opacity-80 border-l-2 ${colors.bg} ${colors.border} ${colors.text}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick(event);
+                  }}
+                  title={event.name}
+                >
+                  {event.name}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {dayEvents.length > 3 && (
-              <div className="text-[8px] sm:text-[10px] text-muted-foreground text-center">
-                +{dayEvents.length - 3}
+              <div className="text-[9px] text-muted-foreground pl-1.5">
+                ещё {dayEvents.length - 3}
               </div>
             )}
           </div>
@@ -97,36 +119,36 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect }: 
   };
 
   return (
-    <div className="w-full overflow-x-auto -mx-2 sm:mx-0">
-      <div className="min-w-[280px] sm:min-w-[600px] px-2 sm:px-0">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-0 mb-1 sm:mb-2">
-          {WEEKDAYS.map((day) => (
-            <div key={day} className="text-center font-semibold text-[10px] sm:text-sm p-1 sm:p-2 bg-muted">
-              {day}
-            </div>
-          ))}
-        </div>
-        
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-0">
-          {renderCalendarDays()}
-        </div>
+    <div className="w-full">
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 border-b border-border">
+        {WEEKDAYS.map((day, i) => (
+          <div key={day} className={`text-center text-xs font-semibold py-2.5 uppercase tracking-wider text-muted-foreground
+            ${i < 5 ? '' : 'text-muted-foreground/60'}
+          `}>
+            {day}
+          </div>
+        ))}
+      </div>
+      
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 border-l border-t border-border/50">
+        {renderCalendarDays()}
+      </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-2 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-pink-500" />
-            <span className="text-xs sm:text-sm">Настя</span>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-purple-500" />
-            <span className="text-xs sm:text-sm">Лера</span>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500" />
-            <span className="text-xs sm:text-sm">Ваня</span>
-          </div>
+      {/* Legend */}
+      <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/50">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
+          <span className="text-xs text-muted-foreground">Настя</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+          <span className="text-xs text-muted-foreground">Лера</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+          <span className="text-xs text-muted-foreground">Ваня</span>
         </div>
       </div>
     </div>

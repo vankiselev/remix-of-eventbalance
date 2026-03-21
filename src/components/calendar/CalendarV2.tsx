@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import CalendarDayView from "./CalendarDayView";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays, X } from "lucide-react";
 import CalendarWeekView from "./CalendarWeekView";
-import CalendarMonthView from "./CalendarMonthView";
+import CalendarMonthView, { getOwnerColor } from "./CalendarMonthView";
 import CalendarYearView from "./CalendarYearView";
 import EventDetailDialog from "./EventDetailDialog";
 
@@ -17,7 +16,7 @@ const MONTHS = [
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
 ];
 
-type ViewMode = "day" | "week" | "month" | "year";
+type ViewMode = "week" | "month" | "year";
 
 interface Event {
   id: string;
@@ -38,6 +37,7 @@ interface Event {
   notes: string | null;
   location: string | null;
   estimate_file_url: string | null;
+  status: string | null;
 }
 
 const CalendarV2 = () => {
@@ -51,7 +51,6 @@ const CalendarV2 = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showDayView, setShowDayView] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -141,148 +140,205 @@ const CalendarV2 = () => {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    if (viewMode === "month") {
-      setShowDayView(true);
-    }
   };
 
+  // Events for the selected date
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  const selectedDayEvents = events.filter(e => e.start_date === selectedDateStr);
+
   return (
-    <div className="w-full overflow-x-hidden space-y-6">
+    <div className="w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 w-full flex-wrap">
-        {/* Left Side Controls */}
+      <div className="flex items-center justify-between gap-2 mb-5 flex-wrap">
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={goToToday}
-            className="text-xs sm:text-sm px-3"
+            className="text-xs font-medium"
           >
             Сегодня
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
-            className="h-9 w-9 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
 
-          {viewMode !== "year" && (
-            <>
-              <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                <SelectTrigger className="w-32 text-xs sm:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((month, index) => (
-                    <SelectItem key={index} value={index.toString()}>
-                      {month}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {viewMode !== "year" && (
+              <div className="flex items-center gap-1">
+                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                  <SelectTrigger className="w-28 text-xs border-0 shadow-none font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, index) => (
+                      <SelectItem key={index} value={index.toString()}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                <SelectTrigger className="w-24 text-xs sm:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
+                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                  <SelectTrigger className="w-20 text-xs border-0 shadow-none font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
-            className="h-9 w-9 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            {viewMode === "year" && (
+              <span className="text-sm font-semibold px-2">{selectedYear}</span>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Right Side Controls */}
         <div className="flex items-center gap-2">
-          <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-            <SelectTrigger className="w-32 text-xs sm:text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">День</SelectItem>
-              <SelectItem value="week">Неделя</SelectItem>
-              <SelectItem value="month">Месяц</SelectItem>
-              <SelectItem value="year">Год</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center bg-muted rounded-lg p-0.5">
+            {(["week", "month", "year"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  viewMode === mode 
+                    ? 'bg-background shadow-sm text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {mode === "week" ? "Неделя" : mode === "month" ? "Месяц" : "Год"}
+              </button>
+            ))}
+          </div>
 
-          <Button size="sm" onClick={handleCreateEvent}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Button size="sm" onClick={handleCreateEvent} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
             Добавить
           </Button>
         </div>
       </div>
 
-      {/* Calendar Views */}
-      <Card className="w-full">
-        <CardContent className="p-2 sm:p-4 md:p-6">
+      {/* Main content: split layout for month view */}
+      {viewMode === "month" ? (
+        <div className="flex gap-0 border rounded-xl overflow-hidden bg-background shadow-sm">
+          {/* Left panel - selected day events */}
+          <div className="w-[320px] min-w-[320px] border-r bg-muted/20 flex flex-col">
+            <div className="p-4 border-b bg-background/80">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {format(selectedDate, 'd MMMM', { locale: ru })}
+                  </h3>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {format(selectedDate, 'EEEE', { locale: ru })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                  <CalendarDays className="h-3 w-3" />
+                  {selectedDayEvents.length}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {selectedDayEvents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <CalendarDays className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">Нет мероприятий</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Выберите день в календаре</p>
+                </div>
+              ) : (
+                selectedDayEvents.map((event) => {
+                  const colors = getOwnerColor(event.project_owner);
+                  return (
+                    <div
+                      key={event.id}
+                      className={`p-3 rounded-lg border-l-[3px] cursor-pointer transition-all hover:shadow-md hover:translate-x-0.5 ${colors.border} ${colors.bg}`}
+                      onClick={() => handleEventClick(event)}
+                    >
+                      <h4 className={`font-semibold text-sm leading-tight mb-1.5 ${colors.text}`}>
+                        {event.name}
+                      </h4>
+                      <div className="space-y-1">
+                        {event.event_time && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 flex-shrink-0" />
+                            <span>{event.event_time.substring(0, 5)}{event.end_time ? ` — ${event.end_time.substring(0, 5)}` : ''}</span>
+                          </div>
+                        )}
+                        {event.location && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{event.location}</span>
+                          </div>
+                        )}
+                        {event.project_owner && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <User className="h-3 w-3 flex-shrink-0" />
+                            <span>{event.project_owner}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right panel - calendar grid */}
+          <div className="flex-1 p-4">
+            {loading ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+              </div>
+            ) : (
+              <CalendarMonthView
+                month={selectedMonth}
+                year={selectedYear}
+                events={events}
+                onEventClick={handleEventClick}
+                onDateSelect={handleDateSelect}
+                selectedDate={selectedDate}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="border rounded-xl overflow-hidden bg-background shadow-sm p-4">
           {loading ? (
             <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
             </div>
           ) : (
             <>
-              {viewMode === "day" && (
-                <CalendarDayView
-                  date={selectedDate}
-                  events={events}
-                  onEventClick={handleEventClick}
-                />
-              )}
               {viewMode === "week" && (
                 <CalendarWeekView
                   date={selectedDate}
                   events={events}
                   onEventClick={handleEventClick}
                 />
-              )}
-              {viewMode === "month" && (
-                <>
-                  <CalendarMonthView
-                    month={selectedMonth}
-                    year={selectedYear}
-                    events={events}
-                    onEventClick={handleEventClick}
-                    onDateSelect={handleDateSelect}
-                  />
-                  {showDayView && (
-                    <div className="mt-6 pt-6 border-t">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">События дня</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowDayView(false)}
-                        >
-                          Закрыть
-                        </Button>
-                      </div>
-                      <CalendarDayView
-                        date={selectedDate}
-                        events={events}
-                        onEventClick={handleEventClick}
-                      />
-                    </div>
-                  )}
-                </>
               )}
               {viewMode === "year" && (
                 <CalendarYearView
@@ -296,8 +352,8 @@ const CalendarV2 = () => {
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       {/* Event Detail Dialog */}
       {(showEventDialog || showCreateDialog) && (
