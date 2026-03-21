@@ -711,13 +711,21 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             recipientId: transferToUserId,
           });
 
-          // Get sender's info
+          // Get sender's info (try user_id first for self-hosted DB)
           const { data: userData } = await supabase.auth.getUser();
-          const { data: profile } = await supabase
-            .from('profiles')
+          let profile: any = null;
+          const { data: p1 } = await (supabase.from('profiles') as any)
             .select('full_name')
-            .eq('id', userData.user?.id)
+            .eq('user_id', userData.user?.id)
             .maybeSingle();
+          profile = p1;
+          if (!profile) {
+            const { data: p2 } = await supabase.from('profiles')
+              .select('full_name')
+              .eq('id', userData.user?.id)
+              .maybeSingle();
+            profile = p2;
+          }
 
           const notifTitle = 'Вам переведены деньги';
           const notifMessage = `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`;
