@@ -1397,7 +1397,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       // Auto-fill description with declined name when employee is selected
                       const selectedEmployee = employees.find(emp => emp.id === value);
                       if (selectedEmployee && currentUserProfile) {
-                        const declinedName = declineFullNameToDative(selectedEmployee.full_name);
+                        // Convert "Фамилия Имя Отчество" → "Имя Фамилия" for natural dative
+                        const nameParts = (selectedEmployee.full_name || '').trim().split(/\s+/);
+                        const displayName = nameParts.length >= 2
+                          ? `${nameParts[1]} ${nameParts[0]}`
+                          : selectedEmployee.full_name || '';
+                        const declinedName = declineFullNameToDative(displayName);
                         const gender = detectGender(currentUserProfile.full_name);
                         const verb = gender === 'female' ? 'Передала' : 'Передал';
                         form.setValue("description", `${verb} ${declinedName}`);
