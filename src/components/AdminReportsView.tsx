@@ -314,11 +314,39 @@ const AdminReportsView = () => {
     }
   };
 
-  const openSalaryDialog = (report: ReportWithEmployee) => {
+  const resolveWalletFromProject = async (projectName: string): Promise<string> => {
+    try {
+      const { data } = await supabase
+        .from("events")
+        .select("project_owner")
+        .ilike("name", projectName)
+        .limit(1)
+        .maybeSingle();
+
+      const owner = data?.project_owner;
+      if (!owner) return "";
+
+      const ownerLower = owner.toLowerCase();
+      if (ownerLower.includes("настя")) return "Наличка Настя";
+      if (ownerLower.includes("лера")) return "Наличка Лера";
+      if (ownerLower.includes("ваня") || ownerLower.includes("иван")) return "Наличка Ваня";
+
+      const match = walletTypes.find(w => w.toLowerCase().includes(ownerLower));
+      return match || "";
+    } catch {
+      return "";
+    }
+  };
+
+  const openSalaryDialog = async (report: ReportWithEmployee) => {
     setSelectedReport(report);
+
+    const existingWallet = report.salary?.wallet_type || "";
+    const autoWallet = existingWallet || await resolveWalletFromProject(report.project_name);
+
     setSalaryForm({
       amount: report.salary?.amount?.toString() || "",
-      wallet_type: report.salary?.wallet_type || "",
+      wallet_type: autoWallet,
       salary_type: report.salary?.salary_type || "ЗП",
     });
     setSalaryDialog(true);
