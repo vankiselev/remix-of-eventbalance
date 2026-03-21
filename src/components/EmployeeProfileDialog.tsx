@@ -476,7 +476,7 @@ export const EmployeeProfileDialog = ({
         console.log('[RoleAssignment] UI should be updated now');
 
         toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
-          description: currentUser.full_name || currentUser.email,
+          description: formatDisplayName(currentUser.full_name) || currentUser.email,
         });
       }
 
