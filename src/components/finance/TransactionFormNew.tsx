@@ -137,15 +137,43 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       const { data: currentUser } = await supabase.auth.getUser();
       if (!currentUser.user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
+      // Try selecting user_id (self-hosted DB has separate user_id = auth.uid())
+      // Fall back to id if user_id column doesn't exist
+      let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
+      
+      const { data, error } = await (supabase
+        .from('profiles') as any)
+        .select('id, user_id, full_name, email')
         .eq('employment_status', 'active')
-        .neq('id', currentUser.user.id)
         .order('full_name');
 
-      if (error) throw error;
-      setEmployees(data || []);
+      if (error) {
+        // Fallback: try without user_id column
+        console.warn('Failed to load with user_id, falling back:', error.message);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .neq('id', currentUser.user.id)
+          .order('full_name');
+        
+        if (fallbackError) throw fallbackError;
+        employeeList = (fallbackData || []) as any;
+      } else {
+        // Use user_id as the employee identifier (matches auth.uid())
+        // Filter out current user by both id and user_id
+        employeeList = (data || [])
+          .filter((p: any) => {
+            const uid = p.user_id || p.id;
+            return uid !== currentUser.user!.id && p.id !== currentUser.user!.id;
+          })
+          .map((p: any) => ({
+            id: p.user_id || p.id, // Prefer user_id (auth.uid()) over profile id
+            full_name: p.full_name,
+            email: p.email,
+          }));
+      }
+      
+      setEmployees(employeeList);
     } catch (error) {
       console.error('Error loading employees:', error);
     }
@@ -156,14 +184,26 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       const { data: currentUser } = await supabase.auth.getUser();
       if (!currentUser.user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
+      // Try user_id first (self-hosted DB), fall back to id
+      let profile = null;
+      const { data: data1 } = await (supabase
+        .from('profiles') as any)
         .select('full_name')
-        .eq('id', currentUser.user.id)
-        .single();
-
-      if (error) throw error;
-      setCurrentUserProfile(data);
+        .eq('user_id', currentUser.user.id)
+        .maybeSingle();
+      
+      if (data1) {
+        profile = data1;
+      } else {
+        const { data: data2 } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', currentUser.user.id)
+          .maybeSingle();
+        profile = data2;
+      }
+      
+      setCurrentUserProfile(profile);
     } catch (error) {
       console.error('Error loading current user profile:', error);
     }
@@ -671,13 +711,21 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             recipientId: transferToUserId,
           });
 
-          // Get sender's info
+          // Get sender's info (try user_id first for self-hosted DB)
           const { data: userData } = await supabase.auth.getUser();
-          const { data: profile } = await supabase
-            .from('profiles')
+          let profile: any = null;
+          const { data: p1 } = await (supabase.from('profiles') as any)
             .select('full_name')
-            .eq('id', userData.user?.id)
+            .eq('user_id', userData.user?.id)
             .maybeSingle();
+          profile = p1;
+          if (!profile) {
+            const { data: p2 } = await supabase.from('profiles')
+              .select('full_name')
+              .eq('id', userData.user?.id)
+              .maybeSingle();
+            profile = p2;
+          }
 
           const notifTitle = 'Вам переведены деньги';
           const notifMessage = `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`;
