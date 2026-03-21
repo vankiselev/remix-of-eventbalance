@@ -163,7 +163,7 @@ export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) =>
                       className="flex items-center justify-between text-sm p-2 rounded hover:bg-accent group"
                     >
                       <span className="text-foreground">
-                        {employee.full_name}
+                        {formatDisplayName(employee.full_name)}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
