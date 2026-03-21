@@ -1071,14 +1071,16 @@ const EmployeeReportsView = ({
                   )}
                 </div>
                 
-                <div className="space-y-3 md:space-y-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0">
+                  <div className="md:pr-4">
                     <h4 className="text-sm md:text-base font-medium mb-1 md:mb-2">Работа по подготовке мероприятия:</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">{report.preparation_work}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">{report.preparation_work}</p>
                   </div>
-                  <div>
+                  <Separator orientation="vertical" className="hidden md:block mx-2 h-auto" />
+                  <Separator className="md:hidden" />
+                  <div className="md:pl-4">
                     <h4 className="text-sm md:text-base font-medium mb-1 md:mb-2">Работа на площадке:</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">{report.onsite_work}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">{report.onsite_work}</p>
                   </div>
                 </div>
 
