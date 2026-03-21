@@ -372,7 +372,7 @@ export function TransactionDetailDialog({
                   </h3>
                   {transaction.transfer_to_user && (
                     <p className="text-sm text-muted-foreground">
-                      Получатель: {transaction.transfer_to_user.full_name}
+                      Получатель: {formatDisplayName(transaction.transfer_to_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_from_user && (
