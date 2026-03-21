@@ -184,14 +184,26 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       const { data: currentUser } = await supabase.auth.getUser();
       if (!currentUser.user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
+      // Try user_id first (self-hosted DB), fall back to id
+      let profile = null;
+      const { data: data1 } = await (supabase
+        .from('profiles') as any)
         .select('full_name')
-        .eq('id', currentUser.user.id)
-        .single();
-
-      if (error) throw error;
-      setCurrentUserProfile(data);
+        .eq('user_id', currentUser.user.id)
+        .maybeSingle();
+      
+      if (data1) {
+        profile = data1;
+      } else {
+        const { data: data2 } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', currentUser.user.id)
+          .maybeSingle();
+        profile = data2;
+      }
+      
+      setCurrentUserProfile(profile);
     } catch (error) {
       console.error('Error loading current user profile:', error);
     }
