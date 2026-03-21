@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin } from "lucide-react";
 import { formatDate } from "@/utils/dateFormat";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/contexts/TenantContext";
 
