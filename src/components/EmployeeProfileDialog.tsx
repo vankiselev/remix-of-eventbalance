@@ -24,6 +24,7 @@ import { Upload, ChevronDown, History, UserX, Trash2, UserCheck, X, ImageIcon, C
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { AvatarCropper } from "@/components/ui/avatar-cropper";
+import { formatDisplayName } from "@/utils/formatName";
 import {
   AlertDialog,
   AlertDialogAction,
