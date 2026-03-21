@@ -488,11 +488,11 @@ const Staff = () => {
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage src={user.avatar_url} />
                                   <AvatarFallback>
-                                    {user.full_name.split(' ').map(n => n[0]).join('')}
+                                    {formatDisplayName(user.full_name).split(' ').map(n => n[0]).join('')}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <div className="font-medium">{user.full_name}</div>
+                                  <div className="font-medium">{formatDisplayName(user.full_name)}</div>
                                   <div className="text-sm text-muted-foreground">{user.email}</div>
                                 </div>
                               </div>
