@@ -8,6 +8,7 @@ import { useProfiles } from "@/hooks/useProfiles";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MessageSquare, Send, Image as ImageIcon } from "lucide-react";
+import { formatDisplayName } from "@/utils/formatName";
 import { useDropzone } from "react-dropzone";
 
 interface TaskCommentsProps {
