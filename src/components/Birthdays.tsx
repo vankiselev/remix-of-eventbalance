@@ -5,6 +5,7 @@ import { Calendar, Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, isTomorrow, isThisMonth, parseISO, formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 
