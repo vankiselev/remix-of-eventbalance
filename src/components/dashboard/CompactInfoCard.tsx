@@ -116,7 +116,7 @@ export const CompactInfoCard = () => {
                   {employee.avatar_url ? (
                     <img 
                       src={employee.avatar_url} 
-                      alt={employee.full_name}
+                      alt={formatDisplayName(employee.full_name)}
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
