@@ -216,7 +216,7 @@ export const MoneyTransferRequests = () => {
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarImage src={transfer.transfer_from_user?.avatar_url} />
                       <AvatarFallback>
-                        {transfer.transfer_from_user?.full_name
+                        {formatDisplayName(transfer.transfer_from_user?.full_name)
                           ?.split(' ')
                           .map(n => n[0])
                           .join('')
