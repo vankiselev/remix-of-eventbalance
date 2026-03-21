@@ -191,7 +191,7 @@ export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) =>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Удалить аванс?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Аванс у {employee.full_name} ({formatCurrency(employee.advance_balance)}) будет обнулён.
+                                Аванс у {formatDisplayName(employee.full_name)} ({formatCurrency(employee.advance_balance)}) будет обнулён.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
