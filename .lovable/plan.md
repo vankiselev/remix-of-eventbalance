@@ -1,26 +1,58 @@
 
 
-## Проблема
+## Диагностика проблемы с загрузкой чеков
 
-Миграция `20260321_add_car_columns_to_event_reports.sql` **не была применена** к базе данных. Таблица `event_reports` по-прежнему содержит только 13 колонок без `car_kilometers` и `without_car`. Код при INSERT пытается записать в несуществующие колонки → ошибка.
+### Корневая причина
 
-Вероятная причина: формат имени файла миграции (`20260321_add_car_...`) отличается от рабочего формата (`20250929124426_e41107ba-...` с UUID). Система могла не подхватить файл.
+Проблема не в размере файла (1.78 МБ в пределах лимита). Изучив код и конфигурацию:
 
-## Решение
+1. **Все запросы идут к self-hosted Supabase** (`superbag.eventbalance.ru`), а не к Lovable Cloud
+2. Бакет `receipts` создан через миграцию как **приватный** (`public = false`)
+3. В Safari ошибка "Load failed" — это известная проблема с CORS на storage-эндпоинтах Supabase (GitHub issue #20982). Safari строже проверяет preflight-запросы к storage API
+4. Текущий код пытается загрузить файл в storage bucket, и при любой ошибке сети — полностью блокирует сохранение транзакции
+5. Таблица `financial_transactions` уже имеет колонку `receipt_images` (ARRAY), которая не используется
 
-1. **Удалить старый файл миграции** `migrations/20260321_add_car_columns_to_event_reports.sql`
+### Решение — хранение чеков как сжатых base64 в БД
 
-2. **Создать новую миграцию с правильным форматом имени** (timestamp + UUID):
-   ```sql
-   ALTER TABLE public.event_reports 
-     ADD COLUMN IF NOT EXISTS car_kilometers numeric,
-     ADD COLUMN IF NOT EXISTS without_car boolean DEFAULT false;
-   ```
+Полностью обойти storage bucket и хранить чеки прямо в колонке `receipt_images` на `financial_transactions`. Это устраняет зависимость от CORS, bucket-политик и storage RLS.
 
-3. **Добавить защиту в код** (`Reports.tsx`): на случай если миграция ещё не применена, исключить `car_kilometers` и `without_car` из insert/update объектов, если значения пустые, и обернуть вставку в try/catch с повторной попыткой без этих полей.
+### Шаги реализации
 
-Затрагиваемые файлы:
-- `migrations/20260321_add_car_columns_to_event_reports.sql` → удалить
-- `migrations/20260321100000_<uuid>.sql` → создать
-- `src/components/Reports.tsx` → добавить fallback при ошибке вставки
+**Шаг 1. Утилита сжатия изображений** (`src/utils/imageCompressor.ts`)
+- Функция `compressImage(file, maxWidth=1200, quality=0.7)` → возвращает base64 data URL
+- Для изображений: resize через Canvas + JPEG-сжатие (~100-300 КБ вместо 1-3 МБ)
+- Для не-изображений (PDF): конвертация в base64 напрямую (до 5 МБ)
+- Если файл слишком большой после конвертации — выдать понятную ошибку
+
+**Шаг 2. Переписать `uploadFiles` в `TransactionFormNew.tsx`**
+- Убрать storage upload, retry-логику и fallback-таблицы
+- Вместо этого: сжать каждый файл → собрать массив base64 data URLs → UPDATE транзакцию, записав в `receipt_images`
+- Если UPDATE не удался — выбросить ошибку (транзакция не сохраняется, как выбрано)
+
+**Шаг 3. Обновить `AttachmentsView.tsx`**
+- Читать `receipt_images` из данных транзакции (передаётся как проп)
+- Для обратной совместимости: также проверять `financial_attachments` (для старых записей)
+- Рендерить base64-изображения напрямую через `<img src={dataUrl} />`
+
+**Шаг 4. Обновить `TransactionDetailDialog` / карточки**
+- Передавать `receipt_images` в `AttachmentsView`
+
+### Технические детали
+
+```text
+Текущий flow:
+  File → Storage Upload (CORS FAIL) → DB Insert → ERROR
+
+Новый flow:  
+  File → Canvas Compress → base64 → UPDATE receipt_images[] → OK
+```
+
+- Колонка `receipt_images` (TEXT[]) уже существует в `financial_transactions`
+- Каждый элемент массива = `data:image/jpeg;base64,...` (сжатый)
+- Средний размер после сжатия: 100-300 КБ на файл
+- До 5 файлов = max ~1.5 МБ в базе — допустимо для PostgreSQL
+
+### Обратная совместимость
+- Старые записи с `financial_attachments` продолжат работать
+- Новые записи будут использовать `receipt_images` — без зависимости от storage
 
