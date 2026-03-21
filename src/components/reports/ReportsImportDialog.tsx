@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface ReportsImportDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ interface ExcelWorkbookData {
 
 export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: ReportsImportDialogProps) => {
   const { toast } = useToast();
+  const { currentTenant } = useTenant();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [file, setFile] = useState<File | null>(null);
   const [workbookData, setWorkbookData] = useState<ExcelWorkbookData | null>(null);
