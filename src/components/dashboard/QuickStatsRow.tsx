@@ -4,6 +4,7 @@ import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useCompanyCashSummary } from "@/hooks/useCompanyCashSummary";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
+import { formatDisplayName } from "@/utils/formatName";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
