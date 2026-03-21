@@ -75,25 +75,75 @@ export const MoneyTransferRequests = () => {
     try {
       setLoading(true);
       
+      // Collect all possible IDs for the current user
+      // On self-hosted DB, profiles.id may differ from auth.uid()
+      const userIds: string[] = [user!.id];
+      
+      // Check if profile has a different user_id mapping
+      try {
+        const { data: profileData } = await (supabase.from('profiles') as any)
+          .select('id, user_id')
+          .or(`user_id.eq.${user!.id},id.eq.${user!.id}`)
+          .limit(2);
+        
+        if (profileData) {
+          for (const p of profileData) {
+            if (p.id && !userIds.includes(p.id)) userIds.push(p.id);
+            if (p.user_id && !userIds.includes(p.user_id)) userIds.push(p.user_id);
+          }
+        }
+      } catch (e) {
+        // user_id column might not exist, ignore
+      }
+
+      console.log('🔍 Fetching pending transfers for user IDs:', userIds);
+
       const { data, error } = await supabase
         .from('financial_transactions')
         .select('*')
-        .eq('transfer_to_user_id', user?.id)
+        .in('transfer_to_user_id', userIds)
         .eq('transfer_status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch sender profiles
+      console.log('📋 Found pending transfers:', data?.length || 0);
+
+      // Fetch sender profiles (try both id and user_id columns)
       const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
       
       if (senderIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email, avatar_url')
-          .in('id', senderIds);
+        // Try to find profiles by user_id first (self-hosted), then by id
+        let profileMap = new Map<string, any>();
+        
+        try {
+          const { data: profilesByUserId } = await (supabase.from('profiles') as any)
+            .select('id, user_id, full_name, email, avatar_url')
+            .in('user_id', senderIds);
+          
+          if (profilesByUserId) {
+            for (const p of profilesByUserId) {
+              profileMap.set(p.user_id, p);
+            }
+          }
+        } catch (e) {
+          // user_id column might not exist
+        }
 
-        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+        // Also try by id for any missing
+        const missingSenderIds = senderIds.filter(id => !profileMap.has(id));
+        if (missingSenderIds.length > 0) {
+          const { data: profilesById } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url')
+            .in('id', missingSenderIds);
+          
+          if (profilesById) {
+            for (const p of profilesById) {
+              if (!profileMap.has(p.id)) profileMap.set(p.id, p);
+            }
+          }
+        }
 
         const enrichedData = (data || []).map(t => ({
           id: t.id,
