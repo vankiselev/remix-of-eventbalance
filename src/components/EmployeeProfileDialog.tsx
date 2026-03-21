@@ -748,7 +748,7 @@ export const EmployeeProfileDialog = ({
               </button>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
+              <h3 className="text-lg font-semibold">{formatDisplayName(currentUser.full_name)}</h3>
               <p className="text-sm text-muted-foreground">{currentUser.email}</p>
               <div className="mt-2">
                 <RoleBadges roles={rbacRoles} />
