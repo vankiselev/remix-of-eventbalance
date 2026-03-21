@@ -639,11 +639,32 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       // Handle project_id - if it's a static project (string), store it in static_project_name, otherwise it's an event ID
       const projectId = data.project_id;
       const isStaticProject = projectId && STATIC_PROJECTS.includes(projectId);
+
+      // Resolve recipient auth uid BEFORE building transaction data
+      let resolvedTransferToUserId: string | null = null;
+      if (isMoneyTransfer && transferToUserId) {
+        try {
+          const { data: resolvedId, error: resolveError } = await (supabase.rpc as any)('resolve_transfer_recipient', {
+            p_selected_id: transferToUserId,
+            p_tenant_id: currentTenant.id,
+          });
+          if (!resolveError && resolvedId) {
+            resolvedTransferToUserId = resolvedId;
+            console.log('🔄 Resolved recipient:', transferToUserId, '->', resolvedTransferToUserId);
+          } else {
+            console.warn('⚠️ resolve_transfer_recipient returned null/error, using original ID:', resolveError?.message);
+            resolvedTransferToUserId = transferToUserId;
+          }
+        } catch (resolveErr) {
+          console.warn('⚠️ resolve_transfer_recipient RPC unavailable, using original ID');
+          resolvedTransferToUserId = transferToUserId;
+        }
+      }
       
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
-        project_id: isStaticProject ? null : (projectId || null), // Only store UUID for events, null for static projects
-        static_project_name: isStaticProject ? projectId : null, // Store static project name
+        project_id: isStaticProject ? null : (projectId || null),
+        static_project_name: isStaticProject ? projectId : null,
         project_owner: data.whose_project,
         description: data.description,
         expense_amount: data.expense_amount || 0,
@@ -656,8 +677,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         tenant_id: currentTenant.id,
         verification_status: 'pending',
         requires_verification: true,
-        // Money transfer fields
-        transfer_to_user_id: isMoneyTransfer ? transferToUserId : null,
+        // Money transfer fields — always use resolved auth uid
+        transfer_to_user_id: resolvedTransferToUserId,
         transfer_status: isMoneyTransfer ? 'pending' : null,
       };
 
