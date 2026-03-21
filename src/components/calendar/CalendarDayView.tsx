@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { getOwnerColor } from "./CalendarMonthView";
+import { Clock, MapPin, User } from "lucide-react";
 
 interface Event {
   id: string;
@@ -16,18 +18,6 @@ interface CalendarDayViewProps {
   events: Event[];
   onEventClick: (event: Event) => void;
 }
-
-const CalendarDayView = ({ date, events, onEventClick }: CalendarDayViewProps) => {
-  const dateStr = format(date, 'yyyy-MM-dd');
-  const dayEvents = events.filter(event => event.start_date === dateStr);
-
-  const getOwnerColor = (owner: string | null) => {
-    if (!owner) return "bg-gray-500";
-    if (owner.toLowerCase().includes("настя")) return "bg-pink-500";
-    if (owner.toLowerCase().includes("лера")) return "bg-purple-500";
-    if (owner.toLowerCase().includes("ваня")) return "bg-blue-500";
-    return "bg-gray-500";
-  };
 
   return (
     <div className="w-full space-y-3 sm:space-y-4">
