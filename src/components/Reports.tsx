@@ -300,18 +300,30 @@ const Reports = () => {
     
     setSubmitting(true);
     try {
-      const { error } = await supabase
+      const updatePayload: Record<string, unknown> = {
+        project_name: data.project_name,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        preparation_work: data.preparation_work,
+        onsite_work: data.onsite_work,
+        car_kilometers: data.car_kilometers || null,
+        without_car: data.without_car || false,
+      };
+
+      let { error } = await supabase
         .from("event_reports")
-        .update({
-          project_name: data.project_name,
-          start_time: data.start_time,
-          end_time: data.end_time,
-          preparation_work: data.preparation_work,
-          onsite_work: data.onsite_work,
-          car_kilometers: data.car_kilometers || null,
-          without_car: data.without_car || false,
-        })
+        .update(updatePayload as any)
         .eq("id", editingReport.id);
+
+      // Fallback: if columns don't exist yet, retry without car fields
+      if (error && (error.message?.includes('car_kilometers') || error.message?.includes('without_car') || error.code === '42703')) {
+        const { car_kilometers, without_car, ...fallbackPayload } = updatePayload;
+        const result = await supabase
+          .from("event_reports")
+          .update(fallbackPayload as any)
+          .eq("id", editingReport.id);
+        error = result.error;
+      }
 
       if (error) throw error;
 
