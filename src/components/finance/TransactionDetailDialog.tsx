@@ -233,11 +233,11 @@ export function TransactionDetailDialog({
         body: {
           user_id: transaction.transfer_to_user_id,
           title: 'Вам переведены деньги',
-          message: `${profile?.full_name || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
+          message: `${formatDisplayName(profile?.full_name) || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
           type: 'money_transfer',
           data: {
             transaction_id: transaction.id,
-            from_user_name: profile?.full_name || 'Сотрудник',
+            from_user_name: formatDisplayName(profile?.full_name) || 'Сотрудник',
             amount: transaction.expense_amount,
             cash_type: transaction.cash_type,
             description: transaction.description,
