@@ -196,10 +196,10 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={task.assigned_user.avatar_url || undefined} />
                       <AvatarFallback className="text-[8px]">
-                        {task.assigned_user.full_name?.slice(0, 2).toUpperCase()}
+                        {formatDisplayName(task.assigned_user.full_name)?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{task.assigned_user.full_name}</span>
+                    <span>{formatDisplayName(task.assigned_user.full_name)}</span>
                   </div>
                 </div>
               )}
