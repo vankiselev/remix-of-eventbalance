@@ -22,6 +22,7 @@ import { RoleBadges } from "@/components/roles/RoleBadge";
 import { formatFullName, getInitials } from "@/utils/formatName";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { TopNavigation } from "@/components/navigation/TopNavigation";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 
 interface LayoutProps {
   children: React.ReactNode;
