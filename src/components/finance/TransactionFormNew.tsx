@@ -172,6 +172,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           }));
       }
       
+      console.log('👥 Loaded transfer recipients:', employeeList.map((e) => ({ id: e.id, email: e.email })));
       setEmployees(employeeList);
     } catch (error) {
       console.error('Error loading employees:', error);
