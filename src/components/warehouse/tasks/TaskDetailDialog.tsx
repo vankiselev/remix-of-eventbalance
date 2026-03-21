@@ -8,6 +8,7 @@ import { TaskItemsList } from "./TaskItemsList";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 import { Calendar, User, Package, CheckCircle, XCircle, PlayCircle } from "lucide-react";
 
 interface TaskDetailDialogProps {
