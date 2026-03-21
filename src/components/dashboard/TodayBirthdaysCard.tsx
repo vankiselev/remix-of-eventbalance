@@ -85,7 +85,7 @@ const TodayBirthdaysCard = () => {
         {employee.avatar_url ? (
           <img
             src={employee.avatar_url}
-            alt={employee.full_name}
+            alt={formatDisplayName(employee.full_name)}
             className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
