@@ -12,129 +12,235 @@ on:
 jobs:
   deploy-functions:
     runs-on: self-hosted
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      WORKFLOW_NAME: Deploy Edge Functions to Self-Hosted Supabase
+      RUN_TITLE: ${{ github.event.head_commit.message || github.workflow }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Notify Telegram about start
+        run: |
+          chmod +x .github/scripts/send-telegram.sh
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          cat > "$RUNNER_TEMP/telegram_start.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: created
+          Stage: queued/running
+
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+          EOF
+          .github/scripts/send-telegram.sh send "$RUNNER_TEMP/telegram_start.txt" > "$RUNNER_TEMP/telegram_message_id.txt"
       
       - name: Find Edge Runtime container + functions path
         id: find-target
+        continue-on-error: true
         run: |
-          echo "🔍 Looking for Edge Runtime container and functions directory..."
+          set -o pipefail
+          {
+            echo "🔍 Looking for Edge Runtime container and functions directory..."
 
-          # Candidate containers (self-hosted Supabase names vary)
-          CANDIDATES=$(docker ps --format '{{.Names}}' | grep -E 'supabase|edge|runtime|functions' || true)
+            CANDIDATES=$(docker ps --format '{{.Names}}' | grep -E 'supabase|edge|runtime|functions' || true)
 
-          if [ -z "$CANDIDATES" ]; then
-            echo "❌ No candidate containers found"
-            docker ps --format '{{.Names}}'
-            exit 1
-          fi
+            if [ -z "$CANDIDATES" ]; then
+              echo "❌ No candidate containers found"
+              docker ps --format '{{.Names}}'
+              exit 1
+            fi
 
-          # Known functions mount points
-          PATHS="/home/deno/functions /app/functions /var/lib/supabase/functions"
+            PATHS="/home/deno/functions /app/functions /var/lib/supabase/functions"
 
-          for c in $CANDIDATES; do
-            for p in $PATHS; do
-              if docker exec "$c" sh -lc "test -d '$p'" >/dev/null 2>&1; then
-                echo "✅ Using container: $c"
-                echo "✅ Functions path: $p"
-                echo "container=$c" >> $GITHUB_OUTPUT
-                echo "functions_path=$p" >> $GITHUB_OUTPUT
-                exit 0
-              fi
+            for c in $CANDIDATES; do
+              for p in $PATHS; do
+                if docker exec "$c" sh -lc "test -d '$p'" >/dev/null 2>&1; then
+                  echo "✅ Using container: $c"
+                  echo "✅ Functions path: $p"
+                  echo "container=$c" >> "$GITHUB_OUTPUT"
+                  echo "functions_path=$p" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+              done
             done
-          done
 
-          echo "❌ Could not find an Edge Runtime container with a functions directory."
-          echo "Candidates were:"
-          echo "$CANDIDATES" | sed 's/^/  - /'
-          exit 1
+            echo "❌ Could not find an Edge Runtime container with a functions directory."
+            echo "Candidates were:"
+            echo "$CANDIDATES" | sed 's/^/  - /'
+            exit 1
+          } 2>&1 | tee "$RUNNER_TEMP/find_target.log"
       
       - name: List functions to deploy
+        id: list_functions
+        if: steps.find-target.outcome == 'success'
+        continue-on-error: true
         run: |
-          echo "📋 Functions to deploy:"
-          ls -la supabase/functions/ | grep "^d" | awk '{print "  - " $NF}' | grep -v "^\s*-\s*\.$"
-          
-          FUNC_COUNT=$(ls -d supabase/functions/*/ 2>/dev/null | wc -l)
-          echo ""
-          echo "📊 Total: $FUNC_COUNT function(s)"
+          set -o pipefail
+          {
+            echo "📋 Functions to deploy:"
+            ls -la supabase/functions/ | grep "^d" | awk '{print "  - " $NF}' | grep -v "^\s*-\s*\.$"
+            
+            FUNC_COUNT=$(ls -d supabase/functions/*/ 2>/dev/null | wc -l)
+            echo ""
+            echo "📊 Total: $FUNC_COUNT function(s)"
+          } 2>&1 | tee "$RUNNER_TEMP/list_functions.log"
       
       - name: Deploy functions to container
+        id: deploy_functions
+        if: steps.find-target.outcome == 'success'
+        continue-on-error: true
         run: |
-          CONTAINER="${{ steps.find-target.outputs.container }}"
-          TARGET="${{ steps.find-target.outputs.functions_path }}"
-          
-          echo "🚀 Deploying functions to $CONTAINER -> $TARGET ..."
-          
-          # Ensure target exists
-          docker exec "$CONTAINER" sh -lc "mkdir -p '$TARGET'"
-
-          # Copy all functions to the container (folders + deno.json)
-          docker cp supabase/functions/. "$CONTAINER:$TARGET/"
-          
-          if [ $? -eq 0 ]; then
-            echo "✅ Functions copied successfully"
-          else
-            echo "❌ Failed to copy functions"
-            exit 1
-          fi
+          set -o pipefail
+          {
+            CONTAINER="${{ steps.find-target.outputs.container }}"
+            TARGET="${{ steps.find-target.outputs.functions_path }}"
+            
+            echo "🚀 Deploying functions to $CONTAINER -> $TARGET ..."
+            docker exec "$CONTAINER" sh -lc "mkdir -p '$TARGET'"
+            docker cp supabase/functions/. "$CONTAINER:$TARGET/"
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Functions copied successfully"
+            else
+              echo "❌ Failed to copy functions"
+              exit 1
+            fi
+          } 2>&1 | tee "$RUNNER_TEMP/deploy_functions.log"
       
       - name: Restart Edge Runtime
+        id: restart_runtime
+        if: steps.deploy_functions.outcome == 'success'
+        continue-on-error: true
         run: |
-          CONTAINER="${{ steps.find-target.outputs.container }}"
-          
-          echo "🔄 Restarting $CONTAINER to apply changes..."
-          docker restart $CONTAINER
-          
-          # Wait for container to be healthy
-          echo "⏳ Waiting for container to be ready..."
-          sleep 5
-          
-          if docker ps | grep -q $CONTAINER; then
-            echo "✅ Container restarted successfully"
-          else
-            echo "❌ Container failed to restart"
-            docker logs $CONTAINER --tail 20
-            exit 1
-          fi
+          set -o pipefail
+          {
+            CONTAINER="${{ steps.find-target.outputs.container }}"
+            
+            echo "🔄 Restarting $CONTAINER to apply changes..."
+            docker restart "$CONTAINER"
+            echo "⏳ Waiting for container to be ready..."
+            sleep 5
+            
+            if docker ps | grep -q "$CONTAINER"; then
+              echo "✅ Container restarted successfully"
+            else
+              echo "❌ Container failed to restart"
+              docker logs "$CONTAINER" --tail 20
+              exit 1
+            fi
+          } 2>&1 | tee "$RUNNER_TEMP/restart_runtime.log"
       
       - name: Verify deployment
+        id: verify_deployment
+        if: steps.restart_runtime.outcome == 'success'
+        continue-on-error: true
         run: |
-          CONTAINER="${{ steps.find-target.outputs.container }}"
-          TARGET="${{ steps.find-target.outputs.functions_path }}"
-          
-          echo "🔍 Verifying deployed functions..."
+          set -o pipefail
+          {
+            CONTAINER="${{ steps.find-target.outputs.container }}"
+            TARGET="${{ steps.find-target.outputs.functions_path }}"
+            
+            echo "🔍 Verifying deployed functions..."
+            docker exec "$CONTAINER" sh -lc "ls -la '$TARGET'" 2>/dev/null || echo "⚠️ Could not list functions directory in container"
 
-          # Basic listing
-          docker exec "$CONTAINER" sh -lc "ls -la '$TARGET'" 2>/dev/null || echo "⚠️ Could not list functions directory in container"
+            REQUIRED_FUNCS="check-transaction-description suggest-transaction-fields voice-transaction"
+            MISSING=0
+            for fn in $REQUIRED_FUNCS; do
+              if ! docker exec "$CONTAINER" sh -lc "test -f '$TARGET/$fn/index.ts'" >/dev/null 2>&1; then
+                echo "❌ Missing entrypoint: $TARGET/$fn/index.ts"
+                MISSING=1
+              else
+                echo "✅ Entrypoint OK: $fn/index.ts"
+              fi
+            done
 
-          # Ensure required entrypoints exist (prevents 'could not find an appropriate entrypoint')
-          REQUIRED_FUNCS="check-transaction-description suggest-transaction-fields voice-transaction"
-          MISSING=0
-          for fn in $REQUIRED_FUNCS; do
-            if ! docker exec "$CONTAINER" sh -lc "test -f '$TARGET/$fn/index.ts'" >/dev/null 2>&1; then
-              echo "❌ Missing entrypoint: $TARGET/$fn/index.ts"
-              MISSING=1
-            else
-              echo "✅ Entrypoint OK: $fn/index.ts"
+            if [ "$MISSING" -ne 0 ]; then
+              echo ""
+              echo "🔎 Debug tree (index files):"
+              docker exec "$CONTAINER" sh -lc "find '$TARGET' -maxdepth 2 -type f -name 'index.*' -print" || true
+              exit 1
             fi
-          done
-
-          # Note: GOOGLE_AI_API_KEY should be configured in docker-compose.yml for AI functions to work
-
-          if [ "$MISSING" -ne 0 ]; then
+            
             echo ""
-            echo "🔎 Debug tree (index files):"
-            docker exec "$CONTAINER" sh -lc "find '$TARGET' -maxdepth 2 -type f -name 'index.*' -print" || true
+            echo "🎉 Edge Functions deployment complete!"
+          } 2>&1 | tee "$RUNNER_TEMP/verify_deployment.log"
+      
+      - name: Notify Telegram and finish
+        if: always()
+        run: |
+          chmod +x .github/scripts/send-telegram.sh
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          STATUS="success"
+          STAGE="completed"
+          ERROR_DETAILS=""
+
+          if [ "${{ steps.find-target.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="find edge runtime container"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/find_target.log" 2>/dev/null || echo "Target discovery failed before logs were captured.")"
+          elif [ "${{ steps.list_functions.outcome }}" = "failure" ]; then
+            STATUS="failure"
+            STAGE="list functions to deploy"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/list_functions.log" 2>/dev/null || echo "Function listing failed before logs were captured.")"
+          elif [ "${{ steps.deploy_functions.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="copy functions into container"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/deploy_functions.log" 2>/dev/null || echo "Function copy failed before logs were captured.")"
+          elif [ "${{ steps.restart_runtime.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="restart edge runtime"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/restart_runtime.log" 2>/dev/null || echo "Runtime restart failed before logs were captured.")"
+          elif [ "${{ steps.verify_deployment.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="verify deployment"
+            ERROR_DETAILS="$(tail -n 40 "$RUNNER_TEMP/verify_deployment.log" 2>/dev/null || echo "Deployment verification failed before logs were captured.")"
+          fi
+
+          if [ "$STATUS" = "success" ]; then
+            cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: success
+          Stage: ${STAGE}
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+          EOF
+          else
+            cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: failure
+          Stage: ${STAGE}
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+
+          Error details:
+          ${ERROR_DETAILS}
+          EOF
+          fi
+
+          .github/scripts/send-telegram.sh edit "$RUNNER_TEMP/telegram_finish.txt" "$RUNNER_TEMP/telegram_message_id.txt"
+
+          if [ "$STATUS" != "success" ]; then
             exit 1
           fi
-          
-          echo ""
-          echo "🎉 Edge Functions deployment complete!"
-      
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "❌ Edge Functions deployment failed!"
-          echo "Check the logs above for details."

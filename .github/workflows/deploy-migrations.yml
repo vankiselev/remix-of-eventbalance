@@ -12,125 +12,205 @@ on:
 jobs:
   deploy-migrations:
     runs-on: self-hosted
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      WORKFLOW_NAME: Deploy to Self-Hosted Supabase
+      RUN_TITLE: ${{ github.event.head_commit.message || github.workflow }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Notify Telegram about start
+        run: |
+          chmod +x .github/scripts/send-telegram.sh
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          cat > "$RUNNER_TEMP/telegram_start.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: created
+          Stage: queued/running
+
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+          EOF
+          .github/scripts/send-telegram.sh send "$RUNNER_TEMP/telegram_start.txt" > "$RUNNER_TEMP/telegram_message_id.txt"
       
       - name: Verify Supabase database connection
+        id: verify_db
+        continue-on-error: true
         run: |
-          echo "🔍 Checking database connection..."
-          
-          if ! docker ps | grep -q supabase-db; then
-            echo "❌ Supabase database container not running"
-            exit 1
-          fi
-          
-          if docker exec supabase-db psql -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
-            echo "✅ Database connection successful"
-          else
-            echo "❌ Cannot connect to database"
-            exit 1
-          fi
-          
-          # Create migrations tracking table if it doesn't exist
-          echo "📋 Setting up migration tracking..."
-          docker exec supabase-db psql -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS public.schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), success BOOLEAN NOT NULL DEFAULT true);"
-          echo "✅ Migration tracking ready"
+          set -o pipefail
+          {
+            echo "🔍 Checking database connection..."
+            
+            if ! docker ps | grep -q supabase-db; then
+              echo "❌ Supabase database container not running"
+              exit 1
+            fi
+            
+            if docker exec supabase-db psql -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
+              echo "✅ Database connection successful"
+            else
+              echo "❌ Cannot connect to database"
+              exit 1
+            fi
+            
+            echo "📋 Setting up migration tracking..."
+            docker exec supabase-db psql -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS public.schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), success BOOLEAN NOT NULL DEFAULT true);"
+            echo "✅ Migration tracking ready"
+          } 2>&1 | tee "$RUNNER_TEMP/verify_db.log"
       
       - name: Apply migrations
+        id: apply_migrations
+        if: steps.verify_db.outcome == 'success'
+        continue-on-error: true
         run: |
-          echo "🚀 Starting migration deployment..."
+          set -o pipefail
+          {
+            echo "🚀 Starting migration deployment..."
 
-          if [ ! -d "migrations" ]; then
-            echo "❌ No migrations directory found"
-            exit 1
-          fi
-
-          migration_count=$(ls -1 migrations/*.sql 2>/dev/null | wc -l)
-          echo "📊 Found $migration_count migration(s)"
-
-          if [ $migration_count -eq 0 ]; then
-            echo "⚠️  No migrations to apply"
-            exit 0
-          fi
-
-          success_count=0
-          fail_count=0
-          skip_count=0
-
-          for migration in migrations/*.sql; do
-            migration_name=$(basename "$migration")
-
-            # Check if migration was already applied
-            already_applied=$(docker exec supabase-db psql -U postgres -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM public.schema_migrations WHERE filename = '$migration_name' AND success = true);")
-            
-            if echo "$already_applied" | grep -q "t"; then
-              echo "⏭️  Skipping: $migration_name (already applied)"
-              skip_count=$((skip_count + 1))
-              continue
+            if [ ! -d "migrations" ]; then
+              echo "❌ No migrations directory found"
+              exit 1
             fi
+
+            migration_count=$(ls -1 migrations/*.sql 2>/dev/null | wc -l)
+            echo "📊 Found $migration_count migration(s)"
+
+            if [ "$migration_count" -eq 0 ]; then
+              echo "⚠️  No migrations to apply"
+              exit 0
+            fi
+
+            success_count=0
+            fail_count=0
+            skip_count=0
+
+            for migration in migrations/*.sql; do
+              migration_name=$(basename "$migration")
+
+              already_applied=$(docker exec supabase-db psql -U postgres -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM public.schema_migrations WHERE filename = '$migration_name' AND success = true);")
+              
+              if echo "$already_applied" | grep -q "t"; then
+                echo "⏭️  Skipping: $migration_name (already applied)"
+                skip_count=$((skip_count + 1))
+                continue
+              fi
+
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "📝 Applying: $migration_name"
+              echo "Preview:"
+              head -n 3 "$migration" | sed 's/^/  /'
+              echo "  ..."
+              echo ""
+
+              if docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration" > "$RUNNER_TEMP/psql_output.txt" 2>&1; then
+                echo "✅ Success: $migration_name"
+
+                if [ -s "$RUNNER_TEMP/psql_output.txt" ]; then
+                  grep -v "^$" "$RUNNER_TEMP/psql_output.txt" | sed 's/^/   /' || true
+                fi
+                
+                docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', true) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = true;" > /dev/null
+                
+                success_count=$((success_count + 1))
+              else
+                echo "❌ Failed: $migration_name"
+                echo "   Error output:"
+                sed 's/^/   /' "$RUNNER_TEMP/psql_output.txt"
+                echo ""
+                echo "Migration file content (first 20 lines):"
+                head -n 20 "$migration" | sed 's/^/   /'
+                echo "   ..."
+
+                docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', false) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = false;" > /dev/null
+
+                fail_count=$((fail_count + 1))
+              fi
+
+              echo ""
+            done
 
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "📝 Applying: $migration_name"
+            echo "📊 Summary:"
+            echo "   ✅ Successful: $success_count"
+            echo "   ❌ Failed: $fail_count"
+            echo "   ⏭️  Skipped: $skip_count"
+            echo "   📝 Total: $migration_count"
 
-            # Show first 3 lines of migration for context
-            echo "Preview:"
-            head -n 3 "$migration" | sed 's/^/  /'
-            echo "  ..."
-            echo ""
-
-            # Execute migration directly via psql in Docker container
-            if docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration" > "$RUNNER_TEMP/psql_output.txt" 2>&1; then
-              echo "✅ Success: $migration_name"
-
-              # Show any notices or output
-              if [ -s "$RUNNER_TEMP/psql_output.txt" ]; then
-                cat "$RUNNER_TEMP/psql_output.txt" | grep -v "^$" | sed 's/^/   /'
-              fi
-              
-              # Record successful migration
-              docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', true) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = true;" > /dev/null
-              
-              success_count=$((success_count + 1))
-            else
-              echo "❌ Failed: $migration_name"
-              echo "   Error output:"
-              cat "$RUNNER_TEMP/psql_output.txt" | sed 's/^/   /'
+            if [ "$fail_count" -gt 0 ]; then
               echo ""
-              echo "Migration file content (first 20 lines):"
-              head -n 20 "$migration" | sed 's/^/   /'
-              echo "   ..."
-
-              # Record failed migration
-              docker exec supabase-db psql -U postgres -d postgres -c "INSERT INTO public.schema_migrations (filename, success) VALUES ('$migration_name', false) ON CONFLICT (filename) DO UPDATE SET applied_at = now(), success = false;" > /dev/null
-
-              fail_count=$((fail_count + 1))
-
-              # Continue to see all failures
-              # exit 1
+              echo "❌ Some migrations failed!"
+              exit 1
             fi
 
             echo ""
-          done
+            echo "🎉 All migrations applied successfully!"
+          } 2>&1 | tee "$RUNNER_TEMP/apply_migrations.log"
+      
+      - name: Notify Telegram and finish
+        if: always()
+        run: |
+          chmod +x .github/scripts/send-telegram.sh
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          STATUS="success"
+          STAGE="completed"
+          ERROR_DETAILS=""
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📊 Summary:"
-          echo "   ✅ Successful: $success_count"
-          echo "   ❌ Failed: $fail_count"
-          echo "   ⏭️  Skipped: $skip_count"
-          echo "   📝 Total: $migration_count"
-
-          if [ $fail_count -gt 0 ]; then
-            echo ""
-            echo "❌ Some migrations failed!"
-            exit 1
+          if [ "${{ steps.verify_db.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="verify database connection"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/verify_db.log" 2>/dev/null || echo "Database verification failed before logs were captured.")"
+          elif [ "${{ steps.apply_migrations.outcome }}" != "success" ]; then
+            STATUS="failure"
+            STAGE="apply migrations"
+            ERROR_DETAILS="$(tail -n 40 "$RUNNER_TEMP/apply_migrations.log" 2>/dev/null || echo "Migration apply step failed before logs were captured.")"
           fi
 
-          echo ""
-          echo "🎉 All migrations applied successfully!"
-      
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "❌ Migration deployment failed!"
+          if [ "$STATUS" = "success" ]; then
+            cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: success
+          Stage: ${STAGE}
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+          EOF
+          else
+            cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
+          GitHub Actions update
+
+          Task: ${TASK_TITLE}
+          Status: failure
+          Stage: ${STAGE}
+          Workflow: ${WORKFLOW_NAME}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Actor: ${{ github.actor }}
+          Commit: ${{ github.sha }}
+          Run: ${RUN_URL}
+
+          Error details:
+          ${ERROR_DETAILS}
+          EOF
+          fi
+
+          .github/scripts/send-telegram.sh edit "$RUNNER_TEMP/telegram_finish.txt" "$RUNNER_TEMP/telegram_message_id.txt"
+
+          if [ "$STATUS" != "success" ]; then
+            exit 1
+          fi
