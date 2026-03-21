@@ -33,26 +33,35 @@ export function FilePreviewModal({
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
+  const isDataUrl = (val?: string) => !!val && val.startsWith('data:');
+  const isHttpUrl = (val?: string) => !!val && (val.startsWith('http://') || val.startsWith('https://'));
+
   React.useEffect(() => {
     if (file && isOpen) {
       loadFileUrl();
     }
     return () => {
-      if (fileUrl) {
+      if (fileUrl && !isDataUrl(fileUrl) && !isHttpUrl(fileUrl)) {
         URL.revokeObjectURL(fileUrl);
-        setFileUrl(null);
       }
+      setFileUrl(null);
     };
   }, [file, isOpen]);
 
   const loadFileUrl = async () => {
     if (!file) return;
     
+    // If storage_path is already a data URL or HTTP URL, use directly
+    if (isDataUrl(file.storage_path) || isHttpUrl(file.storage_path)) {
+      setFileUrl(file.storage_path);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.storage
         .from('receipts')
-        .createSignedUrl(file.storage_path, 3600); // 1 hour
+        .createSignedUrl(file.storage_path, 3600);
 
       if (error) throw error;
       setFileUrl(data.signedUrl);
@@ -69,18 +78,31 @@ export function FilePreviewModal({
   };
 
   const handleDownload = async () => {
-    if (!file || !fileUrl) return;
+    if (!file) return;
 
     try {
-      const response = await fetch(fileUrl);
+      const url = fileUrl || file.storage_path;
+      if (!url) return;
+
+      if (isDataUrl(url)) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.original_filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      const response = await fetch(url);
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = file.original_filename;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading file:', error);
