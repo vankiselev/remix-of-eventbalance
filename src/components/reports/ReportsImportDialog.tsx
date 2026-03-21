@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface ReportsImportDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ interface ExcelWorkbookData {
 
 export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: ReportsImportDialogProps) => {
   const { toast } = useToast();
+  const { currentTenant } = useTenant();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [file, setFile] = useState<File | null>(null);
   const [workbookData, setWorkbookData] = useState<ExcelWorkbookData | null>(null);
@@ -300,6 +302,38 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
 
     const userId = userData.user.id;
 
+    let tenantId = currentTenant?.id || null;
+    if (!tenantId) {
+      const { data: membership, error: membershipError } = await supabase
+        .from('tenant_memberships')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (membershipError) {
+        toast({
+          title: 'Ошибка',
+          description: membershipError.message,
+          variant: 'destructive',
+        });
+        setImporting(false);
+        return;
+      }
+
+      tenantId = membership?.tenant_id || null;
+    }
+
+    if (!tenantId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не выбрана компания: tenant_id не найден',
+        variant: 'destructive',
+      });
+      setImporting(false);
+      return;
+    }
+
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i];
       
@@ -323,6 +357,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
           .from('event_reports')
           .insert({
             user_id: userId,
+            tenant_id: tenantId,
             project_name: projectName,
             preparation_work: preparationWork || '',
             onsite_work: onsiteWork || '',
