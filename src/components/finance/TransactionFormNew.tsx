@@ -803,30 +803,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
           }]);
 
         // If this is a money transfer, send notification to recipient
-        if (isMoneyTransfer && transferToUserId) {
-          // Resolve to canonical auth uid via RPC
-          let resolvedRecipientId = transferToUserId;
-          try {
-            const { data: resolvedId, error: resolveError } = await (supabase.rpc as any)('resolve_transfer_recipient', {
-              p_selected_id: transferToUserId,
-              p_tenant_id: currentTenant.id,
-            });
-            if (!resolveError && resolvedId) {
-              resolvedRecipientId = resolvedId;
-              // Update the transaction with the resolved ID if different
-              if (resolvedRecipientId !== transferToUserId) {
-                console.log('🔄 Resolved recipient ID:', transferToUserId, '->', resolvedRecipientId);
-                await supabase
-                  .from('financial_transactions')
-                  .update({ transfer_to_user_id: resolvedRecipientId })
-                  .eq('id', transaction.id);
-              }
-            } else {
-              console.warn('⚠️ resolve_transfer_recipient RPC failed or returned null, using original ID:', resolveError?.message);
-            }
-          } catch (resolveErr) {
-            console.warn('⚠️ resolve_transfer_recipient RPC unavailable, using original ID:', resolveErr);
-          }
+        if (isMoneyTransfer && resolvedTransferToUserId) {
+          const resolvedRecipientId = resolvedTransferToUserId;
 
           console.log('💸 Money transfer details:', {
             transactionId: transaction.id,
