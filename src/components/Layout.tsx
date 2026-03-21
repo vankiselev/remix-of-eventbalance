@@ -350,9 +350,9 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          <main className="flex-1 w-full overflow-auto px-4 py-6 pb-28">
+          <PullToRefresh className="flex-1 w-full px-4 py-6 pb-28">
             {children}
-          </main>
+          </PullToRefresh>
           
           <MobileNavEnhanced onOpenCommandPalette={() => {}} />
         </div>
