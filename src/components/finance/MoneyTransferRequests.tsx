@@ -201,7 +201,7 @@ export const MoneyTransferRequests = () => {
           }
         }
 
-        const enrichedData = (data || []).map(t => ({
+        const enrichedData = mergedData.map(t => ({
           id: t.id,
           operation_date: t.operation_date,
           description: t.description,
