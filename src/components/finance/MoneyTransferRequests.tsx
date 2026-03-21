@@ -213,7 +213,7 @@ export const MoneyTransferRequests = () => {
 
         setPendingTransfers(enrichedData);
       } else {
-        setPendingTransfers((data || []).map(t => ({
+        setPendingTransfers(mergedData.map(t => ({
           id: t.id,
           operation_date: t.operation_date,
           description: t.description,
