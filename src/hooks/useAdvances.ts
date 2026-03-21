@@ -25,7 +25,6 @@ export const useAllAdvances = () => {
         .from('profiles')
         .select('id, full_name, advance_balance')
         .gt('advance_balance', 0)
-        .eq('employment_status', 'active')
         .order('advance_balance', { ascending: false });
       
       if (error) throw error;
@@ -34,7 +33,7 @@ export const useAllAdvances = () => {
       return { employees: data || [], total } as AdvancesData;
     },
     enabled: isAdmin,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 };
@@ -42,7 +41,6 @@ export const useAllAdvances = () => {
 // Hook for employee to get their own advance
 export const useMyAdvance = () => {
   const { user } = useAuth();
-  const { isAdmin } = useUserRbacRoles();
   
   return useQuery({
     queryKey: ['my-advance', user?.id],
@@ -59,7 +57,7 @@ export const useMyAdvance = () => {
       
       return data?.advance_balance || 0;
     },
-    enabled: !!user?.id && !isAdmin, // Only for non-admin users
+    enabled: !!user?.id,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
