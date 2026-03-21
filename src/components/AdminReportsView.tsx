@@ -258,6 +258,19 @@ const AdminReportsView = () => {
     try {
       const amount = parseFloat(salaryForm.amount);
       const isExistingSalary = selectedReport.salary;
+
+      // Resolve tenant_id
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
+      let tenantId = currentTenant?.id;
+      if (!tenantId && userId) {
+        const { data: tm } = await supabase
+          .from("tenant_memberships")
+          .select("tenant_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        tenantId = tm?.tenant_id;
+      }
       
       // Create or update salary record
       const { error: salaryError } = await supabase
@@ -268,7 +281,7 @@ const AdminReportsView = () => {
           amount: amount,
           wallet_type: salaryForm.wallet_type,
           salary_type: salaryForm.salary_type,
-          assigned_by: (await supabase.auth.getUser()).data.user?.id,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         }, {
           onConflict: 'report_id,employee_user_id'
         });
