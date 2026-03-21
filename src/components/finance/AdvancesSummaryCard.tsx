@@ -22,6 +22,22 @@ export const AdvancesSummaryCard = () => {
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | undefined>();
   const [editingAmount, setEditingAmount] = useState<number>(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = async (employeeId: string, name: string) => {
+    try {
+      const { error } = await (supabase.from('profiles') as any)
+        .update({ advance_balance: 0 })
+        .eq('id', employeeId);
+      if (error) throw error;
+      toast({ title: "Аванс удалён", description: `Аванс у ${name} обнулён` });
+      queryClient.invalidateQueries({ queryKey: ['all-advances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-advance'] });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    }
+  };
 
   const handleAddNew = () => {
     setEditingEmployeeId(undefined);
