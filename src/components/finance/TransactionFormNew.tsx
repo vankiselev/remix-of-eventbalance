@@ -855,7 +855,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               const { error: notifError } = await supabase
                 .from('notifications')
                 .insert({
-                  user_id: transferToUserId,
+                  user_id: resolvedRecipientId,
                   title: notifTitle,
                   message: notifMessage,
                   type: 'money_transfer',
