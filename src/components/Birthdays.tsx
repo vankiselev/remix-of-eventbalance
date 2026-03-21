@@ -5,6 +5,7 @@ import { Calendar, Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, isTomorrow, isThisMonth, parseISO, formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 
@@ -110,7 +111,7 @@ const Birthdays = () => {
           {employee.avatar_url ? (
             <img 
               src={employee.avatar_url} 
-              alt={employee.full_name}
+              alt={formatDisplayName(employee.full_name)}
               className="w-12 h-12 rounded-full object-cover"
             />
           ) : (
@@ -120,7 +121,7 @@ const Birthdays = () => {
           )}
         </div>
         <div className="flex-1">
-          <h3 className="font-medium text-foreground">{employee.full_name}</h3>
+          <h3 className="font-medium text-foreground">{formatDisplayName(employee.full_name)}</h3>
           <div className="mt-1">
             <RoleBadges roles={roles} />
           </div>

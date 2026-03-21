@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { Plus, Users, User, Edit, UserPlus, Search, Shield, Save, DollarSign, Check, X } from "lucide-react";
+import { formatDisplayName } from "@/utils/formatName";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeProfileDialog } from "@/components/EmployeeProfileDialog";
 import { formatDate } from '@/utils/dateFormat';
@@ -488,11 +489,11 @@ const Staff = () => {
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage src={user.avatar_url} />
                                   <AvatarFallback>
-                                    {user.full_name.split(' ').map(n => n[0]).join('')}
+                                    {formatDisplayName(user.full_name).split(' ').map(n => n[0]).join('')}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <div className="font-medium">{user.full_name}</div>
+                                  <div className="font-medium">{formatDisplayName(user.full_name)}</div>
                                   <div className="text-sm text-muted-foreground">{user.email}</div>
                                 </div>
                               </div>
@@ -563,12 +564,12 @@ const Staff = () => {
                           <Avatar className="avatar-responsive flex-shrink-0">
                             <AvatarImage src={user.avatar_url} />
                             <AvatarFallback>
-                              {user.full_name.split(' ').map(n => n[0]).join('')}
+                              {formatDisplayName(user.full_name).split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <div className="space-y-0.5">
-                              {user.full_name.split(' ').map((namePart, index) => (
+                              {formatDisplayName(user.full_name).split(' ').map((namePart, index) => (
                                 <div key={index} className="text-sm font-medium leading-tight">
                                   <TextTruncate lines={1}>
                                     {namePart}

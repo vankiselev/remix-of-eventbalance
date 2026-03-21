@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, ArrowUpDown, Search, X, MapPin, Clock, Users, Trash2, Filter, Check, ChevronsUpDown, User, Target } from "lucide-react";
+import { formatDisplayName } from "@/utils/formatName";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
@@ -129,7 +130,7 @@ const Events = () => {
     // Если есть manager_ids (новое поле), используем его
     if (event.manager_ids && event.manager_ids.length > 0) {
       const names = event.manager_ids
-        .map(id => employees.find(emp => emp.id === id)?.full_name)
+        .map(id => formatDisplayName(employees.find(emp => emp.id === id)?.full_name))
         .filter(Boolean)
         .join(", ");
       if (names) return names;
@@ -604,7 +605,7 @@ const Events = () => {
                                           selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
                                         )}
                                       />
-                                      {employee.full_name}
+                                      {formatDisplayName(employee.full_name)}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>

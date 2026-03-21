@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, DollarSign, Clock, User, Filter, Eye, FileText, Car, MapPin } from "lucide-react";
 import { formatDate } from "@/utils/dateFormat";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/contexts/TenantContext";
 
@@ -98,7 +99,7 @@ const AdminReportsView = () => {
         const profile = profiles?.find(p => p.id === report.user_id);
         return {
           ...report,
-          employee_name: profile?.full_name || "Неизвестно",
+          employee_name: formatDisplayName(profile?.full_name) || "Неизвестно",
           employee_email: profile?.email || "",
           employee_avatar_url: profile?.avatar_url,
           salary: salaries?.find(s => s.report_id === report.id && s.employee_user_id === report.user_id),

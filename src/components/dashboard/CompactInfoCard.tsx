@@ -4,6 +4,7 @@ import { Cake, Plane, Users, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { formatDisplayName } from "@/utils/formatName";
 
 interface BirthdayEmployee {
   id: string;
@@ -115,7 +116,7 @@ export const CompactInfoCard = () => {
                   {employee.avatar_url ? (
                     <img 
                       src={employee.avatar_url} 
-                      alt={employee.full_name}
+                      alt={formatDisplayName(employee.full_name)}
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
@@ -123,7 +124,7 @@ export const CompactInfoCard = () => {
                       <Users className="w-3 h-3 text-pink-500" />
                     </div>
                   )}
-                  <span className="text-sm">{employee.full_name}</span>
+                  <span className="text-sm">{formatDisplayName(employee.full_name)}</span>
                   <span className="text-xs text-muted-foreground">
                     {calculateAge(employee.birth_date)} лет
                   </span>

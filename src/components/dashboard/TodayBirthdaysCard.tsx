@@ -4,6 +4,7 @@ import { Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseISO, isToday, isSameWeek, format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { formatDisplayName } from "@/utils/formatName";
 
 interface BirthdayEmployee {
   id: string;
@@ -84,7 +85,7 @@ const TodayBirthdaysCard = () => {
         {employee.avatar_url ? (
           <img
             src={employee.avatar_url}
-            alt={employee.full_name}
+            alt={formatDisplayName(employee.full_name)}
             className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
@@ -94,7 +95,7 @@ const TodayBirthdaysCard = () => {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-foreground text-sm truncate">{employee.full_name}</h4>
+        <h4 className="font-medium text-foreground text-sm truncate">{formatDisplayName(employee.full_name)}</h4>
         <p className="text-xs text-muted-foreground">
           {showDate ? `${formatBirthday(employee.birth_date)} · ` : ""}
           {calculateAge(employee.birth_date)} лет

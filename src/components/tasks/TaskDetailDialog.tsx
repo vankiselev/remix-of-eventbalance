@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { formatDisplayName } from "@/utils/formatName";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -195,10 +196,10 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={task.assigned_user.avatar_url || undefined} />
                       <AvatarFallback className="text-[8px]">
-                        {task.assigned_user.full_name?.slice(0, 2).toUpperCase()}
+                        {formatDisplayName(task.assigned_user.full_name)?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{task.assigned_user.full_name}</span>
+                    <span>{formatDisplayName(task.assigned_user.full_name)}</span>
                   </div>
                 </div>
               )}
@@ -223,7 +224,7 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                 <div className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Автор:</span>
-                  <span>{task.created_user.full_name}</span>
+                  <span>{formatDisplayName(task.created_user.full_name)}</span>
                 </div>
               )}
 
@@ -350,12 +351,12 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={comment.user?.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">
-                        {comment.user?.full_name?.slice(0, 2).toUpperCase()}
+                        {formatDisplayName(comment.user?.full_name)?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{comment.user?.full_name}</span>
+                        <span className="text-sm font-medium">{formatDisplayName(comment.user?.full_name)}</span>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(comment.created_at), "d MMM, HH:mm", { locale: ru })}
                         </span>

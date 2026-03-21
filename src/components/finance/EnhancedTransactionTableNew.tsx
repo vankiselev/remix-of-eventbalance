@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -370,7 +371,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
     
     // If we have full_name from profile, use it
     if (profile?.full_name && profile.full_name !== 'User') {
-      return profile.full_name;
+      return formatDisplayName(profile.full_name);
     }
     
     // Fallback to email prefix

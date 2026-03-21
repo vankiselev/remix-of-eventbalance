@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, History, Plus, RefreshCw, Send, Mic } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { AttachmentsView } from './AttachmentsView';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -132,7 +133,7 @@ export function TransactionDetailDialog({
           changed_by: log.changed_by,
           changed_at: log.changed_at,
           change_description: log.change_description,
-          user_name: (log.profiles as any)?.full_name || 'Неизвестный пользователь'
+          user_name: formatDisplayName((log.profiles as any)?.full_name) || 'Неизвестный пользователь'
         }));
 
         setAuditHistory(enrichedLogs);
@@ -233,11 +234,11 @@ export function TransactionDetailDialog({
         body: {
           user_id: transaction.transfer_to_user_id,
           title: 'Вам переведены деньги',
-          message: `${profile?.full_name || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
+          message: `${formatDisplayName(profile?.full_name) || 'Сотрудник'} передал вам ${transaction.expense_amount} ₽`,
           type: 'money_transfer',
           data: {
             transaction_id: transaction.id,
-            from_user_name: profile?.full_name || 'Сотрудник',
+            from_user_name: formatDisplayName(profile?.full_name) || 'Сотрудник',
             amount: transaction.expense_amount,
             cash_type: transaction.cash_type,
             description: transaction.description,
@@ -372,12 +373,12 @@ export function TransactionDetailDialog({
                   </h3>
                   {transaction.transfer_to_user && (
                     <p className="text-sm text-muted-foreground">
-                      Получатель: {transaction.transfer_to_user.full_name}
+                      Получатель: {formatDisplayName(transaction.transfer_to_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_from_user && (
                     <p className="text-sm text-muted-foreground">
-                      Отправитель: {transaction.transfer_from_user.full_name}
+                      Отправитель: {formatDisplayName(transaction.transfer_from_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_status === 'rejected' && transaction.transfer_rejection_reason && (

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { formatDisplayName } from "@/utils/formatName";
 import { TaskWithDetails, Task, TaskType, getStatusLabel, isWarehouseTask } from "@/hooks/useTasks";
 
 interface TaskCardProps {
@@ -132,10 +133,10 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
                   <Avatar className="h-4 w-4">
                     <AvatarImage src={task.assigned_user.avatar_url || undefined} />
                     <AvatarFallback className="text-[8px]">
-                      {task.assigned_user.full_name?.slice(0, 2).toUpperCase()}
+                      {formatDisplayName(task.assigned_user.full_name)?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate max-w-[80px]">{task.assigned_user.full_name}</span>
+                  <span className="truncate max-w-[80px]">{formatDisplayName(task.assigned_user.full_name)}</span>
                 </div>
               )}
             </div>

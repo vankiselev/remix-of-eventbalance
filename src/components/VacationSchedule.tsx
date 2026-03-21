@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/utils/formatName";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
 import { format } from "date-fns";
@@ -97,7 +98,7 @@ const VacationSchedule = () => {
     try {
       const vacationData = {
         user_id: user.id,
-        employee_name: userProfile.full_name,
+        employee_name: formatDisplayName(userProfile.full_name),
         start_date: formData.start_date.toISOString().split('T')[0],
         end_date: formData.end_date.toISOString().split('T')[0],
         vacation_type: formData.vacation_type,
@@ -122,7 +123,7 @@ const VacationSchedule = () => {
 
       await sendNotificationToAdmins(
         'Новая заявка на отпуск',
-        `${userProfile.full_name} подал заявку: ${vacationType} с ${formData.start_date.toLocaleDateString('ru-RU')} по ${formData.end_date.toLocaleDateString('ru-RU')}`,
+        `${formatDisplayName(userProfile.full_name)} подал заявку: ${vacationType} с ${formData.start_date.toLocaleDateString('ru-RU')} по ${formData.end_date.toLocaleDateString('ru-RU')}`,
         'vacation',
         { 
           vacation_type: formData.vacation_type,

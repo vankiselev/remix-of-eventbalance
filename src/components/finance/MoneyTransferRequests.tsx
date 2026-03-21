@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
@@ -215,7 +216,7 @@ export const MoneyTransferRequests = () => {
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarImage src={transfer.transfer_from_user?.avatar_url} />
                       <AvatarFallback>
-                        {transfer.transfer_from_user?.full_name
+                        {formatDisplayName(transfer.transfer_from_user?.full_name)
                           ?.split(' ')
                           .map(n => n[0])
                           .join('')
@@ -224,7 +225,7 @@ export const MoneyTransferRequests = () => {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {transfer.transfer_from_user?.full_name || transfer.transfer_from_user?.email || 'Сотрудник'}
+                        {formatDisplayName(transfer.transfer_from_user?.full_name) || transfer.transfer_from_user?.email || 'Сотрудник'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(transfer.operation_date), 'd MMMM', { locale: ru })}

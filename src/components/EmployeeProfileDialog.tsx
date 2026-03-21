@@ -24,6 +24,7 @@ import { Upload, ChevronDown, History, UserX, Trash2, UserCheck, X, ImageIcon, C
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { AvatarCropper } from "@/components/ui/avatar-cropper";
+import { formatDisplayName } from "@/utils/formatName";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -475,7 +476,7 @@ export const EmployeeProfileDialog = ({
         console.log('[RoleAssignment] UI should be updated now');
 
         toast.success(`Роль изменена: ${oldRole} → ${newRole}`, {
-          description: currentUser.full_name || currentUser.email,
+          description: formatDisplayName(currentUser.full_name) || currentUser.email,
         });
       }
 
@@ -734,7 +735,7 @@ export const EmployeeProfileDialog = ({
                 <Avatar className="w-20 h-20">
                   <AvatarImage src={currentUser.avatar_url} />
                   <AvatarFallback>
-                    {currentUser.full_name.split(' ').map(n => n[0]).join('')}
+                    {formatDisplayName(currentUser.full_name).split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 {/* Overlay on hover */}
@@ -747,7 +748,7 @@ export const EmployeeProfileDialog = ({
               </button>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">{currentUser.full_name}</h3>
+              <h3 className="text-lg font-semibold">{formatDisplayName(currentUser.full_name)}</h3>
               <p className="text-sm text-muted-foreground">{currentUser.email}</p>
               <div className="mt-2">
                 <RoleBadges roles={rbacRoles} />
@@ -1044,7 +1045,7 @@ export const EmployeeProfileDialog = ({
                           </p>
                         </div>
                         <div className="text-xs text-muted-foreground text-right ml-4">
-                          <p>{entry.edited_by.full_name}</p>
+                          <p>{formatDisplayName(entry.edited_by.full_name)}</p>
                           <p>{formatDate(entry.created_at)}</p>
                         </div>
                       </div>

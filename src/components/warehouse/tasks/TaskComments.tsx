@@ -8,6 +8,7 @@ import { useProfiles } from "@/hooks/useProfiles";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MessageSquare, Send, Image as ImageIcon } from "lucide-react";
+import { formatDisplayName } from "@/utils/formatName";
 import { useDropzone } from "react-dropzone";
 
 interface TaskCommentsProps {
@@ -53,7 +54,7 @@ export const TaskComments = ({ task }: TaskCommentsProps) => {
 
   const getProfileName = (userId: string) => {
     const profile = profiles.find(p => p.id === userId);
-    return profile?.full_name || 'Пользователь';
+    return formatDisplayName(profile?.full_name) || 'Пользователь';
   };
 
   const getProfileAvatar = (userId: string) => {

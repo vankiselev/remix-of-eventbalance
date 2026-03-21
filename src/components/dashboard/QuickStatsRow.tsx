@@ -4,6 +4,7 @@ import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useCompanyCashSummary } from "@/hooks/useCompanyCashSummary";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
+import { formatDisplayName } from "@/utils/formatName";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -89,7 +90,7 @@ export const QuickStatsRow = () => {
             <div className="mt-3 text-xs text-muted-foreground">
               {allAdvances.employees.slice(0, 2).map((e, i) => (
                 <span key={e.id} className="inline-block mr-2">
-                  {e.full_name.split(' ')[0]}: {formatCurrency(e.advance_balance)}
+                  {formatDisplayName(e.full_name).split(' ')[0]}: {formatCurrency(e.advance_balance)}
                 </span>
               ))}
               {allAdvances.employees.length > 2 && (

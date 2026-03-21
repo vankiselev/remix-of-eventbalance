@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Banknote, Plus, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
@@ -162,7 +163,7 @@ export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) =>
                       className="flex items-center justify-between text-sm p-2 rounded hover:bg-accent group"
                     >
                       <span className="text-foreground">
-                        {employee.full_name}
+                        {formatDisplayName(employee.full_name)}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
@@ -190,12 +191,12 @@ export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) =>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Удалить аванс?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Аванс у {employee.full_name} ({formatCurrency(employee.advance_balance)}) будет обнулён.
+                                Аванс у {formatDisplayName(employee.full_name)} ({formatCurrency(employee.advance_balance)}) будет обнулён.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Отмена</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(employee.id, employee.full_name)}>
+                              <AlertDialogAction onClick={() => handleDelete(employee.id, formatDisplayName(employee.full_name))}>
                                 Удалить
                               </AlertDialogAction>
                             </AlertDialogFooter>

@@ -1,3 +1,14 @@
+// Convert raw "Фамилия Имя Отчество" string to "Имя Фамилия"
+export const formatDisplayName = (fullName?: string | null): string => {
+  if (!fullName) return 'Пользователь';
+  const parts = fullName.split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    // "Фамилия Имя [Отчество]" → "Имя Фамилия"
+    return `${parts[1]} ${parts[0]}`;
+  }
+  return fullName;
+};
+
 // Helper function to format display name (First Name + Last Name) for UI
 export const formatFullName = (profile: {
   last_name?: string | null;
@@ -12,17 +23,8 @@ export const formatFullName = (profile: {
       .join(' ') || 'Пользователь';
   }
   
-  // Fallback to full_name (take first two words if it has middle name)
-  if (profile.full_name) {
-    const parts = profile.full_name.split(' ').filter(Boolean);
-    if (parts.length >= 2) {
-      // Assume format "Фамилия Имя Отчество" → return "Имя Фамилия"
-      return `${parts[1]} ${parts[0]}`;
-    }
-    return profile.full_name;
-  }
-  
-  return 'Пользователь';
+  // Fallback to full_name via formatDisplayName
+  return formatDisplayName(profile.full_name);
 };
 
 // Helper function to format full official name (Last Name + First Name + Middle Name) for profile

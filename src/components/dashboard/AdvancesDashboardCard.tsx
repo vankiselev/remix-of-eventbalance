@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Banknote } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,7 +57,7 @@ export const AdvancesDashboardCard = () => {
                   className="flex items-center justify-between text-sm"
                 >
                   <span className="text-orange-700 dark:text-orange-300 truncate mr-2">
-                    {employee.full_name}
+                    {formatDisplayName(employee.full_name)}
                   </span>
                   <span className="font-medium text-orange-900 dark:text-orange-100 whitespace-nowrap">
                     {formatCurrency(employee.advance_balance)}
