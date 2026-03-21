@@ -124,7 +124,7 @@ export const CompactInfoCard = () => {
                       <Users className="w-3 h-3 text-pink-500" />
                     </div>
                   )}
-                  <span className="text-sm">{employee.full_name}</span>
+                  <span className="text-sm">{formatDisplayName(employee.full_name)}</span>
                   <span className="text-xs text-muted-foreground">
                     {calculateAge(employee.birth_date)} лет
                   </span>

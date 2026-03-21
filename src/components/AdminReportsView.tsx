@@ -99,7 +99,7 @@ const AdminReportsView = () => {
         const profile = profiles?.find(p => p.id === report.user_id);
         return {
           ...report,
-          employee_name: profile?.full_name || "Неизвестно",
+          employee_name: formatDisplayName(profile?.full_name) || "Неизвестно",
           employee_email: profile?.email || "",
           employee_avatar_url: profile?.avatar_url,
           salary: salaries?.find(s => s.report_id === report.id && s.employee_user_id === report.user_id),

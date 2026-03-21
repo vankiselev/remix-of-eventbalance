@@ -351,12 +351,12 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={comment.user?.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">
-                        {comment.user?.full_name?.slice(0, 2).toUpperCase()}
+                        {formatDisplayName(comment.user?.full_name)?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{comment.user?.full_name}</span>
+                        <span className="text-sm font-medium">{formatDisplayName(comment.user?.full_name)}</span>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(comment.created_at), "d MMM, HH:mm", { locale: ru })}
                         </span>

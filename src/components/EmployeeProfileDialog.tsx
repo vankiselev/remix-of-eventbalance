@@ -1045,7 +1045,7 @@ export const EmployeeProfileDialog = ({
                           </p>
                         </div>
                         <div className="text-xs text-muted-foreground text-right ml-4">
-                          <p>{entry.edited_by.full_name}</p>
+                          <p>{formatDisplayName(entry.edited_by.full_name)}</p>
                           <p>{formatDate(entry.created_at)}</p>
                         </div>
                       </div>
