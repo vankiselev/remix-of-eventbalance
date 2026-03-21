@@ -21,14 +21,6 @@ else
   MESSAGE="$INPUT"
 fi
 
-escape_html() {
-  local value="${1:-}"
-  value="${value//&/&amp;}"
-  value="${value//</&lt;}"
-  value="${value//>/&gt;}"
-  printf '%s' "$value"
-}
-
 # Telegram sendMessage limit is 4096 chars. Keep some room for safety.
 MAX_LEN=3900
 if [ "${#MESSAGE}" -gt "$MAX_LEN" ]; then
@@ -38,7 +30,6 @@ if [ "${#MESSAGE}" -gt "$MAX_LEN" ]; then
 fi
 
 if [ "$MODE" = "send" ]; then
-  MESSAGE="$(escape_html "$MESSAGE")"
   RESPONSE="$(curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
     --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
     --data-urlencode "text=${MESSAGE}" \
@@ -67,7 +58,6 @@ if [ "$MODE" = "edit" ]; then
     exit 1
   fi
 
-  MESSAGE="$(escape_html "$MESSAGE")"
   curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText" \
     --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
     --data-urlencode "message_id=${MESSAGE_ID}" \
