@@ -667,26 +667,50 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
             .eq('id', userData.user?.id)
             .maybeSingle();
 
-          // Send notification directly
+          const notifTitle = 'Вам переведены деньги';
+          const notifMessage = `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`;
+          const notifData = {
+            transaction_id: transaction.id,
+            from_user_name: profile?.full_name || 'Сотрудник',
+            amount: data.expense_amount,
+            cash_type: data.whose_project,
+            description: data.description,
+          };
+
+          // Always insert notification directly into DB to guarantee delivery
+          try {
+            const { error: notifError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: transferToUserId,
+                title: notifTitle,
+                message: notifMessage,
+                type: 'money_transfer',
+                data: notifData,
+              });
+            if (notifError) {
+              console.error('❌ Failed to insert notification:', notifError);
+            } else {
+              console.log('✅ Money transfer notification inserted into DB');
+            }
+          } catch (dbNotifErr) {
+            console.error('❌ DB notification insert failed:', dbNotifErr);
+          }
+
+          // Also try edge function for push notifications (best-effort)
           try {
             await supabase.functions.invoke('send-push-notification', {
               body: {
                 user_id: transferToUserId,
-                title: 'Вам переведены деньги',
-                message: `${profile?.full_name || 'Сотрудник'} передал вам ${data.expense_amount} ₽`,
+                title: notifTitle,
+                message: notifMessage,
                 type: 'money_transfer',
-                data: {
-                  transaction_id: transaction.id,
-                  from_user_name: profile?.full_name || 'Сотрудник',
-                  amount: data.expense_amount,
-                  cash_type: data.whose_project,
-                  description: data.description,
-                },
+                data: notifData,
               },
             });
-            console.log('✅ Money transfer notification sent successfully');
+            console.log('✅ Push notification sent via edge function');
           } catch (notifyErr) {
-            console.error('❌ Failed to send transfer notification:', notifyErr);
+            console.error('⚠️ Edge function push failed (notification already saved to DB):', notifyErr);
           }
         }
 
