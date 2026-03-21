@@ -4,6 +4,7 @@ import { Cake, Plane, Users, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { formatDisplayName } from "@/utils/formatName";
 
 interface BirthdayEmployee {
   id: string;
