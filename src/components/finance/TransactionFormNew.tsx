@@ -138,13 +138,12 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       if (!currentUser.user) return;
 
       // Try selecting user_id (self-hosted DB has separate user_id = auth.uid())
-      // Fall back to id if user_id column doesn't exist
+      // IMPORTANT: no employment_status filter here, because some self-hosted schemas don't have this column
       let employeeList: Array<{ id: string; full_name: string; email: string }> = [];
       
       const { data, error } = await (supabase
         .from('profiles') as any)
         .select('id, user_id, full_name, email')
-        .eq('employment_status', 'active')
         .order('full_name');
 
       if (error) {
