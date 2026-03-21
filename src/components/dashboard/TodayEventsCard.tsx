@@ -102,7 +102,7 @@ const TodayEventsCard = () => {
             <p>На ближайшую неделю нет запланированных мероприятий</p>
           </div>
         ) : (
-          <ScrollArea className="h-[400px]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-3 pr-3 pb-1">
               {events.map((event) => (
                 <div 
