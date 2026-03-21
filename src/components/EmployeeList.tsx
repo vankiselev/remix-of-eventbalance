@@ -31,7 +31,7 @@ export function EmployeeList({ employees, onEmployeeClick }: EmployeeListProps) 
                 <div className="flex items-center space-x-3">
                   <User className="h-8 w-8 text-muted-foreground" />
                   <div>
-                    <h3 className="font-medium">{employee.full_name}</h3>
+                    <h3 className="font-medium">{formatDisplayName(employee.full_name)}</h3>
                     <p className="text-sm text-muted-foreground">{employee.email}</p>
                   </div>
                 </div>

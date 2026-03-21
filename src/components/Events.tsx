@@ -605,7 +605,7 @@ const Events = () => {
                                           selectedManagers.includes(employee.id) ? "opacity-100" : "opacity-0"
                                         )}
                                       />
-                                      {employee.full_name}
+                                      {formatDisplayName(employee.full_name)}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>

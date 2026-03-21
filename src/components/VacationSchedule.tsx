@@ -123,7 +123,7 @@ const VacationSchedule = () => {
 
       await sendNotificationToAdmins(
         'Новая заявка на отпуск',
-        `${userProfile.full_name} подал заявку: ${vacationType} с ${formData.start_date.toLocaleDateString('ru-RU')} по ${formData.end_date.toLocaleDateString('ru-RU')}`,
+        `${formatDisplayName(userProfile.full_name)} подал заявку: ${vacationType} с ${formData.start_date.toLocaleDateString('ru-RU')} по ${formData.end_date.toLocaleDateString('ru-RU')}`,
         'vacation',
         { 
           vacation_type: formData.vacation_type,

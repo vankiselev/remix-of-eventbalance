@@ -280,7 +280,7 @@ export const TaskCreateDialog = ({
                   <SelectItem value="none">Не назначен</SelectItem>
                   {activeProfiles.map((profile) => (
                     <SelectItem key={profile.id} value={profile.id}>
-                      {profile.full_name}
+                      {formatDisplayName(profile.full_name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

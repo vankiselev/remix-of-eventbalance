@@ -563,12 +563,12 @@ const Staff = () => {
                           <Avatar className="avatar-responsive flex-shrink-0">
                             <AvatarImage src={user.avatar_url} />
                             <AvatarFallback>
-                              {user.full_name.split(' ').map(n => n[0]).join('')}
+                              {formatDisplayName(user.full_name).split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <div className="space-y-0.5">
-                              {user.full_name.split(' ').map((namePart, index) => (
+                              {formatDisplayName(user.full_name).split(' ').map((namePart, index) => (
                                 <div key={index} className="text-sm font-medium leading-tight">
                                   <TextTruncate lines={1}>
                                     {namePart}
