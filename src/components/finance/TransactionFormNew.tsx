@@ -712,7 +712,57 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
       }
 
       // Send notification to admins for large transactions (over 10000)
-...
+      // But only if user is not admin themselves
+      // Wrapped in try-catch so notification failure doesn't affect the transaction
+      try {
+        const amount = data.expense_amount || data.income_amount || 0;
+        if (amount >= 10000 && !isMoneyTransfer && !isAdmin) {
+          const { sendNotificationToAdmins } = await import('@/utils/notifications');
+          const type = data.expense_amount ? 'расход' : 'приход';
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          await sendNotificationToAdmins(
+            'Крупная транзакция',
+            `${profile?.full_name || 'Сотрудник'} внес ${type} ${amount.toLocaleString('ru-RU')} ₽ (${data.category})`,
+            'transaction',
+            { 
+              amount,
+              category: data.category,
+              description: data.description
+            }
+          );
+        }
+      } catch (notifyErr) {
+        console.error('Failed to send admin notification:', notifyErr);
+      }
+
+      toast({
+        title: "Успех",
+        description: editTransaction ? "Транзакция обновлена" : "Операция сохранена",
+      });
+
+      form.reset();
+      setFiles([]);
+      onOpenChange(false);
+      onSuccess?.();
+      } catch (error) {
+      console.error('Error saving transaction:', error);
+      const err = error as any;
+      toast({
+        title: "Ошибка",
+        description: err?.message || err?.error?.message || err?.details || JSON.stringify(err),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+      submitLockRef.current = false;
+    }
+  };
+
   const uploadFiles = async (transactionId: string, userId: string) => {
     const { compressAndConvertToBase64 } = await import('@/utils/imageCompressor');
 
