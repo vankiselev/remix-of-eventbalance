@@ -292,19 +292,23 @@ const AdminReportsView = () => {
       await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
 
       // Send notification to employee
-      const { sendNotification } = await import('@/utils/notifications');
-      await sendNotification({
-        userId: selectedReport.user_id,
-        title: isExistingSalary ? 'Зарплата обновлена' : 'Зарплата назначена',
-        message: `${salaryForm.salary_type} ${amount.toLocaleString('ru-RU')} ₽ за отчет "${selectedReport.project_name}"`,
-        type: 'salary',
-        data: { 
-          report_id: selectedReport.id,
-          amount,
-          wallet_type: salaryForm.wallet_type,
-          salary_type: salaryForm.salary_type
-        }
-      });
+      try {
+        const { sendNotification } = await import('@/utils/notifications');
+        await sendNotification({
+          userId: selectedReport.user_id,
+          title: isExistingSalary ? 'Зарплата обновлена' : 'Зарплата назначена',
+          message: `${salaryForm.salary_type} ${amount.toLocaleString('ru-RU')} ₽ за отчет "${selectedReport.project_name}"`,
+          type: 'salary',
+          data: { 
+            report_id: selectedReport.id,
+            amount,
+            wallet_type: salaryForm.wallet_type,
+            salary_type: salaryForm.salary_type
+          }
+        });
+      } catch (notifyErr) {
+        console.error('Failed to send salary notification:', notifyErr);
+      }
 
       toast({
         title: "Успешно",
