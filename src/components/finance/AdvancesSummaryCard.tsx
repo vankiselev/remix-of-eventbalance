@@ -11,12 +11,23 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
-export const AdvancesSummaryCard = () => {
+interface AdvancesSummaryCardProps {
+  employeeId?: string;
+}
+
+export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) => {
   const { isAdmin } = useUserRbacRoles();
+  const { user } = useAuth();
   const { data: allAdvances, isLoading: isLoadingAll } = useAllAdvances();
-  const { data: myAdvance, isLoading: isLoadingMy } = useMyAdvance();
+  
+  // For employee view: show target employee's advance (or own if no employeeId)
+  const targetUserId = employeeId || (!isAdmin ? user?.id : undefined);
+  const { data: advanceInfo, isLoading: isLoadingMy } = useMyAdvance(targetUserId);
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | undefined>();
@@ -25,11 +36,11 @@ export const AdvancesSummaryCard = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleDelete = async (employeeId: string, name: string) => {
+  const handleDelete = async (empId: string, name: string) => {
     try {
       const { error } = await (supabase.from('profiles') as any)
-        .update({ advance_balance: 0 })
-        .eq('id', employeeId);
+        .update({ advance_balance: 0, advance_issued_by: null, advance_issued_at: null })
+        .eq('id', empId);
       if (error) throw error;
       toast({ title: "Аванс удалён", description: `Аванс у ${name} обнулён` });
       queryClient.invalidateQueries({ queryKey: ['all-advances'] });
@@ -45,13 +56,14 @@ export const AdvancesSummaryCard = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleEdit = (employeeId: string, amount: number) => {
-    setEditingEmployeeId(employeeId);
+  const handleEdit = (empId: string, amount: number) => {
+    setEditingEmployeeId(empId);
     setEditingAmount(amount);
     setIsEditDialogOpen(true);
   };
 
-  if (isLoadingAll || isLoadingMy) {
+  // Loading state
+  if ((isAdmin && !employeeId && isLoadingAll) || isLoadingMy) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -67,6 +79,48 @@ export const AdvancesSummaryCard = () => {
     );
   }
 
+  // Admin viewing a specific employee OR non-admin viewing own advance
+  if (employeeId || !isAdmin) {
+    const amount = advanceInfo?.amount || 0;
+    const issuedByName = advanceInfo?.issuedByName;
+    const issuedAt = advanceInfo?.issuedAt;
+
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            {employeeId ? "Аванс сотрудника" : "Выданный мне аванс"}
+          </CardTitle>
+          <Banknote className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {amount > 0 ? (
+            <>
+              <div className="text-2xl font-bold">
+                {formatCurrency(amount)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {issuedByName 
+                  ? `Выдал(а): ${issuedByName}`
+                  : "Выдано"}
+                {issuedAt && (
+                  <span className="ml-1">
+                    · {format(new Date(issuedAt), 'd MMM yyyy', { locale: ru })}
+                  </span>
+                )}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Аванс пока не выдан
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Admin overview (no specific employee selected)
   if (isAdmin && allAdvances) {
     return (
       <>
@@ -167,28 +221,6 @@ export const AdvancesSummaryCard = () => {
           currentAmount={editingAmount}
         />
       </>
-    );
-  }
-
-  // Employee view — show their advance
-  if (!isAdmin && myAdvance && myAdvance > 0) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Выданный мне аванс
-          </CardTitle>
-          <Banknote className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {formatCurrency(myAdvance)}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Выдано администратором
-          </p>
-        </CardContent>
-      </Card>
     );
   }
 
