@@ -111,7 +111,7 @@ const Birthdays = () => {
           {employee.avatar_url ? (
             <img 
               src={employee.avatar_url} 
-              alt={employee.full_name}
+              alt={formatDisplayName(employee.full_name)}
               className="w-12 h-12 rounded-full object-cover"
             />
           ) : (
