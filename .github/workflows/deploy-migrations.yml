@@ -27,19 +27,15 @@ jobs:
           chmod +x .github/scripts/send-telegram.sh
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          DISPLAY_TITLE="Миграция (${TASK_TITLE})"
           cat > "$RUNNER_TEMP/telegram_start.txt" <<EOF
-          GitHub Actions update
+          <b>СТАТУС: СОЗДАНО</b>
 
-          Task: ${TASK_TITLE}
-          Status: created
-          Stage: queued/running
-
-          Workflow: ${WORKFLOW_NAME}
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Actor: ${{ github.actor }}
-          Commit: ${{ github.sha }}
-          Run: ${RUN_URL}
+          Название: ${DISPLAY_TITLE}
+          Этап: В очереди / выполняется
+          Репозиторий: ${{ github.repository }}
+          Автор: ${{ github.actor }}
+          Ссылка: ${RUN_URL}
           EOF
           .github/scripts/send-telegram.sh send "$RUNNER_TEMP/telegram_start.txt" > "$RUNNER_TEMP/telegram_message_id.txt"
       
@@ -162,6 +158,7 @@ jobs:
           chmod +x .github/scripts/send-telegram.sh
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           TASK_TITLE="$(printf '%s\n' "${RUN_TITLE}" | head -n 1)"
+          DISPLAY_TITLE="Миграция (${TASK_TITLE})"
           STATUS="success"
           STAGE="completed"
           ERROR_DETAILS=""
@@ -178,33 +175,31 @@ jobs:
 
           if [ "$STATUS" = "success" ]; then
             cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
-          GitHub Actions update
+          <b>СТАТУС: УСПЕШНО</b>
 
-          Task: ${TASK_TITLE}
-          Status: success
-          Stage: ${STAGE}
-          Workflow: ${WORKFLOW_NAME}
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Actor: ${{ github.actor }}
-          Commit: ${{ github.sha }}
-          Run: ${RUN_URL}
+          Название: ${DISPLAY_TITLE}
+          Этап: Завершено
+          Репозиторий: ${{ github.repository }}
+          Автор: ${{ github.actor }}
+          Ссылка: ${RUN_URL}
           EOF
           else
+            STAGE_RU="$STAGE"
+            if [ "$STAGE" = "verify database connection" ]; then
+              STAGE_RU="Проверка подключения к базе"
+            elif [ "$STAGE" = "apply migrations" ]; then
+              STAGE_RU="Применение миграций"
+            fi
             cat > "$RUNNER_TEMP/telegram_finish.txt" <<EOF
-          GitHub Actions update
+          <b>СТАТУС: ОШИБКА</b>
 
-          Task: ${TASK_TITLE}
-          Status: failure
-          Stage: ${STAGE}
-          Workflow: ${WORKFLOW_NAME}
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Actor: ${{ github.actor }}
-          Commit: ${{ github.sha }}
-          Run: ${RUN_URL}
+          Название: ${DISPLAY_TITLE}
+          Этап: ${STAGE_RU}
+          Репозиторий: ${{ github.repository }}
+          Автор: ${{ github.actor }}
+          Ссылка: ${RUN_URL}
 
-          Error details:
+          Ошибка:
           ${ERROR_DETAILS}
           EOF
           fi
