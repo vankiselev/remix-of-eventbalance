@@ -163,10 +163,10 @@ export const MoneyTransferRequests = () => {
         console.warn('⚠️ Notification fallback query failed:', notifErr);
       }
 
-      console.log('📋 Found pending transfers:', data?.length || 0);
+      console.log('📋 Found pending transfers:', mergedData.length);
 
       // Fetch sender profiles (try both id and user_id columns)
-      const senderIds = [...new Set((data || []).map(t => t.created_by).filter(Boolean))];
+      const senderIds = [...new Set(mergedData.map(t => t.created_by).filter(Boolean))];
       
       if (senderIds.length > 0) {
         // Try to find profiles by user_id first (self-hosted), then by id
