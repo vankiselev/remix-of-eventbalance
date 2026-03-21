@@ -224,7 +224,7 @@ export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogP
                 <div className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Автор:</span>
-                  <span>{task.created_user.full_name}</span>
+                  <span>{formatDisplayName(task.created_user.full_name)}</span>
                 </div>
               )}
 
