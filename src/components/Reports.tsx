@@ -1088,11 +1088,18 @@ const EmployeeReportsView = ({
                   <>
                     <Separator className="my-3 md:my-4" />
                     <div>
-                      <h4 className="text-sm md:text-base font-medium mb-2">Назначенные выплаты:</h4>
-                      <div className="space-y-1">
+                      <h4 className="text-sm md:text-base font-semibold mb-2 flex items-center gap-2">
+                        <Banknote className="h-4 w-4 text-primary" />
+                        Назначенные выплаты:
+                      </h4>
+                      <div className="space-y-2">
                         {report.salaries.map((salary: any, index: number) => (
-                          <div key={index} className="text-xs md:text-sm text-muted-foreground">
-                            {salary.salary_type}: {formatCurrency(salary.amount)} ({salary.wallet_type})
+                          <div key={index} className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                            <span className="text-xs md:text-sm font-medium">{salary.salary_type}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm md:text-base font-bold text-primary">{formatCurrency(salary.amount)}</span>
+                              <span className="text-xs text-muted-foreground">({salary.wallet_type})</span>
+                            </div>
                           </div>
                         ))}
                       </div>
