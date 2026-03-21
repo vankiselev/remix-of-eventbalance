@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TenantProvider } from "@/contexts/TenantContext";
@@ -11,41 +13,41 @@ import { ImportProgressProvider } from "@/contexts/ImportProgressContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import Auth from "./pages/Auth";
-import { InvitePage } from "./pages/InvitePage";
-import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import AwaitingInvitationPage from "./pages/AwaitingInvitationPage";
-import NotFound from "./pages/NotFound";
-import DashboardPage from "./pages/DashboardPage";
-
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import TermsOfUsePage from "./pages/TermsOfUsePage";
-import AboutPage from "./pages/AboutPage";
-import SupportPage from "./pages/SupportPage";
-import ContactsInfoPage from "./pages/ContactsInfoPage";
-import FinancesPage from "./pages/FinancesPage";
-import EventsPage from "./pages/EventsPage";
-import CalendarPageWrapper from "./pages/CalendarPageWrapper";
-import TransactionPage from "./pages/TransactionPage";
-import StaffPage from "./pages/StaffPage";
-import BirthdaysPage from "./pages/BirthdaysPage";
-import VacationsPage from "./pages/VacationsPage";
-import ContactsPage from "./pages/ContactsPage";
-import ReportsPage from "./pages/ReportsPage";
-import InvitationsPage from "./pages/InvitationsPage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import AdministrationPage from "./pages/AdministrationPage";
-import TransactionsReviewPage from "./pages/TransactionsReviewPage";
-import SelectCompanyPage from "./pages/SelectCompanyPage";
-import RegisterCompanyPage from "./pages/RegisterCompanyPage";
-import SuperAdminPage from "./pages/SuperAdminPage";
-
-import SiriIntegrationPage from "./pages/SiriIntegrationPage";
-import WarehousePage from "./pages/WarehousePage";
-import CRMTasksPage from "./pages/CRMTasksPage";
-import FinancialReportPage from "./pages/FinancialReportPage";
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
+
+// Lazy-loaded pages for code splitting
+const InvitePage = lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
+const AwaitingInvitationPage = lazy(() => import("./pages/AwaitingInvitationPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfUsePage = lazy(() => import("./pages/TermsOfUsePage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
+const ContactsInfoPage = lazy(() => import("./pages/ContactsInfoPage"));
+const FinancesPage = lazy(() => import("./pages/FinancesPage"));
+const EventsPage = lazy(() => import("./pages/EventsPage"));
+const CalendarPageWrapper = lazy(() => import("./pages/CalendarPageWrapper"));
+const TransactionPage = lazy(() => import("./pages/TransactionPage"));
+const StaffPage = lazy(() => import("./pages/StaffPage"));
+const BirthdaysPage = lazy(() => import("./pages/BirthdaysPage"));
+const VacationsPage = lazy(() => import("./pages/VacationsPage"));
+const ContactsPage = lazy(() => import("./pages/ContactsPage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const InvitationsPage = lazy(() => import("./pages/InvitationsPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const AdministrationPage = lazy(() => import("./pages/AdministrationPage"));
+const TransactionsReviewPage = lazy(() => import("./pages/TransactionsReviewPage"));
+const SelectCompanyPage = lazy(() => import("./pages/SelectCompanyPage"));
+const RegisterCompanyPage = lazy(() => import("./pages/RegisterCompanyPage"));
+const SuperAdminPage = lazy(() => import("./pages/SuperAdminPage"));
+const SiriIntegrationPage = lazy(() => import("./pages/SiriIntegrationPage"));
+const WarehousePage = lazy(() => import("./pages/WarehousePage"));
+const CRMTasksPage = lazy(() => import("./pages/CRMTasksPage"));
+const FinancialReportPage = lazy(() => import("./pages/FinancialReportPage"));
 
 // Optimized React Query configuration for better caching
 const queryClient = new QueryClient({
