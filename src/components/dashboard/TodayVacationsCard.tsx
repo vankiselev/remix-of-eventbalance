@@ -100,7 +100,7 @@ const TodayVacationsCard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 justify-center">
             <Plane className="w-5 h-5 text-primary" />
-            Кто сегодня в отпуске
+            Не на связи
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center">
@@ -118,14 +118,14 @@ const TodayVacationsCard = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 justify-center">
           <Plane className="w-5 h-5 text-primary" />
-          Кто сегодня в отпуске
+          Не на связи
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
         {todayVacations.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Все на работе!</p>
+            <p>Все на связи!</p>
           </div>
         ) : (
           <div className="space-y-3">

@@ -95,15 +95,15 @@ const TodayEventsCard = () => {
           Ближайшие мероприятия
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="flex-1 flex flex-col overflow-hidden">
         {events.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
             <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>На ближайшую неделю нет запланированных мероприятий</p>
           </div>
         ) : (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-3 pr-3">
               {events.map((event) => (
                 <div 
                   key={event.id} 
