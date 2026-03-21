@@ -98,7 +98,7 @@ const VacationSchedule = () => {
     try {
       const vacationData = {
         user_id: user.id,
-        employee_name: userProfile.full_name,
+        employee_name: formatDisplayName(userProfile.full_name),
         start_date: formData.start_date.toISOString().split('T')[0],
         end_date: formData.end_date.toISOString().split('T')[0],
         vacation_type: formData.vacation_type,
