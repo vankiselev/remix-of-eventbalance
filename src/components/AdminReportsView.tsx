@@ -315,11 +315,11 @@ const AdminReportsView = () => {
       setSalaryForm({ amount: "", wallet_type: "", salary_type: "ЗП" });
       setSelectedReport(null);
       fetchReports();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error assigning salary:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось назначить зарплату",
+        description: error?.message || "Не удалось назначить зарплату",
         variant: "destructive",
       });
     } finally {
