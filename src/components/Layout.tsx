@@ -22,6 +22,7 @@ import { RoleBadges } from "@/components/roles/RoleBadge";
 import { formatFullName, getInitials } from "@/utils/formatName";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { TopNavigation } from "@/components/navigation/TopNavigation";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -350,9 +351,9 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          <main className="flex-1 w-full overflow-auto px-4 py-6 pb-28">
+          <PullToRefresh className="flex-1 w-full px-4 py-6 pb-28">
             {children}
-          </main>
+          </PullToRefresh>
           
           <MobileNavEnhanced onOpenCommandPalette={() => {}} />
         </div>
