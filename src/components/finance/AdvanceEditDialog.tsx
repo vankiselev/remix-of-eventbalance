@@ -112,7 +112,7 @@ export const AdvanceEditDialog = ({ open, onOpenChange, employeeId, currentAmoun
               <SelectContent>
                 {profiles.map((profile: any) => (
                   <SelectItem key={profile.id} value={profile.id}>
-                    {profile.full_name || 'Без имени'}
+                    {formatDisplayName(profile.full_name) || 'Без имени'}
                   </SelectItem>
                 ))}
               </SelectContent>

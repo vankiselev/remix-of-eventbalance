@@ -196,7 +196,7 @@ export const AdvancesSummaryCard = ({ employeeId }: AdvancesSummaryCardProps) =>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Отмена</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(employee.id, employee.full_name)}>
+                              <AlertDialogAction onClick={() => handleDelete(employee.id, formatDisplayName(employee.full_name))}>
                                 Удалить
                               </AlertDialogAction>
                             </AlertDialogFooter>
