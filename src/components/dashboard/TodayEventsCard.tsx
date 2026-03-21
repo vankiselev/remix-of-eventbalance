@@ -103,7 +103,7 @@ const TodayEventsCard = () => {
           </div>
         ) : (
           <ScrollArea className="h-[400px]">
-            <div className="space-y-3 pr-3">
+            <div className="space-y-3 pr-3 pb-1">
               {events.map((event) => (
                 <div 
                   key={event.id} 
