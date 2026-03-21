@@ -23,6 +23,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { cn } from "@/lib/utils";
 import AdminReportsView from "./AdminReportsView";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { useTenant } from "@/contexts/TenantContext";
 
 const reportSchema = z.object({
   project_name: z.string().min(1, "Выберите проект"),
@@ -56,6 +57,7 @@ interface Report {
 const Reports = () => {
   const { toast } = useToast();
   const { isAdmin } = useUserRbacRoles();
+  const { currentTenant } = useTenant();
   const [reports, setReports] = useState<Report[]>([]);
   const [projects, setProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
