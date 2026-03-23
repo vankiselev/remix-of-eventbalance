@@ -70,7 +70,7 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
                       onClick={() => onEventClick(event)}
                     >
                       <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
-                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner).dot}`} />
                         <span className="font-medium truncate text-[8px] sm:text-xs">{event.name}</span>
                       </div>
                       {event.event_time && (

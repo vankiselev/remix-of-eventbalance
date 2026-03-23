@@ -418,8 +418,8 @@ const Events = () => {
     }
   };
 
-  const filteredEvents = getFilteredAndSortedEvents();
-  const groupedEvents = groupEventsByDay(filteredEvents);
+  const filteredEvents = useMemo(() => getFilteredAndSortedEvents(), [events, periodFilter, selectedMonth, selectedYear, selectedProjectOwner, selectedManagers, selectedVenue, searchQuery, sortOrder]);
+  const groupedEvents = useMemo(() => groupEventsByDay(filteredEvents), [filteredEvents]);
 
 
   if (loading) {

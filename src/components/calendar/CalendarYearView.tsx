@@ -3,6 +3,8 @@ interface Event {
   start_date: string;
 }
 
+import { useMemo } from "react";
+
 interface CalendarYearViewProps {
   year: number;
   events: Event[];
