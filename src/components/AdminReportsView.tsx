@@ -183,8 +183,9 @@ const AdminReportsView = () => {
     });
   }, [searchTerm, projectFilter, employeeFilter, reports]);
 
-  const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+  const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string, userId?: string) => {
     try {
+      const createdBy = userId || (await supabase.auth.getUser()).data.user?.id;
       const { error } = await supabase
         .from("financial_transactions")
         .insert({
@@ -196,7 +197,7 @@ const AdminReportsView = () => {
           income_amount: 0,
           cash_type: walletType,
           static_project_name: report.project_name,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
+          created_by: createdBy,
           tenant_id: currentTenant?.id || null,
         });
 
