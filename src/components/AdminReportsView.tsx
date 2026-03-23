@@ -133,8 +133,7 @@ const AdminReportsView = () => {
           schema: 'public',
           table: 'event_report_salaries'
         },
-        (payload) => {
-          console.log('Real-time salary update (admin):', payload);
+        () => {
           fetchReports();
         }
       )
@@ -145,8 +144,7 @@ const AdminReportsView = () => {
           schema: 'public',
           table: 'event_reports'
         },
-        (payload) => {
-          console.log('Real-time report update (admin):', payload);
+        () => {
           fetchReports();
         }
       )

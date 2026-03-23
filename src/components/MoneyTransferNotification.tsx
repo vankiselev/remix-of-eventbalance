@@ -44,12 +44,12 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
-      console.log('🔄 Processing money transfer action:', action, { transactionId });
+      
       
       // 1) Get current user
       const { data: userRes } = await supabase.auth.getUser();
       const currentUserId = userRes.user?.id;
-      console.log('👤 Current user ID:', currentUserId);
+      
       if (!currentUserId) throw new Error('not_authenticated');
 
       // 2) Load original transaction
@@ -59,8 +59,6 @@ export const MoneyTransferNotification = ({
         .eq('id', transactionId)
         .single();
 
-      console.log('📄 Transaction data:', tx);
-      console.log('❌ Transaction error:', txError);
 
       if (txError || !tx) throw txError || new Error('tx_not_found');
 
@@ -73,11 +71,11 @@ export const MoneyTransferNotification = ({
       }
 
       if (action === 'accept') {
-        console.log('✅ Accepting transfer via RPC...');
+        
         const { error: rpcErr } = await supabase.rpc('accept_money_transfer', {
           p_transaction_id: transactionId,
         });
-        console.log('🔁 RPC accept error:', rpcErr);
+        
         if (rpcErr) throw rpcErr;
 
         // Notify sender
@@ -101,7 +99,7 @@ export const MoneyTransferNotification = ({
           p_transaction_id: transactionId,
           p_rejection_reason: rejectionReason.trim(),
         });
-        console.log('🔁 RPC reject error:', rpcErr);
+        
         if (rpcErr) throw rpcErr;
 
         await supabase.functions.invoke('send-push-notification', {

@@ -193,8 +193,7 @@ const Reports = () => {
           schema: 'public',
           table: 'event_report_salaries'
         },
-        (payload) => {
-          console.log('Real-time salary update:', payload);
+        () => {
           fetchReports();
         }
       )
@@ -205,8 +204,7 @@ const Reports = () => {
           schema: 'public',
           table: 'event_reports'
         },
-        (payload) => {
-          console.log('Real-time report update:', payload);
+        () => {
           fetchReports();
         }
       )
