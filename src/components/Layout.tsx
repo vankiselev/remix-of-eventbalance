@@ -40,8 +40,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Enable real-time updates globally
-  useRealtimeUpdates();
+  // Realtime updates handled by RealtimeSync in App.tsx
   
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
