@@ -174,7 +174,7 @@ export function InvitationsManagement() {
   };
 
   const handleDeleteInvitation = async () => {
-    if (!deleteInvitation) return;
+    if (!deleteInvitation || !user) return;
 
     try {
       const { error } = await supabase
@@ -184,10 +184,9 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: deleteInvitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "deleted",
         details: { email: deleteInvitation.email },
       });
@@ -198,7 +197,7 @@ export function InvitationsManagement() {
       });
 
       setDeleteInvitation(null);
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error deleting invitation:", error);
       toast({
