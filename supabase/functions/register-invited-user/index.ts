@@ -41,17 +41,25 @@ Deno.serve(async (req) => {
     });
 
     // ── STEP 1: Validate invitation ──
+    // Check both active AND already-accepted invitations (for retry scenarios)
     console.log("[register] Step 1: Validating invitation token...");
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
       .select("id, tenant_id, invited_by, email, expires_at, status")
       .eq("token", invitation_token)
-      .in("status", ["pending", "sent"])
       .single();
 
     if (invError || !invData) {
       console.error("[register] Invitation lookup failed:", invError?.message);
-      return jsonResponse({ error: "Приглашение не найдено или уже использовано" }, 401);
+      return jsonResponse({ error: "Приглашение не найдено" }, 401);
+    }
+
+    // Check if invitation was already accepted (retry scenario)
+    const isRetry = invData.status === "accepted";
+
+    if (!isRetry && !["pending", "sent"].includes(invData.status)) {
+      console.error("[register] Invitation has invalid status:", invData.status);
+      return jsonResponse({ error: "Приглашение уже использовано или отменено" }, 401);
     }
 
     if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
@@ -63,7 +71,7 @@ Deno.serve(async (req) => {
       console.error("[register] Email mismatch:", email, "vs", invData.email);
       return jsonResponse({ error: "Email не совпадает с приглашением" }, 403);
     }
-    console.log("[register] Step 1 OK: invitation valid");
+    console.log("[register] Step 1 OK: invitation valid, isRetry:", isRetry);
 
     // ── STEP 2: Upload avatar (non-blocking) ──
     let finalAvatarUrl = avatar_url || null;
@@ -92,8 +100,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── STEP 3: Create user ──
+    // ── STEP 3: Create user (or find existing on retry) ──
     console.log("[register] Step 3: Creating user for:", email);
+    let userId: string;
+
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -111,17 +121,32 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
-      console.error("[register] Step 3 FAILED - createUser:", createError.message);
-      const userMsg = createError.message.includes("already been registered")
-        ? "Пользователь с таким email уже зарегистрирован"
-        : `Ошибка создания аккаунта: ${createError.message}`;
-      return jsonResponse({ error: userMsg }, 400);
+      // Handle retry: user already exists from a previous partial attempt
+      if (createError.message.includes("already been registered")) {
+        console.log("[register] Step 3: User already exists, looking up...");
+        const { data: existingUsers, error: listError } = await adminClient.auth.admin.listUsers();
+        if (listError) {
+          console.error("[register] Failed to list users:", listError.message);
+          return jsonResponse({ error: "Пользователь уже зарегистрирован. Попробуйте войти с вашим паролем." }, 409);
+        }
+        const existingUser = existingUsers.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+        if (!existingUser) {
+          return jsonResponse({ error: "Пользователь уже зарегистрирован. Попробуйте войти с вашим паролем." }, 409);
+        }
+        userId = existingUser.id;
+        console.log("[register] Step 3 OK: found existing user, id:", userId);
+      } else {
+        console.error("[register] Step 3 FAILED - createUser:", createError.message);
+        return jsonResponse({ error: `Ошибка создания аккаунта: ${createError.message}` }, 400);
+      }
+    } else {
+      userId = userData.user.id;
+      console.log("[register] Step 3 OK: user created, id:", userId);
     }
 
-    const userId = userData.user.id;
-    console.log("[register] Step 3 OK: user created, id:", userId);
-
-    // ── STEP 4: Create/update profile (UPSERT since there's no trigger) ──
+    // ── STEP 4: Create/update profile ──
     const profileData: Record<string, unknown> = {
       id: userId,
       email: email,
@@ -140,7 +165,6 @@ Deno.serve(async (req) => {
         .upsert(profileData, { onConflict: "id" });
       if (profileError) {
         console.error("[register] Step 4 WARN - profile upsert failed:", profileError.message);
-        // Non-fatal: user is created, profile will be incomplete
       } else {
         console.log("[register] Step 4 OK: profile upserted");
       }
@@ -148,39 +172,58 @@ Deno.serve(async (req) => {
       console.error("[register] Step 4 WARN - profile exception:", profileErr);
     }
 
-    // ── STEP 5: Accept invitation ──
-    try {
-      const { error: invUpdateErr } = await adminClient
-        .from("invitations")
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", invData.id);
-      if (invUpdateErr) {
-        console.error("[register] Step 5 WARN - invitation update failed:", invUpdateErr.message);
-      } else {
-        console.log("[register] Step 5 OK: invitation accepted");
-      }
-    } catch (invUpErr) {
-      console.error("[register] Step 5 WARN - invitation exception:", invUpErr);
-    }
-
-    // ── STEP 6: Insert tenant membership ──
+    // ── STEP 5: Insert tenant membership (idempotent) ──
     if (invData.tenant_id) {
       try {
         const { error: tmError } = await adminClient
           .from("tenant_memberships")
-          .insert({
-            tenant_id: invData.tenant_id,
-            user_id: userId,
-            role: role || "member",
-          });
+          .upsert(
+            {
+              tenant_id: invData.tenant_id,
+              user_id: userId,
+              role: role || "member",
+            },
+            { onConflict: "tenant_id,user_id" }
+          );
         if (tmError) {
-          console.error("[register] Step 6 WARN - tenant_memberships insert failed:", tmError.message);
+          // Fallback: try insert, ignore duplicate
+          const { error: tmInsertError } = await adminClient
+            .from("tenant_memberships")
+            .insert({
+              tenant_id: invData.tenant_id,
+              user_id: userId,
+              role: role || "member",
+            });
+          if (tmInsertError && !tmInsertError.message.includes("duplicate")) {
+            console.error("[register] Step 5 WARN - tenant_memberships insert failed:", tmInsertError.message);
+          } else {
+            console.log("[register] Step 5 OK: tenant membership created (insert fallback)");
+          }
         } else {
-          console.log("[register] Step 6 OK: tenant membership created");
+          console.log("[register] Step 5 OK: tenant membership upserted");
         }
       } catch (tmErr) {
-        console.error("[register] Step 6 WARN - tenant_memberships exception:", tmErr);
+        console.error("[register] Step 5 WARN - tenant_memberships exception:", tmErr);
       }
+    }
+
+    // ── STEP 6: Accept invitation (ONLY after all critical steps succeeded) ──
+    if (!isRetry) {
+      try {
+        const { error: invUpdateErr } = await adminClient
+          .from("invitations")
+          .update({ status: "accepted", accepted_at: new Date().toISOString() })
+          .eq("id", invData.id);
+        if (invUpdateErr) {
+          console.error("[register] Step 6 WARN - invitation update failed:", invUpdateErr.message);
+        } else {
+          console.log("[register] Step 6 OK: invitation accepted");
+        }
+      } catch (invUpErr) {
+        console.error("[register] Step 6 WARN - invitation exception:", invUpErr);
+      }
+    } else {
+      console.log("[register] Step 6 SKIP: invitation already accepted (retry)");
     }
 
     // ── STEP 7: Audit log (non-fatal) ──
@@ -188,7 +231,7 @@ Deno.serve(async (req) => {
       await adminClient.from("invitation_audit_log").insert({
         invitation_id: invData.id,
         actor_id: userId,
-        action: "accepted",
+        action: isRetry ? "accepted_retry" : "accepted",
         details: { email },
       });
       console.log("[register] Step 7 OK: audit log created");
