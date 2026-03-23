@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -28,11 +28,20 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("[register-invited-user] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(
+        JSON.stringify({ error: "Ошибка конфигурации сервера. Обратитесь к администратору." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     // ── SECURITY GATE: Validate invitation BEFORE any user creation ──
+    console.log("[register-invited-user] Validating invitation token...");
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
       .select("id, tenant_id, invited_by, email, expires_at")
@@ -41,30 +50,32 @@ Deno.serve(async (req) => {
       .single();
 
     if (invError || !invData) {
+      console.error("[register-invited-user] Invitation lookup failed:", invError?.message);
       return new Response(
-        JSON.stringify({ error: "Invalid or already used invitation token" }),
+        JSON.stringify({ error: "Приглашение не найдено или уже использовано" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
+      console.error("[register-invited-user] Invitation expired:", invData.expires_at);
       return new Response(
-        JSON.stringify({ error: "Invitation token has expired" }),
+        JSON.stringify({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (invData.email.toLowerCase() !== email.toLowerCase()) {
+      console.error("[register-invited-user] Email mismatch:", email, "vs", invData.email);
       return new Response(
-        JSON.stringify({ error: "Email does not match the invitation" }),
+        JSON.stringify({ error: "Email не совпадает с приглашением" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     // ── END SECURITY GATE ──
 
-    // Compute public base URL for storage URLs
-    const reqUrl = new URL(req.url);
-    const publicBaseUrl = `${reqUrl.protocol}//${reqUrl.host}`;
+    // Use SUPABASE_URL for storage URLs (not req.url which points to edge function host)
+    const publicBaseUrl = supabaseUrl;
 
     // Upload avatar if base64 provided
     let finalAvatarUrl = avatar_url || null;
@@ -86,24 +97,21 @@ Deno.serve(async (req) => {
           .upload(fileName, bytes, { contentType: 'image/jpeg' });
         
         if (uploadError) {
-          console.error('Avatar upload error:', uploadError);
-          return new Response(
-            JSON.stringify({ error: `Avatar upload failed: ${uploadError.message}` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          console.error('[register-invited-user] Avatar upload error:', uploadError);
+          // Don't block registration for avatar upload failure - continue without avatar
+          console.warn('[register-invited-user] Continuing registration without avatar');
+        } else {
+          finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
         }
-
-        finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
       } catch (avatarError) {
-        console.error('Avatar processing error:', avatarError);
-        return new Response(
-          JSON.stringify({ error: `Avatar processing failed: ${avatarError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error('[register-invited-user] Avatar processing error:', avatarError);
+        // Don't block registration for avatar issues
+        console.warn('[register-invited-user] Continuing registration without avatar');
       }
     }
 
     // Create user — only reachable after invitation is validated
+    console.log("[register-invited-user] Creating user for:", email);
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -121,8 +129,12 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
+      console.error("[register-invited-user] User creation failed:", createError.message);
+      const userMsg = createError.message.includes("already been registered")
+        ? "Пользователь с таким email уже зарегистрирован"
+        : `Ошибка создания аккаунта: ${createError.message}`;
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: userMsg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
