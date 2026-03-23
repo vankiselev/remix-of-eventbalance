@@ -154,7 +154,11 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
       )}
 
       {!selectedEmployee && !isAdmin && hasPermission('finances.create') && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setShowVoiceDialog(true)}>
+            <Mic className="mr-2 h-4 w-4" />
+            Голосом
+          </Button>
           <Button onClick={() => setShowTransactionForm(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить транзакцию
