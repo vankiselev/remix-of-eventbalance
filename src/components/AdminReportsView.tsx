@@ -208,7 +208,7 @@ const AdminReportsView = () => {
     }
   };
 
-  const updateFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+  const updateFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string, userId?: string) => {
     try {
       // Find existing transaction for this salary
       const { data: existingTransactions } = await supabase
@@ -234,7 +234,7 @@ const AdminReportsView = () => {
         if (error) throw error;
       } else {
         // Create new transaction if not found
-        await createFinancialTransaction(report, amount, walletType, salaryType);
+        await createFinancialTransaction(report, amount, walletType, salaryType, userId);
       }
     } catch (error) {
       console.error("Error updating financial transaction:", error);
