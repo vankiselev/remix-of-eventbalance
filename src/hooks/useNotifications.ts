@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { notificationSound } from '@/utils/notificationSound';
-import { useDebounce } from '@/hooks/useDebounce';
 
 export interface Notification {
   id: string;
@@ -19,13 +18,18 @@ export interface Notification {
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
   const seenIdsRef = useRef<Set<string>>(new Set());
-  const pendingNotificationsRef = useRef<Notification[]>([]);
-  const debouncedNotifications = useDebounce(pendingNotificationsRef.current, 500);
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingQueueRef = useRef<Notification[]>([]);
 
-  const fetchNotifications = async () => {
+  // Derive unreadCount from notifications — single source of truth
+  const unreadCount = useMemo(
+    () => notifications.filter(n => !n.read).length,
+    [notifications]
+  );
+
+  const fetchNotifications = useCallback(async () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
@@ -38,18 +42,42 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      const list = (data as any) || [];
+      const list = (data as Notification[]) || [];
       setNotifications(list);
-      seenIdsRef.current = new Set(list.map((n: Notification) => n.id));
-      setUnreadCount(list.filter((n: Notification) => !n.read).length || 0);
+      seenIdsRef.current = new Set(list.map(n => n.id));
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const markAsRead = async (notificationId: string) => {
+  const flushPendingNotifications = useCallback(() => {
+    const queue = pendingQueueRef.current;
+    if (queue.length === 0) return;
+
+    notificationSound.play();
+
+    if (queue.length === 1) {
+      toast({ title: queue[0].title, description: queue[0].message });
+    } else {
+      toast({
+        title: 'Новые уведомления',
+        description: `Получено ${queue.length} новых уведомлений`,
+      });
+    }
+
+    pendingQueueRef.current = [];
+  }, [toast]);
+
+  const enqueuePendingNotification = useCallback((notif: Notification) => {
+    pendingQueueRef.current.push(notif);
+
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    pendingTimerRef.current = setTimeout(flushPendingNotifications, 500);
+  }, [flushPendingNotifications]);
+
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -61,7 +89,6 @@ export const useNotifications = () => {
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking notification as read:', error);
       toast({
@@ -70,9 +97,9 @@ export const useNotifications = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
@@ -86,7 +113,6 @@ export const useNotifications = () => {
       if (error) throw error;
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
 
       toast({
         title: 'Успешно',
@@ -100,9 +126,9 @@ export const useNotifications = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
-  const deleteNotification = async (notificationId: string) => {
+  const deleteNotification = useCallback(async (notificationId: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -111,11 +137,7 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      const deletedNotif = notifications.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      if (deletedNotif && !deletedNotif.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
 
       toast({
         title: 'Успешно',
@@ -129,9 +151,9 @@ export const useNotifications = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
-  const deleteAllNotifications = async () => {
+  const deleteAllNotifications = useCallback(async () => {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
@@ -144,7 +166,6 @@ export const useNotifications = () => {
       if (error) throw error;
 
       setNotifications([]);
-      setUnreadCount(0);
 
       toast({
         title: 'Успешно',
@@ -158,17 +179,15 @@ export const useNotifications = () => {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchNotifications();
 
     let cleanup: (() => void) | undefined;
 
-    // Subscribe to realtime updates
     const setupRealtimeSubscription = async () => {
       const { data: userData } = await supabase.auth.getUser();
-      
       if (!userData.user) return;
 
       const channel = supabase
@@ -182,24 +201,15 @@ export const useNotifications = () => {
             filter: `user_id=eq.${userData.user.id}`,
           },
           (payload) => {
-            console.log('Notification change:', payload);
-            
             if (payload.eventType === 'INSERT') {
               const newNotif = payload.new as Notification;
-              if (seenIdsRef.current.has(newNotif.id)) {
-                return; // prevent duplicates
-              }
+              if (seenIdsRef.current.has(newNotif.id)) return;
               seenIdsRef.current.add(newNotif.id);
               setNotifications(prev => [newNotif, ...prev]);
-              setUnreadCount(prev => prev + 1);
-              
-              // Add to pending queue for debounced notification
-              pendingNotificationsRef.current = [...pendingNotificationsRef.current, newNotif];
+              enqueuePendingNotification(newNotif);
             } else if (payload.eventType === 'UPDATE') {
               const updated = payload.new as Notification;
-              if (!seenIdsRef.current.has(updated.id)) {
-                seenIdsRef.current.add(updated.id);
-              }
+              seenIdsRef.current.add(updated.id);
               setNotifications(prev =>
                 prev.map(n => n.id === updated.id ? updated : n)
               );
@@ -207,8 +217,8 @@ export const useNotifications = () => {
               const oldId = (payload.old as any)?.id;
               if (oldId) {
                 seenIdsRef.current.delete(oldId);
+                setNotifications(prev => prev.filter(n => n.id !== oldId));
               }
-              setNotifications(prev => prev.filter(n => n.id !== oldId));
             }
           }
         )
@@ -225,33 +235,9 @@ export const useNotifications = () => {
 
     return () => {
       cleanup?.();
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
     };
-  }, []);
-
-  // Handle debounced notifications
-  useEffect(() => {
-    if (debouncedNotifications.length > 0) {
-      // Play sound once for all notifications
-      notificationSound.play();
-      
-      // Show toast for the latest notification
-      const latest = debouncedNotifications[debouncedNotifications.length - 1];
-      if (debouncedNotifications.length === 1) {
-        toast({
-          title: latest.title,
-          description: latest.message,
-        });
-      } else {
-        toast({
-          title: 'Новые уведомления',
-          description: `Получено ${debouncedNotifications.length} новых уведомлений`,
-        });
-      }
-      
-      // Clear the pending queue
-      pendingNotificationsRef.current = [];
-    }
-  }, [debouncedNotifications, toast]);
+  }, [fetchNotifications, enqueuePendingNotification]);
 
   return {
     notifications,
