@@ -76,6 +76,9 @@ const PageLoader = () => (
 );
 
 const RealtimeSync = () => {
+  // Idle prefetch for most visited sections
+  useIdlePrefetch();
+
   const queryClient = useQueryClient();
 
   useEffect(() => {
