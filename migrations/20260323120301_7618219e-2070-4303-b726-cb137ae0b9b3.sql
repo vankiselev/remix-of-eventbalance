@@ -1,6 +1,7 @@
 
 -- ============================================================
 -- TENANT ISOLATION: Replace permissive RLS with tenant-scoped policies
+-- Resilient: checks if tenant_id column exists before creating policies
 -- ============================================================
 
 -- 1. Create SECURITY DEFINER helper to check tenant membership without RLS recursion
@@ -25,413 +26,432 @@ CREATE POLICY "Users can read own tenant_memberships" ON public.tenant_membershi
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
 -- ============================================================
--- PROFILES — tenant-scoped read, user can update own
+-- Helper: apply tenant-scoped policies only if tenant_id exists
 -- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read profiles" ON public.profiles;
-CREATE POLICY "Tenant members can read profiles" ON public.profiles
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL
-    OR public.is_tenant_member(tenant_id)
-  );
 
-DROP POLICY IF EXISTS "Users can insert profiles" ON public.profiles;
-CREATE POLICY "Users can insert profiles" ON public.profiles
-  FOR INSERT TO authenticated WITH CHECK (true);
+DO $tenant_isolation$
+DECLARE
+  has_col boolean;
+BEGIN
 
-DROP POLICY IF EXISTS "Users can update profiles" ON public.profiles;
-CREATE POLICY "Users can update own profiles" ON public.profiles
-  FOR UPDATE TO authenticated USING (
-    id = (SELECT id FROM public.profiles WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) LIMIT 1)
-    OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- PROFILES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read profiles" ON public.profiles;
+    CREATE POLICY "Tenant members can read profiles" ON public.profiles
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- FINANCIAL_TRANSACTIONS — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read transactions" ON public.financial_transactions;
-CREATE POLICY "Tenant members can read transactions" ON public.financial_transactions
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert profiles" ON public.profiles;
+    CREATE POLICY "Users can insert profiles" ON public.profiles
+      FOR INSERT TO authenticated WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Users can insert transactions" ON public.financial_transactions;
-CREATE POLICY "Tenant members can insert transactions" ON public.financial_transactions
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update profiles" ON public.profiles;
+    CREATE POLICY "Users can update own profiles" ON public.profiles
+      FOR UPDATE TO authenticated USING (
+        id = (SELECT p.id FROM public.profiles p WHERE p.email = (SELECT u.email FROM auth.users u WHERE u.id = auth.uid()) LIMIT 1)
+        OR public.is_tenant_member(tenant_id)
+      );
+  END IF;
 
-DROP POLICY IF EXISTS "Users can update transactions" ON public.financial_transactions;
-CREATE POLICY "Tenant members can update transactions" ON public.financial_transactions
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- FINANCIAL_TRANSACTIONS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read transactions" ON public.financial_transactions;
+    CREATE POLICY "Tenant members can read transactions" ON public.financial_transactions
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can delete transactions" ON public.financial_transactions;
-CREATE POLICY "Tenant members can delete transactions" ON public.financial_transactions
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert transactions" ON public.financial_transactions;
+    CREATE POLICY "Tenant members can insert transactions" ON public.financial_transactions
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- EVENTS — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read events" ON public.events;
-CREATE POLICY "Tenant members can read events" ON public.events
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update transactions" ON public.financial_transactions;
+    CREATE POLICY "Tenant members can update transactions" ON public.financial_transactions
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can insert events" ON public.events;
-CREATE POLICY "Tenant members can insert events" ON public.events
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can delete transactions" ON public.financial_transactions;
+    CREATE POLICY "Tenant members can delete transactions" ON public.financial_transactions
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Users can update events" ON public.events;
-CREATE POLICY "Tenant members can update events" ON public.events
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- EVENTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read events" ON public.events;
+    CREATE POLICY "Tenant members can read events" ON public.events
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can delete events" ON public.events;
-CREATE POLICY "Tenant members can delete events" ON public.events
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert events" ON public.events;
+    CREATE POLICY "Tenant members can insert events" ON public.events
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- EVENT_REPORTS — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read event_reports" ON public.event_reports;
-CREATE POLICY "Tenant members can read event_reports" ON public.event_reports
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update events" ON public.events;
+    CREATE POLICY "Tenant members can update events" ON public.events
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can insert event_reports" ON public.event_reports;
-CREATE POLICY "Tenant members can insert event_reports" ON public.event_reports
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can delete events" ON public.events;
+    CREATE POLICY "Tenant members can delete events" ON public.events
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Users can update event_reports" ON public.event_reports;
-CREATE POLICY "Tenant members can update event_reports" ON public.event_reports
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- EVENT_REPORTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='event_reports' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read event_reports" ON public.event_reports;
+    CREATE POLICY "Tenant members can read event_reports" ON public.event_reports
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can delete event_reports" ON public.event_reports;
-CREATE POLICY "Tenant members can delete event_reports" ON public.event_reports
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert event_reports" ON public.event_reports;
+    CREATE POLICY "Tenant members can insert event_reports" ON public.event_reports
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- EVENT_REPORT_SALARIES — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read event_report_salaries" ON public.event_report_salaries;
-CREATE POLICY "Tenant members can read event_report_salaries" ON public.event_report_salaries
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update event_reports" ON public.event_reports;
+    CREATE POLICY "Tenant members can update event_reports" ON public.event_reports
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can insert event_report_salaries" ON public.event_report_salaries;
-CREATE POLICY "Tenant members can insert event_report_salaries" ON public.event_report_salaries
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can delete event_reports" ON public.event_reports;
+    CREATE POLICY "Tenant members can delete event_reports" ON public.event_reports
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Users can update event_report_salaries" ON public.event_report_salaries;
-CREATE POLICY "Tenant members can update event_report_salaries" ON public.event_report_salaries
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- EVENT_REPORT_SALARIES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='event_report_salaries' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read event_report_salaries" ON public.event_report_salaries;
+    CREATE POLICY "Tenant members can read event_report_salaries" ON public.event_report_salaries
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can delete event_report_salaries" ON public.event_report_salaries;
-CREATE POLICY "Tenant members can delete event_report_salaries" ON public.event_report_salaries
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert event_report_salaries" ON public.event_report_salaries;
+    CREATE POLICY "Tenant members can insert event_report_salaries" ON public.event_report_salaries
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- VACATIONS — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read vacations" ON public.vacations;
-CREATE POLICY "Tenant members can read vacations" ON public.vacations
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update event_report_salaries" ON public.event_report_salaries;
+    CREATE POLICY "Tenant members can update event_report_salaries" ON public.event_report_salaries
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can insert vacations" ON public.vacations;
-CREATE POLICY "Tenant members can insert vacations" ON public.vacations
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can delete event_report_salaries" ON public.event_report_salaries;
+    CREATE POLICY "Tenant members can delete event_report_salaries" ON public.event_report_salaries
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Users can update vacations" ON public.vacations;
-CREATE POLICY "Tenant members can update vacations" ON public.vacations
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- VACATIONS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='vacations' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read vacations" ON public.vacations;
+    CREATE POLICY "Tenant members can read vacations" ON public.vacations
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Users can delete vacations" ON public.vacations;
-CREATE POLICY "Tenant members can delete vacations" ON public.vacations
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can insert vacations" ON public.vacations;
+    CREATE POLICY "Tenant members can insert vacations" ON public.vacations
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- INVITATIONS — tenant-scoped all ops
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read invitations" ON public.invitations;
-CREATE POLICY "Tenant members can read invitations" ON public.invitations
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can update vacations" ON public.vacations;
+    CREATE POLICY "Tenant members can update vacations" ON public.vacations
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Authenticated can insert invitations" ON public.invitations;
-CREATE POLICY "Tenant members can insert invitations" ON public.invitations
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Users can delete vacations" ON public.vacations;
+    CREATE POLICY "Tenant members can delete vacations" ON public.vacations
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can update invitations" ON public.invitations;
-CREATE POLICY "Tenant members can update invitations" ON public.invitations
-  FOR UPDATE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- INVITATIONS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invitations' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read invitations" ON public.invitations;
+    CREATE POLICY "Tenant members can read invitations" ON public.invitations
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "Authenticated can delete invitations" ON public.invitations;
-CREATE POLICY "Tenant members can delete invitations" ON public.invitations
-  FOR DELETE TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Authenticated can insert invitations" ON public.invitations;
+    CREATE POLICY "Tenant members can insert invitations" ON public.invitations
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- TASKS — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read tasks" ON public.tasks;
-CREATE POLICY "Tenant members can read tasks" ON public.tasks
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Authenticated can update invitations" ON public.invitations;
+    CREATE POLICY "Tenant members can update invitations" ON public.invitations
+      FOR UPDATE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- EMPLOYEES — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read employees" ON public.employees;
-CREATE POLICY "Tenant members can read employees" ON public.employees
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+    DROP POLICY IF EXISTS "Authenticated can delete invitations" ON public.invitations;
+    CREATE POLICY "Tenant members can delete invitations" ON public.invitations
+      FOR DELETE TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- SALARY tables — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read salary_settings" ON public.salary_settings;
-CREATE POLICY "Tenant members can read salary_settings" ON public.salary_settings
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- TASKS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='tasks' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read tasks" ON public.tasks;
+    CREATE POLICY "Tenant members can read tasks" ON public.tasks
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read salary_payments" ON public.salary_payments;
-CREATE POLICY "Tenant members can read salary_payments" ON public.salary_payments
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- EMPLOYEES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='employees' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read employees" ON public.employees;
+    CREATE POLICY "Tenant members can read employees" ON public.employees
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read salary_advances" ON public.salary_advances;
-CREATE POLICY "Tenant members can read salary_advances" ON public.salary_advances
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- SALARY_SETTINGS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='salary_settings' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read salary_settings" ON public.salary_settings;
+    CREATE POLICY "Tenant members can read salary_settings" ON public.salary_settings
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- DIRECTORY tables (animators, clients, contractors, contact_persons, venues)
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read animators" ON public.animators;
-CREATE POLICY "Tenant members can read animators" ON public.animators
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- SALARY_PAYMENTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='salary_payments' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read salary_payments" ON public.salary_payments;
+    CREATE POLICY "Tenant members can read salary_payments" ON public.salary_payments
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated users can read clients" ON public.clients;
-CREATE POLICY "Tenant members can read clients" ON public.clients
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- SALARY_ADVANCES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='salary_advances' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read salary_advances" ON public.salary_advances;
+    CREATE POLICY "Tenant members can read salary_advances" ON public.salary_advances
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read contractors" ON public.contractors;
-CREATE POLICY "Tenant members can read contractors" ON public.contractors
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- ANIMATORS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='animators' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read animators" ON public.animators;
+    CREATE POLICY "Tenant members can read animators" ON public.animators
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read contact_persons" ON public.contact_persons;
-CREATE POLICY "Tenant members can read contact_persons" ON public.contact_persons
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- CLIENTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='clients' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read clients" ON public.clients;
+    CREATE POLICY "Tenant members can read clients" ON public.clients
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read venues" ON public.venues;
-CREATE POLICY "Tenant members can read venues" ON public.venues
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- CONTRACTORS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='contractors' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read contractors" ON public.contractors;
+    CREATE POLICY "Tenant members can read contractors" ON public.contractors
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- PROJECTS — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read projects" ON public.projects;
-CREATE POLICY "Tenant members can read projects" ON public.projects
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- CONTACT_PERSONS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='contact_persons' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read contact_persons" ON public.contact_persons;
+    CREATE POLICY "Tenant members can read contact_persons" ON public.contact_persons
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- WAREHOUSE tables — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read warehouses" ON public.warehouses;
-CREATE POLICY "Tenant members can read warehouses" ON public.warehouses
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- VENUES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='venues' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read venues" ON public.venues;
+    CREATE POLICY "Tenant members can read venues" ON public.venues
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read warehouse_items" ON public.warehouse_items;
-CREATE POLICY "Tenant members can read warehouse_items" ON public.warehouse_items
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- PROJECTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='projects' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read projects" ON public.projects;
+    CREATE POLICY "Tenant members can read projects" ON public.projects
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read warehouse_tasks" ON public.warehouse_tasks;
-CREATE POLICY "Tenant members can read warehouse_tasks" ON public.warehouse_tasks
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- WAREHOUSES
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='warehouses' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read warehouses" ON public.warehouses;
+    CREATE POLICY "Tenant members can read warehouses" ON public.warehouses
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read warehouse_settings" ON public.warehouse_settings;
-CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
-  FOR SELECT TO authenticated USING (true);
--- warehouse_settings has no tenant_id, kept as-is
+  -- ============================================================
+  -- WAREHOUSE_ITEMS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='warehouse_items' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read warehouse_items" ON public.warehouse_items;
+    CREATE POLICY "Tenant members can read warehouse_items" ON public.warehouse_items
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- FINANCIAL_REPORTS — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read financial_reports" ON public.financial_reports;
-CREATE POLICY "Tenant members can read financial_reports" ON public.financial_reports
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- WAREHOUSE_TASKS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='warehouse_tasks' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read warehouse_tasks" ON public.warehouse_tasks;
+    CREATE POLICY "Tenant members can read warehouse_tasks" ON public.warehouse_tasks
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- BUDGET_ITEMS — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read budget_items" ON public.budget_items;
-CREATE POLICY "Tenant members can read budget_items" ON public.budget_items
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- FINANCIAL_REPORTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_reports' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read financial_reports" ON public.financial_reports;
+    CREATE POLICY "Tenant members can read financial_reports" ON public.financial_reports
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- USER_ROLE_ASSIGNMENTS — tenant-scoped SELECT
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read user_role_assignments" ON public.user_role_assignments;
-CREATE POLICY "Tenant members can read user_role_assignments" ON public.user_role_assignments
-  FOR SELECT TO authenticated USING (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- BUDGET_ITEMS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='budget_items' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated can read budget_items" ON public.budget_items;
+    CREATE POLICY "Tenant members can read budget_items" ON public.budget_items
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
-DROP POLICY IF EXISTS "Users can insert user_role_assignments" ON public.user_role_assignments;
-CREATE POLICY "Tenant members can insert user_role_assignments" ON public.user_role_assignments
-  FOR INSERT TO authenticated WITH CHECK (
-    tenant_id IS NULL OR public.is_tenant_member(tenant_id)
-  );
+  -- ============================================================
+  -- USER_ROLE_ASSIGNMENTS
+  -- ============================================================
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='user_role_assignments' AND column_name='tenant_id') INTO has_col;
+  IF has_col THEN
+    DROP POLICY IF EXISTS "Authenticated users can read user_role_assignments" ON public.user_role_assignments;
+    CREATE POLICY "Tenant members can read user_role_assignments" ON public.user_role_assignments
+      FOR SELECT TO authenticated USING (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
 
--- ============================================================
--- EVENT_PARTICIPANTS — no tenant_id, scoped via event's tenant
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read event_participants" ON public.event_participants;
-CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
-  FOR SELECT TO authenticated USING (
-    EXISTS (
-      SELECT 1 FROM public.events e
-      WHERE e.id = event_id
-      AND (e.tenant_id IS NULL OR public.is_tenant_member(e.tenant_id))
-    )
-  );
+    DROP POLICY IF EXISTS "Users can insert user_role_assignments" ON public.user_role_assignments;
+    CREATE POLICY "Tenant members can insert user_role_assignments" ON public.user_role_assignments
+      FOR INSERT TO authenticated WITH CHECK (tenant_id IS NULL OR public.is_tenant_member(tenant_id));
+  END IF;
 
--- ============================================================
--- TRANSACTION_ATTACHMENTS — no tenant_id, scoped via transaction's tenant
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read transaction_attachments" ON public.transaction_attachments;
-CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
-  FOR SELECT TO authenticated USING (
-    EXISTS (
-      SELECT 1 FROM public.financial_transactions ft
-      WHERE ft.id = transaction_id
-      AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
-    )
-  );
+  -- ============================================================
+  -- EVENT_PARTICIPANTS — no tenant_id, scope via events table
+  -- ============================================================
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='tenant_id') THEN
+    DROP POLICY IF EXISTS "Authenticated can read event_participants" ON public.event_participants;
+    CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
+      FOR SELECT TO authenticated USING (
+        EXISTS (
+          SELECT 1 FROM public.events e
+          WHERE e.id = event_id
+          AND (e.tenant_id IS NULL OR public.is_tenant_member(e.tenant_id))
+        )
+      );
+  END IF;
 
--- ============================================================
--- AUDIT LOGS — tenant-scoped via parent tables
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated can read audit log" ON public.financial_audit_log;
-CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
-  FOR SELECT TO authenticated USING (
-    transaction_id IS NULL
-    OR EXISTS (
-      SELECT 1 FROM public.financial_transactions ft
-      WHERE ft.id = transaction_id
-      AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
-    )
-  );
+  -- ============================================================
+  -- TRANSACTION_ATTACHMENTS — no tenant_id, scope via transactions
+  -- ============================================================
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
+    DROP POLICY IF EXISTS "Authenticated can read transaction_attachments" ON public.transaction_attachments;
+    CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
+      FOR SELECT TO authenticated USING (
+        EXISTS (
+          SELECT 1 FROM public.financial_transactions ft
+          WHERE ft.id = transaction_id
+          AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
+        )
+      );
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can insert audit log" ON public.financial_audit_log;
-CREATE POLICY "Authenticated can insert financial_audit_log" ON public.financial_audit_log
-  FOR INSERT TO authenticated WITH CHECK (true);
+  -- ============================================================
+  -- FINANCIAL_AUDIT_LOG — scope via transactions
+  -- ============================================================
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
+    DROP POLICY IF EXISTS "Authenticated can read audit log" ON public.financial_audit_log;
+    CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
+      FOR SELECT TO authenticated USING (
+        transaction_id IS NULL
+        OR EXISTS (
+          SELECT 1 FROM public.financial_transactions ft
+          WHERE ft.id = transaction_id
+          AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
+        )
+      );
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated can read invitation_audit_log" ON public.invitation_audit_log;
-CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
-  FOR SELECT TO authenticated USING (
-    invitation_id IS NULL
-    OR EXISTS (
-      SELECT 1 FROM public.invitations i
-      WHERE i.id = invitation_id
-      AND (i.tenant_id IS NULL OR public.is_tenant_member(i.tenant_id))
-    )
-  );
+  DROP POLICY IF EXISTS "Authenticated can insert audit log" ON public.financial_audit_log;
+  CREATE POLICY "Authenticated can insert financial_audit_log" ON public.financial_audit_log
+    FOR INSERT TO authenticated WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log;
-CREATE POLICY "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log
-  FOR INSERT TO authenticated WITH CHECK (true);
+  -- ============================================================
+  -- INVITATION_AUDIT_LOG — scope via invitations
+  -- ============================================================
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invitations' AND column_name='tenant_id') THEN
+    DROP POLICY IF EXISTS "Authenticated can read invitation_audit_log" ON public.invitation_audit_log;
+    CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
+      FOR SELECT TO authenticated USING (
+        invitation_id IS NULL
+        OR EXISTS (
+          SELECT 1 FROM public.invitations i
+          WHERE i.id = invitation_id
+          AND (i.tenant_id IS NULL OR public.is_tenant_member(i.tenant_id))
+        )
+      );
+  END IF;
 
--- ============================================================
--- PROFILE_EDIT_HISTORY — tenant-scoped via profile
--- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can read profile_edit_history" ON public.profile_edit_history;
-CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
-  FOR SELECT TO authenticated USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = profile_id
-      AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
-    )
-  );
+  DROP POLICY IF EXISTS "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log;
+  CREATE POLICY "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log
+    FOR INSERT TO authenticated WITH CHECK (true);
 
--- ============================================================
--- USER_PROJECTS — no tenant_id, keep global read for now
--- ============================================================
--- user_projects has no tenant_id column, access controlled via projects table
+  -- ============================================================
+  -- PROFILE_EDIT_HISTORY — scope via profiles
+  -- ============================================================
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND column_name='tenant_id') THEN
+    DROP POLICY IF EXISTS "Authenticated users can read profile_edit_history" ON public.profile_edit_history;
+    CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
+      FOR SELECT TO authenticated USING (
+        EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = profile_id
+          AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
+        )
+      );
+  END IF;
 
--- ============================================================
--- TABLES INTENTIONALLY LEFT AS GLOBAL READ:
--- tenants: reference table, users need to see tenant info for switching
--- role_definitions: global reference, no sensitive data
--- system_secrets: already service_role only
--- notifications: already user_id scoped (auth.uid() = user_id)
--- push_subscriptions: already user_id scoped
--- overdue_report_settings: already user_id scoped  
--- api_keys: already user_id scoped
--- user_voice_settings: already user_id scoped
--- ============================================================
+  -- ============================================================
+  -- WAREHOUSE_SETTINGS — no tenant_id, keep global read
+  -- ============================================================
+  DROP POLICY IF EXISTS "Authenticated can read warehouse_settings" ON public.warehouse_settings;
+  CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
+    FOR SELECT TO authenticated USING (true);
+
+END;
+$tenant_isolation$;
