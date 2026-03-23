@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     });
 
     // ── SECURITY GATE: Validate invitation BEFORE any user creation ──
+    console.log("[register-invited-user] Validating invitation token...");
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
       .select("id, tenant_id, invited_by, email, expires_at")
@@ -49,22 +50,25 @@ Deno.serve(async (req) => {
       .single();
 
     if (invError || !invData) {
+      console.error("[register-invited-user] Invitation lookup failed:", invError?.message);
       return new Response(
-        JSON.stringify({ error: "Invalid or already used invitation token" }),
+        JSON.stringify({ error: "Приглашение не найдено или уже использовано" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
+      console.error("[register-invited-user] Invitation expired:", invData.expires_at);
       return new Response(
-        JSON.stringify({ error: "Invitation token has expired" }),
+        JSON.stringify({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (invData.email.toLowerCase() !== email.toLowerCase()) {
+      console.error("[register-invited-user] Email mismatch:", email, "vs", invData.email);
       return new Response(
-        JSON.stringify({ error: "Email does not match the invitation" }),
+        JSON.stringify({ error: "Email не совпадает с приглашением" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
