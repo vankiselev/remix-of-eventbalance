@@ -38,25 +38,18 @@ interface PendingUser {
   created_at: string;
 }
 
-interface RoleDefinition {
-  id: string;
-  name: string;
-  code: string;
-  is_admin_role: boolean;
-}
-
 export function PendingUsersManagement() {
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
-  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const { roles } = useRoles();
+  const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
   const [rejectUser, setRejectUser] = useState<PendingUser | null>(null);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
 
-  const fetchPendingUsers = async () => {
-    try {
-      // Используем прямой запрос до применения миграции с новой RPC функцией
+  const { data: pendingUsers = [], isLoading: loading } = useQuery({
+    queryKey: ['pending-users'],
+    queryFn: async () => {
       // @ts-ignore - invitation_status column will exist after migration
       const { data, error } = await supabase
         .from("profiles")
@@ -64,59 +57,20 @@ export function PendingUsersManagement() {
         .eq("invitation_status", "pending")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setPendingUsers((data as unknown as PendingUser[]) || []);
-    } catch (error: any) {
-      console.error("Error fetching pending users:", error);
-      // Если колонка еще не существует, просто показываем пустой список
-      if (error.message?.includes('invitation_status')) {
-        setPendingUsers([]);
-      } else {
-        toast.error("Не удалось загрузить список ожидающих пользователей");
+      if (error) {
+        if (error.message?.includes('invitation_status')) return [];
+        throw error;
       }
-    } finally {
-      setLoading(false);
-    }
+      return (data as unknown as PendingUser[]) || [];
+    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Poll every 30s instead of realtime subscription
+  });
+
+  const refetchPendingUsers = () => {
+    queryClient.invalidateQueries({ queryKey: ['pending-users'] });
   };
-
-  const fetchRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("role_definitions")
-        .select("id, name, code, is_admin_role")
-        .order("name");
-
-      if (error) throw error;
-      setRoles(data || []);
-    } catch (error: any) {
-      console.error("Error fetching roles:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchPendingUsers();
-    fetchRoles();
-
-    // Подписка на изменения в profiles
-    const channel = supabase
-      .channel('pending-users-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        () => {
-          fetchPendingUsers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   const handleInviteUser = async (user: PendingUser) => {
     const roleId = selectedRoles[user.id];
