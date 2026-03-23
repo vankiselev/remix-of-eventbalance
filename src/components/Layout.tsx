@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import EventsImportDialog from "@/components/EventsImportDialog";
+const EventsImportDialog = lazy(() => import("@/components/EventsImportDialog"));
 
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { formatFullName, getInitials } from "@/utils/formatName";
@@ -358,16 +358,20 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       )}
       
-      {/* Events Import Dialog */}
-      <EventsImportDialog 
-        open={showEventsImportDialog}
-        onOpenChange={setShowEventsImportDialog}
-        onImportComplete={() => {
-          setShowEventsImportDialog(false);
-          queryClient.invalidateQueries({ queryKey: ['events'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        }}
-      />
+      {/* Events Import Dialog — lazy loaded */}
+      {showEventsImportDialog && (
+        <Suspense fallback={null}>
+          <EventsImportDialog 
+            open={showEventsImportDialog}
+            onOpenChange={setShowEventsImportDialog}
+            onImportComplete={() => {
+              setShowEventsImportDialog(false);
+              queryClient.invalidateQueries({ queryKey: ['events'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Delete All Events Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

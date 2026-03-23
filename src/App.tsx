@@ -15,6 +15,7 @@ import AdminRoute from "@/components/AdminRoute";
 const Auth = lazy(() => import("./pages/Auth"));
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
+import { useIdlePrefetch } from "@/hooks/useIdlePrefetch";
 
 // Lazy-loaded pages for code splitting
 const InvitePage = lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
@@ -75,6 +76,9 @@ const PageLoader = () => (
 );
 
 const RealtimeSync = () => {
+  // Idle prefetch for most visited sections
+  useIdlePrefetch();
+
   const queryClient = useQueryClient();
 
   useEffect(() => {
