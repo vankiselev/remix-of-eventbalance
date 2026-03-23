@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
       avatar_url, avatar_base64
     } = await req.json();
 
+    // SECURITY: All three fields are mandatory
     if (!email || !password || !invitation_token) {
       return new Response(
         JSON.stringify({ error: "Email, password and invitation token are required" }),
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // SECURITY: Validate invitation token BEFORE any user creation
+    // ── SECURITY GATE: Validate invitation BEFORE any user creation ──
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
       .select("id, tenant_id, invited_by, email, expires_at")
@@ -46,7 +47,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check expiration
     if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
       return new Response(
         JSON.stringify({ error: "Invitation token has expired" }),
@@ -54,22 +54,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify email matches invitation
     if (invData.email.toLowerCase() !== email.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Email does not match the invitation" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    // ── END SECURITY GATE ──
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // Compute public base URL from the request origin (not SUPABASE_URL which may be internal)
+    // Compute public base URL for storage URLs
     const reqUrl = new URL(req.url);
     const publicBaseUrl = `${reqUrl.protocol}//${reqUrl.host}`;
 
@@ -100,9 +93,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Build public URL manually to avoid internal Docker host (kong:8000)
         finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
-        console.log('Avatar uploaded, public URL:', finalAvatarUrl);
       } catch (avatarError) {
         console.error('Avatar processing error:', avatarError);
         return new Response(
@@ -112,8 +103,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create user - all profile fields go into user_metadata
-    // The handle_new_user trigger will read them and insert into profiles
+    // Create user — only reachable after invitation is validated
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -139,8 +129,7 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Explicitly update profile fields that the trigger might not handle
-    // This is a safety net for self-hosted where the trigger may be outdated
+    // Update profile fields the trigger might not handle
     const profileUpdate: Record<string, any> = {};
     if (finalAvatarUrl) profileUpdate.avatar_url = finalAvatarUrl;
     if (phone) profileUpdate.phone = phone;
@@ -156,7 +145,7 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // Accept invitation — reuse invData from pre-validation above
+    // Accept invitation
     const invitedBy: string | null = invData.invited_by;
     const invTenantId: string | null = invData.tenant_id;
 
@@ -180,7 +169,7 @@ Deno.serve(async (req) => {
       details: { email },
     });
 
-    // Send notification to admins about new registration
+    // Notify admins
     try {
       const recipientIds: string[] = [];
 
@@ -207,7 +196,7 @@ Deno.serve(async (req) => {
       const notifications = uniqueIds.map(adminId => ({
         user_id: adminId,
         title: "Новая регистрация",
-        message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению и ожидает одобрения`,
+        message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению`,
         type: "system",
         data: { user_email: email, user_id: userId },
       }));
