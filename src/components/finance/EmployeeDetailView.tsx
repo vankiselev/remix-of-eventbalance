@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, ArrowLeft, Upload, Trash2 } from "lucide-react";
+import { Plus, ArrowLeft, Upload, Trash2, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequest
 import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
+import { VoiceTransactionDialog } from "@/components/finance/VoiceTransactionDialog";
 
 interface SelectedEmployee {
   id: string;
@@ -46,6 +47,7 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
 
   const currentUserId = selectedEmployee?.id || user?.id;
   const { data: summary = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 } } = useUserCashSummary(currentUserId);
@@ -138,6 +140,10 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <Button size="sm" variant="outline" onClick={() => setShowVoiceDialog(true)} className="flex-shrink-0">
+                <Mic className="mr-1 h-4 w-4" />
+                <span className="hidden sm:inline">Голос</span>
+              </Button>
               <Button size="sm" onClick={() => setShowTransactionForm(true)} className="flex-shrink-0">
                 <Plus className="mr-1 h-4 w-4" />
                 Добавить
@@ -148,7 +154,11 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
       )}
 
       {!selectedEmployee && !isAdmin && hasPermission('finances.create') && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setShowVoiceDialog(true)}>
+            <Mic className="mr-2 h-4 w-4" />
+            Голосом
+          </Button>
           <Button onClick={() => setShowTransactionForm(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить транзакцию
@@ -213,6 +223,12 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
         onOpenChange={setShowImportDialog}
         onImportComplete={handleTransactionSuccess}
         defaultEmployeeId={selectedEmployee?.id}
+      />
+
+      <VoiceTransactionDialog
+        isOpen={showVoiceDialog}
+        onOpenChange={setShowVoiceDialog}
+        onSuccess={handleTransactionSuccess}
       />
     </div>
   );
