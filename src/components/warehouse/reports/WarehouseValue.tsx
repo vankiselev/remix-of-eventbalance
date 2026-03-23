@@ -51,11 +51,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
         <CardContent className="space-y-4">
           <div>
             <p className="text-3xl font-bold">
-              {new Intl.NumberFormat('ru-RU', {
-                style: 'currency',
-                currency: 'RUB',
-                minimumFractionDigits: 0,
-              }).format(totalValue)}
+              {rubFormatter.format(totalValue)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Суммарная стоимость всех товаров на складе
