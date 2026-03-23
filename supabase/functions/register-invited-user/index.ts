@@ -156,43 +156,29 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // Accept invitation if token provided
-    let invitedBy: string | null = null;
-    let invTenantId: string | null = null;
+    // Accept invitation — reuse invData from pre-validation above
+    const invitedBy: string | null = invData.invited_by;
+    const invTenantId: string | null = invData.tenant_id;
 
-    if (invitation_token) {
-      const { data: invData } = await adminClient
-        .from("invitations")
-        .select("id, tenant_id, invited_by")
-        .eq("token", invitation_token)
-        .in("status", ["pending", "sent"])
-        .single();
+    await adminClient.from("invitations").update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+    }).eq("id", invData.id);
 
-      if (invData) {
-        invitedBy = invData.invited_by;
-        invTenantId = invData.tenant_id;
-
-        await adminClient.from("invitations").update({
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-        }).eq("id", invData.id);
-
-        if (invData.tenant_id) {
-          await adminClient.from("tenant_memberships").insert({
-            tenant_id: invData.tenant_id,
-            user_id: userId,
-            role: role || "member",
-          });
-        }
-
-        await adminClient.from("invitation_audit_log").insert({
-          invitation_id: invData.id,
-          actor_id: userId,
-          action: "accepted",
-          details: { email },
-        });
-      }
+    if (invData.tenant_id) {
+      await adminClient.from("tenant_memberships").insert({
+        tenant_id: invData.tenant_id,
+        user_id: userId,
+        role: role || "member",
+      });
     }
+
+    await adminClient.from("invitation_audit_log").insert({
+      invitation_id: invData.id,
+      actor_id: userId,
+      action: "accepted",
+      details: { email },
+    });
 
     // Send notification to admins about new registration
     try {
