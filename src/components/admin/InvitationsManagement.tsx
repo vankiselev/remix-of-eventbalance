@@ -141,6 +141,7 @@ export function InvitationsManagement() {
   };
 
   const handleRevokeInvitation = async (invitation: Invitation) => {
+    if (!user) return;
     try {
       const { error } = await supabase
         .from("invitations")
@@ -149,10 +150,9 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: invitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "revoked",
         details: { email: invitation.email },
       });
@@ -162,7 +162,7 @@ export function InvitationsManagement() {
         description: `Приглашение для ${invitation.email} отозвано`,
       });
 
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error revoking invitation:", error);
       toast({
