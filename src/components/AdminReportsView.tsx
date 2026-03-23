@@ -287,7 +287,7 @@ const AdminReportsView = () => {
       if (salaryError) throw salaryError;
 
       // Always check if financial transaction exists and create/update accordingly
-      await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
+      await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type, userId);
 
       // Send notification to employee
       try {
