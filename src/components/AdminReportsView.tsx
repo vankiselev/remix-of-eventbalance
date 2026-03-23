@@ -97,7 +97,7 @@ const AdminReportsView = () => {
       const salariesMap = new Map((salaries || []).map(s => [`${s.report_id}_${s.employee_user_id}`, s]));
 
       const reportsWithEmployees: ReportWithEmployee[] = (data || []).map(report => {
-        const profile = profilesMap.get(report.user_id);
+        const profile = profilesMap.get(report.user_id) as any;
         return {
           ...report,
           employee_name: formatDisplayName(profile?.full_name) || "Неизвестно",
