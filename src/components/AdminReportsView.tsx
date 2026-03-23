@@ -46,8 +46,6 @@ const AdminReportsView = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("");
-  const [projects, setProjects] = useState<string[]>([]);
-  const [employees, setEmployees] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<ReportWithEmployee | null>(null);
   const [salaryDialog, setSalaryDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
