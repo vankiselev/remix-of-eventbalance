@@ -49,7 +49,7 @@ export const MoneyTransferNotification = ({
       // 1) Get current user
       const { data: userRes } = await supabase.auth.getUser();
       const currentUserId = userRes.user?.id;
-      console.log('👤 Current user ID:', currentUserId);
+      
       if (!currentUserId) throw new Error('not_authenticated');
 
       // 2) Load original transaction
