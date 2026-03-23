@@ -1,55 +1,44 @@
 
 
-## Проблема
+## Исправление ошибки "Приглашение не найдено" при регистрации
 
-Карточки "Наличка Настя/Лера/Ваня" показывают **0 ₽**, хотя "Итого на руках" показывает **1 000 ₽**. Это значит, что транзакции находятся (фильтр по `created_by` работает), но `cash_type` не совпадает с ожидаемыми значениями в CASE-выражениях функции.
+### Подтверждённая причина
 
-**Две возможные причины:**
+Несколько проблем в цепочке валидации приглашения:
 
-1. **На self-hosted сервере работает старая версия функции** `calculate_user_cash_totals` (из миграции 20251013), где `total_cash = SUM(всё)`, а не `SUM(три кошелька)`. В новой версии (миграция 20251017) `total_cash = cash_nastya + cash_lera + cash_vanya`, и если бы она была на сервере, total тоже был бы 0.
+1. **Рассинхрон статусов между RPC и Edge-функцией**: функция `get_invitation_by_token` фильтрует только `status = 'sent'`, а Edge-функция `register-invited-user` принимает `pending` И `sent`. Если приглашение в статусе `pending`, фронтенд его покажет (если RPC обновлён), но Edge-функция может не найти — или наоборот.
 
-2. **Значение `cash_type` в транзакции** не совпадает со строками `'Наличка Настя'` / `'Наличка Лера'` / `'Наличка Ваня'` — возможно там другой формат, пробелы, или значение из другого кошелька (Корп. карта, ИП и т.д.).
+2. **Возможный type mismatch**: RPC-функция `get_invitation_by_token` принимает параметр типа `uuid`, но колонка `token` в таблице — `text`. Это может вызывать ошибку неявного приведения типов.
 
-## План исправления
+3. **Edge-функция возвращает слишком общую ошибку** — "Приглашение не найдено" без деталей (какой статус, найден ли токен вообще).
 
-### 1. Обновить функции подсчёта — учитывать ВСЕ типы кошельков
+### План исправления
 
-Сейчас функции считают только 3 "наличных" кошелька. Но `cash_type` может быть любым значением из `PROJECT_OWNERS` (всего 12 вариантов: Корп. карта, ИП, Оплатил клиент и т.д.). Нужно:
-
-- Оставить 3 карточки для наличных кошельков
-- **Пересчитать `total_cash`** как сумму ВСЕХ транзакций пользователя (не только трёх наличных), чтобы "Итого на руках" отражало полный баланс
-
-**Новая миграция** — пересоздать `calculate_user_cash_totals`, `get_company_cash_summary` и `get_employee_cash_summary`:
-- `total_cash` = SUM по всем транзакциям (без фильтра по cash_type)
-- `cash_nastya/lera/vanya` = SUM с фильтром по конкретному cash_type (как сейчас)
-
-### 2. Добавить нечувствительное к регистру/пробелам сравнение
-
-Использовать `TRIM(LOWER(cash_type))` для сравнения в CASE-выражениях, чтобы избежать проблем с невидимыми символами или разным регистром.
-
-### 3. Без изменений фронтенда
-
-Компоненты `FinanceSummaryCards` и хуки уже работают корректно — проблема только в SQL-функциях на сервере.
-
-## Технические детали
-
-Миграция обновит 3 функции:
+#### Шаг 1: Миграция — пересоздать `get_invitation_by_token`
+- Изменить тип параметра с `uuid` на `text`
+- Добавить статус `pending` в фильтр (помимо `sent`)
+- Добавить поддержку статуса `accepted` для retry-сценариев
 
 ```sql
--- Пример для calculate_user_cash_totals
-CREATE OR REPLACE FUNCTION public.calculate_user_cash_totals(user_uuid uuid)
-RETURNS TABLE(total_cash numeric, cash_nastya numeric, cash_lera numeric, cash_vanya numeric)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $$
-  SELECT
-    COALESCE(SUM(COALESCE(income_amount,0) - COALESCE(expense_amount,0)), 0) AS total_cash,
-    COALESCE(SUM(CASE WHEN TRIM(cash_type) = 'Наличка Настя' THEN ... END), 0) AS cash_nastya,
-    COALESCE(SUM(CASE WHEN TRIM(cash_type) = 'Наличка Лера'  THEN ... END), 0) AS cash_lera,
-    COALESCE(SUM(CASE WHEN TRIM(cash_type) = 'Наличка Ваня'  THEN ... END), 0) AS cash_vanya
-  FROM public.financial_transactions
-  WHERE created_by = user_uuid;
-$$;
+CREATE OR REPLACE FUNCTION public.get_invitation_by_token(invitation_token text)
+RETURNS TABLE(...)
+-- WHERE status IN ('pending', 'sent', 'accepted')
+--   AND (status = 'accepted' OR expires_at > now())
 ```
 
-Аналогично для `get_company_cash_summary` (без WHERE) и `get_employee_cash_summary`.
+#### Шаг 2: Edge-функция — улучшить диагностику
+В `supabase/functions/register-invited-user/index.ts`:
+- Добавить в лог и ответ конкретную причину (токен не найден / статус невалидный / истёк)
+- Разделить ошибки: "Токен не найден" vs "Приглашение истекло" vs "Приглашение уже использовано"
+
+#### Шаг 3: Фронтенд — устойчивая валидация
+В `src/pages/InvitePage.tsx`:
+- Добавить fallback: если RPC `get_invitation_by_token` не существует или падает, попробовать прямой запрос к таблице
+- Логировать конкретную ошибку RPC в консоль для диагностики
+- Показывать детальное сообщение об ошибке от Edge-функции
+
+### Файлы для изменения
+1. **Новая миграция** — пересоздание функции `get_invitation_by_token`
+2. `supabase/functions/register-invited-user/index.ts` — улучшение ошибок
+3. `src/pages/InvitePage.tsx` — fallback валидация + детальные ошибки
 
