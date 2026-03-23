@@ -35,82 +35,65 @@ const actionLabels = {
   restore: { label: "Восстановление", variant: "default" as const },
 };
 
-export const ItemAuditLog = ({ itemId }: ItemAuditLogProps) => {
-  const { auditLogs, isLoading } = useWarehouseItemsAudit(itemId);
-  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
+const fieldLabels: Record<string, string> = {
+  name: "Название",
+  sku: "Артикул",
+  description: "Описание",
+  category_id: "Категория",
+  unit: "Единица измерения",
+  min_stock: "Мин. остаток",
+  price: "Цена",
+  photo_url: "Фото",
+  is_active: "Активность",
+};
 
-  const getChangedFieldsText = (log: AuditLogEntry) => {
-    if (!log.changed_fields || log.changed_fields.length === 0) {
-      return "—";
-    }
-    
-    const fieldLabels: Record<string, string> = {
-      name: "Название",
-      sku: "Артикул",
-      description: "Описание",
-      category_id: "Категория",
-      unit: "Единица измерения",
-      min_stock: "Мин. остаток",
-      price: "Цена",
-      photo_url: "Фото",
-      is_active: "Активность",
-    };
+const getChangedFieldsText = (log: AuditLogEntry) => {
+  if (!log.changed_fields || log.changed_fields.length === 0) {
+    return "—";
+  }
+  return log.changed_fields
+    .map((field) => fieldLabels[field] || field)
+    .join(", ");
+};
 
-    return log.changed_fields
-      .map((field) => fieldLabels[field] || field)
-      .join(", ");
-  };
+const renderDiff = (log: AuditLogEntry) => {
+  if (!log.changed_fields || log.changed_fields.length === 0) {
+    return null;
+  }
 
-  const renderDiff = (log: AuditLogEntry) => {
-    if (!log.changed_fields || log.changed_fields.length === 0) {
-      return null;
-    }
+  return (
+    <div className="space-y-3">
+      {log.changed_fields.map((field) => {
+        const oldValue = log.old_data?.[field];
+        const newValue = log.new_data?.[field];
+        
+        if (oldValue === newValue) return null;
 
-    const fieldLabels: Record<string, string> = {
-      name: "Название",
-      sku: "Артикул",
-      description: "Описание",
-      category_id: "Категория",
-      unit: "Единица измерения",
-      min_stock: "Мин. остаток",
-      price: "Цена",
-      photo_url: "Фото",
-      is_active: "Активность",
-    };
-
-    return (
-      <div className="space-y-3">
-        {log.changed_fields.map((field) => {
-          const oldValue = log.old_data?.[field];
-          const newValue = log.new_data?.[field];
-          
-          if (oldValue === newValue) return null;
-
-          return (
-            <div key={field} className="border-l-2 border-primary pl-3">
-              <div className="text-sm font-medium text-foreground mb-1">
-                {fieldLabels[field] || field}
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Было:</div>
-                  <div className="bg-destructive/10 text-destructive px-2 py-1 rounded">
-                    {oldValue?.toString() || "—"}
-                  </div>
+        return (
+          <div key={field} className="border-l-2 border-primary pl-3">
+            <div className="text-sm font-medium text-foreground mb-1">
+              {fieldLabels[field] || field}
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Было:</div>
+                <div className="bg-destructive/10 text-destructive px-2 py-1 rounded">
+                  {oldValue?.toString() || "—"}
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Стало:</div>
-                  <div className="bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-1 rounded">
-                    {newValue?.toString() || "—"}
-                  </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Стало:</div>
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-1 rounded">
+                  {newValue?.toString() || "—"}
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-    );
-  };
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
   if (isLoading) {
     return (
