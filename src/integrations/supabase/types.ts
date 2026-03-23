@@ -1542,23 +1542,14 @@ export type Database = {
         Args: { p_transaction_id: string }
         Returns: undefined
       }
-      calculate_user_cash_totals:
-        | {
-            Args: { p_user_id: string }
-            Returns: {
-              cash_type: string
-              total_expense: number
-              total_income: number
-            }[]
-          }
-        | {
-            Args: { p_user_id?: string; user_uuid?: string }
-            Returns: {
-              cash_type: string
-              total_expense: number
-              total_income: number
-            }[]
-          }
+      calculate_user_cash_totals: {
+        Args: { p_user_id: string }
+        Returns: {
+          cash_type: string
+          total_expense: number
+          total_income: number
+        }[]
+      }
       delete_all_transactions: { Args: never; Returns: undefined }
       delete_employee_permanently:
         | { Args: { p_user_id: string }; Returns: undefined }

@@ -89,7 +89,7 @@ export const useUserCashSummary = (userId: string | undefined) => {
       if (!userId) return defaultSummary;
       
       const { data, error } = await supabase.rpc('calculate_user_cash_totals', { 
-        user_uuid: userId 
+        p_user_id: userId 
       });
       
       if (error) throw error;
