@@ -1,7 +1,14 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
 import { WarehouseCategory } from "@/hooks/useWarehouseCategories";
 import { DollarSign, TrendingUp, Package } from "lucide-react";
+
+const rubFormatter = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  minimumFractionDigits: 0,
+});
 
 interface WarehouseValueProps {
   items: WarehouseItemWithStock[];
