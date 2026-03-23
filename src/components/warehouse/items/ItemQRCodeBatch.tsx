@@ -211,8 +211,8 @@ export const ItemQRCodeBatch = ({
                 ({ item, dataUrl, locations }) => `
               <div class="qr-item">
                 <img src="${dataUrl}" alt="QR Code" />
-                <h3>${item.name}</h3>
-                <div class="sku">SKU: ${item.sku}</div>
+                <h3>${escapeHtml(item.name)}</h3>
+                <div class="sku">SKU: ${escapeHtml(item.sku)}</div>
                 ${locations.length > 0 ? `
                   <div class="locations">
                     ${locations.slice(0, 2).map(loc => `
