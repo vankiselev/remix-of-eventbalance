@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { generateSlug } from '@/utils/slugUtils';
 
 interface CreateTenantDialogProps {
   onCreated: () => void;
@@ -17,16 +18,6 @@ export const CreateTenantDialog: React.FC<CreateTenantDialogProps> = ({ onCreate
   const [slug, setSlug] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  const generateSlug = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 30);
-  };
 
   const handleNameChange = (value: string) => {
     setName(value);

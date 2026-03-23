@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, RotateCcw, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +17,15 @@ import {
 import { InviteUserDialog } from "./InviteUserDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 interface Invitation {
   id: string;
   email: string;
-  role: string; // Can be any string from DB
+  role: string;
   status: string;
   invited_at: string;
   expires_at: string;
@@ -39,14 +41,15 @@ interface Invitation {
 }
 
 export function InvitationsManagement() {
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [deleteInvitation, setDeleteInvitation] = useState<Invitation | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const fetchInvitations = async () => {
-    try {
+  const { data: invitations = [], isLoading: loading } = useQuery({
+    queryKey: ['invitations-management'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("invitations")
         .select("*")
@@ -54,7 +57,6 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Check if invited users have already registered by looking up profiles
       const emails = (data || []).map(i => i.email);
       const { data: registeredProfiles } = await supabase
         .from("profiles")
@@ -63,40 +65,29 @@ export function InvitationsManagement() {
 
       const registeredEmails = new Set((registeredProfiles || []).map(p => p.email));
 
-      // Update status to 'accepted' for users who have already registered
-      const enrichedInvitations = (data || []).map(inv => {
+      return (data || []).map(inv => {
         if (registeredEmails.has(inv.email) && inv.status !== 'accepted') {
           return { ...inv, status: 'accepted' };
         }
         return inv;
-      });
+      }) as Invitation[];
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-      setInvitations(enrichedInvitations);
-    } catch (error: any) {
-      console.error("Error fetching invitations:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить список приглашений",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const refetchInvitations = () => {
+    queryClient.invalidateQueries({ queryKey: ['invitations-management'] });
   };
 
-  useEffect(() => {
-    fetchInvitations();
-  }, []);
-
   const handleResendInvitation = async (invitation: Invitation) => {
+    if (!user) return;
     try {
-      // Revoke old invitation
       await supabase
         .from("invitations")
         .update({ status: "revoked" })
         .eq("id", invitation.id);
 
-      // Create new invitation
       const { data: newInvitation, error: createError } = await supabase
         .from("invitations")
         .insert({
@@ -104,15 +95,14 @@ export function InvitationsManagement() {
           role: invitation.role,
           first_name: invitation.first_name,
           last_name: invitation.last_name,
-          invited_by: (await supabase.auth.getUser()).data.user?.id!,
-          token_hash: '', // Will be filled by trigger
+          invited_by: user.id,
+          token_hash: '',
         })
         .select()
         .single();
 
       if (createError) throw createError;
 
-      // Send email
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           email: invitation.email,
@@ -127,10 +117,9 @@ export function InvitationsManagement() {
         console.error("Email sending error:", emailError);
       }
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: newInvitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "resent",
         details: { email: invitation.email },
       });
@@ -140,7 +129,7 @@ export function InvitationsManagement() {
         description: `Новое приглашение для ${invitation.email} отправлено`,
       });
 
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error resending invitation:", error);
       toast({
@@ -152,6 +141,7 @@ export function InvitationsManagement() {
   };
 
   const handleRevokeInvitation = async (invitation: Invitation) => {
+    if (!user) return;
     try {
       const { error } = await supabase
         .from("invitations")
@@ -160,10 +150,9 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: invitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "revoked",
         details: { email: invitation.email },
       });
@@ -173,7 +162,7 @@ export function InvitationsManagement() {
         description: `Приглашение для ${invitation.email} отозвано`,
       });
 
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error revoking invitation:", error);
       toast({
@@ -185,7 +174,7 @@ export function InvitationsManagement() {
   };
 
   const handleDeleteInvitation = async () => {
-    if (!deleteInvitation) return;
+    if (!deleteInvitation || !user) return;
 
     try {
       const { error } = await supabase
@@ -195,10 +184,9 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: deleteInvitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "deleted",
         details: { email: deleteInvitation.email },
       });
@@ -209,7 +197,7 @@ export function InvitationsManagement() {
       });
 
       setDeleteInvitation(null);
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error deleting invitation:", error);
       toast({
@@ -352,7 +340,7 @@ export function InvitationsManagement() {
       <InviteUserDialog
         open={showInviteDialog}
         onOpenChange={setShowInviteDialog}
-        onInviteSent={fetchInvitations}
+        onInviteSent={refetchInvitations}
       />
 
       <AlertDialog open={!!deleteInvitation} onOpenChange={(open) => !open && setDeleteInvitation(null)}>

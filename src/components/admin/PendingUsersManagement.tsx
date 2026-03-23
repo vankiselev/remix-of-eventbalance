@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,6 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRoles } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -35,25 +38,18 @@ interface PendingUser {
   created_at: string;
 }
 
-interface RoleDefinition {
-  id: string;
-  name: string;
-  code: string;
-  is_admin_role: boolean;
-}
-
 export function PendingUsersManagement() {
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
-  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const { roles } = useRoles();
+  const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
   const [rejectUser, setRejectUser] = useState<PendingUser | null>(null);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
 
-  const fetchPendingUsers = async () => {
-    try {
-      // Используем прямой запрос до применения миграции с новой RPC функцией
+  const { data: pendingUsers = [], isLoading: loading } = useQuery({
+    queryKey: ['pending-users'],
+    queryFn: async () => {
       // @ts-ignore - invitation_status column will exist after migration
       const { data, error } = await supabase
         .from("profiles")
@@ -61,59 +57,20 @@ export function PendingUsersManagement() {
         .eq("invitation_status", "pending")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setPendingUsers((data as unknown as PendingUser[]) || []);
-    } catch (error: any) {
-      console.error("Error fetching pending users:", error);
-      // Если колонка еще не существует, просто показываем пустой список
-      if (error.message?.includes('invitation_status')) {
-        setPendingUsers([]);
-      } else {
-        toast.error("Не удалось загрузить список ожидающих пользователей");
+      if (error) {
+        if (error.message?.includes('invitation_status')) return [];
+        throw error;
       }
-    } finally {
-      setLoading(false);
-    }
+      return (data as unknown as PendingUser[]) || [];
+    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Poll every 30s instead of realtime subscription
+  });
+
+  const refetchPendingUsers = () => {
+    queryClient.invalidateQueries({ queryKey: ['pending-users'] });
   };
-
-  const fetchRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("role_definitions")
-        .select("id, name, code, is_admin_role")
-        .order("name");
-
-      if (error) throw error;
-      setRoles(data || []);
-    } catch (error: any) {
-      console.error("Error fetching roles:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchPendingUsers();
-    fetchRoles();
-
-    // Подписка на изменения в profiles
-    const channel = supabase
-      .channel('pending-users-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        () => {
-          fetchPendingUsers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   const handleInviteUser = async (user: PendingUser) => {
     const roleId = selectedRoles[user.id];
@@ -138,13 +95,12 @@ export function PendingUsersManagement() {
       if (updateError) throw updateError;
 
       // Назначаем RBAC роль
-      const { data: authUser } = await supabase.auth.getUser();
       const { error: roleError } = await supabase
         .from("user_role_assignments")
         .upsert({
           user_id: user.id,
           role_id: roleId,
-          assigned_by: authUser.user?.id
+          assigned_by: authUser?.id
         }, { onConflict: "user_id" });
 
       if (roleError) throw roleError;
@@ -168,8 +124,7 @@ export function PendingUsersManagement() {
         console.error("Failed to send approval email:", emailError);
       }
       
-      // Удаляем из локального состояния
-      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+      refetchPendingUsers();
       setSelectedRoles(prev => {
         const { [user.id]: _, ...rest } = prev;
         return rest;
@@ -200,8 +155,7 @@ export function PendingUsersManagement() {
 
       toast.success(`Заявка пользователя ${rejectUser.email} отклонена`);
       
-      // Удаляем из локального состояния
-      setPendingUsers(prev => prev.filter(u => u.id !== rejectUser.id));
+      refetchPendingUsers();
       setRejectUser(null);
     } catch (error: any) {
       console.error("Error rejecting user:", error);
