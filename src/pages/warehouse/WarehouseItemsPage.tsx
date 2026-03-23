@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useWarehouseItems } from "@/hooks/useWarehouseItems";
 import { useWarehouseCategories } from "@/hooks/useWarehouseCategories";
 import { Button } from "@/components/ui/button";
