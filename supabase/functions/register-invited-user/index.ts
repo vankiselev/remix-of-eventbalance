@@ -97,20 +97,16 @@ Deno.serve(async (req) => {
           .upload(fileName, bytes, { contentType: 'image/jpeg' });
         
         if (uploadError) {
-          console.error('Avatar upload error:', uploadError);
-          return new Response(
-            JSON.stringify({ error: `Avatar upload failed: ${uploadError.message}` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          console.error('[register-invited-user] Avatar upload error:', uploadError);
+          // Don't block registration for avatar upload failure - continue without avatar
+          console.warn('[register-invited-user] Continuing registration without avatar');
+        } else {
+          finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
         }
-
-        finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
       } catch (avatarError) {
-        console.error('Avatar processing error:', avatarError);
-        return new Response(
-          JSON.stringify({ error: `Avatar processing failed: ${avatarError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error('[register-invited-user] Avatar processing error:', avatarError);
+        // Don't block registration for avatar issues
+        console.warn('[register-invited-user] Continuing registration without avatar');
       }
     }
 
