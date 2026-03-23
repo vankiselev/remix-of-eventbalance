@@ -586,10 +586,9 @@ html, body {
       min-height: 44px; /* iOS recommended touch target */
     }
 
-    /* Mobile button improvements */
-    button {
-      min-height: 44px;
-      min-width: 44px;
+    /* Mobile button improvements — only for standalone action buttons, not inline icons */
+    button:not([class*="h-6"]):not([class*="h-7"]):not([class*="h-8"]):not([class*="w-6"]):not([class*="w-7"]):not([class*="w-8"]) {
+      min-height: 40px;
     }
   }
 
