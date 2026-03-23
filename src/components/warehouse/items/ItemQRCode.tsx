@@ -170,7 +170,7 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>QR-код: ${item.sku}</title>
+          <title>QR-код: ${escapeHtml(item.sku)}</title>
           <style>
             @media print {
               @page {
