@@ -144,8 +144,7 @@ const AdminReportsView = () => {
           schema: 'public',
           table: 'event_reports'
         },
-        (payload) => {
-          console.log('Real-time report update (admin):', payload);
+        () => {
           fetchReports();
         }
       )

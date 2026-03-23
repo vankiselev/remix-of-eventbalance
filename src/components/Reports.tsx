@@ -204,8 +204,7 @@ const Reports = () => {
           schema: 'public',
           table: 'event_reports'
         },
-        (payload) => {
-          console.log('Real-time report update:', payload);
+        () => {
           fetchReports();
         }
       )
