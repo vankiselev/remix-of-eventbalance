@@ -17,10 +17,48 @@ Deno.serve(async (req) => {
       avatar_url, avatar_base64
     } = await req.json();
 
-    if (!email || !password) {
+    if (!email || !password || !invitation_token) {
       return new Response(
-        JSON.stringify({ error: "Email and password are required" }),
+        JSON.stringify({ error: "Email, password and invitation token are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // SECURITY: Validate invitation token BEFORE any user creation
+    const { data: invData, error: invError } = await adminClient
+      .from("invitations")
+      .select("id, tenant_id, invited_by, email, expires_at")
+      .eq("token", invitation_token)
+      .in("status", ["pending", "sent"])
+      .single();
+
+    if (invError || !invData) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or already used invitation token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check expiration
+    if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: "Invitation token has expired" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify email matches invitation
+    if (invData.email.toLowerCase() !== email.toLowerCase()) {
+      return new Response(
+        JSON.stringify({ error: "Email does not match the invitation" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -118,43 +156,29 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // Accept invitation if token provided
-    let invitedBy: string | null = null;
-    let invTenantId: string | null = null;
+    // Accept invitation — reuse invData from pre-validation above
+    const invitedBy: string | null = invData.invited_by;
+    const invTenantId: string | null = invData.tenant_id;
 
-    if (invitation_token) {
-      const { data: invData } = await adminClient
-        .from("invitations")
-        .select("id, tenant_id, invited_by")
-        .eq("token", invitation_token)
-        .in("status", ["pending", "sent"])
-        .single();
+    await adminClient.from("invitations").update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+    }).eq("id", invData.id);
 
-      if (invData) {
-        invitedBy = invData.invited_by;
-        invTenantId = invData.tenant_id;
-
-        await adminClient.from("invitations").update({
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-        }).eq("id", invData.id);
-
-        if (invData.tenant_id) {
-          await adminClient.from("tenant_memberships").insert({
-            tenant_id: invData.tenant_id,
-            user_id: userId,
-            role: role || "member",
-          });
-        }
-
-        await adminClient.from("invitation_audit_log").insert({
-          invitation_id: invData.id,
-          actor_id: userId,
-          action: "accepted",
-          details: { email },
-        });
-      }
+    if (invData.tenant_id) {
+      await adminClient.from("tenant_memberships").insert({
+        tenant_id: invData.tenant_id,
+        user_id: userId,
+        role: role || "member",
+      });
     }
+
+    await adminClient.from("invitation_audit_log").insert({
+      invitation_id: invData.id,
+      actor_id: userId,
+      action: "accepted",
+      details: { email },
+    });
 
     // Send notification to admins about new registration
     try {
