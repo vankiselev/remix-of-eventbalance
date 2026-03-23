@@ -192,17 +192,7 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
       throw new Error('Лист пуст');
     }
 
-    // Get column letters (A, B, C, etc.)
-    const getColumnLetter = (index: number): string => {
-      let letter = '';
-      while (index >= 0) {
-        letter = String.fromCharCode((index % 26) + 65) + letter;
-        index = Math.floor(index / 26) - 1;
-      }
-      return letter;
-    };
-
-    // Create headers with column letters
+    // Create headers with column letters (reuses getColumnLetter)
     const headerRow = rows[0].map((cell: any, index: number) => {
       const columnLetter = getColumnLetter(index);
       const cellValue = cell ? String(cell).trim() : '';
