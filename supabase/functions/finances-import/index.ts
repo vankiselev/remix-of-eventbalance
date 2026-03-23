@@ -568,7 +568,7 @@ serve(async (req) => {
     }
 
     // Синхронный режим - ждём завершения
-    const result = await processImport(supabase, rows, user_id, target_user_id || user_id, job_id, resume_from_row || 0);
+    const result = await processImport(supabase, rows, user_id, resolvedTargetUserId, job_id, resume_from_row || 0);
     console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(
