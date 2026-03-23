@@ -83,45 +83,54 @@ export const NotificationsMenu = () => {
   const renderNotification = (n: Notification) => {
     const cfg = getIconConfig(n.type);
     const Icon = cfg.icon;
+    const isTransferWithActions = n.type === 'money_transfer' && n.data && !n.read;
 
     return (
       <div
         key={n.id}
         className={cn(
-          'relative flex gap-3 p-3 rounded-lg transition-colors cursor-pointer group',
-          'hover:bg-muted/60',
+          'relative flex gap-3 p-3 rounded-lg transition-colors group',
+          !isTransferWithActions && 'cursor-pointer hover:bg-muted/60',
           !n.read && 'border-l-[3px] border-l-primary bg-primary/5',
           n.read && 'border-l-[3px] border-l-transparent'
         )}
-        onClick={() => handleNotificationClick(n.id, n.read)}
+        onClick={() => !isTransferWithActions && handleNotificationClick(n.id, n.read)}
       >
         {/* Icon */}
-        <div className={cn('flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-0.5', cfg.bg)}>
+        <div className={cn('flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5', cfg.bg)}>
           <Icon className={cn('h-4 w-4', cfg.color)} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className={cn('text-sm leading-tight', !n.read ? 'font-semibold text-foreground' : 'font-medium text-foreground/80')}>
+          <div className="flex items-start justify-between gap-1">
+            <h4 className={cn(
+              'text-sm leading-tight flex-1 min-w-0',
+              !n.read ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'
+            )}>
               {n.title}
             </h4>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-1 -mr-1"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 -mr-1"
               onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-          <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+          
+          {/* Message — hide for actionable transfers to avoid redundancy */}
+          {!isTransferWithActions && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+          )}
+          
+          <p className="text-[11px] text-muted-foreground/60 mt-1">
             {format(new Date(n.created_at), 'HH:mm · d MMM', { locale: ru })}
           </p>
 
           {/* Money transfer actions */}
-          {n.type === 'money_transfer' && n.data && !n.read && (
+          {isTransferWithActions && (
             <div className="mt-2">
               <MoneyTransferNotification
                 notificationId={n.id}
@@ -136,6 +145,22 @@ export const NotificationsMenu = () => {
                   queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
                   queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
                 }}
+              />
+            </div>
+          )}
+
+          {/* Non-actionable transfer status (already processed) */}
+          {n.type === 'money_transfer' && n.data && n.read && n.data.status && (
+            <div className="mt-2">
+              <MoneyTransferNotification
+                notificationId={n.id}
+                transactionId={n.data.transaction_id}
+                fromUserName={n.data.from_user_name}
+                amount={n.data.amount}
+                cashType={n.data.cash_type}
+                description={n.data.description}
+                status={n.data.status}
+                onAction={() => {}}
               />
             </div>
           )}
@@ -196,14 +221,14 @@ export const NotificationsMenu = () => {
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[85vw] max-w-[420px] flex flex-col gap-0 p-0">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <SheetTitle className="text-lg font-bold">Уведомления</SheetTitle>
-            <div className="flex items-center gap-1">
+          {/* Header — compact, no width conflicts */}
+          <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
+            <SheetTitle className="text-lg font-bold flex-shrink-0">Уведомления</SheetTitle>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-7 px-2 text-xs">
                   <Check className="h-3.5 w-3.5 mr-1" />
-                  Прочитать
+                  <span className="hidden xs:inline">Прочитать</span>
                 </Button>
               )}
               {notifications.length > 0 && (
@@ -211,38 +236,37 @@ export const NotificationsMenu = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteAllDialogOpen(true)}
-                  className="h-8 text-xs text-destructive hover:text-destructive"
+                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Очистить
+                  <span className="hidden xs:inline">Очистить</span>
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
           {/* Tabs */}
           <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="mx-4 mb-2 h-9 w-auto grid grid-cols-4">
-              <TabsTrigger value="all" className="text-xs">
-                Все
-                {notifications.length > 0 && (
-                  <span className="ml-1 text-muted-foreground">({notifications.length})</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="unread" className="text-xs">
-                Новые
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="transfers" className="text-xs">Переводы</TabsTrigger>
-              <TabsTrigger value="system" className="text-xs">Система</TabsTrigger>
-            </TabsList>
+            <div className="px-4 pb-2">
+              <TabsList className="h-8 w-full grid grid-cols-4">
+                <TabsTrigger value="all" className="text-[11px] px-1">
+                  Все
+                  {notifications.length > 0 && (
+                    <span className="ml-0.5 text-muted-foreground">({notifications.length})</span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="unread" className="text-[11px] px-1">
+                  Новые
+                  {unreadCount > 0 && (
+                    <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-0.5 text-[10px]">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="transfers" className="text-[11px] px-1">Переводы</TabsTrigger>
+                <TabsTrigger value="system" className="text-[11px] px-1">Система</TabsTrigger>
+              </TabsList>
+            </div>
 
             {(['all', 'unread', 'transfers', 'system'] as const).map((tab) => (
               <TabsContent key={tab} value={tab} className="flex-1 mt-0 min-h-0">

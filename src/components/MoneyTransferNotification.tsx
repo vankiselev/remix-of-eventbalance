@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, ArrowDownLeft, Wallet } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface MoneyTransferNotificationProps {
   notificationId: string;
@@ -44,41 +45,26 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
-      
-      
-      // 1) Get current user
       const { data: userRes } = await supabase.auth.getUser();
       const currentUserId = userRes.user?.id;
-      
       if (!currentUserId) throw new Error('not_authenticated');
 
-      // 2) Load original transaction
       const { data: tx, error: txError } = await supabase
         .from('financial_transactions')
         .select('id, created_by, transfer_to_user_id, expense_amount, cash_type, transfer_status, project_owner')
         .eq('id', transactionId)
         .single();
 
-
       if (txError || !tx) throw txError || new Error('tx_not_found');
-
-      if (tx.transfer_to_user_id !== currentUserId) {
-        throw new Error('not_recipient');
-      }
-
-      if (tx.transfer_status && tx.transfer_status !== 'pending') {
-        throw new Error('already_processed');
-      }
+      if (tx.transfer_to_user_id !== currentUserId) throw new Error('not_recipient');
+      if (tx.transfer_status && tx.transfer_status !== 'pending') throw new Error('already_processed');
 
       if (action === 'accept') {
-        
         const { error: rpcErr } = await supabase.rpc('accept_money_transfer', {
           p_transaction_id: transactionId,
         });
-        
         if (rpcErr) throw rpcErr;
 
-        // Notify sender
         await supabase.functions.invoke('send-push-notification', {
           body: {
             user_id: tx.created_by,
@@ -94,12 +80,10 @@ export const MoneyTransferNotification = ({
           },
         });
       } else {
-        // Reject transfer via RPC with rejection reason
         const { error: rpcErr } = await supabase.rpc('reject_money_transfer', {
           p_transaction_id: transactionId,
           p_rejection_reason: rejectionReason.trim(),
         });
-        
         if (rpcErr) throw rpcErr;
 
         await supabase.functions.invoke('send-push-notification', {
@@ -118,7 +102,6 @@ export const MoneyTransferNotification = ({
         });
       }
 
-      // Mark notification as read
       await supabase
         .from('notifications')
         .update({ read: true })
@@ -144,70 +127,96 @@ export const MoneyTransferNotification = ({
     }
   };
 
-  // If status is accepted or rejected, show info-only message
+  // Resolved status — compact info-only display
   if (status === 'accepted' || status === 'rejected') {
     return (
-      <div className="space-y-2 p-3 bg-accent/50 rounded-lg">
-        <div className="flex items-center gap-2">
-          {status === 'accepted' ? (
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          ) : (
-            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          )}
-          <div className="font-medium">
-            {status === 'accepted' ? 'Получение подтверждено' : 'Передача отклонена'}
-          </div>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Сумма: {(amount || 0).toLocaleString('ru-RU')} ₽
+      <div className={cn(
+        "flex items-center gap-2.5 p-2.5 rounded-lg",
+        status === 'accepted' ? "bg-green-500/10" : "bg-red-500/10"
+      )}>
+        {status === 'accepted' ? (
+          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+        ) : (
+          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+        )}
+        <div className="min-w-0 flex-1">
+          <span className={cn(
+            "text-sm font-medium",
+            status === 'accepted' ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
+          )}>
+            {status === 'accepted' ? 'Подтверждено' : 'Отклонено'}
+          </span>
+          <span className="text-sm text-muted-foreground ml-1.5">
+            {(amount || 0).toLocaleString('ru-RU')} ₽
+          </span>
         </div>
       </div>
     );
   }
 
-  // For pending status, show action buttons
+  // Pending — actionable card with clear visual hierarchy
   return (
-    <div className="space-y-3 p-3 bg-accent/50 rounded-lg">
-      <div className="space-y-1">
-        <div className="font-medium">От: {fromUserName}</div>
-        <div className="text-lg font-semibold text-green-600 dark:text-green-400">
-          +{(amount || 0).toLocaleString('ru-RU')} ₽
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Кошелек: {cashType}
-        </div>
-        {description && (
-          <div className="text-sm text-muted-foreground">
-            {description}
+    <div className="rounded-lg border border-primary/20 bg-primary/5 overflow-hidden">
+      {/* Transfer details */}
+      <div className="p-3 space-y-2">
+        {/* Amount — most important */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
+              <ArrowDownLeft className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">
+                От {fromUserName || 'сотрудника'}
+              </p>
+            </div>
           </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-lg font-bold text-green-600 dark:text-green-400 leading-tight">
+              +{(amount || 0).toLocaleString('ru-RU')} ₽
+            </p>
+          </div>
+        </div>
+
+        {/* Wallet + description — secondary info */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Wallet className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{cashType}</span>
+        </div>
+        
+        {description && (
+          <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed">
+            {description}
+          </p>
         )}
       </div>
       
-      <div className="grid grid-cols-2 gap-2">
+      {/* Actions — full width, stacked on very narrow widths */}
+      <div className="grid grid-cols-2 gap-px bg-border/50">
         <Button
           onClick={() => handleAction('accept')}
           disabled={processing}
           size="sm"
-          className="w-full"
+          className="rounded-none rounded-bl-lg h-9 text-xs font-medium"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
           ) : (
-            <CheckCircle className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Подтвердить получение
+          Подтвердить
         </Button>
         <Button
           onClick={() => setRejectDialogOpen(true)}
           disabled={processing}
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="w-full"
+          className="rounded-none rounded-br-lg h-9 text-xs font-medium text-muted-foreground hover:text-destructive"
         >
           {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
           ) : (
-            <XCircle className="h-4 w-4 mr-2" />
+            <XCircle className="h-3.5 w-3.5 mr-1.5" />
           )}
           Отклонить
         </Button>
