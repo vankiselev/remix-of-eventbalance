@@ -210,6 +210,11 @@ export const useNotifications = () => {
               seenIdsRef.current.add(newNotif.id);
               setNotifications(prev => [newNotif, ...prev]);
               enqueuePendingNotification(newNotif);
+              // When a money_transfer notification arrives, immediately refresh pending transfers UI
+              if (newNotif.type === 'money_transfer') {
+                queryClient.invalidateQueries({ queryKey: ['pending-transfers'] });
+                queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
+              }
             } else if (payload.eventType === 'UPDATE') {
               const updated = payload.new as Notification;
               seenIdsRef.current.add(updated.id);
