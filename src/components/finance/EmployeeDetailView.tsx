@@ -47,6 +47,7 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
 
   const currentUserId = selectedEmployee?.id || user?.id;
   const { data: summary = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 } } = useUserCashSummary(currentUserId);
