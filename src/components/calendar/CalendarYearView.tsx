@@ -3,6 +3,8 @@ interface Event {
   start_date: string;
 }
 
+import { useMemo } from "react";
+
 interface CalendarYearViewProps {
   year: number;
   events: Event[];
@@ -17,16 +19,25 @@ const MONTHS = [
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
 const CalendarYearView = ({ year, events, onMonthClick }: CalendarYearViewProps) => {
-  const getEventsCountForMonth = (month: number) => {
-    return events.filter(event => {
+  // Pre-index events by date and month for O(1) lookups
+  const { eventsByDate, eventsCountByMonth } = useMemo(() => {
+    const byDate = new Map<string, number>();
+    const byMonth = new Array(12).fill(0);
+    events.forEach(event => {
+      byDate.set(event.start_date, (byDate.get(event.start_date) || 0) + 1);
       const eventDate = new Date(event.start_date);
-      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
-    }).length;
-  };
+      if (eventDate.getFullYear() === year) {
+        byMonth[eventDate.getMonth()]++;
+      }
+    });
+    return { eventsByDate: byDate, eventsCountByMonth: byMonth };
+  }, [events, year]);
+
+  const getEventsCountForMonth = (month: number) => eventsCountByMonth[month];
 
   const getEventsForDate = (month: number, day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.start_date === dateStr).length;
+    return eventsByDate.get(dateStr) || 0;
   };
 
   const renderMiniMonth = (month: number) => {

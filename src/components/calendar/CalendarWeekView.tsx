@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
+import { getOwnerColor } from "./CalendarMonthView";
 
 interface Event {
   id: string;
@@ -20,17 +22,20 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
   const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  // Pre-index events by date for O(1) lookup
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, Event[]>();
+    events.forEach(event => {
+      const list = map.get(event.start_date) || [];
+      list.push(event);
+      map.set(event.start_date, list);
+    });
+    return map;
+  }, [events]);
+
   const getEventsForDate = (day: Date) => {
     const dateStr = format(day, 'yyyy-MM-dd');
-    return events.filter(event => event.start_date === dateStr);
-  };
-
-  const getOwnerColor = (owner: string | null) => {
-    if (!owner) return "bg-gray-500";
-    if (owner.toLowerCase().includes("настя")) return "bg-pink-500";
-    if (owner.toLowerCase().includes("лера")) return "bg-purple-500";
-    if (owner.toLowerCase().includes("ваня")) return "bg-blue-500";
-    return "bg-gray-500";
+    return eventsByDate.get(dateStr) || [];
   };
 
   return (
@@ -65,7 +70,7 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
                       onClick={() => onEventClick(event)}
                     >
                       <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
-                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner)}`} />
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${getOwnerColor(event.project_owner).dot}`} />
                         <span className="font-medium truncate text-[8px] sm:text-xs">{event.name}</span>
                       </div>
                       {event.event_time && (
