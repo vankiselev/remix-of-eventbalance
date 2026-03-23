@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, DollarSign, Plus, CalendarDays, Calendar, ListChecks,
   Package, Users, Cake, Plane, Briefcase, FileText, ClipboardCheck,
-  Shield, MoreHorizontal, Circle
+  Shield, MoreHorizontal, Settings
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
