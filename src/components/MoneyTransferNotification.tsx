@@ -99,7 +99,7 @@ export const MoneyTransferNotification = ({
           p_transaction_id: transactionId,
           p_rejection_reason: rejectionReason.trim(),
         });
-        console.log('🔁 RPC reject error:', rpcErr);
+        
         if (rpcErr) throw rpcErr;
 
         await supabase.functions.invoke('send-push-notification', {
