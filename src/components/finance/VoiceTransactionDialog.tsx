@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 interface ParsedTransaction {
   amount: number;
   description: string;
-  type: 'expense' | 'income';
+  type: "expense" | "income";
   suggestedCategory: string;
   cashType?: string | null;
   confidence?: number;
@@ -37,61 +37,97 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   const [textInput, setTextInput] = useState("");
   const [parsedData, setParsedData] = useState<ParsedTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const recognitionRef = useRef<any>(null);
+  const finalResultsRef = useRef<Map<number, string>>(new Map());
+  const liveTranscriptRef = useRef("");
+  const shouldProcessOnEndRef = useRef(false);
+
+  const setTranscriptSynced = (value: string) => {
+    liveTranscriptRef.current = value;
+    setTranscript(value);
+  };
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'ru-RU';
+    if (typeof window === "undefined") return;
 
-        let finalText = '';
-        
-        recognition.onresult = (event: any) => {
-          let interimTranscript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            const result = event.results[i];
-            if (result.isFinal) {
-              finalText += result[0].transcript + ' ';
-            } else {
-              interimTranscript += result[0].transcript;
-            }
-          }
-          setTranscript((finalText + interimTranscript).trim());
-        };
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
-          if (event.error === 'not-allowed') {
-            setError('Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.');
-          } else if (event.error === 'no-speech') {
-            setError('Речь не обнаружена. Попробуйте ещё раз.');
-          } else if (event.error === 'network') {
-            setError('Ошибка сети. Проверьте подключение к интернету.');
-          } else {
-            setError('Не удалось распознать речь. Попробуйте ввести текст вручную.');
-          }
-          setIsListening(false);
-        };
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "ru-RU";
 
-        recognition.onend = () => {
-          setIsListening(false);
-          finalText = '';
-        };
+    recognition.onresult = (event: any) => {
+      const interimParts: string[] = [];
 
-        recognitionRef.current = recognition;
+      // IMPORTANT: iterate from resultIndex to avoid reprocessing old results (duplicate transcript bug)
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const chunk = result?.[0]?.transcript?.trim();
+        if (!chunk) continue;
+
+        if (result.isFinal) {
+          finalResultsRef.current.set(i, chunk);
+        } else {
+          interimParts.push(chunk);
+        }
       }
-    }
+
+      const finalTranscript = Array.from(finalResultsRef.current.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([, value]) => value)
+        .join(" ")
+        .trim();
+
+      const interimTranscript = interimParts.join(" ").trim();
+      const merged = [finalTranscript, interimTranscript].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+
+      setTranscriptSynced(merged);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+
+      if (event.error === "not-allowed") {
+        setError("Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.");
+      } else if (event.error === "no-speech") {
+        setError("Речь не обнаружена. Попробуйте ещё раз.");
+      } else if (event.error === "network") {
+        setError("Ошибка сети. Проверьте подключение к интернету.");
+      } else {
+        setError("Не удалось распознать речь. Попробуйте ввести текст вручную.");
+      }
+
+      shouldProcessOnEndRef.current = false;
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+
+      if (!shouldProcessOnEndRef.current) return;
+      shouldProcessOnEndRef.current = false;
+
+      const finalText = liveTranscriptRef.current.trim();
+      if (finalText) {
+        void processText(finalText);
+      } else {
+        setError("Не удалось распознать речь. Попробуйте говорить чуть медленнее или введите текст вручную.");
+      }
+    };
+
+    recognitionRef.current = recognition;
 
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
       }
     };
   }, []);
@@ -104,49 +140,62 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   }, [isOpen]);
 
   const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      setTranscript("");
-      setTextInput("");
-      setParsedData(null);
-      setError(null);
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-        setError('Не удалось запустить запись. Попробуйте ввести текст вручную.');
+    if (!recognitionRef.current || isProcessing || isCreating) return;
+
+    setParsedData(null);
+    setError(null);
+    setTextInput("");
+    setTranscriptSynced("");
+    finalResultsRef.current = new Map();
+    shouldProcessOnEndRef.current = false;
+
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
+      setError("Не удалось запустить запись. Попробуйте ещё раз или введите текст вручную.");
+    }
+  }, [isCreating, isProcessing]);
+
+  const stopListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+
+    shouldProcessOnEndRef.current = true;
+    setIsListening(false);
+
+    try {
+      recognitionRef.current.stop();
+    } catch {
+      // Если stop упал, все равно попробуем обработать текущий текст
+      shouldProcessOnEndRef.current = false;
+      const snapshot = liveTranscriptRef.current.trim();
+      if (snapshot) {
+        void processText(snapshot);
       }
     }
   }, []);
 
-  const stopListening = useCallback(async () => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-      setIsListening(false);
-      
-      if (transcript.trim()) {
-        await processText(transcript.trim());
-      }
-    }
-  }, [transcript]);
-
   const processText = async (text: string) => {
+    const normalizedText = text.trim();
+    if (!normalizedText || isProcessing) return;
+
     setIsProcessing(true);
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
-        body: { text },
+      const { data, error: fnError } = await supabase.functions.invoke("voice-transaction", {
+        body: { text: normalizedText },
       });
 
       if (fnError) {
-        throw new Error(getUserFriendlyError(fnError));
+        const backendError = await extractEdgeErrorMessage(fnError);
+        throw new Error(backendError || getUserFriendlyError(fnError));
       }
 
       if (!data?.success && data?.error) {
         setError(data.error);
         if (data.partialData) {
-          // Show partial data even on error
           setParsedData(data.partialData);
         }
         return;
@@ -163,7 +212,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
         });
       }
     } catch (err) {
-      console.error('Error processing voice input:', err);
+      console.error("Error processing voice input:", err);
       setError(getUserFriendlyError(err));
     } finally {
       setIsProcessing(false);
@@ -173,20 +222,21 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   const handleTextSubmit = async () => {
     const text = textInput.trim();
     if (!text) return;
-    setTranscript(text);
+
+    setTranscriptSynced(text);
     await processText(text);
   };
 
   const createTransaction = async () => {
-    if (!parsedData) return;
+    if (!parsedData || isCreating) return;
 
     setIsCreating(true);
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
+      const { data, error: fnError } = await supabase.functions.invoke("voice-transaction", {
         body: {
-          step: 'create',
+          step: "create",
           step1Data: {
             amount: parsedData.amount,
             description: parsedData.description,
@@ -198,7 +248,8 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
       });
 
       if (fnError) {
-        throw new Error(getUserFriendlyError(fnError));
+        const backendError = await extractEdgeErrorMessage(fnError);
+        throw new Error(backendError || getUserFriendlyError(fnError));
       }
 
       if (!data?.success && data?.error) {
@@ -208,13 +259,13 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
 
       toast({
         title: "Черновик создан",
-        description: `${parsedData.type === 'expense' ? 'Расход' : 'Приход'}: ${parsedData.amount.toLocaleString('ru-RU')} ₽ — ${parsedData.description}`,
+        description: `${parsedData.type === "expense" ? "Расход" : "Приход"}: ${parsedData.amount.toLocaleString("ru-RU")} ₽ — ${parsedData.description}`,
       });
 
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
-      console.error('Error creating transaction:', err);
+      console.error("Error creating transaction:", err);
       setError(getUserFriendlyError(err));
     } finally {
       setIsCreating(false);
@@ -222,17 +273,19 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   };
 
   const reset = () => {
-    setTranscript("");
+    setTranscriptSynced("");
     setTextInput("");
     setParsedData(null);
     setError(null);
     setIsListening(false);
     setIsProcessing(false);
     setIsCreating(false);
+    shouldProcessOnEndRef.current = false;
+    finalResultsRef.current = new Map();
   };
 
-  const isSpeechSupported = typeof window !== 'undefined' && 
-    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const isSpeechSupported =
+    typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -242,13 +295,10 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             <Sparkles className="h-5 w-5 text-primary" />
             Голосовой ввод транзакции
           </DialogTitle>
-          <DialogDescription>
-            Произнесите или введите описание транзакции
-          </DialogDescription>
+          <DialogDescription>Произнесите или введите описание транзакции</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-4">
-          {/* Microphone Button */}
           {isSpeechSupported && (
             <>
               <button
@@ -257,9 +307,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                 className={cn(
                   "relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300",
                   "focus:outline-none focus:ring-4 focus:ring-primary/20",
-                  isListening 
-                    ? "bg-destructive text-destructive-foreground scale-110" 
-                    : "bg-primary text-primary-foreground hover:scale-105",
+                  isListening ? "bg-destructive text-destructive-foreground scale-110" : "bg-primary text-primary-foreground hover:scale-105",
                   (isProcessing || isCreating) && "opacity-50 cursor-not-allowed"
                 )}
               >
@@ -269,7 +317,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                     <span className="absolute inset-[-8px] rounded-full border-4 border-destructive/30 animate-pulse" />
                   </>
                 )}
-                
+
                 {isProcessing ? (
                   <Loader2 className="h-8 w-8 animate-spin" />
                 ) : isListening ? (
@@ -285,7 +333,6 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             </>
           )}
 
-          {/* Transcript Display */}
           {transcript && !isListening && (
             <div className="w-full p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">Распознано:</p>
@@ -302,7 +349,6 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             </div>
           )}
 
-          {/* Text Input Fallback */}
           {!isListening && !parsedData && !isProcessing && (
             <div className="w-full">
               <div className="flex items-center gap-1 mb-2">
@@ -315,21 +361,20 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   placeholder="Такси 500 рублей наличка Ваня"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void handleTextSubmit();
+                    }
+                  }}
                   className="flex-1"
                 />
-                <Button 
-                  size="icon" 
-                  onClick={handleTextSubmit} 
-                  disabled={!textInput.trim()}
-                >
+                <Button size="icon" onClick={handleTextSubmit} disabled={!textInput.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Error Display */}
           {error && (
             <div className="w-full p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
               <p className="text-destructive">{error}</p>
@@ -341,34 +386,24 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             </div>
           )}
 
-          {/* Parsed Transaction Preview */}
           {parsedData && parsedData.amount > 0 && (
             <div className="w-full p-4 border rounded-lg space-y-3">
               {parsedData.confidence !== undefined && parsedData.confidence < 50 && (
-                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                  ⚠️ Разбор неуверенный — проверьте данные перед созданием
-                </div>
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">⚠️ Разбор неуверенный — проверьте данные перед созданием</div>
               )}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Тип</span>
-                <span className={cn(
-                  "font-medium",
-                  parsedData.type === 'expense' ? "text-destructive" : "text-primary"
-                )}>
-                  {parsedData.type === 'expense' ? 'Расход' : 'Приход'}
+                <span className={cn("font-medium", parsedData.type === "expense" ? "text-destructive" : "text-primary")}>
+                  {parsedData.type === "expense" ? "Расход" : "Приход"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Сумма</span>
-                <span className="font-bold text-lg">
-                  {parsedData.amount.toLocaleString('ru-RU')} ₽
-                </span>
+                <span className="font-bold text-lg">{parsedData.amount.toLocaleString("ru-RU")} ₽</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Описание</span>
-                <span className="font-medium text-right max-w-[200px]">
-                  {parsedData.description}
-                </span>
+                <span className="font-medium text-right max-w-[200px]">{parsedData.description}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Категория</span>
@@ -383,46 +418,29 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             </div>
           )}
 
-          {/* Action Buttons */}
           {parsedData && parsedData.amount > 0 && (
             <div className="flex gap-3 w-full">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={reset}
-                disabled={isCreating}
-              >
+              <Button variant="outline" className="flex-1" onClick={reset} disabled={isCreating}>
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Заново
               </Button>
-              <Button
-                className="flex-1"
-                onClick={createTransaction}
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4 mr-2" />
-                )}
+              <Button className="flex-1" onClick={createTransaction} disabled={isCreating}>
+                {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
                 Создать черновик
               </Button>
             </div>
           )}
 
-          {/* Examples */}
           {!transcript && !parsedData && !isListening && !textInput && (
             <div className="w-full space-y-2">
               <p className="text-xs text-muted-foreground font-medium">Примеры:</p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "Такси 1200 наличка Настя",
-                  "Передал Ване 2500 наличка",
-                  "Приход 50000 от клиента",
-                ].map((example, i) => (
+                {["Такси 1200 наличка Настя", "Передал Петру 5000 наличка Лера", "Приход 5000 от клиента"].map((example, i) => (
                   <button
                     key={i}
-                    onClick={() => { setTextInput(example); }}
+                    onClick={() => {
+                      setTextInput(example);
+                    }}
                     className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground hover:bg-accent transition-colors cursor-pointer"
                   >
                     "{example}"
@@ -437,28 +455,48 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   );
 }
 
+async function extractEdgeErrorMessage(fnError: unknown): Promise<string | null> {
+  if (!fnError || typeof fnError !== "object") return null;
+
+  const maybeContext = (fnError as { context?: unknown }).context;
+  if (!maybeContext || typeof maybeContext !== "object") return null;
+
+  const response = maybeContext as Response;
+  if (typeof response.clone !== "function") return null;
+
+  try {
+    const parsed = await response.clone().json();
+    if (parsed && typeof parsed === "object" && "error" in parsed && typeof (parsed as { error: unknown }).error === "string") {
+      return (parsed as { error: string }).error;
+    }
+  } catch {
+    // ignore json parse errors
+  }
+
+  return null;
+}
+
 function getUserFriendlyError(err: unknown): string {
-  if (!err) return 'Произошла ошибка. Попробуйте ещё раз.';
-  
+  if (!err) return "Произошла ошибка. Попробуйте ещё раз.";
+
   const message = err instanceof Error ? err.message : String(err);
-  
-  if (message.includes('non-2xx') || message.includes('FunctionsHttpError')) {
-    return 'Сервис обработки временно недоступен. Попробуйте через минуту.';
+
+  if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+    return "Ошибка сети. Проверьте подключение к интернету.";
   }
-  if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-    return 'Ошибка сети. Проверьте подключение к интернету.';
+  if (message.includes("rate limit") || message.includes("429")) {
+    return "Слишком много запросов. Подождите минуту.";
   }
-  if (message.includes('rate limit') || message.includes('429')) {
-    return 'Слишком много запросов. Подождите минуту.';
+  if (message.includes("401") || message.includes("auth") || message.includes("Unauthorized")) {
+    return "Необходима авторизация. Перезайдите в приложение.";
   }
-  if (message.includes('401') || message.includes('auth') || message.includes('Unauthorized')) {
-    return 'Необходима авторизация. Перезайдите в приложение.';
+  if (message.includes("non-2xx") || message.includes("FunctionsHttpError")) {
+    return "Не удалось обработать голосовой ввод. Попробуйте ещё раз.";
   }
-  
-  // If it's already a user-friendly Russian message, return as is
-  if (/[а-яА-Я]/.test(message) && !message.includes('Error') && !message.includes('error')) {
+
+  if (/[а-яА-Я]/.test(message) && !message.includes("Error") && !message.includes("error")) {
     return message;
   }
-  
-  return 'Произошла ошибка. Попробуйте ещё раз.';
+
+  return "Произошла ошибка. Попробуйте ещё раз.";
 }
