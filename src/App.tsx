@@ -12,7 +12,7 @@ import { FinancesActionsProvider } from "@/contexts/FinancesActionsContext";
 import { ImportProgressProvider } from "@/contexts/ImportProgressContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
-import Auth from "./pages/Auth";
+const Auth = lazy(() => import("./pages/Auth"));
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
