@@ -139,27 +139,26 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
-  const getPageTitle = () => {
-    const pageTitles: Record<string, string> = {
-      '/dashboard': 'Главная',
-      '/events': 'Мероприятия',
-      '/calendar': 'Календарь',
-      '/transaction': 'Новая транзакция',
-      '/finances': 'Финансы',
-      '/warehouse': 'Склад',
-      '/tasks': 'Мои задачи',
-      '/staff': 'Сотрудники',
-      '/birthdays': 'Дни рождения',
-      '/vacations': 'Отпуска',
-      '/contacts': 'Контакты',
-      '/reports': 'Отчёты',
-      '/settings': 'Настройки',
-      '/administration': 'Администрирование',
-      '/profile': 'Профиль',
-      '/transactions-review': 'Проверка транзакций',
-    };
-    return pageTitles[location.pathname] || 'EventBalance';
+  const pageTitles: Record<string, string> = {
+    '/dashboard': 'Главная',
+    '/events': 'Мероприятия',
+    '/calendar': 'Календарь',
+    '/transaction': 'Новая транзакция',
+    '/finances': 'Финансы',
+    '/warehouse': 'Склад',
+    '/tasks': 'Мои задачи',
+    '/staff': 'Сотрудники',
+    '/birthdays': 'Дни рождения',
+    '/vacations': 'Отпуска',
+    '/contacts': 'Контакты',
+    '/reports': 'Отчёты',
+    '/settings': 'Настройки',
+    '/administration': 'Администрирование',
+    '/profile': 'Профиль',
+    '/transactions-review': 'Проверка транзакций',
   };
+
+  const pageTitle = pageTitles[location.pathname] || 'EventBalance';
 
   return (
     <div className="min-h-screen bg-background flex flex-col w-full">
@@ -326,7 +325,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex h-14 items-center px-4 justify-between">
               {/* Page Title */}
               <h1 className="text-lg font-semibold text-foreground">
-                {getPageTitle()}
+                {pageTitle}
               </h1>
               
               {/* Right Actions: Notifications & Profile */}

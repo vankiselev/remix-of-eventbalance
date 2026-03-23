@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import * as LucideIcons from "lucide-react";
+import {
+  Home, DollarSign, Plus, CalendarDays, Calendar, ListChecks,
+  Package, Users, Cake, Plane, Briefcase, FileText, ClipboardCheck,
+  Shield, MoreHorizontal, Circle
+} from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
@@ -8,17 +12,24 @@ import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
 interface NavItem {
   path: string;
   label: string;
   shortLabel: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 interface MobileNavEnhancedProps {
   onOpenCommandPalette: () => void;
 }
+
+const iconMap: Record<string, LucideIcon> = {
+  Home, DollarSign, Plus, CalendarDays, Calendar, ListChecks,
+  Package, Users, Cake, Plane, Briefcase, FileText, ClipboardCheck,
+  Shield, MoreHorizontal,
+};
 
 const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => {
   const { isAdmin } = useUserRbacRoles();
@@ -30,30 +41,24 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
   const { pendingTasksCount } = usePendingTasksCount();
 
   const mainNavItems: NavItem[] = [
-    { path: "/dashboard", label: "Главная", shortLabel: "Главная", icon: "Home" },
-    { path: "/finances", label: "Финансы", shortLabel: "Финансы", icon: "DollarSign" },
-    { path: "/transaction", label: "Траты", shortLabel: "Траты", icon: "Plus" },
-    { path: "/events", label: "События", shortLabel: "События", icon: "CalendarDays" },
+    { path: "/dashboard", label: "Главная", shortLabel: "Главная", icon: Home },
+    { path: "/finances", label: "Финансы", shortLabel: "Финансы", icon: DollarSign },
+    { path: "/transaction", label: "Траты", shortLabel: "Траты", icon: Plus },
+    { path: "/events", label: "События", shortLabel: "События", icon: CalendarDays },
   ];
 
   const moreMenuItems: NavItem[] = [
-    { path: "/calendar", label: "Календарь", shortLabel: "Календарь", icon: "Calendar" },
-    { path: "/tasks", label: "Мои задачи", shortLabel: "Задачи", icon: "ListChecks" },
-    { path: "/warehouse", label: "Склад", shortLabel: "Склад", icon: "Package" },
-    { path: "/staff", label: "Сотрудники", shortLabel: "Сотрудн.", icon: "Users" },
-    { path: "/birthdays", label: "Дни рождения", shortLabel: "Дни рожд.", icon: "Cake" },
-    { path: "/vacations", label: "График отпусков", shortLabel: "Отпуска", icon: "Plane" },
-    { path: "/contacts", label: "Контакты", shortLabel: "Контакты", icon: "Briefcase" },
-    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: "FileText" }] : []),
-    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: "ClipboardCheck" }] : []),
-    // Settings moved to header next to logout
-    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: "Shield" }] : []),
+    { path: "/calendar", label: "Календарь", shortLabel: "Календарь", icon: Calendar },
+    { path: "/tasks", label: "Мои задачи", shortLabel: "Задачи", icon: ListChecks },
+    { path: "/warehouse", label: "Склад", shortLabel: "Склад", icon: Package },
+    { path: "/staff", label: "Сотрудники", shortLabel: "Сотрудн.", icon: Users },
+    { path: "/birthdays", label: "Дни рождения", shortLabel: "Дни рожд.", icon: Cake },
+    { path: "/vacations", label: "График отпусков", shortLabel: "Отпуска", icon: Plane },
+    { path: "/contacts", label: "Контакты", shortLabel: "Контакты", icon: Briefcase },
+    ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: FileText }] : []),
+    ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: ClipboardCheck }] : []),
+    ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: Shield }] : []),
   ];
-
-  const getIconComponent = (iconName: string) => {
-    const Icon = (LucideIcons as any)[iconName];
-    return Icon || LucideIcons.Circle;
-  };
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -75,7 +80,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
         <div className="flex items-center justify-around px-2 py-3 max-w-screen-sm mx-auto">
           {/* Main nav items */}
           {mainNavItems.map((item) => {
-            const IconComponent = getIconComponent(item.icon);
+            const IconComponent = item.icon;
             const active = isActive(item.path);
             return (
               <button
@@ -113,7 +118,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
             <SheetTrigger asChild>
               <button className="flex flex-col items-center gap-1 min-w-[60px] py-1">
                 <div className="flex items-center justify-center h-10 w-10 rounded-xl text-foreground hover:bg-accent transition-all duration-300">
-                  <LucideIcons.MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+                  <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
                 </div>
                 <span className="text-[10px] font-medium text-muted-foreground">Ещё</span>
               </button>
@@ -128,7 +133,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
               {/* Icon Grid */}
               <div className="grid grid-cols-4 gap-4">
                 {moreMenuItems.map((item) => {
-                  const IconComponent = getIconComponent(item.icon);
+                  const IconComponent = item.icon;
                   const active = isActive(item.path);
                   const badgeCount = getBadgeCount(item.path);
                   
