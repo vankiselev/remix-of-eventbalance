@@ -125,8 +125,7 @@ export function PendingUsersManagement() {
         console.error("Failed to send approval email:", emailError);
       }
       
-      // Удаляем из локального состояния
-      setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+      refetchPendingUsers();
       setSelectedRoles(prev => {
         const { [user.id]: _, ...rest } = prev;
         return rest;
