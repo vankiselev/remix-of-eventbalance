@@ -368,10 +368,21 @@ serve(async (req) => {
         : "Накладные расходы (райдер, траты вне сметы)";
       const txType: TxType = step1Data.type === "income" ? "income" : "expense";
 
-      const { data: transaction, error: txError } = await adminClient
+      // Get user's tenant_id for proper data isolation
+      const { data: membership } = await userClient
+        .from("tenant_memberships")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      const tenantId = membership?.tenant_id || null;
+
+      const { data: transaction, error: txError } = await userClient
         .from("financial_transactions")
         .insert({
           created_by: userId,
+          tenant_id: tenantId,
           operation_date: new Date().toISOString().split("T")[0],
           income_amount: txType === "income" ? amount : 0,
           expense_amount: txType === "expense" ? amount : 0,
@@ -390,8 +401,13 @@ serve(async (req) => {
         .single();
 
       if (txError) {
-        console.error("[voice-transaction] create draft error:", txError);
-        return jsonResponse({ success: false, error: "Не удалось создать черновик. Попробуйте снова." });
+        console.error("[voice-transaction] create draft error:", JSON.stringify(txError));
+        const msg = txError.code === "42501"
+          ? "Нет прав для создания транзакции. Обратитесь к администратору."
+          : txError.code === "23505"
+          ? "Такая транзакция уже существует."
+          : `Не удалось создать черновик: ${txError.message || "неизвестная ошибка"}`;
+        return jsonResponse({ success: false, error: msg });
       }
 
       return jsonResponse({
