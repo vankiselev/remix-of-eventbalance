@@ -403,147 +403,159 @@ BEGIN
 
   -- ============================================================
   -- PARENT-SCOPED TABLES (no tenant_id, scoped through parent FK)
+  -- Each block checks table existence first via to_regclass
   -- ============================================================
 
   -- EVENT_PARTICIPANTS → parent: events
-  DROP POLICY IF EXISTS "Authenticated can read event_participants" ON public.event_participants;
-  DROP POLICY IF EXISTS "Tenant members can read event_participants" ON public.event_participants;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
-      FOR SELECT TO authenticated USING (
-        EXISTS (
-          SELECT 1 FROM public.events e
-          WHERE e.id = event_id
-          AND (e.tenant_id IS NULL OR public.is_tenant_member(e.tenant_id))
-        )
-      );
-  ELSE
-    -- Fallback: allow read for authenticated (events has no tenant_id)
-    CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
-      FOR SELECT TO authenticated USING (true);
+  IF to_regclass('public.event_participants') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read event_participants" ON public.event_participants;
+    DROP POLICY IF EXISTS "Tenant members can read event_participants" ON public.event_participants;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
+        FOR SELECT TO authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_id
+            AND (e.tenant_id IS NULL OR public.is_tenant_member(e.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read event_participants" ON public.event_participants
+        FOR SELECT TO authenticated USING (true);
+    END IF;
   END IF;
 
   -- TRANSACTION_ATTACHMENTS → parent: financial_transactions
-  DROP POLICY IF EXISTS "Authenticated can read transaction_attachments" ON public.transaction_attachments;
-  DROP POLICY IF EXISTS "Tenant members can read transaction_attachments" ON public.transaction_attachments;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
-      FOR SELECT TO authenticated USING (
-        EXISTS (
-          SELECT 1 FROM public.financial_transactions ft
-          WHERE ft.id = transaction_id
-          AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
-        )
-      );
-  ELSE
-    CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
-      FOR SELECT TO authenticated USING (true);
+  IF to_regclass('public.transaction_attachments') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read transaction_attachments" ON public.transaction_attachments;
+    DROP POLICY IF EXISTS "Tenant members can read transaction_attachments" ON public.transaction_attachments;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
+        FOR SELECT TO authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.financial_transactions ft
+            WHERE ft.id = transaction_id
+            AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read transaction_attachments" ON public.transaction_attachments
+        FOR SELECT TO authenticated USING (true);
+    END IF;
   END IF;
 
   -- FINANCIAL_AUDIT_LOG → parent: financial_transactions
-  DROP POLICY IF EXISTS "Authenticated can read audit log" ON public.financial_audit_log;
-  DROP POLICY IF EXISTS "Tenant members can read financial_audit_log" ON public.financial_audit_log;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
-      FOR SELECT TO authenticated USING (
-        transaction_id IS NULL
-        OR EXISTS (
-          SELECT 1 FROM public.financial_transactions ft
-          WHERE ft.id = transaction_id
-          AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
-        )
-      );
-  ELSE
-    CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
-      FOR SELECT TO authenticated USING (true);
-  END IF;
+  IF to_regclass('public.financial_audit_log') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read audit log" ON public.financial_audit_log;
+    DROP POLICY IF EXISTS "Tenant members can read financial_audit_log" ON public.financial_audit_log;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='financial_transactions' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
+        FOR SELECT TO authenticated USING (
+          transaction_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM public.financial_transactions ft
+            WHERE ft.id = transaction_id
+            AND (ft.tenant_id IS NULL OR public.is_tenant_member(ft.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read financial_audit_log" ON public.financial_audit_log
+        FOR SELECT TO authenticated USING (true);
+    END IF;
 
-  -- Audit log INSERT stays permissive (append-only by design)
-  DROP POLICY IF EXISTS "Authenticated can insert audit log" ON public.financial_audit_log;
-  DROP POLICY IF EXISTS "Authenticated can insert financial_audit_log" ON public.financial_audit_log;
-  CREATE POLICY "Authenticated can insert financial_audit_log" ON public.financial_audit_log
-    FOR INSERT TO authenticated WITH CHECK (true);
+    DROP POLICY IF EXISTS "Authenticated can insert audit log" ON public.financial_audit_log;
+    DROP POLICY IF EXISTS "Authenticated can insert financial_audit_log" ON public.financial_audit_log;
+    CREATE POLICY "Authenticated can insert financial_audit_log" ON public.financial_audit_log
+      FOR INSERT TO authenticated WITH CHECK (true);
+  END IF;
 
   -- INVITATION_AUDIT_LOG → parent: invitations
-  DROP POLICY IF EXISTS "Authenticated can read invitation_audit_log" ON public.invitation_audit_log;
-  DROP POLICY IF EXISTS "Tenant members can read invitation_audit_log" ON public.invitation_audit_log;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invitations' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
-      FOR SELECT TO authenticated USING (
-        invitation_id IS NULL
-        OR EXISTS (
-          SELECT 1 FROM public.invitations i
-          WHERE i.id = invitation_id
-          AND (i.tenant_id IS NULL OR public.is_tenant_member(i.tenant_id))
-        )
-      );
-  ELSE
-    CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
-      FOR SELECT TO authenticated USING (true);
-  END IF;
+  IF to_regclass('public.invitation_audit_log') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read invitation_audit_log" ON public.invitation_audit_log;
+    DROP POLICY IF EXISTS "Tenant members can read invitation_audit_log" ON public.invitation_audit_log;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invitations' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
+        FOR SELECT TO authenticated USING (
+          invitation_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM public.invitations i
+            WHERE i.id = invitation_id
+            AND (i.tenant_id IS NULL OR public.is_tenant_member(i.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read invitation_audit_log" ON public.invitation_audit_log
+        FOR SELECT TO authenticated USING (true);
+    END IF;
 
-  DROP POLICY IF EXISTS "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log;
-  CREATE POLICY "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log
-    FOR INSERT TO authenticated WITH CHECK (true);
+    DROP POLICY IF EXISTS "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log;
+    CREATE POLICY "Authenticated can insert invitation_audit_log" ON public.invitation_audit_log
+      FOR INSERT TO authenticated WITH CHECK (true);
+  END IF;
 
   -- PROFILE_EDIT_HISTORY → parent: profiles
-  DROP POLICY IF EXISTS "Authenticated users can read profile_edit_history" ON public.profile_edit_history;
-  DROP POLICY IF EXISTS "Tenant members can read profile_edit_history" ON public.profile_edit_history;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
-      FOR SELECT TO authenticated USING (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = profile_id
-          AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
-        )
-      );
-  ELSE
-    -- Fallback: user can read history of profiles they share a tenant with
-    CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
-      FOR SELECT TO authenticated USING (
-        EXISTS (
-          SELECT 1 FROM public.tenant_memberships tm1
-          JOIN public.tenant_memberships tm2 ON tm1.tenant_id = tm2.tenant_id
-          WHERE tm1.user_id = auth.uid()
-          AND tm2.user_id::text = profile_id::text
-        )
-      );
+  IF to_regclass('public.profile_edit_history') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated users can read profile_edit_history" ON public.profile_edit_history;
+    DROP POLICY IF EXISTS "Tenant members can read profile_edit_history" ON public.profile_edit_history;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
+        FOR SELECT TO authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = profile_id
+            AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read profile_edit_history" ON public.profile_edit_history
+        FOR SELECT TO authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm1
+            JOIN public.tenant_memberships tm2 ON tm1.tenant_id = tm2.tenant_id
+            WHERE tm1.user_id = auth.uid()
+            AND tm2.user_id::text = profile_id::text
+          )
+        );
+    END IF;
   END IF;
 
-  -- WAREHOUSE_SETTINGS → parent: warehouses (via warehouse_id)
-  DROP POLICY IF EXISTS "Authenticated can read warehouse_settings" ON public.warehouse_settings;
-  DROP POLICY IF EXISTS "Tenant members can read warehouse_settings" ON public.warehouse_settings;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='warehouses' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
-      FOR SELECT TO authenticated USING (
-        warehouse_id IS NULL
-        OR EXISTS (
-          SELECT 1 FROM public.warehouses w
-          WHERE w.id = warehouse_id
-          AND (w.tenant_id IS NULL OR public.is_tenant_member(w.tenant_id))
-        )
-      );
-  ELSE
-    CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
-      FOR SELECT TO authenticated USING (true);
+  -- WAREHOUSE_SETTINGS → parent: warehouses
+  IF to_regclass('public.warehouse_settings') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read warehouse_settings" ON public.warehouse_settings;
+    DROP POLICY IF EXISTS "Tenant members can read warehouse_settings" ON public.warehouse_settings;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='warehouses' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
+        FOR SELECT TO authenticated USING (
+          warehouse_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM public.warehouses w
+            WHERE w.id = warehouse_id
+            AND (w.tenant_id IS NULL OR public.is_tenant_member(w.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read warehouse_settings" ON public.warehouse_settings
+        FOR SELECT TO authenticated USING (true);
+    END IF;
   END IF;
 
-  -- USER_PROJECTS → parent: projects (via project_id)
-  DROP POLICY IF EXISTS "Authenticated can read user_projects" ON public.user_projects;
-  DROP POLICY IF EXISTS "Tenant members can read user_projects" ON public.user_projects;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='projects' AND column_name='tenant_id') THEN
-    CREATE POLICY "Tenant members can read user_projects" ON public.user_projects
-      FOR SELECT TO authenticated USING (
-        EXISTS (
-          SELECT 1 FROM public.projects p
-          WHERE p.id = project_id
-          AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
-        )
-      );
-  ELSE
-    CREATE POLICY "Tenant members can read user_projects" ON public.user_projects
-      FOR SELECT TO authenticated USING (true);
+  -- USER_PROJECTS → parent: projects
+  IF to_regclass('public.user_projects') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Authenticated can read user_projects" ON public.user_projects;
+    DROP POLICY IF EXISTS "Tenant members can read user_projects" ON public.user_projects;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='projects' AND column_name='tenant_id') THEN
+      CREATE POLICY "Tenant members can read user_projects" ON public.user_projects
+        FOR SELECT TO authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.projects p
+            WHERE p.id = project_id
+            AND (p.tenant_id IS NULL OR public.is_tenant_member(p.tenant_id))
+          )
+        );
+    ELSE
+      CREATE POLICY "Tenant members can read user_projects" ON public.user_projects
+        FOR SELECT TO authenticated USING (true);
+    END IF;
   END IF;
 
 END;
