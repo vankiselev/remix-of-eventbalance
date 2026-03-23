@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useFinancesActions } from "@/contexts/FinancesActionsContext";
 import { useCompanyCashSummary } from "@/hooks/useCompanyCashSummary";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
@@ -18,19 +17,52 @@ import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
 import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
-import { EmployeeList } from "@/components/finance/EmployeeList";
-import { EnhancedTransactionTable } from "@/components/finance/EnhancedTransactionTableNew";
-import { TransactionForm } from "@/components/finance/TransactionFormNew";
-import FinancesImportDialog from "@/components/finance/FinancesImportDialog";
-import { TransactionsCardView } from "@/components/finance/TransactionsCardView";
-import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
-import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
-import { FinancialAuditLog } from "@/components/finance/FinancialAuditLog";
-import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
-import { FinancialReportsTab } from "@/components/finance/reports/FinancialReportsTab";
-import { ReviewTab } from "@/components/finance/ReviewTab";
+import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
+import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
+import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
 import { EmployeeDetailView } from "@/components/finance/EmployeeDetailView";
+
+// Lazy-loaded heavy tab content and dialogs
+const EmployeeList = lazy(() => import("@/components/finance/EmployeeList").then(m => ({ default: m.EmployeeList })));
+const EnhancedTransactionTable = lazy(() => import("@/components/finance/EnhancedTransactionTableNew").then(m => ({ default: m.EnhancedTransactionTable })));
+const TransactionsCardView = lazy(() => import("@/components/finance/TransactionsCardView").then(m => ({ default: m.TransactionsCardView })));
+const ReviewTab = lazy(() => import("@/components/finance/ReviewTab").then(m => ({ default: m.ReviewTab })));
+const FinancialReportsTab = lazy(() => import("@/components/finance/reports/FinancialReportsTab").then(m => ({ default: m.FinancialReportsTab })));
+const FinancialAuditLog = lazy(() => import("@/components/finance/FinancialAuditLog").then(m => ({ default: m.FinancialAuditLog })));
+
+// Heavy dialogs — only loaded when opened
+const TransactionForm = lazy(() => import("@/components/finance/TransactionFormNew").then(m => ({ default: m.TransactionForm })));
+const FinancesImportDialog = lazy(() => import("@/components/finance/FinancesImportDialog"));
+const AlertDialogModule = lazy(() => import("@/components/ui/alert-dialog").then(m => ({
+  default: ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: (v: boolean) => void; onConfirm: () => void }) => (
+    <m.AlertDialog open={open} onOpenChange={onOpenChange}>
+      <m.AlertDialogContent>
+        <m.AlertDialogHeader>
+          <m.AlertDialogTitle>Подтвердите удаление</m.AlertDialogTitle>
+          <m.AlertDialogDescription>
+            Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
+          </m.AlertDialogDescription>
+        </m.AlertDialogHeader>
+        <m.AlertDialogFooter>
+          <m.AlertDialogCancel>Отмена</m.AlertDialogCancel>
+          <m.AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Удалить все
+          </m.AlertDialogAction>
+        </m.AlertDialogFooter>
+      </m.AlertDialogContent>
+    </m.AlertDialog>
+  )
+})));
+
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-8">
+    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+  </div>
+);
 
 const Finances = () => {
   const { hasPermission } = useUserPermissions();
@@ -244,24 +276,28 @@ const Finances = () => {
                 </Tabs>
               </div>
               <div className="pt-4 w-full">
-              {viewMode === 'cards' ? (
-                <TransactionsCardView
-                  userId={user?.id}
-                  isAdmin={isAdmin}
-                  onEdit={handleEditTransaction}
-                />
-              ) : (
-                <EnhancedTransactionTable
-                  userId={user?.id}
-                  isAdmin={isAdmin}
-                  onEdit={handleEditTransaction}
-                />
-              )}
+                <Suspense fallback={<TabLoader />}>
+                  {viewMode === 'cards' ? (
+                    <TransactionsCardView
+                      userId={user?.id}
+                      isAdmin={isAdmin}
+                      onEdit={handleEditTransaction}
+                    />
+                  ) : (
+                    <EnhancedTransactionTable
+                      userId={user?.id}
+                      isAdmin={isAdmin}
+                      onEdit={handleEditTransaction}
+                    />
+                  )}
+                </Suspense>
               </div>
             </TabsContent>
 
             <TabsContent value="employees" className="mt-0 w-full">
-              <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
+              <Suspense fallback={<TabLoader />}>
+                <EmployeeList onEmployeeSelect={handleEmployeeSelect} />
+              </Suspense>
             </TabsContent>
             
             <TabsContent value="all-transactions" className="mt-0 w-full">
@@ -274,80 +310,87 @@ const Finances = () => {
                 </Tabs>
               </div>
               <div className="pt-4 w-full">
-              {viewMode === 'cards' ? (
-                <TransactionsCardView
-                  isAdmin={isAdmin}
-                  onEdit={handleEditTransaction}
-                  showOwner={true}
-                />
-              ) : (
-                <EnhancedTransactionTable
-                  isAdmin={isAdmin}
-                  onEdit={handleEditTransaction}
-                />
-              )}
+                <Suspense fallback={<TabLoader />}>
+                  {viewMode === 'cards' ? (
+                    <TransactionsCardView
+                      isAdmin={isAdmin}
+                      onEdit={handleEditTransaction}
+                      showOwner={true}
+                    />
+                  ) : (
+                    <EnhancedTransactionTable
+                      isAdmin={isAdmin}
+                      onEdit={handleEditTransaction}
+                    />
+                  )}
+                </Suspense>
               </div>
             </TabsContent>
 
             {isFinancier && (
               <TabsContent value="review" className="mt-0 w-full">
-                <ReviewTab enabled={isFinancier && activeTab === 'review'} />
+                <Suspense fallback={<TabLoader />}>
+                  <ReviewTab enabled={isFinancier && activeTab === 'review'} />
+                </Suspense>
               </TabsContent>
             )}
 
             {(isAdmin || isFinancier) && (
               <TabsContent value="fin-reports" className="mt-0 w-full">
                 <div className="pt-4 w-full">
-                  <FinancialReportsTab />
+                  <Suspense fallback={<TabLoader />}>
+                    <FinancialReportsTab />
+                  </Suspense>
                 </div>
               </TabsContent>
             )}
 
             <TabsContent value="audit-log" className="mt-0 w-full">
               <div className="pt-4 w-full">
-                <FinancialAuditLog />
+                <Suspense fallback={<TabLoader />}>
+                  <FinancialAuditLog />
+                </Suspense>
               </div>
             </TabsContent>
           </CardContent>
         </Tabs>
       </Card>
 
-      <TransactionForm
-        isOpen={showTransactionForm}
-        onOpenChange={setShowTransactionForm}
-        onSuccess={handleTransactionSuccess}
-        editTransaction={editTransaction}
-      />
+      {/* Lazy dialogs — only loaded when opened */}
+      {showTransactionForm && (
+        <Suspense fallback={null}>
+          <TransactionForm
+            isOpen={showTransactionForm}
+            onOpenChange={setShowTransactionForm}
+            onSuccess={handleTransactionSuccess}
+            editTransaction={editTransaction}
+          />
+        </Suspense>
+      )}
 
-      <FinancesImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        onImportComplete={handleTransactionSuccess}
-        defaultEmployeeId={selectedEmployee?.id}
-      />
+      {showImportDialog && (
+        <Suspense fallback={null}>
+          <FinancesImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            onImportComplete={handleTransactionSuccess}
+            defaultEmployeeId={selectedEmployee?.id}
+          />
+        </Suspense>
+      )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Подтвердите удаление</AlertDialogTitle>
-            <AlertDialogDescription>
-              Вы уверены, что хотите удалить ВСЕ финансовые транзакции? Это действие нельзя отменить.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                handleDeleteAllTransactions();
-                setShowDeleteDialog(false);
-              }} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Удалить все
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showDeleteDialog && (
+        <Suspense fallback={null}>
+          <AlertDialogModule
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            onConfirm={() => {
+              handleDeleteAllTransactions();
+              setShowDeleteDialog(false);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
