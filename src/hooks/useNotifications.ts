@@ -20,6 +20,7 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const seenIdsRef = useRef<Set<string>>(new Set());
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingQueueRef = useRef<Notification[]>([]);
