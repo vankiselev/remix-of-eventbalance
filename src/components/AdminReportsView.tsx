@@ -159,27 +159,30 @@ const AdminReportsView = () => {
     };
   }, []);
 
-  useEffect(() => {
-    let filtered = reports;
+  // Derive projects/employees lists from reports
+  const projects = useMemo(() => 
+    [...new Set(reports.map(r => r.project_name))].sort(), 
+    [reports]
+  );
+  const employees = useMemo(() => 
+    [...new Set(reports.map(r => r.employee_name))].sort(), 
+    [reports]
+  );
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        report =>
-          report.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          report.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          report.employee_email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (projectFilter && projectFilter !== "all") {
-      filtered = filtered.filter(report => report.project_name === projectFilter);
-    }
-
-    if (employeeFilter && employeeFilter !== "all") {
-      filtered = filtered.filter(report => report.employee_name === employeeFilter);
-    }
-
-    setFilteredReports(filtered);
+  // Single-pass filtering via useMemo instead of useEffect+setState
+  const filteredReports = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    return reports.filter(report => {
+      if (search && 
+          !report.employee_name.toLowerCase().includes(search) &&
+          !report.project_name.toLowerCase().includes(search) &&
+          !report.employee_email.toLowerCase().includes(search)) {
+        return false;
+      }
+      if (projectFilter && projectFilter !== "all" && report.project_name !== projectFilter) return false;
+      if (employeeFilter && employeeFilter !== "all" && report.employee_name !== employeeFilter) return false;
+      return true;
+    });
   }, [searchTerm, projectFilter, employeeFilter, reports]);
 
   const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
