@@ -140,6 +140,10 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <Button size="sm" variant="outline" onClick={() => setShowVoiceDialog(true)} className="flex-shrink-0">
+                <Mic className="mr-1 h-4 w-4" />
+                <span className="hidden sm:inline">Голос</span>
+              </Button>
               <Button size="sm" onClick={() => setShowTransactionForm(true)} className="flex-shrink-0">
                 <Plus className="mr-1 h-4 w-4" />
                 Добавить
