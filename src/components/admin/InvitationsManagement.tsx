@@ -81,14 +81,13 @@ export function InvitationsManagement() {
   };
 
   const handleResendInvitation = async (invitation: Invitation) => {
+    if (!user) return;
     try {
-      // Revoke old invitation
       await supabase
         .from("invitations")
         .update({ status: "revoked" })
         .eq("id", invitation.id);
 
-      // Create new invitation
       const { data: newInvitation, error: createError } = await supabase
         .from("invitations")
         .insert({
@@ -96,15 +95,14 @@ export function InvitationsManagement() {
           role: invitation.role,
           first_name: invitation.first_name,
           last_name: invitation.last_name,
-          invited_by: (await supabase.auth.getUser()).data.user?.id!,
-          token_hash: '', // Will be filled by trigger
+          invited_by: user.id,
+          token_hash: '',
         })
         .select()
         .single();
 
       if (createError) throw createError;
 
-      // Send email
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           email: invitation.email,
@@ -119,10 +117,9 @@ export function InvitationsManagement() {
         console.error("Email sending error:", emailError);
       }
 
-      // Log audit event
       await supabase.from("invitation_audit_log").insert({
         invitation_id: newInvitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
+        user_id: user.id,
         action: "resent",
         details: { email: invitation.email },
       });
@@ -132,7 +129,7 @@ export function InvitationsManagement() {
         description: `Новое приглашение для ${invitation.email} отправлено`,
       });
 
-      fetchInvitations();
+      refetchInvitations();
     } catch (error: any) {
       console.error("Error resending invitation:", error);
       toast({
