@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, QrCode, MapPin } from "lucide-react";
+import { escapeHtml } from "@/utils/escapeHtml";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -157,9 +158,9 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
     const locationsHtml = locations.length > 0 
       ? locations.map(loc => `
           <div style="margin: 8px 0; padding: 8px; background: #f9fafb; border-radius: 4px;">
-            <div style="font-weight: 600; color: #111827;">${loc.location_name}</div>
+            <div style="font-weight: 600; color: #111827;">${escapeHtml(loc.location_name)}</div>
             <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-              ${formatLocation(loc)} • ${loc.quantity} шт
+              ${escapeHtml(formatLocation(loc))} • ${loc.quantity} шт
             </div>
           </div>
         `).join('')
@@ -169,7 +170,7 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>QR-код: ${item.sku}</title>
+          <title>QR-код: ${escapeHtml(item.sku)}</title>
           <style>
             @media print {
               @page {
@@ -246,8 +247,8 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
           <div class="qr-container">
             <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
             <div class="item-info">
-              <div class="item-sku">${item.sku}</div>
-              <div class="item-name">${item.name}</div>
+              <div class="item-sku">${escapeHtml(item.sku)}</div>
+              <div class="item-name">${escapeHtml(item.name)}</div>
               
               <div class="locations-section">
                 <div class="locations-title">Размещение товара</div>

@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Printer, Download, Loader2 } from "lucide-react";
+import { escapeHtml } from "@/utils/escapeHtml";
 import QRCode from "qrcode";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
 import { supabase } from "@/integrations/supabase/client";
@@ -210,13 +211,13 @@ export const ItemQRCodeBatch = ({
                 ({ item, dataUrl, locations }) => `
               <div class="qr-item">
                 <img src="${dataUrl}" alt="QR Code" />
-                <h3>${item.name}</h3>
-                <div class="sku">SKU: ${item.sku}</div>
+                <h3>${escapeHtml(item.name)}</h3>
+                <div class="sku">SKU: ${escapeHtml(item.sku)}</div>
                 ${locations.length > 0 ? `
                   <div class="locations">
                     ${locations.slice(0, 2).map(loc => `
                       <div class="location-line">
-                        ${formatLocation(loc)} • ${loc.quantity} шт
+                        ${escapeHtml(formatLocation(loc))} • ${loc.quantity} шт
                       </div>
                     `).join('')}
                     ${locations.length > 2 ? `<div class="location-line">+${locations.length - 2} ещё</div>` : ''}
