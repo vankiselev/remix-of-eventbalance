@@ -335,10 +335,15 @@ serve(async (req) => {
     const { text, step, step1Data } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    const authHeader = req.headers.get("authorization")!;
 
-    const { data: voiceSettings } = await adminClient
+    // Use the user's own JWT for all DB operations (works with RLS)
+    const userClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: voiceSettings } = await userClient
       .from("user_voice_settings")
       .select("default_wallet, default_project_id")
       .eq("user_id", userId)
