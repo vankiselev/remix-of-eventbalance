@@ -129,7 +129,10 @@ export const NotificationsMenu = () => {
                 cashType={n.data.cash_type}
                 description={n.data.description}
                 status={n.data.status}
-                onAction={() => window.location.reload()}
+                onAction={() => {
+                  // Invalidate relevant queries instead of full reload
+                  window.dispatchEvent(new CustomEvent('invalidate-transfers'));
+                }}
               />
             </div>
           )}

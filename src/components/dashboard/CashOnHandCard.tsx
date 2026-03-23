@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { DollarSign, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,26 +13,37 @@ interface CashData {
   cash_vanya: number;
 }
 
-interface AdminCashData {
-  myCash: CashData;
-  companyCash: CashData;
+const defaultCash: CashData = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 };
+
+function parseCashRows(rows: any[]): CashData {
+  if (!rows || rows.length === 0) return defaultCash;
+  // Flat format
+  if ('total_cash' in rows[0]) {
+    return {
+      total_cash: Number(rows[0].total_cash) || 0,
+      cash_nastya: Number(rows[0].cash_nastya) || 0,
+      cash_lera: Number(rows[0].cash_lera) || 0,
+      cash_vanya: Number(rows[0].cash_vanya) || 0,
+    };
+  }
+  // Grouped format (cash_type, total_income, total_expense)
+  let total_cash = 0, cash_nastya = 0, cash_lera = 0, cash_vanya = 0;
+  for (const row of rows) {
+    const net = (Number(row.total_income) || 0) - (Number(row.total_expense) || 0);
+    total_cash += net;
+    const ct = (row.cash_type || '').trim();
+    if (ct === 'Наличка Настя') cash_nastya += net;
+    else if (ct === 'Наличка Лера') cash_lera += net;
+    else if (ct === 'Наличка Ваня') cash_vanya += net;
+  }
+  return { total_cash, cash_nastya, cash_lera, cash_vanya };
 }
 
 const CashOnHandCard = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRbacRoles();
-  const [cashData, setCashData] = useState<CashData>({
-    total_cash: 0,
-    cash_nastya: 0,
-    cash_lera: 0,
-    cash_vanya: 0,
-  });
-  const [companyCashData, setCompanyCashData] = useState<CashData>({
-    total_cash: 0,
-    cash_nastya: 0,
-    cash_lera: 0,
-    cash_vanya: 0,
-  });
+  const [cashData, setCashData] = useState<CashData>(defaultCash);
+  const [companyCashData, setCompanyCashData] = useState<CashData>(defaultCash);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,24 +55,22 @@ const CashOnHandCard = () => {
   const fetchCashData = async () => {
     try {
       if (isAdmin) {
-        // Админ видит свои данные И общую сумму по компании
-        const [myData, companyData] = await Promise.all([
-          (supabase.rpc as any)('calculate_user_cash_totals', { user_uuid: user?.id }).maybeSingle(),
-          (supabase.rpc as any)('get_company_cash_summary').maybeSingle()
+        const [myResult, companyResult] = await Promise.all([
+          supabase.rpc('calculate_user_cash_totals', { p_user_id: user?.id }),
+          supabase.rpc('get_company_cash_summary' as any)
         ]);
 
-        if (myData.error) throw myData.error;
-        if (companyData.error) throw companyData.error;
-
-        setCashData((myData.data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
-        setCompanyCashData((companyData.data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
+        if (myResult.error) throw myResult.error;
+        setCashData(parseCashRows(myResult.data as any[] || []));
+        
+        if (!companyResult.error && companyResult.data) {
+          const companyRows = Array.isArray(companyResult.data) ? companyResult.data : [companyResult.data];
+          setCompanyCashData(parseCashRows(companyRows as any[]));
+        }
       } else {
-        // Сотрудник видит только свои данные
-        const { data, error } = await (supabase.rpc as any)('calculate_user_cash_totals', { user_uuid: user?.id })
-          .maybeSingle();
-
+        const { data, error } = await supabase.rpc('calculate_user_cash_totals', { p_user_id: user?.id });
         if (error) throw error;
-        setCashData((data as any) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 });
+        setCashData(parseCashRows(data as any[] || []));
       }
     } catch (error) {
       console.error('Error fetching cash data:', error);

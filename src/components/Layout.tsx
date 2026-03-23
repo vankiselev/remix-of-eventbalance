@@ -128,7 +128,8 @@ const Layout = ({ children }: LayoutProps) => {
       });
       
       setShowDeleteConfirm(false);
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     } catch (error) {
       console.error('Delete error:', error);
       toast({
