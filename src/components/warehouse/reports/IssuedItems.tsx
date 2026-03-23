@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WarehouseTaskWithDetails } from "@/hooks/useWarehouseTasks";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Package, Calendar } from "lucide-react";

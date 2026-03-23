@@ -16,33 +16,27 @@ interface WarehouseValueProps {
 }
 
 export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
-  // Calculate category values
-  const categoryValues = categories.map(category => {
-    const categoryItems = items.filter(item => item.category_id === category.id);
-    const value = categoryItems.reduce((sum, item) => 
-      sum + (item.total_quantity || 0) * item.price, 0
-    );
+  const { categoryValues, totalValue, topItems } = useMemo(() => {
+    const catValues = categories.map(category => {
+      const categoryItems = items.filter(item => item.category_id === category.id);
+      const value = categoryItems.reduce((sum, item) => 
+        sum + (item.total_quantity || 0) * item.price, 0
+      );
+      return { category, value, itemCount: categoryItems.length };
+    })
+    .filter(cv => cv.value > 0)
+    .sort((a, b) => b.value - a.value);
 
-    return {
-      category,
-      value,
-      itemCount: categoryItems.length,
-    };
-  })
-  .filter(cv => cv.value > 0)
-  .sort((a, b) => b.value - a.value);
+    const total = catValues.reduce((sum, cv) => sum + cv.value, 0);
 
-  const totalValue = categoryValues.reduce((sum, cv) => sum + cv.value, 0);
+    const top = [...items]
+      .map(item => ({ ...item, value: (item.total_quantity || 0) * item.price }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
 
-  // Top 10 most valuable items
-  const topItems = [...items]
-    .map(item => ({
-      ...item,
-      value: (item.total_quantity || 0) * item.price,
-    }))
-    .filter(item => item.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
+    return { categoryValues: catValues, totalValue: total, topItems: top };
+  }, [items, categories]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

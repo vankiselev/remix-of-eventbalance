@@ -33,17 +33,20 @@ export const WarehouseItemsPage = () => {
   const [isBatchQROpen, setIsBatchQROpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
-  const filteredItems = items.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return items.filter((item) => {
+      const matchesSearch = !query ||
+        item.name.toLowerCase().includes(query) ||
+        item.sku.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query);
 
-    const matchesCategory =
-      categoryFilter === "all" || item.category_id === categoryFilter;
+      const matchesCategory =
+        categoryFilter === "all" || item.category_id === categoryFilter;
 
-    return matchesSearch && matchesCategory;
-  });
+      return matchesSearch && matchesCategory;
+    });
+  }, [items, searchQuery, categoryFilter]);
 
   const handleEdit = (itemId: string) => {
     setEditingItem(itemId);
