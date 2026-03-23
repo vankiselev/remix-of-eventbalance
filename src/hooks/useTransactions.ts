@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
 
 export interface Transaction {
   id: string;
@@ -114,72 +113,12 @@ export const useTransactions = (options: UseTransactionsOptions = {}) => {
     queryKey,
     queryFn: () => fetchTransactionsData(userId, isAdmin, limit),
     enabled,
-    staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh, show immediately from cache
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  // Debounce ref for INSERT events during bulk imports
-  const insertDebounceRef = useRef<NodeJS.Timeout>();
-
-  // Realtime subscription for updates
-  useEffect(() => {
-    if (!enabled) return;
-
-    const channel = supabase
-      .channel(`transactions-realtime-${userId || 'all'}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        () => {
-          // Debounce INSERT events to prevent excessive refetches during bulk imports
-          clearTimeout(insertDebounceRef.current);
-          insertDebounceRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          }, 2000);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          // Update cache directly for single updates
-          queryClient.setQueryData(queryKey, (old: Transaction[] | undefined) => {
-            if (!old) return old;
-            return old.map(tx => tx.id === payload.new.id ? { ...tx, ...payload.new } : tx);
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          // Remove from cache directly
-          queryClient.setQueryData(queryKey, (old: Transaction[] | undefined) => {
-            if (!old) return old;
-            return old.filter(tx => tx.id !== payload.old.id);
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearTimeout(insertDebounceRef.current);
-      supabase.removeChannel(channel);
-    };
-  }, [userId, enabled, queryClient, queryKey]);
+  // Realtime invalidation handled by RealtimeSync in App.tsx
 
   const refetch = () => {
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
