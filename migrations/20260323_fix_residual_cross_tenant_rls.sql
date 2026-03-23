@@ -62,19 +62,47 @@ END;
 $$;
 
 -- ============================================================
--- 5. WAREHOUSE_SETTINGS — restrict SELECT through parent warehouse tenant
--- OLD: USING (true) — all warehouse settings readable by everyone
--- NEW: only if the parent warehouse belongs to caller's tenant
+-- 5. WAREHOUSE_SETTINGS — schema-safe tenant restriction
+-- Self-hosted may not have warehouse_id column
 -- ============================================================
-DROP POLICY IF EXISTS "Tenant members can read warehouse_settings" ON public.warehouse_settings;
-CREATE POLICY "Tenant members can read warehouse_settings"
-  ON public.warehouse_settings
-  FOR SELECT TO authenticated
-  USING (
-    warehouse_id IS NULL
-    OR EXISTS (
-      SELECT 1 FROM public.warehouses w
-      WHERE w.id = warehouse_settings.warehouse_id
-        AND (w.tenant_id IS NULL OR public.is_tenant_member(w.tenant_id))
-    )
-  );
+DO $$
+DECLARE
+  has_warehouse_id boolean;
+BEGIN
+  IF to_regclass('public.warehouse_settings') IS NULL THEN
+    RAISE NOTICE 'warehouse_settings table does not exist, skipping';
+    RETURN;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='warehouse_settings' AND column_name='warehouse_id'
+  ) INTO has_warehouse_id;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Tenant members can read warehouse_settings" ON public.warehouse_settings';
+
+  IF has_warehouse_id THEN
+    -- Parent-scoped through warehouse -> tenant
+    EXECUTE '
+      CREATE POLICY "Tenant members can read warehouse_settings"
+        ON public.warehouse_settings
+        FOR SELECT TO authenticated
+        USING (
+          warehouse_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM public.warehouses w
+            WHERE w.id = warehouse_settings.warehouse_id
+              AND (w.tenant_id IS NULL OR public.is_tenant_member(w.tenant_id))
+          )
+        )';
+  ELSE
+    -- No warehouse_id column: allow authenticated reads (table has no tenant path)
+    EXECUTE '
+      CREATE POLICY "Tenant members can read warehouse_settings"
+        ON public.warehouse_settings
+        FOR SELECT TO authenticated
+        USING (true)';
+    RAISE NOTICE 'warehouse_settings has no warehouse_id — applied permissive SELECT (no tenant path available)';
+  END IF;
+END;
+$$;
