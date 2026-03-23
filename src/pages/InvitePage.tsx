@@ -246,11 +246,24 @@ export function InvitePage() {
       }
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось принять приглашение",
-        variant: "destructive",
-      });
+      const msg = error.message || "Не удалось принять приглашение";
+      const isAlreadyRegistered = msg.includes("уже зарегистрирован") || msg.includes("already been registered");
+      
+      if (isAlreadyRegistered) {
+        toast({
+          title: "Аккаунт уже создан",
+          description: "Попробуйте войти с паролем, который вы указали при регистрации.",
+          variant: "default",
+        });
+        // Auto-redirect to login after a delay
+        setTimeout(() => navigate("/auth"), 3000);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
