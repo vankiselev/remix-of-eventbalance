@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[register-invited-user] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-      return jsonResponse({ error: "Ошибка конфигурации сервера. Обратитесь к администратору." }, 500);
+      console.error("[register] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return jsonResponse({ error: "Ошибка конфигурации сервера." }, 500);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
     });
 
     // ── STEP 1: Validate invitation ──
-    // Check both active AND already-accepted invitations (for retry scenarios)
-    console.log("[register] Step 1: Validating invitation token...");
+    // First do an unrestricted lookup to give specific error messages
+    console.log("[register] Step 1: Looking up token...");
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
       .select("id, tenant_id, invited_by, email, expires_at, status")
@@ -50,28 +50,33 @@ Deno.serve(async (req) => {
       .single();
 
     if (invError || !invData) {
-      console.error("[register] Invitation lookup failed:", invError?.message);
-      return jsonResponse({ error: "Приглашение не найдено" }, 401);
+      console.error("[register] Token not found in DB:", invError?.message);
+      return jsonResponse({ error: "Токен приглашения не найден. Проверьте ссылку." }, 404);
     }
 
-    // Check if invitation was already accepted (retry scenario)
+    // Now check specific conditions and return targeted errors
+    if (invData.status === "cancelled" || invData.status === "revoked") {
+      console.error("[register] Invitation cancelled/revoked:", invData.status);
+      return jsonResponse({ error: "Приглашение было отменено. Запросите новое приглашение." }, 410);
+    }
+
     const isRetry = invData.status === "accepted";
 
     if (!isRetry && !["pending", "sent"].includes(invData.status)) {
-      console.error("[register] Invitation has invalid status:", invData.status);
-      return jsonResponse({ error: "Приглашение уже использовано или отменено" }, 401);
+      console.error("[register] Unexpected invitation status:", invData.status);
+      return jsonResponse({ error: `Приглашение имеет статус "${invData.status}" и не может быть использовано.` }, 410);
     }
 
-    if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
+    if (!isRetry && invData.expires_at && new Date(invData.expires_at) < new Date()) {
       console.error("[register] Invitation expired:", invData.expires_at);
-      return jsonResponse({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }, 401);
+      return jsonResponse({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }, 410);
     }
 
     if (invData.email.toLowerCase() !== email.toLowerCase()) {
       console.error("[register] Email mismatch:", email, "vs", invData.email);
       return jsonResponse({ error: "Email не совпадает с приглашением" }, 403);
     }
-    console.log("[register] Step 1 OK: invitation valid, isRetry:", isRetry);
+    console.log("[register] Step 1 OK: invitation valid, status:", invData.status, "isRetry:", isRetry);
 
     // ── STEP 2: Upload avatar (non-blocking) ──
     let finalAvatarUrl = avatar_url || null;
@@ -121,7 +126,6 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
-      // Handle retry: user already exists from a previous partial attempt
       if (createError.message.includes("already been registered")) {
         console.log("[register] Step 3: User already exists, looking up...");
         const { data: existingUsers, error: listError } = await adminClient.auth.admin.listUsers();
@@ -146,7 +150,7 @@ Deno.serve(async (req) => {
       console.log("[register] Step 3 OK: user created, id:", userId);
     }
 
-    // ── STEP 4: Create/update profile ──
+    // ── STEP 4: Create/update profile (non-fatal) ──
     const profileData: Record<string, unknown> = {
       id: userId,
       email: email,
@@ -172,28 +176,20 @@ Deno.serve(async (req) => {
       console.error("[register] Step 4 WARN - profile exception:", profileErr);
     }
 
-    // ── STEP 5: Insert tenant membership (idempotent) ──
+    // ── STEP 5: Insert tenant membership (idempotent, non-fatal) ──
     if (invData.tenant_id) {
       try {
         const { error: tmError } = await adminClient
           .from("tenant_memberships")
           .upsert(
-            {
-              tenant_id: invData.tenant_id,
-              user_id: userId,
-              role: role || "member",
-            },
+            { tenant_id: invData.tenant_id, user_id: userId, role: role || "member" },
             { onConflict: "tenant_id,user_id" }
           );
         if (tmError) {
           // Fallback: try insert, ignore duplicate
           const { error: tmInsertError } = await adminClient
             .from("tenant_memberships")
-            .insert({
-              tenant_id: invData.tenant_id,
-              user_id: userId,
-              role: role || "member",
-            });
+            .insert({ tenant_id: invData.tenant_id, user_id: userId, role: role || "member" });
           if (tmInsertError && !tmInsertError.message.includes("duplicate")) {
             console.error("[register] Step 5 WARN - tenant_memberships insert failed:", tmInsertError.message);
           } else {
@@ -207,26 +203,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── STEP 6: Accept invitation (ONLY after all critical steps succeeded) ──
-    if (!isRetry) {
-      try {
-        const { error: invUpdateErr } = await adminClient
-          .from("invitations")
-          .update({ status: "accepted", accepted_at: new Date().toISOString() })
-          .eq("id", invData.id);
-        if (invUpdateErr) {
-          console.error("[register] Step 6 WARN - invitation update failed:", invUpdateErr.message);
-        } else {
-          console.log("[register] Step 6 OK: invitation accepted");
-        }
-      } catch (invUpErr) {
-        console.error("[register] Step 6 WARN - invitation exception:", invUpErr);
-      }
-    } else {
-      console.log("[register] Step 6 SKIP: invitation already accepted (retry)");
-    }
-
-    // ── STEP 7: Audit log (non-fatal) ──
+    // ── STEP 6: Audit log (non-fatal) ──
     try {
       await adminClient.from("invitation_audit_log").insert({
         invitation_id: invData.id,
@@ -234,9 +211,28 @@ Deno.serve(async (req) => {
         action: isRetry ? "accepted_retry" : "accepted",
         details: { email },
       });
-      console.log("[register] Step 7 OK: audit log created");
+      console.log("[register] Step 6 OK: audit log created");
     } catch (auditErr) {
-      console.error("[register] Step 7 WARN - audit log failed:", auditErr);
+      console.error("[register] Step 6 WARN - audit log failed:", auditErr);
+    }
+
+    // ── STEP 7: Accept invitation — ONLY after all critical steps succeeded ──
+    if (!isRetry) {
+      try {
+        const { error: invUpdateErr } = await adminClient
+          .from("invitations")
+          .update({ status: "accepted", accepted_at: new Date().toISOString() })
+          .eq("id", invData.id);
+        if (invUpdateErr) {
+          console.error("[register] Step 7 WARN - invitation update failed:", invUpdateErr.message);
+        } else {
+          console.log("[register] Step 7 OK: invitation accepted");
+        }
+      } catch (invUpErr) {
+        console.error("[register] Step 7 WARN - invitation exception:", invUpErr);
+      }
+    } else {
+      console.log("[register] Step 7 SKIP: invitation already accepted (retry)");
     }
 
     // ── STEP 8: Notify admins (non-fatal) ──

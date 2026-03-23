@@ -1562,6 +1562,16 @@ export type Database = {
         Returns: undefined
       }
       get_current_user_role: { Args: never; Returns: string }
+      get_invitation_by_token: {
+        Args: { invitation_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          role: string
+          status: string
+        }[]
+      }
       get_system_secret: { Args: { secret_key: string }; Returns: string }
       get_tenant_by_slug: { Args: { _slug: string }; Returns: Json }
       get_user_basic_profile: {

@@ -90,27 +90,47 @@ export function InvitePage() {
       }
 
       try {
+        let invitationResult: InvitationData | null = null;
+
+        // Try RPC first
         const { data, error } = await supabase
           .rpc('get_invitation_by_token', { invitation_token: token });
 
-        if (error || !data || data.length === 0) {
-          toast({
-            title: "Ошибка",
-            description: "Приглашение не найдено или уже использовано",
-            variant: "destructive",
-          });
+        if (!error && data && data.length > 0) {
+          invitationResult = data[0];
+        } else {
+          console.warn("[InvitePage] RPC failed:", error?.message || "no data, trying direct query");
+
+          // Fallback: direct table query
+          const { data: directData, error: directError } = await supabase
+            .from("invitations")
+            .select("id, email, role, expires_at, status")
+            .eq("token", token)
+            .in("status", ["pending", "sent", "accepted"])
+            .single();
+
+          if (!directError && directData) {
+            if (directData.status !== "accepted" && directData.expires_at && new Date(directData.expires_at) < new Date()) {
+              toast({ title: "Приглашение истекло", description: "Запросите новое приглашение.", variant: "destructive" });
+              navigate("/auth");
+              return;
+            }
+            invitationResult = directData as InvitationData;
+          } else {
+            console.error("[InvitePage] Direct query failed:", directError?.message);
+          }
+        }
+
+        if (!invitationResult) {
+          toast({ title: "Ошибка", description: "Приглашение не найдено или уже использовано", variant: "destructive" });
           navigate("/auth");
           return;
         }
 
-        setInvitation(data[0]);
+        setInvitation(invitationResult);
       } catch (error) {
-        console.error("Error validating invitation:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось проверить приглашение",
-          variant: "destructive",
-        });
+        console.error("[InvitePage] Error validating invitation:", error);
+        toast({ title: "Ошибка", description: "Не удалось проверить приглашение", variant: "destructive" });
         navigate("/auth");
       } finally {
         setLoading(false);
