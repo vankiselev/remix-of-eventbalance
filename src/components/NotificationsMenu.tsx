@@ -132,8 +132,9 @@ export const NotificationsMenu = () => {
                 description={n.data.description}
                 status={n.data.status}
                 onAction={() => {
-                  // Invalidate relevant queries instead of full reload
-                  window.dispatchEvent(new CustomEvent('invalidate-transfers'));
+                  queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                  queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+                  queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
                 }}
               />
             </div>
