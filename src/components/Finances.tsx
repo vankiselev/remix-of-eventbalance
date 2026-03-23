@@ -311,7 +311,7 @@ const Finances = () => {
     // Загружаем данные выбранного сотрудника
     try {
       const { data: employeeSummaryData, error } = await supabase
-        .rpc("calculate_user_cash_totals", { user_uuid: employeeId });
+        .rpc("calculate_user_cash_totals", { p_user_id: employeeId });
 
       if (error) throw error;
 
