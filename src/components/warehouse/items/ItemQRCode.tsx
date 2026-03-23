@@ -160,7 +160,7 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
           <div style="margin: 8px 0; padding: 8px; background: #f9fafb; border-radius: 4px;">
             <div style="font-weight: 600; color: #111827;">${escapeHtml(loc.location_name)}</div>
             <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-              ${formatLocation(loc)} • ${loc.quantity} шт
+              ${escapeHtml(formatLocation(loc))} • ${loc.quantity} шт
             </div>
           </div>
         `).join('')
