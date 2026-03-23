@@ -103,7 +103,7 @@ export const TransactionFilter = ({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[90vw] sm:w-[500px] max-w-[500px] p-0" align="start" side="bottom">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[500px] max-w-[500px] p-0" align="start" side="bottom" sideOffset={8}>
         <div className="border-b p-3">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -153,7 +153,7 @@ export const TransactionFilter = ({
               filteredOptions.map((option) => (
                 <div
                   key={option.value}
-                  className="flex items-center space-x-2 hover:bg-muted/50 p-2 rounded"
+                  className="flex items-center space-x-3 hover:bg-muted/50 p-2.5 rounded min-h-[44px]"
                 >
                   <Checkbox
                     id={`${column}-${option.value}`}

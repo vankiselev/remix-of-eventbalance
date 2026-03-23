@@ -113,10 +113,10 @@ export const NotificationsMenu = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 -mr-1"
+              className="h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 -mr-1"
               onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
           
@@ -221,14 +221,14 @@ export const NotificationsMenu = () => {
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[85vw] max-w-[420px] flex flex-col gap-0 p-0" hideCloseButton>
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 px-4 pt-6 pb-3">
+          {/* Header — safe area top + comfortable spacing */}
+          <div className="flex items-center justify-between gap-2 px-4 pb-3" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))' }}>
             <SheetTitle className="text-lg font-bold flex-shrink-0">Уведомления</SheetTitle>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 px-2.5 text-xs">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-9 px-2.5 text-xs">
                   <Check className="h-3.5 w-3.5 mr-1" />
-                  <span className="hidden xs:inline">Прочитать</span>
+                  <span className="hidden sm:inline">Прочитать</span>
                 </Button>
               )}
               {notifications.length > 0 && (
@@ -236,14 +236,14 @@ export const NotificationsMenu = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteAllDialogOpen(true)}
-                  className="h-8 px-2.5 text-xs text-destructive hover:text-destructive"
+                  className="h-9 px-2.5 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  <span className="hidden xs:inline">Очистить</span>
+                  <span className="hidden sm:inline">Очистить</span>
                 </Button>
               )}
               <SheetClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted">
                   <X className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </SheetClose>
@@ -253,14 +253,14 @@ export const NotificationsMenu = () => {
           {/* Tabs */}
           <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pb-2">
-              <TabsList className="h-8 w-full grid grid-cols-4">
-                <TabsTrigger value="all" className="text-[11px] px-1">
+              <TabsList className="h-9 w-full grid grid-cols-4">
+                <TabsTrigger value="all" className="text-xs px-1">
                   Все
                   {notifications.length > 0 && (
                     <span className="ml-0.5 text-muted-foreground">({notifications.length})</span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="unread" className="text-[11px] px-1">
+                <TabsTrigger value="unread" className="text-xs px-1">
                   Новые
                   {unreadCount > 0 && (
                     <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-0.5 text-[10px]">
@@ -268,14 +268,14 @@ export const NotificationsMenu = () => {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="transfers" className="text-[11px] px-1">Переводы</TabsTrigger>
-                <TabsTrigger value="system" className="text-[11px] px-1">Система</TabsTrigger>
+                <TabsTrigger value="transfers" className="text-xs px-1">Переводы</TabsTrigger>
+                <TabsTrigger value="system" className="text-xs px-1">Система</TabsTrigger>
               </TabsList>
             </div>
 
             {(['all', 'unread', 'transfers', 'system'] as const).map((tab) => (
               <TabsContent key={tab} value={tab} className="flex-1 mt-0 min-h-0">
-                <ScrollArea className="h-full max-h-[calc(100vh-140px)]">
+                <ScrollArea className="h-full max-h-[calc(100vh-160px)]">
                   {renderList(filtered[tab])}
                 </ScrollArea>
               </TabsContent>
