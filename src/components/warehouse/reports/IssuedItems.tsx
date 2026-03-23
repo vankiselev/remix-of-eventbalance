@@ -9,12 +9,6 @@ interface IssuedItemsProps {
   tasks: WarehouseTaskWithDetails[];
 }
 
-interface ItemDetail {
-  name: string;
-  quantity: number;
-  collected_quantity: number;
-}
-
 export const IssuedItems = ({ tasks }: IssuedItemsProps) => {
 
   // Filter for active collection tasks
