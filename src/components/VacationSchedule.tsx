@@ -250,61 +250,8 @@ const VacationSchedule = () => {
     setShowCreateDialog(false);
   };
 
-  const getVacationTypeLabel = (type: string) => {
-    switch (type) {
-      case "weekend":
-        return "Выходной";
-      case "vacation":
-        return "Отпуск";
-      case "sick":
-        return "Больничный";
-      case "personal":
-        return "Личное";
-      case "fun":
-        return "Кайфануть";
-      case "study":
-        return "Учеба";
-      default:
-        return type;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Ожидание";
-      case "approved":
-        return "Одобрено";
-      case "rejected":
-        return "Отклонено";
-      default:
-        return status;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd MMMM yyyy", { locale: ru });
-  };
-
-  const calculateDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
   };
 
   if (loading) {
