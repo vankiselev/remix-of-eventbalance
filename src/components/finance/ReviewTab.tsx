@@ -94,7 +94,8 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
       return data || [];
     },
     enabled,
-  });
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
 
   const profilesMap = useMemo(() => {
     const map = new Map();
@@ -113,11 +114,13 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
     );
   }, [reviewTransactions, searchQuery]);
 
+  const displayStats = fullStats || reviewStats;
+
   const statCards = [
-    { key: "pending", label: "На проверке", icon: Clock, color: "yellow", count: reviewStats?.pending || 0 },
-    { key: "approved", label: "Утверждено", icon: CheckCircle, color: "green", count: reviewStats?.approved || 0 },
-    { key: "rejected", label: "Отклонено", icon: XCircle, color: "red", count: reviewStats?.rejected || 0 },
-    { key: "all", label: "Всего", icon: Filter, color: "blue", count: reviewStats?.total || 0 },
+    { key: "pending", label: "На проверке", icon: Clock, color: "yellow", count: displayStats?.pending || 0 },
+    { key: "approved", label: "Утверждено", icon: CheckCircle, color: "green", count: displayStats?.approved || 0 },
+    { key: "rejected", label: "Отклонено", icon: XCircle, color: "red", count: displayStats?.rejected || 0 },
+    { key: "all", label: "Всего", icon: Filter, color: "blue", count: displayStats?.total || 0 },
   ];
 
   return (
