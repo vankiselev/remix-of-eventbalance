@@ -73,16 +73,6 @@ export const TenantDetailDialog: React.FC<TenantDetailDialogProps> = ({
     }
   }, [tenant]);
 
-  const generateSlug = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 30);
-  };
-
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   const handleNameChange = (value: string) => {
