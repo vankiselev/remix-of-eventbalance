@@ -97,6 +97,16 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     }
   };
 
+  const getColumnLetter = (index: number): string => {
+    let letter = '';
+    let i = index;
+    while (i >= 0) {
+      letter = String.fromCharCode((i % 26) + 65) + letter;
+      i = Math.floor(i / 26) - 1;
+    }
+    return letter;
+  };
+
   const processCSVFile = (csvText: string) => {
     const cleanText = csvText.replace(/^\uFEFF/, '');
     
@@ -107,16 +117,6 @@ export const ReportsImportDialog = ({ open, onOpenChange, onImportComplete }: Re
     
     if (results.data && results.data.length > 0) {
       const data = results.data as string[][];
-      
-      // Get column letters (A, B, C, etc.)
-      const getColumnLetter = (index: number): string => {
-        let letter = '';
-        while (index >= 0) {
-          letter = String.fromCharCode((index % 26) + 65) + letter;
-          index = Math.floor(index / 26) - 1;
-        }
-        return letter;
-      };
 
       // Create headers with column letters
       const headerRow = data[0].map((cell: string, index: number) => {
