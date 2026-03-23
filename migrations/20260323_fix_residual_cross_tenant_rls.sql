@@ -27,6 +27,7 @@ $$;
 -- NEW: caller can only insert for themselves OR for users in the same tenant
 -- ============================================================
 DROP POLICY IF EXISTS "Authenticated can insert notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Tenant members can insert notifications" ON public.notifications;
 CREATE POLICY "Tenant members can insert notifications"
   ON public.notifications
   FOR INSERT TO authenticated
