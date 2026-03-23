@@ -10,31 +10,13 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatDisplayName } from "@/utils/formatName";
 import { Calendar, User, Package, CheckCircle, XCircle, PlayCircle } from "lucide-react";
+import { statusColors, statusLabels, typeLabels } from "./taskConstants";
 
 interface TaskDetailDialogProps {
   task: WarehouseTaskWithDetails;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const statusColors = {
-  pending: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  in_progress: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  completed: "bg-green-500/10 text-green-600 dark:text-green-400",
-  cancelled: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
-};
-
-const statusLabels = {
-  pending: "Ожидает",
-  in_progress: "В работе",
-  completed: "Завершено",
-  cancelled: "Отменено",
-};
-
-const typeLabels = {
-  collection: "Сбор",
-  return: "Возврат",
-};
 
 export const TaskDetailDialog = ({ task, open, onOpenChange }: TaskDetailDialogProps) => {
   const { updateTaskStatus } = useWarehouseTasks();

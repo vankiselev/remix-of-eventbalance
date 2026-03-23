@@ -1,36 +1,17 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Calendar, User, Package, MessageSquare } from "lucide-react";
 import { WarehouseTaskWithDetails } from "@/hooks/useWarehouseTasks";
 import { TaskDetailDialog } from "./TaskDetailDialog";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatDisplayName } from "@/utils/formatName";
+import { statusColors, statusLabels, typeLabels } from "./taskConstants";
 
 interface TaskCardProps {
   task: WarehouseTaskWithDetails;
 }
-
-const statusColors = {
-  pending: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  in_progress: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  completed: "bg-green-500/10 text-green-600 dark:text-green-400",
-  cancelled: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
-};
-
-const statusLabels = {
-  pending: "Ожидает",
-  in_progress: "В работе",
-  completed: "Завершено",
-  cancelled: "Отменено",
-};
-
-const typeLabels = {
-  collection: "Сбор",
-  return: "Возврат",
-};
 
 export const TaskCard = ({ task }: TaskCardProps) => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
