@@ -345,7 +345,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
           {parsedData && parsedData.amount > 0 && (
             <div className="w-full p-4 border rounded-lg space-y-3">
               {parsedData.confidence !== undefined && parsedData.confidence < 50 && (
-                <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
                   ⚠️ Разбор неуверенный — проверьте данные перед созданием
                 </div>
               )}
@@ -353,7 +353,7 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                 <span className="text-sm text-muted-foreground">Тип</span>
                 <span className={cn(
                   "font-medium",
-                  parsedData.type === 'expense' ? "text-destructive" : "text-green-600"
+                  parsedData.type === 'expense' ? "text-destructive" : "text-primary"
                 )}>
                   {parsedData.type === 'expense' ? 'Расход' : 'Приход'}
                 </span>
