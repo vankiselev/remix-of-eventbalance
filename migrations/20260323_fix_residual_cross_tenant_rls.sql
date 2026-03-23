@@ -27,6 +27,7 @@ $$;
 -- NEW: caller can only insert for themselves OR for users in the same tenant
 -- ============================================================
 DROP POLICY IF EXISTS "Authenticated can insert notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Tenant members can insert notifications" ON public.notifications;
 CREATE POLICY "Tenant members can insert notifications"
   ON public.notifications
   FOR INSERT TO authenticated
@@ -42,6 +43,7 @@ CREATE POLICY "Tenant members can insert notifications"
 -- Edge functions use service_role and bypass RLS
 -- ============================================================
 DROP POLICY IF EXISTS "Users can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile"
   ON public.profiles
   FOR INSERT TO authenticated
@@ -56,6 +58,7 @@ DO $$
 BEGIN
   IF to_regclass('public.user_projects') IS NOT NULL THEN
     EXECUTE 'DROP POLICY IF EXISTS "Authenticated can read user_projects" ON public.user_projects';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can read own user_projects" ON public.user_projects';
     EXECUTE 'CREATE POLICY "Users can read own user_projects" ON public.user_projects FOR SELECT TO authenticated USING (user_id = auth.uid())';
   END IF;
 END;
