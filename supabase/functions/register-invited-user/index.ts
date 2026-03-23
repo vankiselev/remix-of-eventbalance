@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
     }
 
     // Create user — only reachable after invitation is validated
+    console.log("[register-invited-user] Creating user for:", email);
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -128,8 +129,12 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
+      console.error("[register-invited-user] User creation failed:", createError.message);
+      const userMsg = createError.message.includes("already been registered")
+        ? "Пользователь с таким email уже зарегистрирован"
+        : `Ошибка создания аккаунта: ${createError.message}`;
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: userMsg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
