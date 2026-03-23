@@ -42,7 +42,6 @@ const AdminReportsView = () => {
   const { toast } = useToast();
   const { currentTenant } = useTenant();
   const [reports, setReports] = useState<ReportWithEmployee[]>([]);
-  const [filteredReports, setFilteredReports] = useState<ReportWithEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
