@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader2, Check, X, RotateCcw, Sparkles } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, RotateCcw, Sparkles, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -16,6 +18,8 @@ interface ParsedTransaction {
   description: string;
   type: 'expense' | 'income';
   suggestedCategory: string;
+  cashType?: string | null;
+  confidence?: number;
 }
 
 interface VoiceTransactionDialogProps {
@@ -30,110 +34,11 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [displayedTranscript, setDisplayedTranscript] = useState("");
+  const [textInput, setTextInput] = useState("");
   const [parsedData, setParsedData] = useState<ParsedTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [isLoadingKey, setIsLoadingKey] = useState(true);
   
   const recognitionRef = useRef<any>(null);
-  const animationRef = useRef<number | null>(null);
-
-  // Load API key
-  useEffect(() => {
-    if (isOpen) {
-      loadApiKey();
-    }
-  }, [isOpen]);
-
-  const loadApiKey = async () => {
-    setIsLoadingKey(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('user_api_keys')
-        .select('api_key')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      setApiKey(data?.api_key || null);
-    } catch (err) {
-      console.error('Error loading API key:', err);
-    } finally {
-      setIsLoadingKey(false);
-    }
-  };
-
-  const generateApiKey = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Deactivate old keys
-      await supabase
-        .from('user_api_keys')
-        .update({ is_active: false })
-        .eq('user_id', user.id);
-
-      // Generate new key
-      const newKey = `vt_${crypto.randomUUID().replace(/-/g, '')}`;
-      
-      const { error } = await supabase
-        .from('user_api_keys')
-        .insert({
-          user_id: user.id,
-          api_key: newKey,
-          is_active: true,
-          name: 'Voice Transaction Key'
-        });
-
-      if (error) throw error;
-      
-      setApiKey(newKey);
-      toast({
-        title: "API-ключ создан",
-        description: "Теперь вы можете использовать голосовой ввод",
-      });
-    } catch (err) {
-      console.error('Error generating API key:', err);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось создать API-ключ",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Animate transcript appearance
-  useEffect(() => {
-    if (transcript.length > displayedTranscript.length) {
-      const targetLength = transcript.length;
-      let currentLength = displayedTranscript.length;
-      
-      const animate = () => {
-        if (currentLength < targetLength) {
-          currentLength += 1;
-          setDisplayedTranscript(transcript.substring(0, currentLength));
-          animationRef.current = requestAnimationFrame(animate);
-        }
-      };
-      
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      setDisplayedTranscript(transcript);
-    }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [transcript]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -141,16 +46,15 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'ru-RU';
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'ru-RU';
 
         let finalText = '';
         
-        recognitionRef.current.onresult = (event: any) => {
+        recognition.onresult = (event: any) => {
           let interimTranscript = '';
-
           for (let i = 0; i < event.results.length; i++) {
             const result = event.results[i];
             if (result.isFinal) {
@@ -159,94 +63,122 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
               interimTranscript += result[0].transcript;
             }
           }
-
-          // Show final + current interim
           setTranscript((finalText + interimTranscript).trim());
         };
 
-        recognitionRef.current.onerror = (event: any) => {
+        recognition.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
-          setError(`Ошибка распознавания: ${event.error}`);
+          if (event.error === 'not-allowed') {
+            setError('Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.');
+          } else if (event.error === 'no-speech') {
+            setError('Речь не обнаружена. Попробуйте ещё раз.');
+          } else if (event.error === 'network') {
+            setError('Ошибка сети. Проверьте подключение к интернету.');
+          } else {
+            setError('Не удалось распознать речь. Попробуйте ввести текст вручную.');
+          }
           setIsListening(false);
         };
 
-        recognitionRef.current.onend = () => {
+        recognition.onend = () => {
           setIsListening(false);
-          finalText = ''; // Reset for next session
+          finalText = '';
         };
+
+        recognitionRef.current = recognition;
       }
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch {}
       }
     };
   }, []);
 
+  // Reset on close
+  useEffect(() => {
+    if (!isOpen) {
+      reset();
+    }
+  }, [isOpen]);
+
   const startListening = useCallback(() => {
     if (recognitionRef.current) {
       setTranscript("");
-      setDisplayedTranscript("");
+      setTextInput("");
       setParsedData(null);
       setError(null);
-      recognitionRef.current.start();
-      setIsListening(true);
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error('Failed to start recognition:', e);
+        setError('Не удалось запустить запись. Попробуйте ввести текст вручную.');
+      }
     }
   }, []);
 
   const stopListening = useCallback(async () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
       setIsListening(false);
       
       if (transcript.trim()) {
-        await processVoiceInput(transcript.trim());
+        await processText(transcript.trim());
       }
     }
   }, [transcript]);
 
-  const processVoiceInput = async (text: string) => {
-    if (!apiKey) {
-      setError("API-ключ не найден");
-      return;
-    }
-
+  const processText = async (text: string) => {
     setIsProcessing(true);
     setError(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
-        body: {
-          apiKey: apiKey,
-          mode: 'simple',
-          step: 1,
-          text: text,
-        }
+        body: { text },
       });
 
-      if (fnError) throw fnError;
-
-      if (data.error) {
-        throw new Error(data.error);
+      if (fnError) {
+        throw new Error(getUserFriendlyError(fnError));
       }
 
-      setParsedData({
-        amount: data.amount,
-        description: data.description,
-        type: data.type,
-        suggestedCategory: data.suggestedCategory,
-      });
+      if (!data?.success && data?.error) {
+        setError(data.error);
+        if (data.partialData) {
+          // Show partial data even on error
+          setParsedData(data.partialData);
+        }
+        return;
+      }
+
+      if (data?.success) {
+        setParsedData({
+          amount: data.amount,
+          description: data.description,
+          type: data.type,
+          suggestedCategory: data.suggestedCategory,
+          cashType: data.cashType,
+          confidence: data.confidence,
+        });
+      }
     } catch (err) {
       console.error('Error processing voice input:', err);
-      setError(err instanceof Error ? err.message : 'Ошибка обработки');
+      setError(getUserFriendlyError(err));
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const handleTextSubmit = async () => {
+    const text = textInput.trim();
+    if (!text) return;
+    setTranscript(text);
+    await processText(text);
+  };
+
   const createTransaction = async () => {
-    if (!parsedData || !apiKey) return;
+    if (!parsedData) return;
 
     setIsCreating(true);
     setError(null);
@@ -254,35 +186,36 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
     try {
       const { data, error: fnError } = await supabase.functions.invoke('voice-transaction', {
         body: {
-          apiKey: apiKey,
-          mode: 'simple',
-          step: 3,
+          step: 'create',
           step1Data: {
             amount: parsedData.amount,
             description: parsedData.description,
             type: parsedData.type,
             suggestedCategory: parsedData.suggestedCategory,
+            cashType: parsedData.cashType,
           },
-          cashType: 'Наличка Ваня',
-        }
+        },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        throw new Error(getUserFriendlyError(fnError));
+      }
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data?.success && data?.error) {
+        setError(data.error);
+        return;
       }
 
       toast({
         title: "Черновик создан",
-        description: `${parsedData.type === 'expense' ? 'Трата' : 'Приход'}: ${parsedData.amount.toLocaleString('ru-RU')} ₽`,
+        description: `${parsedData.type === 'expense' ? 'Расход' : 'Приход'}: ${parsedData.amount.toLocaleString('ru-RU')} ₽ — ${parsedData.description}`,
       });
 
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
       console.error('Error creating transaction:', err);
-      setError(err instanceof Error ? err.message : 'Ошибка создания транзакции');
+      setError(getUserFriendlyError(err));
     } finally {
       setIsCreating(false);
     }
@@ -290,11 +223,12 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
 
   const reset = () => {
     setTranscript("");
-    setDisplayedTranscript("");
+    setTextInput("");
     setParsedData(null);
     setError(null);
     setIsListening(false);
     setIsProcessing(false);
+    setIsCreating(false);
   };
 
   const isSpeechSupported = typeof window !== 'undefined' && 
@@ -308,36 +242,20 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
             <Sparkles className="h-5 w-5 text-primary" />
             Голосовой ввод транзакции
           </DialogTitle>
+          <DialogDescription>
+            Произнесите или введите описание транзакции
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-6 py-6">
-          {isLoadingKey ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Загрузка...
-            </div>
-          ) : !apiKey ? (
-            <div className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                Для использования голосового ввода нужен API-ключ
-              </p>
-              <Button onClick={generateApiKey}>
-                Создать API-ключ
-              </Button>
-            </div>
-          ) : !isSpeechSupported ? (
-            <div className="text-center text-muted-foreground">
-              <p>Ваш браузер не поддерживает распознавание речи.</p>
-              <p className="text-sm mt-2">Попробуйте использовать Chrome или Edge.</p>
-            </div>
-          ) : (
+        <div className="flex flex-col items-center gap-4 py-4">
+          {/* Microphone Button */}
+          {isSpeechSupported && (
             <>
-              {/* Microphone Button */}
               <button
                 onClick={isListening ? stopListening : startListening}
                 disabled={isProcessing || isCreating}
                 className={cn(
-                  "relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300",
+                  "relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300",
                   "focus:outline-none focus:ring-4 focus:ring-primary/20",
                   isListening 
                     ? "bg-destructive text-destructive-foreground scale-110" 
@@ -345,7 +263,6 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                   (isProcessing || isCreating) && "opacity-50 cursor-not-allowed"
                 )}
               >
-                {/* Pulse animation when listening */}
                 {isListening && (
                   <>
                     <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-25" />
@@ -354,122 +271,194 @@ export function VoiceTransactionDialog({ isOpen, onOpenChange, onSuccess }: Voic
                 )}
                 
                 {isProcessing ? (
-                  <Loader2 className="h-10 w-10 animate-spin" />
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 ) : isListening ? (
-                  <MicOff className="h-10 w-10" />
+                  <MicOff className="h-8 w-8" />
                 ) : (
-                  <Mic className="h-10 w-10" />
+                  <Mic className="h-8 w-8" />
                 )}
               </button>
 
               <p className="text-sm text-muted-foreground">
-                {isListening ? "Говорите... Нажмите для остановки" : "Нажмите для начала записи"}
+                {isListening ? "Говорите... Нажмите для остановки" : isProcessing ? "Обработка..." : "Нажмите для записи"}
               </p>
-
-              {/* Transcript Display */}
-              {(displayedTranscript || isListening) && (
-                <div className="w-full min-h-[80px] p-4 bg-muted rounded-lg relative overflow-hidden">
-                  <p className="text-foreground leading-relaxed">
-                    {displayedTranscript}
-                    {isListening && (
-                      <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />
-                    )}
-                  </p>
-                  {!displayedTranscript && isListening && (
-                    <p className="text-muted-foreground italic">Ожидание речи...</p>
-                  )}
-                </div>
-              )}
-
-              {/* Error Display */}
-              {error && (
-                <div className="w-full p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Parsed Transaction Preview */}
-              {parsedData && (
-                <div className="w-full p-4 border rounded-lg space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Тип</span>
-                    <span className={cn(
-                      "font-medium",
-                      parsedData.type === 'expense' ? "text-destructive" : "text-success"
-                    )}>
-                      {parsedData.type === 'expense' ? 'Трата' : 'Приход'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Сумма</span>
-                    <span className="font-bold text-lg">
-                      {parsedData.amount.toLocaleString('ru-RU')} ₽
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Описание</span>
-                    <span className="font-medium text-right max-w-[200px] truncate">
-                      {parsedData.description}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Категория</span>
-                    <span className="text-sm">{parsedData.suggestedCategory}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              {parsedData && (
-                <div className="flex gap-3 w-full">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={reset}
-                    disabled={isCreating}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Заново
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={createTransaction}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4 mr-2" />
-                    )}
-                    Создать черновик
-                  </Button>
-                </div>
-              )}
-
-              {/* Examples */}
-              {!transcript && !parsedData && !isListening && (
-                <div className="w-full space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium">Примеры команд:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Купил кофе за 350 рублей",
-                      "Потратил 1500 на такси",
-                      "Получил 50000 от клиента",
-                    ].map((example, i) => (
-                      <span
-                        key={i}
-                        className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground"
-                      >
-                        "{example}"
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
+          )}
+
+          {/* Transcript Display */}
+          {transcript && !isListening && (
+            <div className="w-full p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Распознано:</p>
+              <p className="text-foreground">{transcript}</p>
+            </div>
+          )}
+
+          {isListening && (
+            <div className="w-full min-h-[60px] p-3 bg-muted rounded-lg">
+              <p className="text-foreground">
+                {transcript || <span className="text-muted-foreground italic">Ожидание речи...</span>}
+                <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />
+              </p>
+            </div>
+          )}
+
+          {/* Text Input Fallback */}
+          {!isListening && !parsedData && !isProcessing && (
+            <div className="w-full">
+              <div className="flex items-center gap-1 mb-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground px-2">или введите текстом</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="Такси 500 рублей наличка Ваня"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); }}
+                  className="flex-1"
+                />
+                <Button 
+                  size="icon" 
+                  onClick={handleTextSubmit} 
+                  disabled={!textInput.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="w-full p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm">
+              <p className="text-destructive">{error}</p>
+              {!parsedData && (
+                <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs" onClick={reset}>
+                  Попробовать снова
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Parsed Transaction Preview */}
+          {parsedData && parsedData.amount > 0 && (
+            <div className="w-full p-4 border rounded-lg space-y-3">
+              {parsedData.confidence !== undefined && parsedData.confidence < 50 && (
+                <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                  ⚠️ Разбор неуверенный — проверьте данные перед созданием
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Тип</span>
+                <span className={cn(
+                  "font-medium",
+                  parsedData.type === 'expense' ? "text-destructive" : "text-primary"
+                )}>
+                  {parsedData.type === 'expense' ? 'Расход' : 'Приход'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Сумма</span>
+                <span className="font-bold text-lg">
+                  {parsedData.amount.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Описание</span>
+                <span className="font-medium text-right max-w-[200px]">
+                  {parsedData.description}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Категория</span>
+                <span className="text-sm text-right max-w-[200px]">{parsedData.suggestedCategory}</span>
+              </div>
+              {parsedData.cashType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Кошелёк</span>
+                  <span className="text-sm">{parsedData.cashType}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {parsedData && parsedData.amount > 0 && (
+            <div className="flex gap-3 w-full">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={reset}
+                disabled={isCreating}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Заново
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={createTransaction}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                Создать черновик
+              </Button>
+            </div>
+          )}
+
+          {/* Examples */}
+          {!transcript && !parsedData && !isListening && !textInput && (
+            <div className="w-full space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">Примеры:</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "Такси 1200 наличка Настя",
+                  "Передал Ване 2500 наличка",
+                  "Приход 50000 от клиента",
+                ].map((example, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setTextInput(example); }}
+                    className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    "{example}"
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
     </Dialog>
   );
+}
+
+function getUserFriendlyError(err: unknown): string {
+  if (!err) return 'Произошла ошибка. Попробуйте ещё раз.';
+  
+  const message = err instanceof Error ? err.message : String(err);
+  
+  if (message.includes('non-2xx') || message.includes('FunctionsHttpError')) {
+    return 'Сервис обработки временно недоступен. Попробуйте через минуту.';
+  }
+  if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+    return 'Ошибка сети. Проверьте подключение к интернету.';
+  }
+  if (message.includes('rate limit') || message.includes('429')) {
+    return 'Слишком много запросов. Подождите минуту.';
+  }
+  if (message.includes('401') || message.includes('auth') || message.includes('Unauthorized')) {
+    return 'Необходима авторизация. Перезайдите в приложение.';
+  }
+  
+  // If it's already a user-friendly Russian message, return as is
+  if (/[а-яА-Я]/.test(message) && !message.includes('Error') && !message.includes('error')) {
+    return message;
+  }
+  
+  return 'Произошла ошибка. Попробуйте ещё раз.';
 }
