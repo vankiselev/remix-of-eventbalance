@@ -93,7 +93,7 @@ const AdminReportsView = () => {
       if (salariesError) throw salariesError;
 
       // O(1) lookups via Maps
-      const profilesMap = new Map((profiles || []).map(p => [p.id, p]));
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]));
       const salariesMap = new Map((salaries || []).map(s => [`${s.report_id}_${s.employee_user_id}`, s]));
 
       const reportsWithEmployees: ReportWithEmployee[] = (data || []).map(report => {
