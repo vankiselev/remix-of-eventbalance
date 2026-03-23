@@ -119,17 +119,40 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // === JWT VERIFICATION: caller must be authenticated ===
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const verifiedUserId = claimsData.claims.sub as string;
+    console.log(`Verified caller: ${verifiedUserId}`);
+
+    // Service role client for DB operations (only after auth verified)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { rows, user_id } = await req.json();
+    const { rows } = await req.json();
+    const user_id = verifiedUserId; // Always use verified caller, ignore body user_id
     
     if (!rows || !Array.isArray(rows)) {
       throw new Error('Invalid rows data');
-    }
-
-    if (!user_id) {
-      throw new Error('User ID is required');
     }
 
     // Get user's tenant_id

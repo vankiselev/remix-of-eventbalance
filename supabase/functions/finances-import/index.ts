@@ -448,9 +448,52 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // === JWT VERIFICATION: caller must be authenticated ===
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const verifiedUserId = claimsData.claims.sub as string;
+    console.log(`Verified caller: ${verifiedUserId}`);
+
+    // Service role client for DB operations (only after auth verified)
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { rows, user_id, target_user_id, background_mode, job_id, resume_from_row } = await req.json();
+    const { rows, target_user_id, background_mode, job_id, resume_from_row } = await req.json();
+    const user_id = verifiedUserId; // Always use verified caller, ignore body user_id
+
+    // Validate target_user_id: caller can only import for themselves or must be admin
+    let resolvedTargetUserId = verifiedUserId;
+    if (target_user_id && target_user_id !== verifiedUserId) {
+      // Check if caller is admin
+      const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: verifiedUserId, _role: 'admin' });
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: only admins can import for other users' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      resolvedTargetUserId = target_user_id;
+      console.log(`Admin ${verifiedUserId} importing for target user ${resolvedTargetUserId}`);
+    }
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(
@@ -459,7 +502,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Starting import: ${rows.length} rows for user ${user_id}, background: ${background_mode}, job_id: ${job_id}`);
+    console.log(`Starting import: ${rows.length} rows for user ${user_id}, target: ${resolvedTargetUserId}, background: ${background_mode}, job_id: ${job_id}`);
 
     // Если фоновый режим - запускаем в waitUntil и сразу возвращаем ответ
     if (background_mode && job_id) {
@@ -477,7 +520,7 @@ serve(async (req) => {
       EdgeRuntime.waitUntil((async () => {
         try {
           console.log(`[Background] Starting import job ${job_id}, resume_from_row: ${resume_from_row || 0}`);
-          const result = await processImport(supabase, rows, user_id, target_user_id || user_id, job_id, resume_from_row || 0);
+          const result = await processImport(supabase, rows, user_id, resolvedTargetUserId, job_id, resume_from_row || 0);
           
           // Обновляем финальный статус и очищаем import_data
           await supabase
@@ -525,7 +568,7 @@ serve(async (req) => {
     }
 
     // Синхронный режим - ждём завершения
-    const result = await processImport(supabase, rows, user_id, target_user_id || user_id, job_id, resume_from_row || 0);
+    const result = await processImport(supabase, rows, user_id, resolvedTargetUserId, job_id, resume_from_row || 0);
     console.log(`Import complete: ${result.inserted} inserted, ${result.failed} failed`);
 
     return new Response(
