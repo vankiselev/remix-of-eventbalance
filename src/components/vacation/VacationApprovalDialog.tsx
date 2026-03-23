@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { getVacationTypeLabel, calculateVacationDays } from "@/utils/vacationConstants";
 
 interface Vacation {
   id: string;
