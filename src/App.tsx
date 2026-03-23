@@ -12,7 +12,7 @@ import { FinancesActionsProvider } from "@/contexts/FinancesActionsContext";
 import { ImportProgressProvider } from "@/contexts/ImportProgressContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
-import Auth from "./pages/Auth";
+const Auth = lazy(() => import("./pages/Auth"));
 import { notificationSound } from "@/utils/notificationSound";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -86,14 +86,18 @@ const RealtimeSync = () => {
         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       })
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'financial_transactions' }, () => {
+        // Batch invalidation with a slight delay to coalesce rapid changes
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
-        queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
-        queryClient.invalidateQueries({ queryKey: ['all-users-cash-totals'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['employee-list-with-cash'] });
         queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
         queryClient.invalidateQueries({ queryKey: ['pending-transfers'] });
-        queryClient.invalidateQueries({ queryKey: ['employee-list-with-cash'] });
+        // Defer secondary invalidations to not block primary UI
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['all-users-cash-totals'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        }, 500);
       })
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'vacations' }, () => {
         queryClient.invalidateQueries({ queryKey: ['vacations'] });

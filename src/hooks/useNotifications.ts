@@ -31,14 +31,15 @@ export const useNotifications = () => {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
 
@@ -101,13 +102,13 @@ export const useNotifications = () => {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('user_id', user.user.id)
+        .eq('user_id', session.user.id)
         .eq('read', false);
 
       if (error) throw error;
@@ -155,13 +156,13 @@ export const useNotifications = () => {
 
   const deleteAllNotifications = useCallback(async () => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', user.user.id);
+        .eq('user_id', session.user.id);
 
       if (error) throw error;
 
@@ -187,8 +188,8 @@ export const useNotifications = () => {
     let cleanup: (() => void) | undefined;
 
     const setupRealtimeSubscription = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const channel = supabase
         .channel('notifications-changes')
@@ -198,7 +199,7 @@ export const useNotifications = () => {
             event: '*',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${userData.user.id}`,
+            filter: `user_id=eq.${session.user.id}`,
           },
           (payload) => {
             if (payload.eventType === 'INSERT') {

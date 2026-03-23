@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -290,10 +290,15 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [user, authLoading, fetchMemberships]);
 
+  // Only refetch when the tenant slug in URL actually changes (not on every pathname change)
+  const prevTenantSlugRef = useRef<string | null>(null);
   useEffect(() => {
     const urlSlug = getTenantSlugFromUrl();
-    if (urlSlug && currentTenant?.slug !== urlSlug) {
+    if (urlSlug && urlSlug !== prevTenantSlugRef.current && currentTenant?.slug !== urlSlug) {
+      prevTenantSlugRef.current = urlSlug;
       fetchMemberships();
+    } else if (urlSlug) {
+      prevTenantSlugRef.current = urlSlug;
     }
   }, [location.pathname, currentTenant?.slug, fetchMemberships, getTenantSlugFromUrl]);
 
