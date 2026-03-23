@@ -224,6 +224,12 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
         onImportComplete={handleTransactionSuccess}
         defaultEmployeeId={selectedEmployee?.id}
       />
+
+      <VoiceTransactionDialog
+        isOpen={showVoiceDialog}
+        onOpenChange={setShowVoiceDialog}
+        onSuccess={handleTransactionSuccess}
+      />
     </div>
   );
 };
