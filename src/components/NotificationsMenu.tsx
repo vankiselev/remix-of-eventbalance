@@ -52,6 +52,7 @@ const groupByDate = (notifications: Notification[]): DateGroup[] => {
 export const NotificationsMenu = () => {
   const [open, setOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   const {
     notifications,
     loading,
