@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { getVacationTypeLabel, getVacationTypeColor } from "@/utils/vacationConstants";
 
 interface Vacation {
   id: string;
@@ -16,71 +17,22 @@ interface Vacation {
 }
 
 const TodayVacationsCard = () => {
-  const [todayVacations, setTodayVacations] = useState<Vacation[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchTodayVacations();
-  }, []);
-
-  const fetchTodayVacations = async () => {
-    try {
+  const { data: todayVacations = [], isLoading: loading } = useQuery({
+    queryKey: ['today-vacations'],
+    queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      
       const { data, error } = await supabase
         .from("vacations")
         .select("id, employee_name, vacation_type, description, start_date, end_date")
         .lte("start_date", today)
         .gte("end_date", today)
         .eq("status", "approved");
-
       if (error) throw error;
-      setTodayVacations(data || []);
-    } catch (error) {
-      console.error("Error fetching today's vacations:", error);
-      setTodayVacations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getVacationTypeLabel = (type: string) => {
-    switch (type) {
-      case "weekend":
-        return "Выходной";
-      case "vacation":
-        return "Отпуск";
-      case "sick":
-        return "Больничный";
-      case "personal":
-        return "Личное";
-      case "fun":
-        return "Кайфануть";
-      case "study":
-        return "Учеба";
-      default:
-        return type;
-    }
-  };
-
-  const getVacationTypeColor = (type: string) => {
-    switch (type) {
-      case "weekend":
-        return "bg-purple-100 text-purple-800";
-      case "vacation":
-        return "bg-green-100 text-green-800";
-      case "sick":
-        return "bg-red-100 text-red-800";
-      case "personal":
-        return "bg-blue-100 text-blue-800";
-      case "fun":
-        return "bg-orange-100 text-orange-800";
-      case "study":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+      return (data || []) as Vacation[];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate);

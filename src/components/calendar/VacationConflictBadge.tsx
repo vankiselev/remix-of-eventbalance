@@ -3,18 +3,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { VacationConflict } from "@/hooks/useVacationConflicts";
+import { vacationTypeConflictBadgeLabels } from "@/utils/vacationConstants";
 
 interface VacationConflictBadgeProps {
   conflict: VacationConflict;
 }
 
 const getVacationTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    annual: "В отпуске",
-    sick: "На больничном",
-    fun: "Выходной",
-  };
-  return labels[type] || "Недоступен";
+  return vacationTypeConflictBadgeLabels[type] || "Недоступен";
 };
 
 export const VacationConflictBadge = ({ conflict }: VacationConflictBadgeProps) => {

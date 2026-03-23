@@ -154,7 +154,7 @@ export const VacationApprovalDialog = ({
             </div>
             <div className="col-span-2">
               <p className="text-sm text-muted-foreground">Количество дней</p>
-              <p className="font-medium">{calculateDays(vacation.start_date, vacation.end_date)} дней</p>
+              <p className="font-medium">{calculateVacationDays(vacation.start_date, vacation.end_date)} дней</p>
             </div>
           </div>
 

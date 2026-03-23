@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { VacationConflict } from "@/hooks/useVacationConflicts";
+import { vacationTypeConflictLabels } from "@/utils/vacationConstants";
 
 interface VacationConflictDialogProps {
   open: boolean;
@@ -24,12 +25,7 @@ interface VacationConflictDialogProps {
 }
 
 const getVacationTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    annual: "в отпуске",
-    sick: "на больничном",
-    fun: "в выходном",
-  };
-  return labels[type] || "недоступен";
+  return vacationTypeConflictLabels[type] || "недоступен";
 };
 
 export const VacationConflictDialog = ({

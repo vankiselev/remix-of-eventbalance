@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { parseISO, isToday, isSameWeek, format } from "date-fns";
+import { parseISO, isSameWeek, format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatDisplayName } from "@/utils/formatName";
+import { useQuery } from "@tanstack/react-query";
 
 interface BirthdayEmployee {
   id: string;
@@ -21,22 +21,14 @@ function matchesMonthDay(birthDate: string, refDate: Date): boolean {
 function isThisWeekBirthday(birthDate: string): boolean {
   const bd = parseISO(birthDate);
   const now = new Date();
-  // Create a "virtual" date this year with same month/day
   const thisYearBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
   return isSameWeek(thisYearBd, now, { weekStartsOn: 1 }) && !matchesMonthDay(birthDate, now);
 }
 
 const TodayBirthdaysCard = () => {
-  const [todayBirthdays, setTodayBirthdays] = useState<BirthdayEmployee[]>([]);
-  const [weekBirthdays, setWeekBirthdays] = useState<BirthdayEmployee[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchBirthdays();
-  }, []);
-
-  const fetchBirthdays = async () => {
-    try {
+  const { data: birthdayData, isLoading: loading } = useQuery({
+    queryKey: ['birthdays-widget'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, birth_date, avatar_url')
@@ -57,14 +49,14 @@ const TodayBirthdaysCard = () => {
         }
       });
 
-      setTodayBirthdays(today);
-      setWeekBirthdays(week);
-    } catch (error) {
-      console.error('Error fetching birthdays:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { today, week };
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const todayBirthdays = birthdayData?.today || [];
+  const weekBirthdays = birthdayData?.week || [];
 
   const calculateAge = (birthDate: string) => {
     const birth = parseISO(birthDate);
