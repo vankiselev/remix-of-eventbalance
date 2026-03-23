@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,24 +11,39 @@ interface RbacRole {
   is_admin_role: boolean;
 }
 
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
+interface UserProfile {
+  full_name: string;
+  last_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  avatar_url: string | null;
+  invitation_status?: string;
+}
+
+interface UserData {
   userRole: string | null;
   userRoleName: string | null;
-  userProfile: { 
-    full_name: string; 
-    last_name?: string;
-    first_name?: string;
-    middle_name?: string;
-    avatar_url: string | null;
-    invitation_status?: string;
-  } | null;
+  userProfile: UserProfile | null;
   rbacRoles: RbacRole[];
   permissions: string[];
   isAdmin: boolean;
   isPendingInvitation: boolean;
+}
+
+const EMPTY_USER_DATA: UserData = {
+  userRole: null,
+  userRoleName: null,
+  userProfile: null,
+  rbacRoles: [],
+  permissions: [],
+  isAdmin: false,
+  isPendingInvitation: false,
+};
+
+interface AuthContextType extends UserData {
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
   hasPermission: (code: string) => boolean;
   signOut: () => Promise<void>;
   refetchUserData: () => Promise<void>;
@@ -49,46 +64,37 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [userRoleName, setUserRoleName] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ 
-    full_name: string;
-    last_name?: string;
-    first_name?: string;
-    middle_name?: string;
-    avatar_url: string | null;
-    invitation_status?: string;
-  } | null>(null);
-  const [rbacRoles, setRbacRoles] = useState<RbacRole[]>([]);
-  const [permissions, setPermissions] = useState<string[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isPendingInvitation, setIsPendingInvitation] = useState(false);
+  const [userData, setUserData] = useState<UserData>(EMPTY_USER_DATA);
 
-  // Load cached data immediately
-  const loadFromCache = () => {
+  // Derive user from session — single source of truth
+  const user = session?.user ?? null;
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
+
+  // Load cached data immediately — returns true if cache was valid
+  const loadFromCache = useCallback(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          console.log('[AuthContext] Loading from cache');
-          if (data.profile) {
-            setUserRole(data.profile.role || 'employee');
-            setUserProfile({
+        if (Date.now() - timestamp < CACHE_DURATION && data.profile) {
+          const adminStatus = data.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
+          setUserData({
+            userRole: adminStatus ? 'admin' : (data.profile.role || 'employee'),
+            userRoleName: data.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'),
+            userProfile: {
               full_name: formatFullName(data.profile),
               last_name: data.profile.last_name,
               first_name: data.profile.first_name,
               middle_name: data.profile.middle_name,
-              avatar_url: normalizeAvatarUrl(data.profile.avatar_url)
-            });
-          }
-          setRbacRoles(data.rbac_roles || []);
-          setPermissions(data.permissions || []);
-          const adminStatus = data.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
-          setIsAdmin(adminStatus);
-          setUserRoleName(data.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'));
+              avatar_url: normalizeAvatarUrl(data.profile.avatar_url),
+            },
+            rbacRoles: data.rbac_roles || [],
+            permissions: data.permissions || [],
+            isAdmin: adminStatus,
+            isPendingInvitation: data.profile.invitation_status === 'pending',
+          });
           return true;
         }
       }
@@ -96,117 +102,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('[AuthContext] Cache load error:', e);
     }
     return false;
-  };
+  }, []);
+
+  // Force sign out and redirect — single place for all "kick user" scenarios
+  const forceSignOut = useCallback(async (message: string) => {
+    toast.error(message, { duration: 10000 });
+    await supabase.auth.signOut();
+    setSession(null);
+    setUserData(EMPTY_USER_DATA);
+    localStorage.removeItem(CACHE_KEY);
+    window.location.href = '/auth';
+  }, []);
 
   // Unified data loading function
-  const loadUserData = async (showLoadingState = true) => {
-    if (!user) {
-      setUserRole(null);
-      setUserRoleName(null);
-      setUserProfile(null);
-      setRbacRoles([]);
-      setPermissions([]);
-      setIsAdmin(false);
+  const loadUserData = useCallback(async () => {
+    // Use ref to get current user without needing it as dependency
+    const currentUser = userRef.current;
+    if (!currentUser) {
+      setUserData(EMPTY_USER_DATA);
       localStorage.removeItem(CACHE_KEY);
       return;
     }
 
     try {
-      // Load all data in one call using optimized RPC
       const { data, error } = await supabase.rpc('get_user_profile_with_roles');
-      
       if (error) throw error;
-      
-      console.log('[AuthContext] Loaded user data:', data);
-      
+
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         const profileData = data as any;
-        
+
         // If profile doesn't exist — account was deleted
         if (!profileData.profile) {
-          toast.error('Ваш аккаунт был удалён', { duration: 10000 });
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setUserRole(null);
-          setUserRoleName(null);
-          setUserProfile(null);
-          setRbacRoles([]);
-          setPermissions([]);
-          setIsAdmin(false);
-          localStorage.removeItem(CACHE_KEY);
-          window.location.href = '/auth';
+          await forceSignOut('Ваш аккаунт был удалён');
           return;
         }
 
         // Check employment status
         if (profileData.profile?.employment_status === 'terminated') {
-          const terminationDate = profileData.profile.termination_date 
+          const terminationDate = profileData.profile.termination_date
             ? new Date(profileData.profile.termination_date).toLocaleDateString('ru-RU')
             : '';
-          const message = terminationDate 
+          const message = terminationDate
             ? `Доступ закрыт! Вы были уволены ${terminationDate}`
             : 'Доступ закрыт! Вы были уволены';
-          toast.error(message, { duration: 10000 });
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setUserRole(null);
-          setUserRoleName(null);
-          setUserProfile(null);
-          setRbacRoles([]);
-          setPermissions([]);
-          setIsAdmin(false);
-          localStorage.removeItem(CACHE_KEY);
-          window.location.href = '/auth';
+          await forceSignOut(message);
           return;
         }
 
-        // Set profile data
-        if (profileData.profile) {
-          const adminStatus = profileData.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
-          const pendingStatus = profileData.profile.invitation_status === 'pending';
-          
-          setUserRole(adminStatus ? 'admin' : (profileData.profile.role || 'employee'));
-          setUserProfile({
+        // Set all profile data in ONE setState call
+        const adminStatus = profileData.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
+
+        setUserData({
+          userRole: adminStatus ? 'admin' : (profileData.profile.role || 'employee'),
+          userRoleName: profileData.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'),
+          userProfile: {
             full_name: formatFullName(profileData.profile),
             last_name: profileData.profile.last_name,
             first_name: profileData.profile.first_name,
             middle_name: profileData.profile.middle_name,
             avatar_url: normalizeAvatarUrl(profileData.profile.avatar_url),
-            invitation_status: profileData.profile.invitation_status
-          });
-          setRbacRoles(profileData.rbac_roles || []);
-          setPermissions(profileData.permissions || []);
-          setIsAdmin(adminStatus);
-          setIsPendingInvitation(pendingStatus);
-          setUserRoleName(profileData.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'));
-        }
+            invitation_status: profileData.profile.invitation_status,
+          },
+          rbacRoles: profileData.rbac_roles || [],
+          permissions: profileData.permissions || [],
+          isAdmin: adminStatus,
+          isPendingInvitation: profileData.profile.invitation_status === 'pending',
+        });
 
         // Cache the data
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           data: profileData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }));
       }
     } catch (error) {
       console.error('[AuthContext] Error loading user data:', error);
     }
-  };
+  }, [forceSignOut]);
 
-  // Load user profile and check employment status
+  // Load user profile when user changes
   useEffect(() => {
     if (!user) {
       loadUserData();
       return;
     }
 
-    // Load from cache first (instant)
-    const hasCache = loadFromCache();
-    
-    // Then load fresh data in background
-    loadUserData(false);
-  }, [user]);
+    // Load from cache first (instant), then fresh data in background
+    loadFromCache();
+    loadUserData();
+  }, [user, loadFromCache, loadUserData]);
 
   // Single realtime subscription for all user data changes
   useEffect(() => {
@@ -222,10 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           table: 'user_role_assignments',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          console.log('[AuthContext] Role assignment changed, reloading...');
-          setTimeout(() => loadUserData(false), 0);
-        }
+        () => loadUserData()
       )
       .on(
         'postgres_changes',
@@ -235,10 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           table: 'profiles',
           filter: `id=eq.${user.id}`,
         },
-        () => {
-          console.log('[AuthContext] Profile changed, reloading...');
-          setTimeout(() => loadUserData(false), 0);
-        }
+        () => loadUserData()
       )
       .on(
         'postgres_changes',
@@ -248,19 +226,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           table: 'profiles',
           filter: `id=eq.${user.id}`,
         },
-        () => {
-          console.log('[AuthContext] Profile deleted, signing out...');
-          toast.error('Ваш аккаунт был удалён');
-          signOut();
-          window.location.href = '/auth';
-        }
+        () => forceSignOut('Ваш аккаунт был удалён')
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, loadUserData, forceSignOut]);
+
   // Periodic session health check — fallback if realtime misses DELETE
   useEffect(() => {
     if (!user) return;
@@ -274,82 +248,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
 
         if (!error && !data) {
-          console.log('[AuthContext] Profile not found in health check, signing out...');
-          toast.error('Ваш аккаунт был удалён');
-          await signOut();
-          window.location.href = '/auth';
+          await forceSignOut('Ваш аккаунт был удалён');
         }
       } catch (e) {
-        console.error('[AuthContext] Health check error:', e);
+        // Silently ignore network errors in health check
       }
     };
 
     const interval = setInterval(checkProfileExists, 60000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, forceSignOut]);
 
+  // Auth state listener
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       setSession(null);
-      setUser(null);
-      setUserRole(null);
-      setUserRoleName(null);
-      setUserProfile(null);
-      setRbacRoles([]);
-      setPermissions([]);
-      setIsAdmin(false);
-      setIsPendingInvitation(false);
+      setUserData(EMPTY_USER_DATA);
       localStorage.removeItem(CACHE_KEY);
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
+  }, []);
 
-  const hasPermission = (code: string) => {
-    if (isAdmin) return true;
-    return permissions.includes(code);
-  };
+  const hasPermission = useCallback((code: string) => {
+    if (userData.isAdmin) return true;
+    return userData.permissions.includes(code);
+  }, [userData.isAdmin, userData.permissions]);
 
-  const refetchUserData = async () => {
-    await loadUserData();
-  };
-
-  const value = {
+  const value = useMemo<AuthContextType>(() => ({
     session,
     user,
     loading,
-    userRole,
-    userRoleName,
-    userProfile,
-    rbacRoles,
-    permissions,
-    isAdmin,
-    isPendingInvitation,
+    ...userData,
     hasPermission,
     signOut,
-    refetchUserData,
-  };
+    refetchUserData: loadUserData,
+  }), [session, user, loading, userData, hasPermission, signOut, loadUserData]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
