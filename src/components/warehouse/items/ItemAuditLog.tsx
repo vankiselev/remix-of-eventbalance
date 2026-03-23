@@ -95,6 +95,10 @@ const renderDiff = (log: AuditLogEntry) => {
   );
 };
 
+export const ItemAuditLog = ({ itemId }: ItemAuditLogProps) => {
+  const { auditLogs, isLoading } = useWarehouseItemsAudit(itemId);
+  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
