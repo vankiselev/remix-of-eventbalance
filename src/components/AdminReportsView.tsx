@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,13 +42,10 @@ const AdminReportsView = () => {
   const { toast } = useToast();
   const { currentTenant } = useTenant();
   const [reports, setReports] = useState<ReportWithEmployee[]>([]);
-  const [filteredReports, setFilteredReports] = useState<ReportWithEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("");
-  const [projects, setProjects] = useState<string[]>([]);
-  const [employees, setEmployees] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<ReportWithEmployee | null>(null);
   const [salaryDialog, setSalaryDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
@@ -95,25 +92,22 @@ const AdminReportsView = () => {
 
       if (salariesError) throw salariesError;
 
+      // O(1) lookups via Maps
+      const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      const salariesMap = new Map((salaries || []).map(s => [`${s.report_id}_${s.employee_user_id}`, s]));
+
       const reportsWithEmployees: ReportWithEmployee[] = (data || []).map(report => {
-        const profile = profiles?.find(p => p.id === report.user_id);
+        const profile = profilesMap.get(report.user_id) as any;
         return {
           ...report,
           employee_name: formatDisplayName(profile?.full_name) || "Неизвестно",
           employee_email: profile?.email || "",
           employee_avatar_url: profile?.avatar_url,
-          salary: salaries?.find(s => s.report_id === report.id && s.employee_user_id === report.user_id),
+          salary: salariesMap.get(`${report.id}_${report.user_id}`),
         };
       });
 
       setReports(reportsWithEmployees);
-      setFilteredReports(reportsWithEmployees);
-
-      // Extract unique projects and employees
-      const uniqueProjects = [...new Set(reportsWithEmployees.map(r => r.project_name))].sort();
-      const uniqueEmployees = [...new Set(reportsWithEmployees.map(r => r.employee_name))].sort();
-      setProjects(uniqueProjects);
-      setEmployees(uniqueEmployees);
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast({
@@ -163,31 +157,35 @@ const AdminReportsView = () => {
     };
   }, []);
 
-  useEffect(() => {
-    let filtered = reports;
+  // Derive projects/employees lists from reports
+  const projects = useMemo(() => 
+    [...new Set(reports.map(r => r.project_name))].sort(), 
+    [reports]
+  );
+  const employees = useMemo(() => 
+    [...new Set(reports.map(r => r.employee_name))].sort(), 
+    [reports]
+  );
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        report =>
-          report.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          report.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          report.employee_email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (projectFilter && projectFilter !== "all") {
-      filtered = filtered.filter(report => report.project_name === projectFilter);
-    }
-
-    if (employeeFilter && employeeFilter !== "all") {
-      filtered = filtered.filter(report => report.employee_name === employeeFilter);
-    }
-
-    setFilteredReports(filtered);
+  // Single-pass filtering via useMemo instead of useEffect+setState
+  const filteredReports = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    return reports.filter(report => {
+      if (search && 
+          !report.employee_name.toLowerCase().includes(search) &&
+          !report.project_name.toLowerCase().includes(search) &&
+          !report.employee_email.toLowerCase().includes(search)) {
+        return false;
+      }
+      if (projectFilter && projectFilter !== "all" && report.project_name !== projectFilter) return false;
+      if (employeeFilter && employeeFilter !== "all" && report.employee_name !== employeeFilter) return false;
+      return true;
+    });
   }, [searchTerm, projectFilter, employeeFilter, reports]);
 
-  const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+  const createFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string, userId?: string) => {
     try {
+      const createdBy = userId || (await supabase.auth.getUser()).data.user?.id;
       const { error } = await supabase
         .from("financial_transactions")
         .insert({
@@ -199,7 +197,7 @@ const AdminReportsView = () => {
           income_amount: 0,
           cash_type: walletType,
           static_project_name: report.project_name,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
+          created_by: createdBy,
           tenant_id: currentTenant?.id || null,
         });
 
@@ -210,7 +208,7 @@ const AdminReportsView = () => {
     }
   };
 
-  const updateFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string) => {
+  const updateFinancialTransaction = async (report: ReportWithEmployee, amount: number, walletType: string, salaryType: string, userId?: string) => {
     try {
       // Find existing transaction for this salary
       const { data: existingTransactions } = await supabase
@@ -236,7 +234,7 @@ const AdminReportsView = () => {
         if (error) throw error;
       } else {
         // Create new transaction if not found
-        await createFinancialTransaction(report, amount, walletType, salaryType);
+        await createFinancialTransaction(report, amount, walletType, salaryType, userId);
       }
     } catch (error) {
       console.error("Error updating financial transaction:", error);
@@ -289,7 +287,7 @@ const AdminReportsView = () => {
       if (salaryError) throw salaryError;
 
       // Always check if financial transaction exists and create/update accordingly
-      await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type);
+      await updateFinancialTransaction(selectedReport, amount, salaryForm.wallet_type, salaryForm.salary_type, userId);
 
       // Send notification to employee
       try {
