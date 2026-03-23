@@ -44,34 +44,22 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
       // Filter out admins
       const employeeProfiles = profiles?.filter((p: any) => p.role !== "admin") || [];
 
-      // Batch: fetch all cash totals in one query instead of N RPCs
-      const employeeIds = employeeProfiles.map((p: any) => p.id);
-      
-      if (employeeIds.length === 0) return [];
+      if (employeeProfiles.length === 0) return [];
 
-      // Get all transactions for all employees in ONE query
-      const { data: txData, error: txError } = await supabase
-        .from('financial_transactions')
-        .select('created_by, cash_type, income_amount, expense_amount')
-        .in('created_by', employeeIds);
+      // Server-side aggregation via RPC — no raw transactions on client
+      const { data: cashData, error: cashError } = await supabase
+        .rpc("get_all_users_cash_totals");
 
-      // Build cash totals map
       const cashMap = new Map<string, { total_cash: number; cash_nastya: number; cash_lera: number; cash_vanya: number }>();
       
-      if (!txError && txData) {
-        for (const tx of txData) {
-          if (!tx.created_by) continue;
-          let entry = cashMap.get(tx.created_by);
-          if (!entry) {
-            entry = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 };
-            cashMap.set(tx.created_by, entry);
-          }
-          const net = (tx.income_amount || 0) - (tx.expense_amount || 0);
-          entry.total_cash += net;
-          const ct = (tx.cash_type || '').trim();
-          if (ct === 'Наличка Настя') entry.cash_nastya += net;
-          else if (ct === 'Наличка Лера') entry.cash_lera += net;
-          else if (ct === 'Наличка Ваня') entry.cash_vanya += net;
+      if (!cashError && cashData) {
+        for (const row of cashData as any[]) {
+          cashMap.set(row.user_id, {
+            total_cash: Number(row.total_cash) || 0,
+            cash_nastya: Number(row.cash_nastya) || 0,
+            cash_lera: Number(row.cash_lera) || 0,
+            cash_vanya: Number(row.cash_vanya) || 0,
+          });
         }
       }
 
