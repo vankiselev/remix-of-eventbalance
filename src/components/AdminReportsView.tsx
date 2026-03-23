@@ -94,25 +94,22 @@ const AdminReportsView = () => {
 
       if (salariesError) throw salariesError;
 
+      // O(1) lookups via Maps
+      const profilesMap = new Map((profiles || []).map(p => [p.id, p]));
+      const salariesMap = new Map((salaries || []).map(s => [`${s.report_id}_${s.employee_user_id}`, s]));
+
       const reportsWithEmployees: ReportWithEmployee[] = (data || []).map(report => {
-        const profile = profiles?.find(p => p.id === report.user_id);
+        const profile = profilesMap.get(report.user_id);
         return {
           ...report,
           employee_name: formatDisplayName(profile?.full_name) || "Неизвестно",
           employee_email: profile?.email || "",
           employee_avatar_url: profile?.avatar_url,
-          salary: salaries?.find(s => s.report_id === report.id && s.employee_user_id === report.user_id),
+          salary: salariesMap.get(`${report.id}_${report.user_id}`),
         };
       });
 
       setReports(reportsWithEmployees);
-      setFilteredReports(reportsWithEmployees);
-
-      // Extract unique projects and employees
-      const uniqueProjects = [...new Set(reportsWithEmployees.map(r => r.project_name))].sort();
-      const uniqueEmployees = [...new Set(reportsWithEmployees.map(r => r.employee_name))].sort();
-      setProjects(uniqueProjects);
-      setEmployees(uniqueEmployees);
     } catch (error) {
       console.error("Error fetching reports:", error);
       toast({
