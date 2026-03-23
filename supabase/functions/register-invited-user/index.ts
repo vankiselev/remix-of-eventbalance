@@ -74,9 +74,8 @@ Deno.serve(async (req) => {
     }
     // ── END SECURITY GATE ──
 
-    // Compute public base URL for storage URLs
-    const reqUrl = new URL(req.url);
-    const publicBaseUrl = `${reqUrl.protocol}//${reqUrl.host}`;
+    // Use SUPABASE_URL for storage URLs (not req.url which points to edge function host)
+    const publicBaseUrl = supabaseUrl;
 
     // Upload avatar if base64 provided
     let finalAvatarUrl = avatar_url || null;
