@@ -43,6 +43,7 @@ CREATE POLICY "Tenant members can insert notifications"
 -- Edge functions use service_role and bypass RLS
 -- ============================================================
 DROP POLICY IF EXISTS "Users can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile"
   ON public.profiles
   FOR INSERT TO authenticated
