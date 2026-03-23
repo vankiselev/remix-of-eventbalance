@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,15 @@ export const TaskComments = ({ task }: TaskCommentsProps) => {
   const [newComment, setNewComment] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Build a Map for O(1) profile lookups instead of O(n) per comment
+  const profilesMap = useMemo(() => {
+    const map = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+    for (const p of profiles) {
+      map.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url });
+    }
+    return map;
+  }, [profiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { 'image/*': [] },
@@ -52,16 +61,6 @@ export const TaskComments = ({ task }: TaskCommentsProps) => {
     });
   };
 
-  const getProfileName = (userId: string) => {
-    const profile = profiles.find(p => p.id === userId);
-    return formatDisplayName(profile?.full_name) || 'Пользователь';
-  };
-
-  const getProfileAvatar = (userId: string) => {
-    const profile = profiles.find(p => p.id === userId);
-    return profile?.avatar_url;
-  };
-
   return (
     <div className="space-y-4">
       <div className="space-y-3">
@@ -71,36 +70,41 @@ export const TaskComments = ({ task }: TaskCommentsProps) => {
             <p>Нет комментариев</p>
           </div>
         ) : (
-          task.comments.map((comment) => (
-            <Card key={comment.id} className="p-4">
-              <div className="flex gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={getProfileAvatar(comment.user_id)} />
-                  <AvatarFallback>
-                    {getProfileName(comment.user_id).charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">
-                      {getProfileName(comment.user_id)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(comment.created_at), "d MMM, HH:mm", { locale: ru })}
-                    </span>
+          task.comments.map((comment) => {
+            const profile = profilesMap.get(comment.user_id);
+            const name = formatDisplayName(profile?.full_name) || 'Пользователь';
+
+            return (
+              <Card key={comment.id} className="p-4">
+                <div className="flex gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">
+                        {name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(comment.created_at), "d MMM, HH:mm", { locale: ru })}
+                      </span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{comment.comment}</p>
+                    {comment.photo_url && (
+                      <img 
+                        src={comment.photo_url} 
+                        alt="Фото комментария"
+                        className="rounded-lg max-w-sm max-h-64 object-cover"
+                      />
+                    )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{comment.comment}</p>
-                  {comment.photo_url && (
-                    <img 
-                      src={comment.photo_url} 
-                      alt="Фото комментария"
-                      className="rounded-lg max-w-sm max-h-64 object-cover"
-                    />
-                  )}
                 </div>
-              </div>
-            </Card>
-          ))
+              </Card>
+            );
+          })
         )}
       </div>
 

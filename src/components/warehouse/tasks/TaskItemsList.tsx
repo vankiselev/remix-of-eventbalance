@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,15 @@ export const TaskItemsList = ({ task }: TaskItemsListProps) => {
   const { updateTaskItem } = useWarehouseTasks();
   const { items: warehouseItems } = useWarehouseItems();
   const [editingQuantity, setEditingQuantity] = useState<Record<string, number>>({});
+
+  // Build a Map for O(1) item name lookups instead of O(n) per task item
+  const itemsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of warehouseItems) {
+      map.set(item.id, item.name);
+    }
+    return map;
+  }, [warehouseItems]);
 
   const handleToggleCollected = (itemId: string, isCollected: boolean, currentQuantity: number) => {
     const updates: any = {
@@ -55,7 +64,7 @@ export const TaskItemsList = ({ task }: TaskItemsListProps) => {
   return (
     <div className="space-y-3">
       {task.items.map((taskItem) => {
-        const item = warehouseItems.find(i => i.id === taskItem.item_id);
+        const itemName = itemsMap.get(taskItem.item_id) || 'Товар не найден';
         const isEditing = editingQuantity[taskItem.item_id] !== undefined;
         
         return (
@@ -73,7 +82,7 @@ export const TaskItemsList = ({ task }: TaskItemsListProps) => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{item?.name || 'Товар не найден'}</span>
+                    <span className="font-medium">{itemName}</span>
                   </div>
                   {taskItem.is_collected && (
                     <Check className="h-5 w-5 text-green-600" />

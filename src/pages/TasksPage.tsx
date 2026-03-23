@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Clock, CheckCircle2, AlertCircle, Calendar, User } from "lucide-react";
+import { Package, Clock, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
 import { useWarehouseTasks, WarehouseTaskWithDetails } from "@/hooks/useWarehouseTasks";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskDetailDialog } from "@/components/warehouse/tasks/TaskDetailDialog";
+import { statusColors, statusLabels, typeIcons, typeFullLabels } from "@/components/warehouse/tasks/taskConstants";
 
 const TasksPage = () => {
   const { user } = useAuth();
@@ -17,39 +17,25 @@ const TasksPage = () => {
   const [selectedTask, setSelectedTask] = useState<WarehouseTaskWithDetails | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  // Фильтр задач для текущего пользователя
-  const myTasks = tasks?.filter(task => task.assigned_to === user?.id) || [];
+  // Single-pass: filter for user + group by status
+  const { myTasks, pendingTasks, inProgressTasks, completedTasks } = useMemo(() => {
+    const my: WarehouseTaskWithDetails[] = [];
+    const pending: WarehouseTaskWithDetails[] = [];
+    const inProgress: WarehouseTaskWithDetails[] = [];
+    const completed: WarehouseTaskWithDetails[] = [];
 
-  // Группировка задач по статусу
-  const pendingTasks = myTasks.filter(t => t.status === 'pending');
-  const inProgressTasks = myTasks.filter(t => t.status === 'in_progress');
-  const completedTasks = myTasks.filter(t => t.status === 'completed');
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
-      case 'cancelled': return 'bg-gray-500';
-      default: return 'bg-yellow-500';
+    for (const task of tasks || []) {
+      if (task.assigned_to !== user?.id) continue;
+      my.push(task);
+      switch (task.status) {
+        case 'pending': pending.push(task); break;
+        case 'in_progress': inProgress.push(task); break;
+        case 'completed': completed.push(task); break;
+      }
     }
-  };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Выполнена';
-      case 'in_progress': return 'В работе';
-      case 'cancelled': return 'Отменена';
-      default: return 'Ожидает';
-    }
-  };
-
-  const getTaskTypeText = (type: string) => {
-    return type === 'collection' ? 'Сбор реквизита' : 'Возврат реквизита';
-  };
-
-  const getTaskTypeIcon = (type: string) => {
-    return type === 'collection' ? '📦' : '↩️';
-  };
+    return { myTasks: my, pendingTasks: pending, inProgressTasks: inProgress, completedTasks: completed };
+  }, [tasks, user?.id]);
 
   const handleTaskClick = (task: WarehouseTaskWithDetails) => {
     setSelectedTask(task);
@@ -70,8 +56,8 @@ const TasksPage = () => {
           <div className="flex justify-between items-start">
             <div className="space-y-1">
               <CardTitle className="text-base flex items-center gap-2">
-                <span>{getTaskTypeIcon(task.task_type)}</span>
-                {getTaskTypeText(task.task_type)}
+                <span>{typeIcons[task.task_type]}</span>
+                {typeFullLabels[task.task_type]}
               </CardTitle>
               <CardDescription className="space-y-1">
                 {task.event && (
@@ -90,8 +76,8 @@ const TasksPage = () => {
                 )}
               </CardDescription>
             </div>
-            <Badge className={getStatusColor(task.status)}>
-              {getStatusText(task.status)}
+            <Badge className={statusColors[task.status]}>
+              {statusLabels[task.status]}
             </Badge>
           </div>
         </CardHeader>
