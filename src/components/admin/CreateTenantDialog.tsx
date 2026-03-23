@@ -8,6 +8,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { generateSlug } from '@/utils/slugUtils';
 
+interface CreateTenantDialogProps {
+  onCreated: () => void;
+}
+
+export const CreateTenantDialog: React.FC<CreateTenantDialogProps> = ({ onCreated }) => {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
   const handleNameChange = (value: string) => {
     setName(value);
     if (!slug || slug === generateSlug(name)) {
