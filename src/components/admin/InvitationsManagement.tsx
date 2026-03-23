@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, RotateCcw, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +17,15 @@ import {
 import { InviteUserDialog } from "./InviteUserDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 interface Invitation {
   id: string;
   email: string;
-  role: string; // Can be any string from DB
+  role: string;
   status: string;
   invited_at: string;
   expires_at: string;
@@ -39,14 +41,15 @@ interface Invitation {
 }
 
 export function InvitationsManagement() {
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [deleteInvitation, setDeleteInvitation] = useState<Invitation | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const fetchInvitations = async () => {
-    try {
+  const { data: invitations = [], isLoading: loading } = useQuery({
+    queryKey: ['invitations-management'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("invitations")
         .select("*")
@@ -54,7 +57,6 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      // Check if invited users have already registered by looking up profiles
       const emails = (data || []).map(i => i.email);
       const { data: registeredProfiles } = await supabase
         .from("profiles")
@@ -63,30 +65,20 @@ export function InvitationsManagement() {
 
       const registeredEmails = new Set((registeredProfiles || []).map(p => p.email));
 
-      // Update status to 'accepted' for users who have already registered
-      const enrichedInvitations = (data || []).map(inv => {
+      return (data || []).map(inv => {
         if (registeredEmails.has(inv.email) && inv.status !== 'accepted') {
           return { ...inv, status: 'accepted' };
         }
         return inv;
-      });
+      }) as Invitation[];
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-      setInvitations(enrichedInvitations);
-    } catch (error: any) {
-      console.error("Error fetching invitations:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить список приглашений",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const refetchInvitations = () => {
+    queryClient.invalidateQueries({ queryKey: ['invitations-management'] });
   };
-
-  useEffect(() => {
-    fetchInvitations();
-  }, []);
 
   const handleResendInvitation = async (invitation: Invitation) => {
     try {
