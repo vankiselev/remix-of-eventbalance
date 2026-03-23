@@ -202,7 +202,12 @@ export function InvitePage() {
         },
       });
 
-      if (fnError) throw fnError;
+      // Extract meaningful error from edge function response
+      if (fnError) {
+        // Try to get the actual error message from the response context
+        const errorMsg = result?.error || fnError?.message || 'Ошибка при регистрации';
+        throw new Error(errorMsg);
+      }
       if (result?.error) throw new Error(result.error);
 
       toast({
