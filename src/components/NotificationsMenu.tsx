@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
@@ -224,9 +224,9 @@ export const NotificationsMenu = () => {
           {/* Header */}
           <div className="flex items-center justify-between gap-2 px-4 pt-6 pb-3">
             <SheetTitle className="text-lg font-bold flex-shrink-0">Уведомления</SheetTitle>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-7 px-2 text-xs">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 px-2.5 text-xs">
                   <Check className="h-3.5 w-3.5 mr-1" />
                   <span className="hidden xs:inline">Прочитать</span>
                 </Button>
@@ -236,12 +236,17 @@ export const NotificationsMenu = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteAllDialogOpen(true)}
-                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                  className="h-8 px-2.5 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
                   <span className="hidden xs:inline">Очистить</span>
                 </Button>
               )}
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted">
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </SheetClose>
             </div>
           </div>
 
