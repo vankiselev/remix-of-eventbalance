@@ -75,7 +75,7 @@ export const MoneyTransferNotification = ({
         const { error: rpcErr } = await supabase.rpc('accept_money_transfer', {
           p_transaction_id: transactionId,
         });
-        console.log('🔁 RPC accept error:', rpcErr);
+        
         if (rpcErr) throw rpcErr;
 
         // Notify sender
