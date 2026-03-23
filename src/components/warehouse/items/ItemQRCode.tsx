@@ -158,7 +158,7 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
     const locationsHtml = locations.length > 0 
       ? locations.map(loc => `
           <div style="margin: 8px 0; padding: 8px; background: #f9fafb; border-radius: 4px;">
-            <div style="font-weight: 600; color: #111827;">${loc.location_name}</div>
+            <div style="font-weight: 600; color: #111827;">${escapeHtml(loc.location_name)}</div>
             <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
               ${formatLocation(loc)} • ${loc.quantity} шт
             </div>
