@@ -78,11 +78,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{cv.category.name}</span>
                     <span className="text-sm font-bold">
-                      {new Intl.NumberFormat('ru-RU', {
-                        style: 'currency',
-                        currency: 'RUB',
-                        minimumFractionDigits: 0,
-                      }).format(cv.value)}
+                      {rubFormatter.format(cv.value)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
