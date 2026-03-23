@@ -20,7 +20,7 @@ import EventsImportDialog from "@/components/EventsImportDialog";
 
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { formatFullName, getInitials } from "@/utils/formatName";
-import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+
 import { TopNavigation } from "@/components/navigation/TopNavigation";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 
