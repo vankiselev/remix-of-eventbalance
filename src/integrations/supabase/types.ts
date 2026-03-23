@@ -1602,6 +1602,7 @@ export type Database = {
         Args: { p_transaction_id: string }
         Returns: undefined
       }
+      shares_tenant_with: { Args: { target_user_id: string }; Returns: boolean }
       terminate_employee:
         | { Args: { p_user_id: string }; Returns: undefined }
         | {
