@@ -44,7 +44,7 @@ export const MoneyTransferNotification = ({
   const handleAction = async (action: 'accept' | 'reject') => {
     setProcessing(true);
     try {
-      console.log('🔄 Processing money transfer action:', action, { transactionId });
+      
       
       // 1) Get current user
       const { data: userRes } = await supabase.auth.getUser();
