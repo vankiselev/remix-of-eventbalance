@@ -92,6 +92,8 @@ const RealtimeSync = () => {
         queryClient.invalidateQueries({ queryKey: ['all-users-cash-totals'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-transfers'] });
+        queryClient.invalidateQueries({ queryKey: ['employee-list-with-cash'] });
       })
       .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'vacations' }, () => {
         queryClient.invalidateQueries({ queryKey: ['vacations'] });

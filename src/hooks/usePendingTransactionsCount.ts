@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 import { useFinancierPermissions } from "./useFinancierPermissions";
 
 export const usePendingTransactionsCount = () => {
@@ -14,7 +13,7 @@ export const usePendingTransactionsCount = () => {
       const { count, error } = await supabase
         .from('financial_transactions')
         .select('*', { count: 'exact', head: true })
-        .eq('is_draft', false) // Исключаем черновики
+        .eq('is_draft', false)
         .eq('verification_status', 'pending')
         .eq('requires_verification', true);
       
@@ -26,35 +25,10 @@ export const usePendingTransactionsCount = () => {
       return count || 0;
     },
     enabled: isFinancier,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    // Removed aggressive refetchInterval - rely on realtime instead
+    // Realtime invalidation handled by RealtimeSync in App.tsx
   });
-
-  // Realtime subscription for transaction changes
-  useEffect(() => {
-    if (!isFinancier) return;
-    
-    const channel = supabase
-      .channel('pending-transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions',
-          filter: 'verification_status=eq.pending',
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isFinancier, refetch]);
 
   return {
     pendingCount: count,

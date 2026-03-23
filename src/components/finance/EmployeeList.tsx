@@ -1,9 +1,9 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { Search, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatFullName, getInitials } from "@/utils/formatName";
@@ -29,19 +29,63 @@ interface EmployeeListProps {
 }
 
 export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"active" | "terminated">("active");
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+  // Fetch profiles via React Query (cached, no waterfall)
+  const { data: employees = [], isLoading: loading } = useQuery({
+    queryKey: ['employee-list-with-cash'],
+    queryFn: async () => {
+      const { data: profiles, error } = await supabase
+        .rpc("get_admin_profiles");
+      
+      if (error) throw error;
 
-  useEffect(() => {
-    const filtered = employees.filter(employee => {
+      // Filter out admins
+      const employeeProfiles = profiles?.filter((p: any) => p.role !== "admin") || [];
+
+      // Batch: fetch all cash totals in one query instead of N RPCs
+      const employeeIds = employeeProfiles.map((p: any) => p.id);
+      
+      if (employeeIds.length === 0) return [];
+
+      // Get all transactions for all employees in ONE query
+      const { data: txData, error: txError } = await supabase
+        .from('financial_transactions')
+        .select('created_by, cash_type, income_amount, expense_amount')
+        .in('created_by', employeeIds);
+
+      // Build cash totals map
+      const cashMap = new Map<string, { total_cash: number; cash_nastya: number; cash_lera: number; cash_vanya: number }>();
+      
+      if (!txError && txData) {
+        for (const tx of txData) {
+          if (!tx.created_by) continue;
+          let entry = cashMap.get(tx.created_by);
+          if (!entry) {
+            entry = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 };
+            cashMap.set(tx.created_by, entry);
+          }
+          const net = (tx.income_amount || 0) - (tx.expense_amount || 0);
+          entry.total_cash += net;
+          const ct = (tx.cash_type || '').trim();
+          if (ct === 'Наличка Настя') entry.cash_nastya += net;
+          else if (ct === 'Наличка Лера') entry.cash_lera += net;
+          else if (ct === 'Наличка Ваня') entry.cash_vanya += net;
+        }
+      }
+
+      return employeeProfiles.map((profile: any) => ({
+        ...profile,
+        ...(cashMap.get(profile.id) || { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 }),
+      })) as Employee[];
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(employee => {
       const matchesSearch = employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.email.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "active" 
@@ -49,66 +93,10 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
         : employee.employment_status === "terminated";
       return matchesSearch && matchesStatus;
     });
-    setFilteredEmployees(filtered);
   }, [employees, searchTerm, statusFilter]);
 
-  const fetchEmployees = async () => {
-    try {
-      // Only admins should be able to see the employee list
-      const { data: profiles, error } = await supabase
-        .rpc("get_admin_profiles");
-      
-      // Filter out admins from the list
-      const employeeProfiles = profiles?.filter((p: any) => p.role !== "admin") || [];
-
-      if (error) throw error;
-
-      // Calculate cash totals for each employee
-      const employeesWithTotals = await Promise.all(
-        employeeProfiles.map(async (profile) => {
-          const { data: cashData, error: cashError } = await supabase
-            .rpc("calculate_user_cash_totals", { p_user_id: profile.id });
-
-          if (cashError) {
-            console.error("Error calculating cash for user:", profile.id, cashError);
-            return {
-              ...profile,
-              total_cash: 0,
-              cash_nastya: 0,
-              cash_lera: 0,
-              cash_vanya: 0,
-            };
-          }
-
-          const totals = cashData?.[0] || {
-            total_cash: 0,
-            cash_nastya: 0,
-            cash_lera: 0,
-            cash_vanya: 0,
-          };
-
-          return {
-            ...profile,
-            ...totals,
-          };
-        })
-      );
-
-      setEmployees(employeesWithTotals);
-    } catch (error: any) {
-      console.error("Error fetching employees:", error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description: "Не удалось загрузить список сотрудников",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const activeCount = employees.filter(e => e.employment_status === "active").length;
-  const terminatedCount = employees.filter(e => e.employment_status === "terminated").length;
+  const activeCount = useMemo(() => employees.filter(e => e.employment_status === "active").length, [employees]);
+  const terminatedCount = useMemo(() => employees.filter(e => e.employment_status === "terminated").length, [employees]);
 
   if (loading) {
     return (
