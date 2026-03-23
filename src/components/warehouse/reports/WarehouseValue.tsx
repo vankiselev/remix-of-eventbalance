@@ -125,20 +125,12 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {item.total_quantity} {item.unit} × {' '}
-                      {new Intl.NumberFormat('ru-RU', {
-                        style: 'currency',
-                        currency: 'RUB',
-                        minimumFractionDigits: 0,
-                      }).format(item.price)}
+                      {rubFormatter.format(item.price)}
                     </p>
                   </div>
                 </div>
                 <p className="text-lg font-bold">
-                  {new Intl.NumberFormat('ru-RU', {
-                    style: 'currency',
-                    currency: 'RUB',
-                    minimumFractionDigits: 0,
-                  }).format(item.value)}
+                  {rubFormatter.format(item.value)}
                 </p>
               </div>
             ))}
