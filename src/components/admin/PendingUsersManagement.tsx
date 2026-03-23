@@ -95,13 +95,12 @@ export function PendingUsersManagement() {
       if (updateError) throw updateError;
 
       // Назначаем RBAC роль
-      const { data: authUser } = await supabase.auth.getUser();
       const { error: roleError } = await supabase
         .from("user_role_assignments")
         .upsert({
           user_id: user.id,
           role_id: roleId,
-          assigned_by: authUser.user?.id
+          assigned_by: authUser?.id
         }, { onConflict: "user_id" });
 
       if (roleError) throw roleError;

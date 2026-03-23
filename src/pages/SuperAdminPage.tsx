@@ -142,10 +142,12 @@ const SuperAdminPage: React.FC = () => {
     }
   };
 
-  const filteredTenants = tenants?.filter(t => 
-    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredTenants = useMemo(() => 
+    tenants?.filter(t => 
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.slug.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || []
+  , [tenants, searchQuery]);
 
   const getPlanBadge = (plan: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
