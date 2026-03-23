@@ -85,7 +85,10 @@ function normalizeText(input: string): string {
 }
 
 function extractAmount(text: string): number {
-  const matches = text.match(/\d[\d\s.,]*/g);
+  // First, remove date patterns like "21.03", "21/03", "21.03.2025" so they don't pollute amount extraction
+  const textWithoutDates = text.replace(/\b\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?\b/g, " ");
+
+  const matches = textWithoutDates.match(/\d[\d\s,]*/g);
   if (!matches?.length) return 0;
 
   for (const match of matches) {
