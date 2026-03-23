@@ -38,9 +38,20 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
   let startingDayOfWeek = firstDay.getDay();
   if (startingDayOfWeek === 0) startingDayOfWeek = 7;
   
+  // Pre-index events by date string for O(1) lookup
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, Event[]>();
+    events.forEach(event => {
+      const list = map.get(event.start_date) || [];
+      list.push(event);
+      map.set(event.start_date, list);
+    });
+    return map;
+  }, [events]);
+
   const getEventsForDate = (day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.start_date === dateStr);
+    return eventsByDate.get(dateStr) || [];
   };
 
   const isSelected = (day: number) => {
