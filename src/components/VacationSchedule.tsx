@@ -72,7 +72,8 @@ const VacationSchedule = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", user.id)
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+        .limit(1)
         .single();
 
       if (error) throw error;
