@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDisplayName } from "@/utils/formatName";
+import { getVacationTypeLabel, getVacationStatusColor as getStatusColor, getVacationStatusLabel as getStatusLabel, calculateVacationDays as calculateDays, vacationTypeLabels } from "@/utils/vacationConstants";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
 import { format } from "date-fns";
