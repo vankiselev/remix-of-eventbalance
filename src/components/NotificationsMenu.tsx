@@ -220,9 +220,9 @@ export const NotificationsMenu = () => {
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[85vw] max-w-[420px] flex flex-col gap-0 p-0 top-4 h-[calc(100%-1rem)] rounded-tl-xl">
-          {/* Header — compact, no width conflicts */}
-          <div className="flex items-center justify-between gap-2 px-4 pt-5 pb-2">
+        <SheetContent side="right" className="w-[85vw] max-w-[420px] flex flex-col gap-0 p-0" hideCloseButton>
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2 px-4 pt-6 pb-3">
             <SheetTitle className="text-lg font-bold flex-shrink-0">Уведомления</SheetTitle>
             <div className="flex items-center gap-0.5 flex-shrink-0">
               {unreadCount > 0 && (
