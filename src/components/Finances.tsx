@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Mic } from "lucide-react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useFinancierPermissions } from "@/hooks/useFinancierPermissions";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ const FinancialAuditLog = lazy(() => import("@/components/finance/FinancialAudit
 // Heavy dialogs — only loaded when opened
 const TransactionForm = lazy(() => import("@/components/finance/TransactionFormNew").then(m => ({ default: m.TransactionForm })));
 const FinancesImportDialog = lazy(() => import("@/components/finance/FinancesImportDialog"));
+const VoiceTransactionDialog = lazy(() => import("@/components/finance/VoiceTransactionDialog").then(m => ({ default: m.VoiceTransactionDialog })));
 const AlertDialogModule = lazy(() => import("@/components/ui/alert-dialog").then(m => ({
   default: ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: (v: boolean) => void; onConfirm: () => void }) => (
     <m.AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -78,6 +79,7 @@ const Finances = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [editTransaction, setEditTransaction] = useState(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("my-transactions");
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -205,6 +207,10 @@ const Finances = () => {
           
           {hasPermission('finances.create') && (
             <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setShowVoiceDialog(true)} className="h-10">
+                <Mic className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Голосом</span>
+              </Button>
               <Button onClick={() => setShowTransactionForm(true)} className="w-full sm:w-auto h-10">
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить транзакцию
@@ -388,6 +394,16 @@ const Finances = () => {
               handleDeleteAllTransactions();
               setShowDeleteDialog(false);
             }}
+          />
+        </Suspense>
+      )}
+
+      {showVoiceDialog && (
+        <Suspense fallback={null}>
+          <VoiceTransactionDialog
+            isOpen={showVoiceDialog}
+            onOpenChange={setShowVoiceDialog}
+            onSuccess={handleTransactionSuccess}
           />
         </Suspense>
       )}
