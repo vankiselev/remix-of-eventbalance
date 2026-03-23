@@ -358,16 +358,20 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       )}
       
-      {/* Events Import Dialog */}
-      <EventsImportDialog 
-        open={showEventsImportDialog}
-        onOpenChange={setShowEventsImportDialog}
-        onImportComplete={() => {
-          setShowEventsImportDialog(false);
-          queryClient.invalidateQueries({ queryKey: ['events'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        }}
-      />
+      {/* Events Import Dialog — lazy loaded */}
+      {showEventsImportDialog && (
+        <Suspense fallback={null}>
+          <EventsImportDialog 
+            open={showEventsImportDialog}
+            onOpenChange={setShowEventsImportDialog}
+            onImportComplete={() => {
+              setShowEventsImportDialog(false);
+              queryClient.invalidateQueries({ queryKey: ['events'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Delete All Events Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
