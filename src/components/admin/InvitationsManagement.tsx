@@ -340,7 +340,7 @@ export function InvitationsManagement() {
       <InviteUserDialog
         open={showInviteDialog}
         onOpenChange={setShowInviteDialog}
-        onInviteSent={fetchInvitations}
+        onInviteSent={refetchInvitations}
       />
 
       <AlertDialog open={!!deleteInvitation} onOpenChange={(open) => !open && setDeleteInvitation(null)}>
