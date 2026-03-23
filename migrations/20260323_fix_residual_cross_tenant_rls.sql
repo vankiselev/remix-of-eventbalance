@@ -58,6 +58,7 @@ DO $$
 BEGIN
   IF to_regclass('public.user_projects') IS NOT NULL THEN
     EXECUTE 'DROP POLICY IF EXISTS "Authenticated can read user_projects" ON public.user_projects';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can read own user_projects" ON public.user_projects';
     EXECUTE 'CREATE POLICY "Users can read own user_projects" ON public.user_projects FOR SELECT TO authenticated USING (user_id = auth.uid())';
   END IF;
 END;
