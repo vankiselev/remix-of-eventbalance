@@ -1,7 +1,14 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
 import { WarehouseCategory } from "@/hooks/useWarehouseCategories";
 import { DollarSign, TrendingUp, Package } from "lucide-react";
+
+const rubFormatter = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  minimumFractionDigits: 0,
+});
 
 interface WarehouseValueProps {
   items: WarehouseItemWithStock[];
@@ -9,33 +16,27 @@ interface WarehouseValueProps {
 }
 
 export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
-  // Calculate category values
-  const categoryValues = categories.map(category => {
-    const categoryItems = items.filter(item => item.category_id === category.id);
-    const value = categoryItems.reduce((sum, item) => 
-      sum + (item.total_quantity || 0) * item.price, 0
-    );
+  const { categoryValues, totalValue, topItems } = useMemo(() => {
+    const catValues = categories.map(category => {
+      const categoryItems = items.filter(item => item.category_id === category.id);
+      const value = categoryItems.reduce((sum, item) => 
+        sum + (item.total_quantity || 0) * item.price, 0
+      );
+      return { category, value, itemCount: categoryItems.length };
+    })
+    .filter(cv => cv.value > 0)
+    .sort((a, b) => b.value - a.value);
 
-    return {
-      category,
-      value,
-      itemCount: categoryItems.length,
-    };
-  })
-  .filter(cv => cv.value > 0)
-  .sort((a, b) => b.value - a.value);
+    const total = catValues.reduce((sum, cv) => sum + cv.value, 0);
 
-  const totalValue = categoryValues.reduce((sum, cv) => sum + cv.value, 0);
+    const top = [...items]
+      .map(item => ({ ...item, value: (item.total_quantity || 0) * item.price }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
 
-  // Top 10 most valuable items
-  const topItems = [...items]
-    .map(item => ({
-      ...item,
-      value: (item.total_quantity || 0) * item.price,
-    }))
-    .filter(item => item.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
+    return { categoryValues: catValues, totalValue: total, topItems: top };
+  }, [items, categories]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -50,11 +51,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
         <CardContent className="space-y-4">
           <div>
             <p className="text-3xl font-bold">
-              {new Intl.NumberFormat('ru-RU', {
-                style: 'currency',
-                currency: 'RUB',
-                minimumFractionDigits: 0,
-              }).format(totalValue)}
+              {rubFormatter.format(totalValue)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Суммарная стоимость всех товаров на складе
@@ -81,11 +78,7 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{cv.category.name}</span>
                     <span className="text-sm font-bold">
-                      {new Intl.NumberFormat('ru-RU', {
-                        style: 'currency',
-                        currency: 'RUB',
-                        minimumFractionDigits: 0,
-                      }).format(cv.value)}
+                      {rubFormatter.format(cv.value)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -132,20 +125,12 @@ export const WarehouseValue = ({ items, categories }: WarehouseValueProps) => {
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {item.total_quantity} {item.unit} × {' '}
-                      {new Intl.NumberFormat('ru-RU', {
-                        style: 'currency',
-                        currency: 'RUB',
-                        minimumFractionDigits: 0,
-                      }).format(item.price)}
+                      {rubFormatter.format(item.price)}
                     </p>
                   </div>
                 </div>
                 <p className="text-lg font-bold">
-                  {new Intl.NumberFormat('ru-RU', {
-                    style: 'currency',
-                    currency: 'RUB',
-                    minimumFractionDigits: 0,
-                  }).format(item.value)}
+                  {rubFormatter.format(item.value)}
                 </p>
               </div>
             ))}

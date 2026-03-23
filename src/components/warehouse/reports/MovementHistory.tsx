@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -39,21 +39,25 @@ export const MovementHistory = ({ movements }: MovementHistoryProps) => {
   };
 
   const dateRange = getDateRange();
-  const filteredMovements = movements.filter(m =>
-    isWithinInterval(new Date(m.operation_date), dateRange)
-  ).sort((a, b) => 
-    new Date(b.operation_date).getTime() - new Date(a.operation_date).getTime()
-  );
 
-  // Calculate stats
-  const stats = {
-    receipt: filteredMovements.filter(m => m.operation_type === 'receipt').length,
-    issue: filteredMovements.filter(m => m.operation_type === 'issue').length,
-    return: filteredMovements.filter(m => m.operation_type === 'return').length,
-    writeOff: filteredMovements.filter(m => m.operation_type === 'write_off').length,
-    transfer: filteredMovements.filter(m => m.operation_type === 'transfer').length,
-    inventory: filteredMovements.filter(m => m.operation_type === 'inventory').length,
-  };
+  const { filteredMovements, stats } = useMemo(() => {
+    const filtered = movements
+      .filter(m => isWithinInterval(new Date(m.operation_date), dateRange))
+      .sort((a, b) => new Date(b.operation_date).getTime() - new Date(a.operation_date).getTime());
+
+    const s = { receipt: 0, issue: 0, return: 0, writeOff: 0, transfer: 0, inventory: 0 };
+    for (const m of filtered) {
+      switch (m.operation_type) {
+        case 'receipt': s.receipt++; break;
+        case 'issue': s.issue++; break;
+        case 'return': s.return++; break;
+        case 'write_off': s.writeOff++; break;
+        case 'transfer': s.transfer++; break;
+        case 'inventory': s.inventory++; break;
+      }
+    }
+    return { filteredMovements: filtered, stats: s };
+  }, [movements, period]);
 
   const getOperationIcon = (type: string) => {
     switch (type) {
