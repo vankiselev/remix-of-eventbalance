@@ -113,14 +113,7 @@ const VacationSchedule = () => {
 
       // Send notification to admins
       const { sendNotificationToAdmins } = await import('@/utils/notifications');
-      const vacationType = {
-        weekend: "Выходной",
-        vacation: "Отпуск",
-        sick: "Больничный",
-        personal: "Личное",
-        fun: "Кайфануть",
-        study: "Учеба"
-      }[formData.vacation_type] || formData.vacation_type;
+      const vacationType = vacationTypeLabels[formData.vacation_type] || formData.vacation_type;
 
       await sendNotificationToAdmins(
         'Новая заявка на отпуск',
