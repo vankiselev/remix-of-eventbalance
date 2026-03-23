@@ -860,37 +860,47 @@ const Events = () => {
                                 {event.project_owner}
                               </Badge>
                             )}
-                            {getManagerNames(event) !== '—' && (
-                              <Badge variant="outline" className="text-xs gap-1">
-                                <Target className="h-3 w-3" />
-                                {getManagerNames(event)}
-                              </Badge>
-                            )}
+                            {(() => {
+                              const managerNames = getManagerNames(event);
+                              return managerNames !== '—' ? (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Target className="h-3 w-3" />
+                                  {managerNames}
+                                </Badge>
+                              ) : null;
+                            })()}
                           </div>
                           
                           {/* Детали: место, время, аниматоры — только если есть */}
-                          {(getLocationDisplay(event) !== '—' || getTimeRange(event) !== '—' || getAnimatorNames(event) !== '—') && (
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-muted-foreground pt-1">
-                              {getLocationDisplay(event) !== '—' && (
-                                <div className="flex items-center gap-1.5">
-                                  <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="truncate max-w-[200px]">{getLocationDisplay(event)}</span>
-                                </div>
-                              )}
-                              {getTimeRange(event) !== '—' && (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span>{getTimeRange(event)}</span>
-                                </div>
-                              )}
-                              {getAnimatorNames(event) !== '—' && (
-                                <div className="flex items-center gap-1.5">
-                                  <Users className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="truncate max-w-[200px]">{getAnimatorNames(event)}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {(() => {
+                            const locationDisplay = getLocationDisplay(event);
+                            const timeRange = getTimeRange(event);
+                            const animatorNames = getAnimatorNames(event);
+                            const hasDetails = locationDisplay !== '—' || timeRange !== '—' || animatorNames !== '—';
+                            if (!hasDetails) return null;
+                            return (
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-muted-foreground pt-1">
+                                {locationDisplay !== '—' && (
+                                  <div className="flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="truncate max-w-[200px]">{locationDisplay}</span>
+                                  </div>
+                                )}
+                                {timeRange !== '—' && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span>{timeRange}</span>
+                                  </div>
+                                )}
+                                {animatorNames !== '—' && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Users className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="truncate max-w-[200px]">{animatorNames}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </Card>
