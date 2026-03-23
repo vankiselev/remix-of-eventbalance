@@ -217,7 +217,7 @@ export const ItemQRCodeBatch = ({
                   <div class="locations">
                     ${locations.slice(0, 2).map(loc => `
                       <div class="location-line">
-                        ${formatLocation(loc)} • ${loc.quantity} шт
+                        ${escapeHtml(formatLocation(loc))} • ${loc.quantity} шт
                       </div>
                     `).join('')}
                     ${locations.length > 2 ? `<div class="location-line">+${locations.length - 2} ещё</div>` : ''}

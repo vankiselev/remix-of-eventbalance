@@ -247,8 +247,8 @@ export const ItemQRCode = ({ open, onOpenChange, item }: ItemQRCodeProps) => {
           <div class="qr-container">
             <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
             <div class="item-info">
-              <div class="item-sku">${item.sku}</div>
-              <div class="item-name">${item.name}</div>
+              <div class="item-sku">${escapeHtml(item.sku)}</div>
+              <div class="item-name">${escapeHtml(item.name)}</div>
               
               <div class="locations-section">
                 <div class="locations-title">Размещение товара</div>
