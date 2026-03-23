@@ -59,8 +59,6 @@ export const MoneyTransferNotification = ({
         .eq('id', transactionId)
         .single();
 
-      console.log('📄 Transaction data:', tx);
-      console.log('❌ Transaction error:', txError);
 
       if (txError || !tx) throw txError || new Error('tx_not_found');
 
