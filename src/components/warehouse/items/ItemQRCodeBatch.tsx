@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Printer, Download, Loader2 } from "lucide-react";
+import { escapeHtml } from "@/utils/escapeHtml";
 import QRCode from "qrcode";
 import { WarehouseItemWithStock } from "@/hooks/useWarehouseItems";
 import { supabase } from "@/integrations/supabase/client";
