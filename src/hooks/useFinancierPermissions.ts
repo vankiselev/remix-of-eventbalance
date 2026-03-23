@@ -10,13 +10,6 @@ export const useFinancierPermissions = () => {
   
   const isFinancier = canReview || canApprove || canReject || canViewAll;
 
-  console.log('[useFinancierPermissions] isFinancier:', isFinancier, {
-    canReview,
-    canApprove,
-    canReject,
-    canViewAll,
-    permissions: permissions.slice(0, 10),
-  });
 
   return {
     isFinancier,

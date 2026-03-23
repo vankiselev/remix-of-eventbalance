@@ -67,7 +67,7 @@ export function EmployeeList({ onEmployeeSelect }: EmployeeListProps) {
       const employeesWithTotals = await Promise.all(
         employeeProfiles.map(async (profile) => {
           const { data: cashData, error: cashError } = await supabase
-            .rpc("calculate_user_cash_totals", { user_uuid: profile.id });
+            .rpc("calculate_user_cash_totals", { p_user_id: profile.id });
 
           if (cashError) {
             console.error("Error calculating cash for user:", profile.id, cashError);

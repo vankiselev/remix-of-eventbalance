@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
 
 interface CashSummary {
   total_cash: number;
@@ -52,37 +51,7 @@ function parseCashResult(data: any[]): CashSummary {
 }
 
 export const useUserCashSummary = (userId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const debounceRef = useRef<NodeJS.Timeout>();
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`user-cash-realtime-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions',
-          filter: `created_by=eq.${userId}`
-        },
-        () => {
-          clearTimeout(debounceRef.current);
-          debounceRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['user-cash-summary', userId] });
-          }, 2000);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
-    };
-  }, [userId, queryClient]);
-
+  // Realtime invalidation handled by RealtimeSync in App.tsx
   return useQuery({
     queryKey: ['user-cash-summary', userId],
     queryFn: async () => {

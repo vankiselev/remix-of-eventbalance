@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Bell, Check, Trash2, X, FileText, Wallet, Calendar, 
   Palmtree, ArrowLeftRight, Settings, DollarSign, BellRing 
@@ -51,6 +52,7 @@ const groupByDate = (notifications: Notification[]): DateGroup[] => {
 export const NotificationsMenu = () => {
   const [open, setOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   const {
     notifications,
     loading,
@@ -129,7 +131,11 @@ export const NotificationsMenu = () => {
                 cashType={n.data.cash_type}
                 description={n.data.description}
                 status={n.data.status}
-                onAction={() => window.location.reload()}
+                onAction={() => {
+                  queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                  queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+                  queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
+                }}
               />
             </div>
           )}

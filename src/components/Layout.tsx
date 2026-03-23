@@ -20,7 +20,7 @@ import EventsImportDialog from "@/components/EventsImportDialog";
 
 import { RoleBadges } from "@/components/roles/RoleBadge";
 import { formatFullName, getInitials } from "@/utils/formatName";
-import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+
 import { TopNavigation } from "@/components/navigation/TopNavigation";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 
@@ -40,8 +40,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showEventsImportDialog, setShowEventsImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Enable real-time updates globally
-  useRealtimeUpdates();
+  // Realtime updates handled by RealtimeSync in App.tsx
   
   const { onExport, onImport, onDeleteAll } = useFinancesActions();
 
@@ -128,7 +127,8 @@ const Layout = ({ children }: LayoutProps) => {
       });
       
       setShowDeleteConfirm(false);
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     } catch (error) {
       console.error('Delete error:', error);
       toast({
