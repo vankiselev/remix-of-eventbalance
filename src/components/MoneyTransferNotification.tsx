@@ -197,12 +197,12 @@ export const MoneyTransferNotification = ({
           onClick={() => handleAction('accept')}
           disabled={processing}
           size="sm"
-          className="rounded-none rounded-bl-lg h-9 text-xs font-medium"
+          className="rounded-none rounded-bl-lg h-11 text-sm font-medium"
         >
           {processing ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
           ) : (
-            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+            <CheckCircle className="h-4 w-4 mr-1.5" />
           )}
           Подтвердить
         </Button>
@@ -211,12 +211,12 @@ export const MoneyTransferNotification = ({
           disabled={processing}
           variant="ghost"
           size="sm"
-          className="rounded-none rounded-br-lg h-9 text-xs font-medium text-muted-foreground hover:text-destructive"
+          className="rounded-none rounded-br-lg h-11 text-sm font-medium text-muted-foreground hover:text-destructive"
         >
           {processing ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
           ) : (
-            <XCircle className="h-3.5 w-3.5 mr-1.5" />
+            <XCircle className="h-4 w-4 mr-1.5" />
           )}
           Отклонить
         </Button>
