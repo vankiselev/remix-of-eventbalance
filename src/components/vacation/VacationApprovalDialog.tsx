@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { getVacationTypeLabel, calculateVacationDays } from "@/utils/vacationConstants";
 
 interface Vacation {
   id: string;
@@ -122,26 +123,6 @@ export const VacationApprovalDialog = ({
     }
   };
 
-  const getVacationTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      weekend: "Выходной",
-      vacation: "Отпуск",
-      sick: "Больничный",
-      personal: "Личное",
-      fun: "Кайфануть",
-      study: "Учеба"
-    };
-    return labels[type] || type;
-  };
-
-  const calculateDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -173,7 +154,7 @@ export const VacationApprovalDialog = ({
             </div>
             <div className="col-span-2">
               <p className="text-sm text-muted-foreground">Количество дней</p>
-              <p className="font-medium">{calculateDays(vacation.start_date, vacation.end_date)} дней</p>
+              <p className="font-medium">{calculateVacationDays(vacation.start_date, vacation.end_date)} дней</p>
             </div>
           </div>
 

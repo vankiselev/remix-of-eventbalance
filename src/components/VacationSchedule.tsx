@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDisplayName } from "@/utils/formatName";
+import { getVacationTypeLabel, getVacationStatusColor as getStatusColor, getVacationStatusLabel as getStatusLabel, calculateVacationDays as calculateDays, vacationTypeLabels } from "@/utils/vacationConstants";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, CalendarIcon, Edit, Trash2, Plane } from "lucide-react";
 import { format } from "date-fns";
@@ -71,7 +72,8 @@ const VacationSchedule = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", user.id)
+        .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+        .limit(1)
         .single();
 
       if (error) throw error;
@@ -112,14 +114,7 @@ const VacationSchedule = () => {
 
       // Send notification to admins
       const { sendNotificationToAdmins } = await import('@/utils/notifications');
-      const vacationType = {
-        weekend: "Выходной",
-        vacation: "Отпуск",
-        sick: "Больничный",
-        personal: "Личное",
-        fun: "Кайфануть",
-        study: "Учеба"
-      }[formData.vacation_type] || formData.vacation_type;
+      const vacationType = vacationTypeLabels[formData.vacation_type] || formData.vacation_type;
 
       await sendNotificationToAdmins(
         'Новая заявка на отпуск',
@@ -250,61 +245,8 @@ const VacationSchedule = () => {
     setShowCreateDialog(false);
   };
 
-  const getVacationTypeLabel = (type: string) => {
-    switch (type) {
-      case "weekend":
-        return "Выходной";
-      case "vacation":
-        return "Отпуск";
-      case "sick":
-        return "Больничный";
-      case "personal":
-        return "Личное";
-      case "fun":
-        return "Кайфануть";
-      case "study":
-        return "Учеба";
-      default:
-        return type;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Ожидание";
-      case "approved":
-        return "Одобрено";
-      case "rejected":
-        return "Отклонено";
-      default:
-        return status;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd MMMM yyyy", { locale: ru });
-  };
-
-  const calculateDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
   };
 
   if (loading) {
