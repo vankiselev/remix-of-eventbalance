@@ -1576,6 +1576,7 @@ export type Database = {
       get_user_tenant_memberships: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      is_tenant_member: { Args: { p_tenant_id: string }; Returns: boolean }
       log_profile_edit:
         | {
             Args: { p_changes: Json; p_profile_id: string }
