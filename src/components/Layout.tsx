@@ -325,7 +325,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex h-14 items-center px-4 justify-between">
               {/* Page Title */}
               <h1 className="text-lg font-semibold text-foreground">
-                {getPageTitle()}
+                {pageTitle}
               </h1>
               
               {/* Right Actions: Notifications & Profile */}
