@@ -5,24 +5,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { 
+    const {
       email, password, full_name, role, invitation_token,
-      first_name, last_name, middle_name, phone, birth_date, 
-      avatar_url, avatar_base64
+      first_name, last_name, middle_name, phone, birth_date,
+      avatar_url, avatar_base64,
     } = await req.json();
 
-    // SECURITY: All three fields are mandatory
     if (!email || !password || !invitation_token) {
-      return new Response(
-        JSON.stringify({ error: "Email, password and invitation token are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Email, password and invitation token are required" }, 400);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,97 +33,76 @@ Deno.serve(async (req) => {
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("[register-invited-user] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-      return new Response(
-        JSON.stringify({ error: "Ошибка конфигурации сервера. Обратитесь к администратору." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Ошибка конфигурации сервера. Обратитесь к администратору." }, 500);
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // ── SECURITY GATE: Validate invitation BEFORE any user creation ──
-    console.log("[register-invited-user] Validating invitation token...");
+    // ── STEP 1: Validate invitation ──
+    console.log("[register] Step 1: Validating invitation token...");
     const { data: invData, error: invError } = await adminClient
       .from("invitations")
-      .select("id, tenant_id, invited_by, email, expires_at")
+      .select("id, tenant_id, invited_by, email, expires_at, status")
       .eq("token", invitation_token)
       .in("status", ["pending", "sent"])
       .single();
 
     if (invError || !invData) {
-      console.error("[register-invited-user] Invitation lookup failed:", invError?.message);
-      return new Response(
-        JSON.stringify({ error: "Приглашение не найдено или уже использовано" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("[register] Invitation lookup failed:", invError?.message);
+      return jsonResponse({ error: "Приглашение не найдено или уже использовано" }, 401);
     }
 
     if (invData.expires_at && new Date(invData.expires_at) < new Date()) {
-      console.error("[register-invited-user] Invitation expired:", invData.expires_at);
-      return new Response(
-        JSON.stringify({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("[register] Invitation expired:", invData.expires_at);
+      return jsonResponse({ error: "Срок действия приглашения истёк. Запросите новое приглашение." }, 401);
     }
 
     if (invData.email.toLowerCase() !== email.toLowerCase()) {
-      console.error("[register-invited-user] Email mismatch:", email, "vs", invData.email);
-      return new Response(
-        JSON.stringify({ error: "Email не совпадает с приглашением" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error("[register] Email mismatch:", email, "vs", invData.email);
+      return jsonResponse({ error: "Email не совпадает с приглашением" }, 403);
     }
-    // ── END SECURITY GATE ──
+    console.log("[register] Step 1 OK: invitation valid");
 
-    // Use SUPABASE_URL for storage URLs (not req.url which points to edge function host)
-    const publicBaseUrl = supabaseUrl;
-
-    // Upload avatar if base64 provided
+    // ── STEP 2: Upload avatar (non-blocking) ──
     let finalAvatarUrl = avatar_url || null;
     if (avatar_base64) {
       try {
-        const base64Data = avatar_base64.includes(',') 
-          ? avatar_base64.split(',')[1] 
+        const base64Data = avatar_base64.includes(",")
+          ? avatar_base64.split(",")[1]
           : avatar_base64;
-        
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
         const fileName = `invite_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
         const { error: uploadError } = await adminClient.storage
-          .from('avatars')
-          .upload(fileName, bytes, { contentType: 'image/jpeg' });
-        
+          .from("avatars")
+          .upload(fileName, bytes, { contentType: "image/jpeg" });
+
         if (uploadError) {
-          console.error('[register-invited-user] Avatar upload error:', uploadError);
-          // Don't block registration for avatar upload failure - continue without avatar
-          console.warn('[register-invited-user] Continuing registration without avatar');
+          console.warn("[register] Avatar upload failed (non-blocking):", uploadError.message);
         } else {
-          finalAvatarUrl = `${publicBaseUrl}/storage/v1/object/public/avatars/${fileName}`;
+          finalAvatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
         }
-      } catch (avatarError) {
-        console.error('[register-invited-user] Avatar processing error:', avatarError);
-        // Don't block registration for avatar issues
-        console.warn('[register-invited-user] Continuing registration without avatar');
+      } catch (avatarErr) {
+        console.warn("[register] Avatar processing failed (non-blocking):", avatarErr);
       }
     }
 
-    // Create user — only reachable after invitation is validated
-    console.log("[register-invited-user] Creating user for:", email);
+    // ── STEP 3: Create user ──
+    console.log("[register] Step 3: Creating user for:", email);
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         full_name: full_name || email,
-        first_name: first_name || '',
-        last_name: last_name || '',
-        middle_name: middle_name || '',
+        first_name: first_name || "",
+        last_name: last_name || "",
+        middle_name: middle_name || "",
         phone: phone || null,
         birth_date: birth_date || null,
         avatar_url: finalAvatarUrl,
@@ -129,105 +111,128 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
-      console.error("[register-invited-user] User creation failed:", createError.message);
+      console.error("[register] Step 3 FAILED - createUser:", createError.message);
       const userMsg = createError.message.includes("already been registered")
         ? "Пользователь с таким email уже зарегистрирован"
         : `Ошибка создания аккаунта: ${createError.message}`;
-      return new Response(
-        JSON.stringify({ error: userMsg }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: userMsg }, 400);
     }
 
     const userId = userData.user.id;
+    console.log("[register] Step 3 OK: user created, id:", userId);
 
-    // Update profile fields the trigger might not handle
-    const profileUpdate: Record<string, any> = {};
-    if (finalAvatarUrl) profileUpdate.avatar_url = finalAvatarUrl;
-    if (phone) profileUpdate.phone = phone;
-    if (birth_date) profileUpdate.birth_date = birth_date;
-    if (first_name) profileUpdate.first_name = first_name;
-    if (last_name) profileUpdate.last_name = last_name;
-    if (middle_name) profileUpdate.middle_name = middle_name;
-    if (full_name) profileUpdate.full_name = full_name;
+    // ── STEP 4: Create/update profile (UPSERT since there's no trigger) ──
+    const profileData: Record<string, unknown> = {
+      id: userId,
+      email: email,
+      full_name: full_name || email,
+    };
+    if (finalAvatarUrl) profileData.avatar_url = finalAvatarUrl;
+    if (phone) profileData.phone = phone;
+    if (birth_date) profileData.birth_date = birth_date;
+    if (first_name) profileData.first_name = first_name;
+    if (last_name) profileData.last_name = last_name;
+    if (middle_name) profileData.middle_name = middle_name;
 
-    if (Object.keys(profileUpdate).length > 0) {
-      await adminClient.from("profiles")
-        .update(profileUpdate)
-        .eq("id", userId);
+    try {
+      const { error: profileError } = await adminClient
+        .from("profiles")
+        .upsert(profileData, { onConflict: "id" });
+      if (profileError) {
+        console.error("[register] Step 4 WARN - profile upsert failed:", profileError.message);
+        // Non-fatal: user is created, profile will be incomplete
+      } else {
+        console.log("[register] Step 4 OK: profile upserted");
+      }
+    } catch (profileErr) {
+      console.error("[register] Step 4 WARN - profile exception:", profileErr);
     }
 
-    // Accept invitation
-    const invitedBy: string | null = invData.invited_by;
-    const invTenantId: string | null = invData.tenant_id;
+    // ── STEP 5: Accept invitation ──
+    try {
+      const { error: invUpdateErr } = await adminClient
+        .from("invitations")
+        .update({ status: "accepted", accepted_at: new Date().toISOString() })
+        .eq("id", invData.id);
+      if (invUpdateErr) {
+        console.error("[register] Step 5 WARN - invitation update failed:", invUpdateErr.message);
+      } else {
+        console.log("[register] Step 5 OK: invitation accepted");
+      }
+    } catch (invUpErr) {
+      console.error("[register] Step 5 WARN - invitation exception:", invUpErr);
+    }
 
-    await adminClient.from("invitations").update({
-      status: "accepted",
-      accepted_at: new Date().toISOString(),
-    }).eq("id", invData.id);
-
+    // ── STEP 6: Insert tenant membership ──
     if (invData.tenant_id) {
-      await adminClient.from("tenant_memberships").insert({
-        tenant_id: invData.tenant_id,
-        user_id: userId,
-        role: role || "member",
-      });
+      try {
+        const { error: tmError } = await adminClient
+          .from("tenant_memberships")
+          .insert({
+            tenant_id: invData.tenant_id,
+            user_id: userId,
+            role: role || "member",
+          });
+        if (tmError) {
+          console.error("[register] Step 6 WARN - tenant_memberships insert failed:", tmError.message);
+        } else {
+          console.log("[register] Step 6 OK: tenant membership created");
+        }
+      } catch (tmErr) {
+        console.error("[register] Step 6 WARN - tenant_memberships exception:", tmErr);
+      }
     }
 
-    await adminClient.from("invitation_audit_log").insert({
-      invitation_id: invData.id,
-      actor_id: userId,
-      action: "accepted",
-      details: { email },
-    });
+    // ── STEP 7: Audit log (non-fatal) ──
+    try {
+      await adminClient.from("invitation_audit_log").insert({
+        invitation_id: invData.id,
+        actor_id: userId,
+        action: "accepted",
+        details: { email },
+      });
+      console.log("[register] Step 7 OK: audit log created");
+    } catch (auditErr) {
+      console.error("[register] Step 7 WARN - audit log failed:", auditErr);
+    }
 
-    // Notify admins
+    // ── STEP 8: Notify admins (non-fatal) ──
     try {
       const recipientIds: string[] = [];
+      if (invData.invited_by) recipientIds.push(invData.invited_by);
 
-      if (invitedBy) {
-        recipientIds.push(invitedBy);
-      }
-
-      if (invTenantId) {
+      if (invData.tenant_id) {
         const { data: tenantAdmins } = await adminClient
           .from("tenant_memberships")
           .select("user_id")
-          .eq("tenant_id", invTenantId)
+          .eq("tenant_id", invData.tenant_id)
           .in("role", ["owner", "admin"]);
-
         if (tenantAdmins) {
-          for (const ta of tenantAdmins) {
-            recipientIds.push(ta.user_id);
-          }
+          for (const ta of tenantAdmins) recipientIds.push(ta.user_id);
         }
       }
 
-      const uniqueIds = [...new Set(recipientIds)].filter(id => id !== userId);
-
-      const notifications = uniqueIds.map(adminId => ({
-        user_id: adminId,
-        title: "Новая регистрация",
-        message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению`,
-        type: "system",
-        data: { user_email: email, user_id: userId },
-      }));
-
-      if (notifications.length > 0) {
-        await adminClient.from("notifications").insert(notifications);
+      const uniqueIds = [...new Set(recipientIds)].filter((id) => id !== userId);
+      if (uniqueIds.length > 0) {
+        await adminClient.from("notifications").insert(
+          uniqueIds.map((adminId) => ({
+            user_id: adminId,
+            title: "Новая регистрация",
+            message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению`,
+            type: "system",
+            data: { user_email: email, user_id: userId },
+          }))
+        );
       }
-    } catch (notifError) {
-      console.error("Failed to send admin notifications:", notifError);
+      console.log("[register] Step 8 OK: notifications sent");
+    } catch (notifErr) {
+      console.error("[register] Step 8 WARN - notifications failed:", notifErr);
     }
 
-    return new Response(
-      JSON.stringify({ user: { id: userId, email } }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.log("[register] ✅ Registration complete for:", email);
+    return jsonResponse({ user: { id: userId, email } });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[register] ❌ Unhandled error:", error);
+    return jsonResponse({ error: error.message || "Внутренняя ошибка сервера" }, 500);
   }
 });

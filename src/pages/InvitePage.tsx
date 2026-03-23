@@ -185,27 +185,45 @@ export function InvitePage() {
         avatarUrl = getDefaultAvatarUrl(selectedDefaultAvatar);
       }
 
-      const { data: result, error: fnError } = await supabase.functions.invoke('register-invited-user', {
-        body: {
-          email: invitation.email,
-          password: data.password,
-          full_name: fullName,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          middle_name: data.middleName,
-          phone: toE164(normalizePhone(data.phone)),
-          birth_date: data.birthDate,
-          avatar_url: avatarUrl,
-          avatar_base64: avatarBase64,
-          role: invitation.role,
-          invitation_token: token,
-        },
-      });
+      // Call edge function directly via fetch to get proper error body
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/register-invited-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            email: invitation.email,
+            password: data.password,
+            full_name: fullName,
+            first_name: data.firstName,
+            last_name: data.lastName,
+            middle_name: data.middleName,
+            phone: toE164(normalizePhone(data.phone)),
+            birth_date: data.birthDate,
+            avatar_url: avatarUrl,
+            avatar_base64: avatarBase64,
+            role: invitation.role,
+            invitation_token: token,
+          }),
+        }
+      );
 
-      // Extract meaningful error from edge function response
-      if (fnError) {
-        // Try to get the actual error message from the response context
-        const errorMsg = result?.error || fnError?.message || 'Ошибка при регистрации';
+      let result: any;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
+
+      if (!response.ok) {
+        const errorMsg = result?.error || `Ошибка сервера (${response.status})`;
         throw new Error(errorMsg);
       }
       if (result?.error) throw new Error(result.error);
