@@ -18,35 +18,6 @@ interface ItemDetail {
 }
 
 export const IssuedItems = ({ tasks }: IssuedItemsProps) => {
-  const [itemsMap, setItemsMap] = useState<Map<string, ItemDetail>>(new Map());
-
-  useEffect(() => {
-    loadItemDetails();
-  }, [tasks]);
-
-  const loadItemDetails = async () => {
-    const itemIds = new Set<string>();
-    tasks.forEach(task => {
-      if (task.items) {
-        task.items.forEach(item => itemIds.add(item.item_id));
-      }
-    });
-
-    if (itemIds.size === 0) return;
-
-    const { data, error } = await supabase
-      .from('warehouse_items' as any)
-      .select('id, name')
-      .in('id', Array.from(itemIds));
-
-    if (!error && data) {
-      const map = new Map<string, ItemDetail>();
-      data.forEach((item: any) => {
-        map.set(item.id, { name: item.name, quantity: 0, collected_quantity: 0 });
-      });
-      setItemsMap(map);
-    }
-  };
 
   // Filter for active collection tasks
   const activeTasks = tasks.filter(
