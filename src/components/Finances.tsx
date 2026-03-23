@@ -195,17 +195,17 @@ const Finances = () => {
 
   // Admin dashboard view
   return (
-    <div className="space-y-6 w-full">
-      <div className="space-y-4 w-full">
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 w-full">
+    <div className="space-y-4 sm:space-y-6 w-full">
+      <div className="space-y-3 sm:space-y-4 w-full">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full">
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-bold truncate">Финансы</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">Финансы</h1>
             <p className="text-muted-foreground hidden md:block truncate">Управление доходами и расходами компании</p>
           </div>
           
           {hasPermission('finances.create') && (
             <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
-              <Button onClick={() => setShowTransactionForm(true)} className="w-full sm:w-auto">
+              <Button onClick={() => setShowTransactionForm(true)} className="w-full sm:w-auto h-10">
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить транзакцию
               </Button>
@@ -230,8 +230,8 @@ const Finances = () => {
 
       <Card className="w-full">
         <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
-          <CardHeader className="py-4 border-b">
-            <TabsList className="w-full overflow-x-auto scrollbar-hide">
+          <CardHeader className="py-3 sm:py-4 border-b px-3 sm:px-6">
+            <TabsList className="w-full overflow-x-auto scrollbar-hide h-9 sm:h-10">
               <TabsTrigger value="my-transactions" className="whitespace-nowrap">
                 Мои транзакции
               </TabsTrigger>
@@ -265,7 +265,7 @@ const Finances = () => {
             </TabsList>
           </CardHeader>
           
-          <CardContent className="pt-0 w-full overflow-x-auto">
+          <CardContent className="pt-0 w-full overflow-x-auto px-2 sm:px-6">
             <TabsContent value="my-transactions" className="mt-0 w-full">
               <div className="flex justify-center py-4 border-b w-full">
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cards' | 'table')} className="w-full">

@@ -321,15 +321,15 @@ const Layout = ({ children }: LayoutProps) => {
         /* Mobile Layout */
         <div className="flex-1 flex flex-col">
           {/* Mobile Header */}
-          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-            <div className="flex h-14 items-center px-4 justify-between">
+          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm safe-area-inset-top">
+            <div className="flex h-12 items-center px-3 justify-between">
               {/* Page Title */}
-              <h1 className="text-lg font-semibold text-foreground">
+              <h1 className="text-base font-semibold text-foreground truncate">
                 {pageTitle}
               </h1>
               
               {/* Right Actions: Notifications & Profile */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <NotificationsMenu />
                 <Button
                   variant="ghost"
@@ -337,11 +337,11 @@ const Layout = ({ children }: LayoutProps) => {
                   onClick={() => navigate('/profile')}
                   className="h-9 w-9 p-0 rounded-full"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-7 w-7">
                     {avatarUrl && (
                       <AvatarImage src={avatarUrl} alt={displayName} />
                     )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
@@ -350,7 +350,7 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          <PullToRefresh className="flex-1 w-full px-4 py-6 pb-28">
+          <PullToRefresh className="flex-1 w-full px-3 py-4 pb-24">
             {children}
           </PullToRefresh>
           

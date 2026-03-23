@@ -297,16 +297,16 @@ const Staff = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">{t('staff')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('staff')}</h1>
+          <p className="text-sm text-muted-foreground">
             {hasPermission('staff.manage')
               ? "Управляйте командой и зарплатами" 
               : "Просмотр информации о пользователях"}
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
@@ -327,11 +327,11 @@ const Staff = () => {
   }
 
   return (
-    <div className="space-y-6 w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+    <div className="space-y-4 sm:space-y-6 w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 w-full">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-bold truncate">{t('staff')}</h1>
-          <p className="text-muted-foreground truncate">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">{t('staff')}</h1>
+          <p className="text-sm text-muted-foreground truncate">
             {hasPermission('staff.manage')
               ? "Управляйте командой и зарплатами" 
               : "Просмотр информации о пользователях"}

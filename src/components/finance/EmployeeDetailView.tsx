@@ -81,42 +81,43 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
   };
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-3 sm:space-y-4 w-full">
       {selectedEmployee && (
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-4 min-w-0 flex-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <Button
               variant="outline"
               onClick={onBack}
-              className="min-h-[44px] min-w-[44px] px-4 py-2 flex items-center justify-center flex-shrink-0"
+              size="sm"
+              className="flex-shrink-0"
             >
-              <ArrowLeft className="mr-2 h-4 w-4 flex-shrink-0" />
+              <ArrowLeft className="mr-1 h-4 w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Назад</span>
             </Button>
-            <Avatar className="h-10 w-10 flex-shrink-0">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
               <AvatarImage src={selectedEmployee.avatar_url || undefined} alt={selectedEmployee.name} />
               <AvatarFallback>{getInitials({ full_name: selectedEmployee.name })}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold truncate">
+              <h2 className="text-base sm:text-xl font-semibold truncate">
                 {selectedEmployee.name}
               </h2>
-              <p className="text-sm text-muted-foreground truncate">
-                Персональные финансы сотрудника
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                Персональные финансы
               </p>
             </div>
           </div>
           {isAdmin && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                <Upload className="mr-2 h-4 w-4" />
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto scrollbar-hide">
+              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)} className="flex-shrink-0">
+                <Upload className="mr-1 h-4 w-4" />
                 Импорт
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="text-destructive hover:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Удалить все
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive flex-shrink-0">
+                    <Trash2 className="mr-1 h-4 w-4" />
+                    Удалить
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -137,9 +138,9 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button onClick={() => setShowTransactionForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить транзакцию
+              <Button size="sm" onClick={() => setShowTransactionForm(true)} className="flex-shrink-0">
+                <Plus className="mr-1 h-4 w-4" />
+                Добавить
               </Button>
             </div>
           )}
