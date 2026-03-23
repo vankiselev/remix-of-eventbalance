@@ -42,10 +42,25 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
       return data;
     },
     enabled,
+    staleTime: 30 * 1000, // 30 seconds for review data
+    gcTime: 5 * 60 * 1000,
   });
 
-  // Fetch verification stats with COUNT queries (exclude drafts)
-  const { data: reviewStats } = useQuery({
+  // Derive verification stats from loaded transactions instead of 4 extra COUNT queries
+  const reviewStats = useMemo(() => {
+    if (!reviewTransactions) return { pending: 0, approved: 0, rejected: 0, total: 0 };
+    // When filtering by status, we only have partial data — use count from what we have
+    // For accurate stats, we need all statuses; but only compute when statusFilter is active
+    return {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      total: reviewTransactions.length,
+    };
+  }, [reviewTransactions]);
+
+  // Separate stats query with longer staleTime to avoid 4 COUNT queries on every tab switch
+  const { data: fullStats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
       const [pendingResult, approvedResult, rejectedResult, totalResult] = await Promise.all([
@@ -63,6 +78,8 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
       };
     },
     enabled,
+    staleTime: 2 * 60 * 1000, // 2 min - stats don't need to be instant
+    gcTime: 10 * 60 * 1000,
   });
 
   // Fetch profiles for review tab

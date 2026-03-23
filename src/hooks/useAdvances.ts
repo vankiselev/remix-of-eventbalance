@@ -79,8 +79,7 @@ export const useMyAdvance = (targetUserId?: string) => {
       return { amount, issuedByName, issuedAt };
     },
     enabled: !!userId,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 };
