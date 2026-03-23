@@ -156,8 +156,7 @@ export function PendingUsersManagement() {
 
       toast.success(`Заявка пользователя ${rejectUser.email} отклонена`);
       
-      // Удаляем из локального состояния
-      setPendingUsers(prev => prev.filter(u => u.id !== rejectUser.id));
+      refetchPendingUsers();
       setRejectUser(null);
     } catch (error: any) {
       console.error("Error rejecting user:", error);
