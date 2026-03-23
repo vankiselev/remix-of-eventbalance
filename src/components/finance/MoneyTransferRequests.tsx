@@ -111,8 +111,11 @@ export const MoneyTransferRequests = () => {
         .contains('data', { transaction_id: transactionId });
 
       toast.success('Перевод принят');
+      // Force refetch even for inactive/unmounted observers so "Мои транзакции" updates immediately
       queryClient.invalidateQueries({ queryKey: ['pending-transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     } catch (error: any) {
       console.error('Error accepting transfer:', error);
       toast.error('Ошибка при принятии перевода');
@@ -151,7 +154,9 @@ export const MoneyTransferRequests = () => {
       setSelectedTransferId(null);
       setRejectionReason("");
       queryClient.invalidateQueries({ queryKey: ['pending-transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     } catch (error: any) {
       console.error('Error rejecting transfer:', error);
       toast.error(error.message || 'Ошибка при отклонении перевода');
