@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, DollarSign, Plus, CalendarDays, Calendar, ListChecks,
   Package, Users, Cake, Plane, Briefcase, FileText, ClipboardCheck,
-  Shield, MoreHorizontal, Circle
+  Shield, MoreHorizontal, Settings
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
     ...(!isFinancier || isAdmin ? [{ path: "/reports", label: "Отчеты", shortLabel: "Отчёты", icon: FileText }] : []),
     ...(isFinancier ? [{ path: "/transactions-review", label: "Проверка транзакций", shortLabel: "Проверка", icon: ClipboardCheck }] : []),
     ...(isAdmin ? [{ path: "/administration", label: "Администрирование", shortLabel: "Админ", icon: Shield }] : []),
+    { path: "/settings", label: "Настройки", shortLabel: "Настройки", icon: Settings },
   ];
 
   const handleNavigation = (path: string) => {
