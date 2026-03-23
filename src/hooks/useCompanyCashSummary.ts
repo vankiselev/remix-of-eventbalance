@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
 
 interface CashSummary {
   total_cash: number;
@@ -17,38 +16,6 @@ const defaultSummary: CashSummary = {
 };
 
 export const useCompanyCashSummary = (enabled: boolean = true) => {
-  const queryClient = useQueryClient();
-  const debounceRef = useRef<NodeJS.Timeout>();
-
-  // Realtime subscription for automatic updates during imports
-  useEffect(() => {
-    if (!enabled) return;
-
-    const channel = supabase
-      .channel('company-cash-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        () => {
-          // Debounce to prevent excessive updates during bulk imports
-          clearTimeout(debounceRef.current);
-          debounceRef.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
-          }, 2000);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
-    };
-  }, [enabled, queryClient]);
-
   return useQuery({
     queryKey: ['company-cash-summary'],
     queryFn: async () => {
