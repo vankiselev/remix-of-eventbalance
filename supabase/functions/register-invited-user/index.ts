@@ -294,10 +294,10 @@ Deno.serve(async (req) => {
         await adminClient.from("notifications").insert(
           uniqueIds.map((adminId) => ({
             user_id: adminId,
-            title: "Новая регистрация",
-            message: `Пользователь ${full_name || email} (${email}) зарегистрировался по приглашению`,
+            title: "Ожидает одобрения",
+            message: `${full_name || email} зарегистрировался и ожидает одобрения для доступа в систему`,
             type: "system",
-            data: { user_email: email, user_id: userId },
+            data: { user_email: email, user_id: userId, action: "approve_user", navigate_to: "/administration" },
           })),
         );
       }
