@@ -269,7 +269,7 @@ export function InvitationsManagement() {
     };
 
     const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.sent;
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    return <Badge variant={statusInfo.variant} className={(statusInfo as any).className || ""}>{statusInfo.label}</Badge>;
   };
 
   const getRoleBadge = (role: string) => {
