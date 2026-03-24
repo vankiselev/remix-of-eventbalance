@@ -29,17 +29,76 @@ function deriveProjectApiUrl(req: Request, fallbackUrl: string | null): string {
   return fallbackUrl || "";
 }
 
+function resolveProjectApiUrl(
+  req: Request,
+  fallbackUrl: string | null,
+  projectApiUrlFromBody: unknown,
+): string {
+  const derivedUrl = deriveProjectApiUrl(req, fallbackUrl);
+
+  if (typeof projectApiUrlFromBody === "string" && projectApiUrlFromBody.trim().length > 0) {
+    try {
+      const requestUrl = new URL(req.url);
+      const candidate = new URL(projectApiUrlFromBody.trim());
+
+      if (candidate.origin === requestUrl.origin) {
+        return candidate.toString().replace(/\/$/, "");
+      }
+
+      console.warn("[register] Ignoring project_api_url with different origin", {
+        requestOrigin: requestUrl.origin,
+        candidateOrigin: candidate.origin,
+      });
+    } catch (e) {
+      console.warn("[register] Invalid project_api_url in request body:", e);
+    }
+  }
+
+  return derivedUrl || fallbackUrl || "";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const {
-      email, password, full_name, role, invitation_token, invitation_id,
-      first_name, last_name, middle_name, phone, birth_date,
-      avatar_url, avatar_base64,
-    } = await req.json();
+    const parsedBody = await req.json();
+    console.log("[register] Parsed request body", {
+      keys: parsedBody && typeof parsedBody === "object" ? Object.keys(parsedBody as Record<string, unknown>) : [],
+      invitation_id:
+        typeof parsedBody?.invitation_id === "string"
+          ? parsedBody.invitation_id
+          : typeof parsedBody?.invitationId === "string"
+            ? parsedBody.invitationId
+            : null,
+      invitation_token: typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : null,
+      project_api_url: typeof parsedBody?.project_api_url === "string" ? parsedBody.project_api_url : null,
+      email: typeof parsedBody?.email === "string" ? parsedBody.email : null,
+    });
+
+    const email = typeof parsedBody?.email === "string" ? parsedBody.email : "";
+    const password = typeof parsedBody?.password === "string" ? parsedBody.password : "";
+    const full_name = typeof parsedBody?.full_name === "string" ? parsedBody.full_name : "";
+    const role = typeof parsedBody?.role === "string" ? parsedBody.role : "member";
+    const invitation_token =
+      typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : "";
+    const project_api_url =
+      typeof parsedBody?.project_api_url === "string" ? parsedBody.project_api_url : null;
+    const invitation_id =
+      typeof parsedBody?.invitation_id === "string"
+        ? parsedBody.invitation_id
+        : typeof parsedBody?.invitationId === "string"
+          ? parsedBody.invitationId
+          : null;
+    const first_name = typeof parsedBody?.first_name === "string" ? parsedBody.first_name : "";
+    const last_name = typeof parsedBody?.last_name === "string" ? parsedBody.last_name : "";
+    const middle_name = typeof parsedBody?.middle_name === "string" ? parsedBody.middle_name : "";
+    const phone = typeof parsedBody?.phone === "string" ? parsedBody.phone : null;
+    const birth_date = typeof parsedBody?.birth_date === "string" ? parsedBody.birth_date : null;
+    const avatar_url = typeof parsedBody?.avatar_url === "string" ? parsedBody.avatar_url : null;
+    const avatar_base64 =
+      typeof parsedBody?.avatar_base64 === "string" ? parsedBody.avatar_base64 : null;
 
     let normalizedToken = "";
     if (typeof invitation_token === "string") {
@@ -55,13 +114,25 @@ Deno.serve(async (req) => {
         ? invitation_id.trim()
         : null;
 
+    console.log("[register] Canonical lookup input", {
+      invitation_id: normalizedInvitationId,
+      invitation_token: normalizedToken || null,
+      project_api_url,
+      email,
+    });
+
     if (!email || !password || (!normalizedToken && !normalizedInvitationId)) {
       return jsonResponse({ error: "Email, password и invitation token обязательны" }, 400);
     }
 
     const envSupabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseUrl = deriveProjectApiUrl(req, envSupabaseUrl);
+    const supabaseUrl = resolveProjectApiUrl(req, envSupabaseUrl, project_api_url);
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    console.log("[register] Resolved API URL", {
+      supabaseUrl,
+      usedProjectApiUrl: Boolean(project_api_url),
+    });
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("[register] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY", {
