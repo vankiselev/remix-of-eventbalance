@@ -65,10 +65,13 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
     const selectedTenant = availableTenants.find(t => t.id === selectedTenantId);
     const selectedRole = roles.find(r => r.id === data.role_id);
-    const currentUserId = (await supabase.auth.getUser()).data.user?.id;
 
     try {
       setIsSubmitting(true);
+      const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+      if (!currentUserId) {
+        throw new Error("Требуется авторизация");
+      }
 
       // Check if user already exists in profiles
       const { data: existingProfile } = await supabase
