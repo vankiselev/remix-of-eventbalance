@@ -1,0 +1,1 @@
+ALTER TABLE public.invitations ALTER COLUMN role TYPE text;
