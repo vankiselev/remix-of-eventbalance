@@ -757,25 +757,25 @@ const Events = () => {
         >
           <ToggleGroupItem 
             value="future" 
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
           >
             Будущие
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="past"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
           >
             Прошлые
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="all"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
           >
             Все
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="cancelled"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
           >
             Отмена
           </ToggleGroupItem>
