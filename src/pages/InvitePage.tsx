@@ -44,15 +44,6 @@ interface InvitationData {
   status: string;
 }
 
-async function sha256Hex(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 export function InvitePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -127,34 +118,9 @@ export function InvitePage() {
             .single();
 
           if (!directError && directData) {
-            if (directData.status !== "accepted" && directData.expires_at && new Date(directData.expires_at) < new Date()) {
-              toast({ title: "Приглашение истекло", description: "Запросите новое приглашение.", variant: "destructive" });
-              navigate("/auth");
-              return;
-            }
             invitationResult = directData as InvitationData;
           } else {
             console.warn("[InvitePage] Direct token query failed:", directError?.message);
-
-            // Fallback 2: direct table query by token_hash
-            const tokenHash = await sha256Hex(token);
-            const { data: hashData, error: hashError } = await supabase
-              .from("invitations")
-              .select("id, email, role, expires_at, status")
-              .eq("token_hash", tokenHash)
-              .in("status", ["pending", "sent", "accepted"])
-              .single();
-
-            if (!hashError && hashData) {
-              if (hashData.status !== "accepted" && hashData.expires_at && new Date(hashData.expires_at) < new Date()) {
-                toast({ title: "Приглашение истекло", description: "Запросите новое приглашение.", variant: "destructive" });
-                navigate("/auth");
-                return;
-              }
-              invitationResult = hashData as InvitationData;
-            } else {
-              console.error("[InvitePage] Direct token_hash query failed:", hashError?.message);
-            }
           }
         }
 
@@ -163,6 +129,27 @@ export function InvitePage() {
           navigate("/auth");
           return;
         }
+
+        if (
+          invitationResult.status !== "accepted" &&
+          invitationResult.expires_at &&
+          new Date(invitationResult.expires_at) < new Date()
+        ) {
+          toast({
+            title: "Приглашение истекло",
+            description: "Запросите новое приглашение.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
+        console.log("[InvitePage] Invitation validated", {
+          invitation_id: invitationResult.id,
+          email: invitationResult.email,
+          status: invitationResult.status,
+          token,
+        });
 
         setInvitation(invitationResult);
       } catch (error) {
@@ -245,6 +232,13 @@ export function InvitePage() {
       // Call edge function directly via fetch to get proper error body
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      console.log("[InvitePage] Submit register-invited-user", {
+        invitation_id: invitation.id,
+        email: invitation.email,
+        status: invitation.status,
+        token,
+      });
       
       const response = await fetch(
         `${supabaseUrl}/functions/v1/register-invited-user`,
