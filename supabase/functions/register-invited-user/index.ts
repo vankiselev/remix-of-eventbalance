@@ -219,8 +219,6 @@ Deno.serve(async (req) => {
       id: userId,
       email,
       full_name: full_name || email,
-      invitation_status: "invited",
-      ...(invitation.tenant_id ? { tenant_id: invitation.tenant_id } : {}),
       ...(finalAvatarUrl ? { avatar_url: finalAvatarUrl } : {}),
       ...(phone ? { phone } : {}),
       ...(birth_date ? { birth_date } : {}),
