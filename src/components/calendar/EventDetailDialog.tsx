@@ -401,20 +401,20 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-       <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-5 sm:px-6 py-4 border-b flex-shrink-0 bg-muted/30">
-          <DialogTitle className="text-lg font-semibold">
+       <DialogContent className="w-[95vw] max-w-2xl h-[85vh] sm:h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 bg-muted/30">
+          <DialogTitle className="text-base sm:text-lg font-semibold pr-8">
             {event ? "Редактировать мероприятие" : "Новое мероприятие"}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-5 sm:mx-6 mt-3 mb-1">
-            <TabsTrigger value="details">Основное</TabsTrigger>
+          <TabsList className="mx-4 sm:mx-6 mt-2 sm:mt-3 mb-1">
+            <TabsTrigger value="details" className="text-[13px] sm:text-sm">Основное</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="flex-1 overflow-y-auto px-5 sm:px-6 pb-6">
-            <div className="space-y-5 pt-2">
+          <TabsContent value="details" className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="space-y-4 sm:space-y-5 pt-2">
               
               {/* ═══ Основная информация ═══ */}
               <section className="space-y-3">
@@ -803,8 +803,10 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
         </Tabs>
 
         {/* Actions Footer */}
-        <div className="flex flex-col sm:flex-row justify-between gap-2 px-5 sm:px-6 py-3 border-t flex-shrink-0 bg-muted/20">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row justify-between gap-2 px-4 sm:px-6 py-2.5 sm:py-3 border-t flex-shrink-0 bg-muted/20"
+          style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="flex gap-1.5 sm:gap-2">
             {event && (
               <>
                 {hasPermission('events.delete') ? (
@@ -814,18 +816,18 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       variant="outline"
                       size="sm"
                       onClick={handleCancel}
-                      className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                      className="flex-1 sm:flex-none h-9 text-[12px] sm:text-sm border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 touch-manipulation"
                     >
-                      Отменить мероприятие
+                      Отменить
                     </Button>
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
                       onClick={handleDelete}
-                      className="w-full sm:w-auto"
+                      className="flex-1 sm:flex-none h-9 text-[12px] sm:text-sm touch-manipulation"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-1 sm:mr-2 h-3.5 w-3.5" />
                       Удалить
                     </Button>
                   </>
@@ -836,32 +838,32 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
                       variant="outline"
                       size="sm"
                       onClick={() => setActionRequestDialog({ open: true, type: 'cancel' })}
-                      className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                      className="flex-1 sm:flex-none h-9 text-[12px] sm:text-sm border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 touch-manipulation"
                     >
-                      Запрос на отмену
+                      Запрос отмены
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setActionRequestDialog({ open: true, type: 'delete' })}
-                      className="w-full sm:w-auto"
+                      className="flex-1 sm:flex-none h-9 text-[12px] sm:text-sm touch-manipulation"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Запрос на удаление
+                      <Trash2 className="mr-1 sm:mr-2 h-3.5 w-3.5" />
+                      Запрос удаления
                     </Button>
                   </>
                 )}
               </>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none h-9 text-[13px] sm:text-sm touch-manipulation"
             >
               Закрыть
             </Button>
@@ -869,7 +871,7 @@ const EventDetailDialog = ({ event, open, onOpenChange, onSave, defaultDate }: E
               onClick={handleSave}
               disabled={loading || uploadingFile || !formData.name || !formData.start_date}
               size="sm"
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none h-9 text-[13px] sm:text-sm touch-manipulation"
             >
               {loading || uploadingFile ? "Сохранение..." : "Сохранить"}
             </Button>
