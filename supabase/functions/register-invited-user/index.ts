@@ -235,6 +235,11 @@ Deno.serve(async (req) => {
     let invData: any = null;
     let invError: any = null;
     let lookupPath = "none";
+    const directIdLookupDiagnostics: Array<{
+      candidateUrl: string;
+      found: boolean;
+      error: string | null;
+    }> = [];
 
     // 1a. Primary: lookup by invitation_id from validated invite page
     if (normalizedInvitationId) {
@@ -251,6 +256,12 @@ Deno.serve(async (req) => {
         console.log("[register] Step 1a candidate result", {
           candidateUrl,
           invitation_id: normalizedInvitationId,
+          found: Boolean(idLookup.data),
+          error: idLookup.error?.message ?? null,
+        });
+
+        directIdLookupDiagnostics.push({
+          candidateUrl,
           found: Boolean(idLookup.data),
           error: idLookup.error?.message ?? null,
         });
@@ -362,9 +373,18 @@ Deno.serve(async (req) => {
         normalizedInvitationId,
         tokenError: invError?.message ?? null,
         resolvedCandidates: supabaseUrlCandidates,
+        directIdLookupDiagnostics,
       });
       return jsonResponse({
         error: "Токен приглашения не найден в submit-обработчике. Код: INVITE_LOOKUP_MISMATCH. Откройте ссылку-приглашение заново или запросите новое.",
+        code: "INVITE_LOOKUP_MISMATCH",
+        debug: {
+          request_url: req.url,
+          invitation_id: normalizedInvitationId,
+          active_supabase_url: supabaseUrl,
+          resolved_candidates: supabaseUrlCandidates,
+          direct_id_lookup: directIdLookupDiagnostics,
+        },
       }, 404);
     }
 
