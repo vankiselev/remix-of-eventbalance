@@ -250,60 +250,46 @@ Deno.serve(async (req) => {
       ...(middle_name ? { middle_name } : {}),
     }, { onConflict: "id" });
 
-    // STEP 5: membership (critical, retry-safe)
+    // STEP 5: membership via SECURITY DEFINER RPC (bypasses RLS safely)
     if (invitation.tenant_id) {
       const memberRole = role || invitation.role || "member";
 
-      console.log("[register] STEP 5 membership payload", {
-        tenant_id: invitation.tenant_id,
+      console.log("[register] STEP 5 membership via RPC", {
+        invitation_id: invitation.id,
         user_id: userId,
         role: memberRole,
       });
 
-      // Check if membership already exists (no unique constraint needed)
-      const { data: existingMembership, error: checkError } = await adminClient
-        .from("tenant_memberships")
-        .select("id")
-        .eq("tenant_id", invitation.tenant_id)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const { data: membershipResult, error: membershipError } = await adminClient.rpc(
+        "ensure_invited_user_membership",
+        {
+          p_invitation_id: invitation.id,
+          p_user_id: userId,
+          p_role: memberRole,
+        },
+      );
 
-      if (checkError) {
-        console.error("[register] STEP 5 check existing membership error", checkError);
+      if (membershipError) {
+        console.error("[register] STEP 5 membership RPC FAILED", {
+          error: membershipError.message,
+          code: membershipError.code,
+        });
+        return jsonResponse({
+          error: `Аккаунт создан, но не удалось добавить в организацию: ${membershipError.message}`,
+          code: "MEMBERSHIP_CREATE_FAILED",
+        }, 500);
       }
 
-      if (existingMembership) {
-        console.log("[register] STEP 5 membership already exists, skipping insert", existingMembership.id);
-      } else {
-        // Insert new membership
-        const { error: insertError } = await adminClient
-          .from("tenant_memberships")
-          .insert({
-            tenant_id: invitation.tenant_id,
-            user_id: userId,
-            role: memberRole,
-          });
-
-        if (insertError) {
-          console.error("[register] STEP 5 membership insert FAILED", {
-            error: insertError.message,
-            code: insertError.code,
-            details: insertError.details,
-            hint: insertError.hint,
-          });
-
-          // If duplicate key (race condition), that's OK
-          if (!insertError.message.toLowerCase().includes("duplicate")) {
-            return jsonResponse({
-              error: `Аккаунт создан, но не удалось добавить в организацию: ${insertError.message}`,
-              code: "MEMBERSHIP_CREATE_FAILED",
-              debug: { pg_code: insertError.code, hint: insertError.hint },
-            }, 500);
-          }
-        } else {
-          console.log("[register] STEP 5 membership created successfully");
-        }
+      const result = membershipResult as Record<string, unknown> | null;
+      if (result && result.success === false) {
+        console.error("[register] STEP 5 membership RPC returned failure", result);
+        return jsonResponse({
+          error: `Аккаунт создан, но не удалось добавить в организацию: ${result.error || "unknown"}`,
+          code: "MEMBERSHIP_CREATE_FAILED",
+        }, 500);
       }
+
+      console.log("[register] STEP 5 membership OK", result);
     }
 
     // STEP 6: audit (non-blocking)

@@ -1561,6 +1561,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      ensure_invited_user_membership: {
+        Args: { p_invitation_id: string; p_role?: string; p_user_id: string }
+        Returns: Json
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_invitation_by_token: {
         Args: { invitation_token: string }
