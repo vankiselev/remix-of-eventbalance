@@ -52,17 +52,18 @@ export function PendingUsersManagement() {
     queryKey: ['pending-users'],
     queryFn: async () => {
       // Find profiles that have an accepted invitation but NO tenant_membership
-      // Step 1: Get all accepted invitations for our tenant
       const { data: acceptedInvitations, error: invErr } = await supabase
         .from("invitations")
-        .select("email")
+        .select("email, role")
         .eq("status", "accepted");
 
       if (invErr || !acceptedInvitations?.length) return [];
 
-      const acceptedEmails = acceptedInvitations.map(i => i.email.toLowerCase());
+      const invitationsByEmail = new Map<string, string>();
+      for (const inv of acceptedInvitations) {
+        invitationsByEmail.set(inv.email.toLowerCase(), inv.role || '');
+      }
 
-      // Step 2: Get all profiles
       const { data: allProfiles, error: profErr } = await supabase
         .from("profiles")
         .select("id, email, first_name, last_name, full_name, created_at")
@@ -70,19 +71,22 @@ export function PendingUsersManagement() {
 
       if (profErr || !allProfiles?.length) return [];
 
-      // Step 3: Get all tenant memberships
-      const { data: memberships, error: memErr } = await supabase
+      const { data: memberships } = await supabase
         .from("tenant_memberships")
         .select("user_id");
 
       const memberUserIds = new Set((memberships || []).map(m => m.user_id));
 
-      // Step 4: Filter: profile email is in accepted invitations AND has no membership
-      const pending = allProfiles.filter(p => 
-        p.email && 
-        acceptedEmails.includes(p.email.toLowerCase()) && 
-        !memberUserIds.has(p.id)
-      );
+      const pending = allProfiles
+        .filter(p => 
+          p.email && 
+          invitationsByEmail.has(p.email.toLowerCase()) && 
+          !memberUserIds.has(p.id)
+        )
+        .map(p => ({
+          ...p,
+          invitation_role: invitationsByEmail.get(p.email!.toLowerCase()) || undefined,
+        }));
 
       return pending as PendingUser[];
     },
