@@ -44,6 +44,15 @@ interface InvitationData {
   status: string;
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export function InvitePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -109,7 +118,7 @@ export function InvitePage() {
         } else {
           console.warn("[InvitePage] RPC failed:", error?.message || "no data, trying direct query");
 
-          // Fallback: direct table query
+          // Fallback 1: direct table query by token
           const { data: directData, error: directError } = await supabase
             .from("invitations")
             .select("id, email, role, expires_at, status")
@@ -125,7 +134,27 @@ export function InvitePage() {
             }
             invitationResult = directData as InvitationData;
           } else {
-            console.error("[InvitePage] Direct query failed:", directError?.message);
+            console.warn("[InvitePage] Direct token query failed:", directError?.message);
+
+            // Fallback 2: direct table query by token_hash
+            const tokenHash = await sha256Hex(token);
+            const { data: hashData, error: hashError } = await supabase
+              .from("invitations")
+              .select("id, email, role, expires_at, status")
+              .eq("token_hash", tokenHash)
+              .in("status", ["pending", "sent", "accepted"])
+              .single();
+
+            if (!hashError && hashData) {
+              if (hashData.status !== "accepted" && hashData.expires_at && new Date(hashData.expires_at) < new Date()) {
+                toast({ title: "Приглашение истекло", description: "Запросите новое приглашение.", variant: "destructive" });
+                navigate("/auth");
+                return;
+              }
+              invitationResult = hashData as InvitationData;
+            } else {
+              console.error("[InvitePage] Direct token_hash query failed:", hashError?.message);
+            }
           }
         }
 

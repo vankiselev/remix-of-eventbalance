@@ -12,6 +12,31 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function deriveProjectApiUrl(req: Request, fallbackUrl: string | null): string {
+  try {
+    const url = new URL(req.url);
+    const marker = "/functions/v1/";
+    const markerIndex = url.pathname.indexOf(marker);
+
+    if (markerIndex > -1) {
+      const projectPath = url.pathname.slice(0, markerIndex);
+      return `${url.origin}${projectPath}`;
+    }
+  } catch (e) {
+    console.warn("[register] Failed to derive project URL from request:", e);
+  }
+
+  return fallbackUrl || "";
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digestArray = Array.from(new Uint8Array(digest));
+  return digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -42,11 +67,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Email, password и invitation token обязательны" }, 400);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const envSupabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseUrl = deriveProjectApiUrl(req, envSupabaseUrl);
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[register] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      console.error("[register] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY", {
+        hasSupabaseUrl: Boolean(supabaseUrl),
+        hasServiceRoleKey: Boolean(serviceRoleKey),
+      });
       return jsonResponse({ error: "Ошибка конфигурации сервера." }, 500);
     }
 
@@ -58,6 +87,9 @@ Deno.serve(async (req) => {
     const invitationSelect = "id, tenant_id, invited_by, email, expires_at, status";
     let invData: any = null;
     let invError: any = null;
+    let lookupPath = "none";
+
+    const tokenHash = normalizedToken ? await sha256Hex(normalizedToken) : null;
 
     // 1a. Primary: RPC get_invitation_by_token (handles type casting, filters by status/expiry)
     if (normalizedToken) {
@@ -78,6 +110,7 @@ Deno.serve(async (req) => {
               .maybeSingle();
             if (fullRec) {
               invData = fullRec;
+              lookupPath = "rpc:get_invitation_by_token";
               console.log("[register] Step 1a OK: found via RPC, id:", rpcInvId);
             }
           }
@@ -99,6 +132,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (tokenLookup.data) {
         invData = tokenLookup.data;
+        lookupPath = "table:token";
         console.log("[register] Step 1b OK: found via direct query");
       } else if (tokenLookup.error) {
         invError = tokenLookup.error;
@@ -106,9 +140,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 1c. Fallback: by invitation_id (for retry flows)
+    // 1c. Fallback: direct query by token_hash
+    if (!invData && tokenHash) {
+      console.log("[register] Step 1c: Direct token_hash lookup...");
+      const hashLookup = await adminClient
+        .from("invitations")
+        .select(invitationSelect)
+        .eq("token_hash", tokenHash)
+        .maybeSingle();
+
+      if (hashLookup.data) {
+        invData = hashLookup.data;
+        lookupPath = "table:token_hash";
+        console.log("[register] Step 1c OK: found via token_hash");
+      } else if (hashLookup.error) {
+        invError = hashLookup.error;
+        console.warn("[register] Step 1c: token_hash query error:", hashLookup.error.message);
+      }
+    }
+
+    // 1d. Fallback: by invitation_id (for retry flows)
     if (!invData && normalizedInvitationId) {
-      console.log("[register] Step 1c: Lookup by invitation_id...");
+      console.log("[register] Step 1d: Lookup by invitation_id...");
       const idLookup = await adminClient
         .from("invitations")
         .select(invitationSelect)
@@ -116,8 +169,9 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (idLookup.data) {
         invData = idLookup.data;
+        lookupPath = "table:id";
         invError = null;
-        console.log("[register] Step 1c OK: found via invitation_id");
+        console.log("[register] Step 1d OK: found via invitation_id");
       } else if (idLookup.error) {
         invError = idLookup.error;
       }
@@ -127,10 +181,15 @@ Deno.serve(async (req) => {
       console.error("[register] Invitation not found:", {
         tokenProvided: Boolean(normalizedToken),
         invitationIdProvided: Boolean(normalizedInvitationId),
+        tokenHashProvided: Boolean(tokenHash),
+        lookupPath,
+        normalizedToken,
+        tokenHash,
+        normalizedInvitationId,
         tokenError: invError?.message ?? null,
       });
       return jsonResponse({
-        error: "Токен приглашения не найден. Возможно, ссылка устарела или уже была использована. Запросите новое приглашение.",
+        error: "Токен приглашения не найден в submit-обработчике. Код: INVITE_LOOKUP_MISMATCH. Откройте ссылку-приглашение заново или запросите новое.",
       }, 404);
     }
 
@@ -156,7 +215,7 @@ Deno.serve(async (req) => {
       console.error("[register] Email mismatch:", email, "vs", invData.email);
       return jsonResponse({ error: "Email не совпадает с приглашением" }, 403);
     }
-    console.log("[register] Step 1 OK: invitation valid, status:", invData.status, "isRetry:", isRetry);
+    console.log("[register] Step 1 OK: invitation valid, status:", invData.status, "isRetry:", isRetry, "lookupPath:", lookupPath);
 
     // ── STEP 2: Upload avatar (non-blocking) ──
     let finalAvatarUrl = avatar_url || null;
