@@ -35,11 +35,39 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const {
-      email, password, full_name, role, invitation_token, invitation_id,
-      first_name, last_name, middle_name, phone, birth_date,
-      avatar_url, avatar_base64,
-    } = await req.json();
+    const parsedBody = await req.json();
+    console.log("[register] Parsed request body", {
+      keys: parsedBody && typeof parsedBody === "object" ? Object.keys(parsedBody as Record<string, unknown>) : [],
+      invitation_id:
+        typeof parsedBody?.invitation_id === "string"
+          ? parsedBody.invitation_id
+          : typeof parsedBody?.invitationId === "string"
+            ? parsedBody.invitationId
+            : null,
+      invitation_token: typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : null,
+      email: typeof parsedBody?.email === "string" ? parsedBody.email : null,
+    });
+
+    const email = typeof parsedBody?.email === "string" ? parsedBody.email : "";
+    const password = typeof parsedBody?.password === "string" ? parsedBody.password : "";
+    const full_name = typeof parsedBody?.full_name === "string" ? parsedBody.full_name : "";
+    const role = typeof parsedBody?.role === "string" ? parsedBody.role : "member";
+    const invitation_token =
+      typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : "";
+    const invitation_id =
+      typeof parsedBody?.invitation_id === "string"
+        ? parsedBody.invitation_id
+        : typeof parsedBody?.invitationId === "string"
+          ? parsedBody.invitationId
+          : null;
+    const first_name = typeof parsedBody?.first_name === "string" ? parsedBody.first_name : "";
+    const last_name = typeof parsedBody?.last_name === "string" ? parsedBody.last_name : "";
+    const middle_name = typeof parsedBody?.middle_name === "string" ? parsedBody.middle_name : "";
+    const phone = typeof parsedBody?.phone === "string" ? parsedBody.phone : null;
+    const birth_date = typeof parsedBody?.birth_date === "string" ? parsedBody.birth_date : null;
+    const avatar_url = typeof parsedBody?.avatar_url === "string" ? parsedBody.avatar_url : null;
+    const avatar_base64 =
+      typeof parsedBody?.avatar_base64 === "string" ? parsedBody.avatar_base64 : null;
 
     let normalizedToken = "";
     if (typeof invitation_token === "string") {
@@ -54,6 +82,12 @@ Deno.serve(async (req) => {
       typeof invitation_id === "string" && invitation_id.trim().length > 0
         ? invitation_id.trim()
         : null;
+
+    console.log("[register] Canonical lookup input", {
+      invitation_id: normalizedInvitationId,
+      invitation_token: normalizedToken || null,
+      email,
+    });
 
     if (!email || !password || (!normalizedToken && !normalizedInvitationId)) {
       return jsonResponse({ error: "Email, password и invitation token обязательны" }, 400);
