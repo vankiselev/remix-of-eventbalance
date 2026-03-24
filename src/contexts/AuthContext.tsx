@@ -132,8 +132,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profileData = data as any;
 
         // If profile doesn't exist — account was deleted
+        // Grace period: don't force sign out if account was just created (< 60s)
         if (!profileData.profile) {
-          await forceSignOut('Ваш аккаунт был удалён');
+          const createdAt = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
+          const accountAge = Date.now() - createdAt;
+          if (accountAge > 60000) {
+            await forceSignOut('Ваш аккаунт был удалён');
+          }
           return;
         }
 
