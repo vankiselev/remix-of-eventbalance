@@ -745,7 +745,7 @@ const Events = () => {
         </div>
       </div>
 
-      {/* Период - отдельная секция */}
+      {/* Период */}
       <div>
         <ToggleGroup 
           type="single" 
@@ -829,23 +829,23 @@ const Events = () => {
                         </div>
                       )}
                       
-                      <div className="flex gap-3 sm:gap-4 p-3 sm:p-5">
+                      <div className="flex gap-2.5 sm:gap-4 p-2.5 sm:p-5">
                         {/* Левый блок с датой */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-xl w-16 h-16 sm:w-24 sm:h-24 border gap-0.5 sm:gap-1">
-                          <div className="text-xl sm:text-3xl font-bold leading-none">{day}</div>
-                          <div className="text-[10px] sm:text-sm capitalize text-muted-foreground leading-tight">{month}</div>
-                          <div className="text-[9px] sm:text-xs font-medium capitalize text-muted-foreground/70 leading-tight">{weekday}</div>
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-xl w-14 h-14 sm:w-24 sm:h-24 border gap-0 sm:gap-1">
+                          <div className="text-lg sm:text-3xl font-bold leading-none">{day}</div>
+                          <div className="text-[9px] sm:text-sm capitalize text-muted-foreground leading-tight">{month}</div>
+                          <div className="text-[8px] sm:text-xs font-medium capitalize text-muted-foreground/70 leading-tight hidden sm:block">{weekday}</div>
                         </div>
                         
                         {/* Правый блок с информацией */}
-                        <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex-1 min-w-0 space-y-1 sm:space-y-2">
                           {/* Заголовок + статус */}
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="text-base sm:text-lg font-semibold leading-tight truncate">{event.name}</h3>
+                          <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+                            <h3 className="text-[13px] sm:text-lg font-semibold leading-tight line-clamp-2">{event.name}</h3>
                             {event.status && (
                               <Badge 
                                 variant={event.status === 'completed' ? 'default' : event.status === 'in_progress' ? 'secondary' : 'outline'}
-                                className="text-[10px] flex-shrink-0"
+                                className="text-[9px] sm:text-[10px] flex-shrink-0 whitespace-nowrap px-1.5 py-0"
                               >
                                 {event.status === 'completed' ? 'Завершено' : event.status === 'in_progress' ? 'В процессе' : event.status === 'planning' ? 'Планируется' : event.status}
                               </Badge>
