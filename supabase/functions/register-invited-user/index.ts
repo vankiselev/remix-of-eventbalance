@@ -237,60 +237,33 @@ Deno.serve(async (req) => {
       userId = userData.user.id;
     }
 
-    // STEP 4: profile upsert (non-blocking)
-    await adminClient.from("profiles").upsert({
+    // STEP 4: profile upsert — set invitation_status='pending' and tenant_id for later admin approval
+    const profilePayload: Record<string, unknown> = {
       id: userId,
       email,
       full_name: full_name || email,
+      invitation_status: "pending",
+      ...(invitation.tenant_id ? { tenant_id: invitation.tenant_id } : {}),
       ...(finalAvatarUrl ? { avatar_url: finalAvatarUrl } : {}),
       ...(phone ? { phone } : {}),
       ...(birth_date ? { birth_date } : {}),
       ...(first_name ? { first_name } : {}),
       ...(last_name ? { last_name } : {}),
       ...(middle_name ? { middle_name } : {}),
-    }, { onConflict: "id" });
+    };
 
-    // STEP 5: membership via SECURITY DEFINER RPC (bypasses RLS safely)
-    if (invitation.tenant_id) {
-      const memberRole = role || invitation.role || "member";
+    const { error: profileError } = await adminClient.from("profiles").upsert(
+      profilePayload,
+      { onConflict: "id" }
+    );
 
-      console.log("[register] STEP 5 membership via RPC", {
-        invitation_id: invitation.id,
-        user_id: userId,
-        role: memberRole,
-      });
-
-      const { data: membershipResult, error: membershipError } = await adminClient.rpc(
-        "ensure_invited_user_membership",
-        {
-          p_invitation_id: invitation.id,
-          p_user_id: userId,
-          p_role: memberRole,
-        },
-      );
-
-      if (membershipError) {
-        console.error("[register] STEP 5 membership RPC FAILED", {
-          error: membershipError.message,
-          code: membershipError.code,
-        });
-        return jsonResponse({
-          error: `Аккаунт создан, но не удалось добавить в организацию: ${membershipError.message}`,
-          code: "MEMBERSHIP_CREATE_FAILED",
-        }, 500);
-      }
-
-      const result = membershipResult as Record<string, unknown> | null;
-      if (result && result.success === false) {
-        console.error("[register] STEP 5 membership RPC returned failure", result);
-        return jsonResponse({
-          error: `Аккаунт создан, но не удалось добавить в организацию: ${result.error || "unknown"}`,
-          code: "MEMBERSHIP_CREATE_FAILED",
-        }, 500);
-      }
-
-      console.log("[register] STEP 5 membership OK", result);
+    if (profileError) {
+      console.error("[register] STEP 4 profile upsert failed", profileError);
     }
+
+    // NOTE: membership is NOT created here.
+    // It will be created by admin during approval via approve_pending_user_membership RPC.
+    console.log("[register] STEP 5 skipped — membership deferred to admin approval");
 
     // STEP 6: audit (non-blocking)
     await adminClient.from("invitation_audit_log").insert({
