@@ -120,17 +120,42 @@ jobs:
           set -o pipefail
           {
             CONTAINER="${{ steps.find-target.outputs.container }}"
-            
+
             echo "🔄 Restarting $CONTAINER to apply changes..."
-            docker restart "$CONTAINER"
+            docker restart "$CONTAINER" >/dev/null
+
             echo "⏳ Waiting for container to be ready..."
-            sleep 5
-            
-            if docker ps | grep -q "$CONTAINER"; then
+            READY=0
+            for i in $(seq 1 30); do
+              STATE=$(docker inspect -f '{{.State.Status}}|{{.State.Running}}|{{.State.Restarting}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.ExitCode}}' "$CONTAINER" 2>/dev/null || echo "missing|false|false|none|1")
+              STATUS=$(echo "$STATE" | cut -d'|' -f1)
+              RUNNING=$(echo "$STATE" | cut -d'|' -f2)
+              RESTARTING=$(echo "$STATE" | cut -d'|' -f3)
+              HEALTH=$(echo "$STATE" | cut -d'|' -f4)
+              EXIT_CODE=$(echo "$STATE" | cut -d'|' -f5)
+
+              echo "   [$i/30] status=$STATUS running=$RUNNING restarting=$RESTARTING health=$HEALTH exit_code=$EXIT_CODE"
+
+              if [ "$RUNNING" = "true" ] && { [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ] || [ "$HEALTH" = "starting" ]; }; then
+                READY=1
+                break
+              fi
+
+              if [ "$STATUS" = "exited" ] || [ "$STATUS" = "dead" ]; then
+                break
+              fi
+
+              sleep 2
+            done
+
+            if [ "$READY" -eq 1 ]; then
               echo "✅ Container restarted successfully"
             else
               echo "❌ Container failed to restart"
-              docker logs "$CONTAINER" --tail 20
+              echo "🔎 docker inspect:"
+              docker inspect "$CONTAINER" --format '{{json .State}}' || true
+              echo "🔎 container logs (tail 80):"
+              docker logs "$CONTAINER" --tail 80 || true
               exit 1
             fi
           } 2>&1 | tee "$RUNNER_TEMP/restart_runtime.log"
