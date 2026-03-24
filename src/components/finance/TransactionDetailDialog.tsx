@@ -353,7 +353,7 @@ export function TransactionDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 pr-1">
           {/* Money Transfer Status - Show if it's a transfer */}
           {isMoneyTransfer && (
             <div className={`p-4 rounded-lg border-2 ${
