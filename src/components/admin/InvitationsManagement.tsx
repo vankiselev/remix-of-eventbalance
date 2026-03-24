@@ -117,12 +117,16 @@ export function InvitationsManagement() {
         console.error("Email sending error:", emailError);
       }
 
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: newInvitation.id,
-        user_id: user.id,
-        action: "resent",
-        details: { email: invitation.email },
-      });
+      try {
+        await supabase.from("invitation_audit_log").insert({
+          invitation_id: newInvitation.id,
+          actor_id: user.id,
+          action: "resent",
+          details: { email: invitation.email },
+        });
+      } catch (auditErr) {
+        console.warn("Audit log insert failed (non-blocking):", auditErr);
+      }
 
       toast({
         title: "Приглашение отправлено повторно",

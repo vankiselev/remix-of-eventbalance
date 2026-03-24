@@ -59,58 +59,67 @@ Deno.serve(async (req) => {
     let invData: any = null;
     let invError: any = null;
 
-    // 1a. Primary lookup by token (works for both text and uuid columns)
+    // 1a. Primary: RPC get_invitation_by_token (handles type casting, filters by status/expiry)
     if (normalizedToken) {
-      console.log("[register] Step 1: Looking up by token...");
+      console.log("[register] Step 1a: RPC lookup by token...");
+      try {
+        const rpcLookup = await adminClient.rpc("get_invitation_by_token", {
+          invitation_token: normalizedToken,
+        });
+
+        if (!rpcLookup.error && Array.isArray(rpcLookup.data) && rpcLookup.data.length > 0) {
+          const rpcInvId = rpcLookup.data[0]?.id;
+          if (rpcInvId) {
+            // Fetch full record with tenant_id and invited_by
+            const { data: fullRec } = await adminClient
+              .from("invitations")
+              .select(invitationSelect)
+              .eq("id", rpcInvId)
+              .maybeSingle();
+            if (fullRec) {
+              invData = fullRec;
+              console.log("[register] Step 1a OK: found via RPC, id:", rpcInvId);
+            }
+          }
+        } else if (rpcLookup.error) {
+          console.warn("[register] Step 1a: RPC error (non-fatal):", rpcLookup.error.message);
+        }
+      } catch (rpcErr) {
+        console.warn("[register] Step 1a: RPC exception (non-fatal):", rpcErr);
+      }
+    }
+
+    // 1b. Fallback: direct query by token (works when token column is text)
+    if (!invData && normalizedToken) {
+      console.log("[register] Step 1b: Direct token lookup...");
       const tokenLookup = await adminClient
         .from("invitations")
         .select(invitationSelect)
         .eq("token", normalizedToken)
         .maybeSingle();
-      invData = tokenLookup.data;
-      invError = tokenLookup.error;
+      if (tokenLookup.data) {
+        invData = tokenLookup.data;
+        console.log("[register] Step 1b OK: found via direct query");
+      } else if (tokenLookup.error) {
+        invError = tokenLookup.error;
+        console.warn("[register] Step 1b: direct query error:", tokenLookup.error.message);
+      }
     }
 
-    // 1b. Fallback by invitation id (for retry flows where token may already be rotated/cleared)
+    // 1c. Fallback: by invitation_id (for retry flows)
     if (!invData && normalizedInvitationId) {
-      console.log("[register] Step 1: Token lookup missed, trying invitation_id fallback...");
+      console.log("[register] Step 1c: Lookup by invitation_id...");
       const idLookup = await adminClient
         .from("invitations")
         .select(invitationSelect)
         .eq("id", normalizedInvitationId)
         .maybeSingle();
-
       if (idLookup.data) {
         invData = idLookup.data;
         invError = null;
+        console.log("[register] Step 1c OK: found via invitation_id");
       } else if (idLookup.error) {
         invError = idLookup.error;
-      }
-    }
-
-    // 1c. Fallback via RPC (handles schema variants from older self-hosted installs)
-    if (!invData && normalizedToken) {
-      console.log("[register] Step 1: Trying RPC fallback get_invitation_by_token...");
-      const rpcLookup = await adminClient.rpc("get_invitation_by_token", {
-        invitation_token: normalizedToken,
-      });
-
-      if (!rpcLookup.error && Array.isArray(rpcLookup.data) && rpcLookup.data.length > 0) {
-        const rpcInvitationId = rpcLookup.data[0]?.id;
-        if (rpcInvitationId) {
-          const byIdLookup = await adminClient
-            .from("invitations")
-            .select(invitationSelect)
-            .eq("id", rpcInvitationId)
-            .maybeSingle();
-
-          if (byIdLookup.data) {
-            invData = byIdLookup.data;
-            invError = null;
-          }
-        }
-      } else if (rpcLookup.error) {
-        invError = rpcLookup.error;
       }
     }
 
