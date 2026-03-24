@@ -128,29 +128,63 @@ Deno.serve(async (req) => {
       invitation_id,
     });
 
-    // STEP 1 (canonical): single lookup path via RPC
-    const { data: inviteRows, error: inviteLookupError } = await adminClient.rpc(
-      "get_invitation_for_registration",
-      { invitation_token: normalizedToken },
-    );
+    // STEP 1 (canonical): lookup by invitation_id first, token only as fallback
+    let invitation: InvitationContext | null = null;
+    let lookupPath = "none";
 
-    if (inviteLookupError) {
-      return jsonResponse({
-        error: `Ошибка проверки приглашения: ${inviteLookupError.message}`,
-        code: "INVITE_LOOKUP_FAILED",
-      }, 500);
+    if (invitation_id) {
+      const { data: invitationById, error: invitationByIdError } = await adminClient
+        .from("invitations")
+        .select("id, tenant_id, invited_by, email, role, expires_at, status")
+        .eq("id", invitation_id)
+        .maybeSingle();
+
+      if (invitationByIdError) {
+        return jsonResponse({
+          error: `Ошибка проверки приглашения по id: ${invitationByIdError.message}`,
+          code: "INVITE_LOOKUP_BY_ID_FAILED",
+        }, 500);
+      }
+
+      if (invitationById) {
+        invitation = invitationById as InvitationContext;
+        lookupPath = "by-id";
+      }
     }
 
-    const invitation = Array.isArray(inviteRows) && inviteRows.length > 0
-      ? (inviteRows[0] as InvitationContext)
-      : null;
+    if (!invitation && normalizedToken) {
+      const { data: inviteRows, error: inviteLookupError } = await adminClient.rpc(
+        "get_invitation_for_registration",
+        { invitation_token: normalizedToken },
+      );
+
+      if (inviteLookupError) {
+        return jsonResponse({
+          error: `Ошибка проверки приглашения: ${inviteLookupError.message}`,
+          code: "INVITE_LOOKUP_FAILED",
+        }, 500);
+      }
+
+      if (Array.isArray(inviteRows) && inviteRows.length > 0) {
+        invitation = inviteRows[0] as InvitationContext;
+        lookupPath = "by-token-rpc";
+      }
+    }
 
     if (!invitation) {
       return jsonResponse({
         error: "Приглашение не найдено или уже недоступно.",
         code: "INVITE_LOOKUP_MISMATCH",
+        debug: { invitation_id, lookupPath },
       }, 404);
     }
+
+    console.log("[register] invite resolved", {
+      invitation_id,
+      resolved_invitation_id: invitation.id,
+      email,
+      lookupPath,
+    });
 
     if (invitation.id !== invitation_id) {
       return jsonResponse({
