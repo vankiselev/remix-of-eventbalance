@@ -340,55 +340,54 @@ export function TransactionDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isVoiceTransaction && <Mic className="h-5 w-5 text-blue-500" />}
-            {isDraft ? 'Черновик транзакции' : 'Детали транзакции'}
-          </DialogTitle>
-          <DialogDescription>
-            {isDraft 
-              ? 'Проверьте данные и отправьте на проверку финансисту'
-              : 'Подробная информация о финансовой операции'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] flex flex-col overflow-hidden p-0 sm:p-6 gap-0">
+        {/* Mobile-optimized header */}
+        <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3 sm:px-0 sm:pt-0 sm:pb-0 border-b sm:border-b-0">
+          <DialogHeader className="space-y-0.5 sm:space-y-1.5 pr-8">
+            <DialogTitle className="flex items-center gap-1.5 text-base sm:text-lg">
+              {isVoiceTransaction && <Mic className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />}
+              {isDraft ? 'Черновик' : 'Детали транзакции'}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm leading-tight">
+              {isDraft 
+                ? 'Проверьте и отправьте на проверку'
+                : 'Информация о финансовой операции'}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-6 px-4 py-3 sm:px-0 sm:py-0">
           {/* Money Transfer Status - Show if it's a transfer */}
           {isMoneyTransfer && (
-            <div className={`p-4 rounded-lg border-2 ${
+            <div className={`p-3 sm:p-4 rounded-lg border ${
               transaction.transfer_status === 'pending' 
                 ? 'bg-yellow-50 border-yellow-300' 
                 : transaction.transfer_status === 'accepted'
                 ? 'bg-green-50 border-green-300'
                 : 'bg-red-50 border-red-300'
             }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💸</span>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold mb-2">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <span className="text-lg sm:text-2xl">💸</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs sm:text-sm font-semibold mb-1">
                     {transaction.transfer_status === 'pending' && '⏳ Ожидает подтверждения'}
                     {transaction.transfer_status === 'accepted' && '✅ Передача подтверждена'}
                     {transaction.transfer_status === 'rejected' && '❌ Передача отклонена'}
                   </h3>
                   {transaction.transfer_to_user && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Получатель: {formatDisplayName(transaction.transfer_to_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_from_user && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Отправитель: {formatDisplayName(transaction.transfer_from_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_status === 'rejected' && transaction.transfer_rejection_reason && (
-                    <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-800">
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        Причина отклонения:
-                      </p>
-                      <p className="text-sm text-gray-800 dark:text-gray-200">
-                        {transaction.transfer_rejection_reason}
-                      </p>
+                    <div className="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-800">
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Причина отклонения:</p>
+                      <p className="text-xs">{transaction.transfer_rejection_reason}</p>
                     </div>
                   )}
                 </div>
@@ -396,188 +395,154 @@ export function TransactionDetailDialog({
             </div>
           )}
 
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Amount highlight */}
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3 sm:p-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Дата операции</label>
-              <p className="text-sm">{formatDate(transaction.operation_date)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Тип операции</label>
-              <p className={`text-sm font-medium ${isExpense ? 'text-red-600' : 'text-blue-600'}`}>
-                {isExpense ? "Расход" : "Доход"}
+              <p className="text-xs text-muted-foreground mb-0.5">Сумма</p>
+              <p className={`text-lg sm:text-xl font-bold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                {isExpense ? '−' : '+'}{formatCurrency(amount)}
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Проект</label>
-              <p className="text-sm">{transaction.static_project_name || transaction.events?.name || "—"}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Чей проект</label>
-              <p className="text-sm">{transaction.project_owner || "—"}</p>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground mb-0.5">Тип</p>
+              <Badge variant={isExpense ? "destructive" : "default"} className="text-xs">
+                {isExpense ? "Расход" : "Доход"}
+              </Badge>
             </div>
           </div>
 
+          {/* Compact info grid */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:gap-4">
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Дата</p>
+              <p className="text-xs sm:text-sm font-medium">{formatDate(transaction.operation_date)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Категория</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.category || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Проект</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.static_project_name || transaction.events?.name || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Чей проект</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.project_owner || "—"}</p>
+            </div>
+          </div>
+
+          {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-600">Описание</label>
-            <p className="text-sm bg-gray-50 p-3 rounded-lg">{transaction.description}</p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mb-1">Описание</p>
+            <p className="text-xs sm:text-sm bg-muted/30 p-2.5 sm:p-3 rounded-lg leading-relaxed">{transaction.description}</p>
           </div>
 
           {transaction.notes && (
             <div>
-              <label className="text-sm font-medium text-gray-600">Дополнительные заметки</label>
-              <p className="text-sm bg-gray-50 p-3 rounded-lg">{transaction.notes}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground mb-1">Заметки</p>
+              <p className="text-xs sm:text-sm bg-muted/30 p-2.5 sm:p-3 rounded-lg leading-relaxed">{transaction.notes}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Сумма</label>
-              <p className={`text-lg font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                {isExpense ? '-' : '+'}{formatCurrency(amount)}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Категория</label>
-              <p className="text-sm">
-                {transaction.category}
-              </p>
-            </div>
-          </div>
-
-          {/* Attachments Section */}
+          {/* Attachments */}
           <div>
-            <label className="text-sm font-medium text-gray-600 mb-3 block">Вложения</label>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mb-1.5">Вложения</p>
             <AttachmentsView
               transactionId={transaction.id}
               noReceipt={transaction.no_receipt}
               noReceiptReason={transaction.no_receipt_reason}
               canDelete={canEdit}
-              onAttachmentsChange={() => {
-                // Refresh parent component if needed
-              }}
+              onAttachmentsChange={() => {}}
             />
           </div>
 
-          {/* Audit History - Only for Admins */}
+          {/* Audit History */}
           {isAdmin && (
-            <div className="border-t pt-4">
+            <div className="border-t border-border pt-3 sm:pt-4">
               <Collapsible defaultOpen={false} onOpenChange={(open) => {
-                if (open && !auditHistoryLoaded) {
-                  loadAuditHistory();
-                }
+                if (open && !auditHistoryLoaded) loadAuditHistory();
               }}>
-                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline w-full">
-                  <History className="h-4 w-4" />
+                <CollapsibleTrigger className="flex items-center gap-2 text-xs sm:text-sm font-medium hover:underline w-full">
+                  <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   История изменений
                   {auditHistory.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{auditHistory.length}</Badge>
+                    <Badge variant="secondary" className="ml-auto text-[10px] sm:text-xs">{auditHistory.length}</Badge>
                   )}
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-2">
+                <CollapsibleContent className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
                   {isLoadingHistory ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      Загрузка истории...
-                    </div>
+                    <div className="text-center py-3 text-xs text-muted-foreground">Загрузка...</div>
                   ) : auditHistory.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      История изменений пуста
-                    </div>
+                    <div className="text-center py-3 text-xs text-muted-foreground">История пуста</div>
                   ) : (
                     auditHistory.map(log => {
-                    const actionIcon = {
-                      'CREATE': <Plus className="h-3 w-3 text-green-600" />,
-                      'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
-                      'DELETE': <Trash2 className="h-3 w-3 text-red-600" />,
-                      'RESEND': <RefreshCw className="h-3 w-3 text-orange-600" />
-                    }[log.action] || <History className="h-3 w-3" />;
-
-                    const actionText = {
-                      'CREATE': 'создал транзакцию',
-                      'UPDATE': 'обновил транзакцию',
-                      'DELETE': 'удалил транзакцию',
-                      'RESEND': 'отправил повторно'
-                    }[log.action] || log.action;
-
-                    return (
-                      <div key={log.id} className="flex items-start gap-2 text-xs bg-muted/30 p-2 rounded">
-                        {actionIcon}
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium">{log.user_name}</span>
-                          {' '}{actionText}
-                          {log.change_description && (
-                            <span className="text-muted-foreground block mt-1 text-[11px]">
-                              {log.change_description}
-                            </span>
-                          )}
+                      const actionIcon = {
+                        'CREATE': <Plus className="h-3 w-3 text-green-600" />,
+                        'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
+                        'DELETE': <Trash2 className="h-3 w-3 text-red-600" />,
+                        'RESEND': <RefreshCw className="h-3 w-3 text-orange-600" />
+                      }[log.action] || <History className="h-3 w-3" />;
+                      const actionText = {
+                        'CREATE': 'создал', 'UPDATE': 'обновил', 'DELETE': 'удалил', 'RESEND': 'повторил'
+                      }[log.action] || log.action;
+                      return (
+                        <div key={log.id} className="flex items-start gap-1.5 text-[11px] sm:text-xs bg-muted/30 p-1.5 sm:p-2 rounded">
+                          {actionIcon}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{log.user_name}</span> {actionText}
+                            {log.change_description && (
+                              <span className="text-muted-foreground block mt-0.5 text-[10px] sm:text-[11px]">{log.change_description}</span>
+                            )}
+                          </div>
+                          <span className="text-muted-foreground whitespace-nowrap text-[10px] sm:text-[11px]">
+                            {format(parseISO(log.changed_at), 'd MMM HH:mm', { locale: ru })}
+                          </span>
                         </div>
-                        <span className="text-muted-foreground whitespace-nowrap text-[11px]">
-                          {format(parseISO(log.changed_at), 'd MMM в HH:mm', { locale: ru })}
-                        </span>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                   )}
                 </CollapsibleContent>
               </Collapsible>
             </div>
           )}
 
-          {/* Meta Info */}
-          <div className="border-t pt-4">
-            <div className="text-xs text-gray-500">
+          {/* Meta */}
+          <div className="border-t border-border pt-2 sm:pt-4">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Создано: {new Date(transaction.created_at).toLocaleString("ru-RU")}
-            </div>
+            </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — mobile-friendly sticky footer */}
         {(canEdit || isRejectedTransfer || isDraft) && (
-          <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 pt-4 border-t">
-            {/* Draft: Show publish button prominently */}
+          <div className="flex-shrink-0 border-t border-border px-4 py-3 sm:px-0 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 flex flex-col sm:flex-row gap-2 sm:justify-end bg-background">
             {isDraft && (
-              <Button 
-                onClick={handlePublishDraft} 
-                disabled={isPublishing}
-                className="w-full sm:w-auto"
-                variant="default"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {isPublishing ? "Отправка..." : "Отправить на проверку"}
+              <Button onClick={handlePublishDraft} disabled={isPublishing} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                <Send className="mr-1.5 h-4 w-4" />
+                {isPublishing ? "Отправка..." : "На проверку"}
               </Button>
             )}
             {isRejectedTransfer && (
-              <Button 
-                onClick={handleResendTransfer} 
-                disabled={isResending}
-                className="w-full sm:w-auto"
-                variant="default"
-              >
+              <Button onClick={handleResendTransfer} disabled={isResending} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
                 {isResending ? "Отправка..." : "Отправить снова"}
               </Button>
             )}
             {canEdit && (
               <>
                 {onEdit && (
-                  <Button onClick={handleEdit} className="w-full sm:w-auto" variant="outline">
-                    <Pencil className="mr-2 h-4 w-4" />
+                  <Button onClick={handleEdit} variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                    <Pencil className="mr-1.5 h-4 w-4" />
                     Редактировать
                   </Button>
                 )}
-                <Button 
-                  onClick={() => setDeleteDialogOpen(true)} 
-                  className="w-full sm:w-auto"
-                  variant="destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                  <Trash2 className="mr-1.5 h-4 w-4" />
                   Удалить
                 </Button>
               </>
             )}
-          </DialogFooter>
+          </div>
         )}
       </DialogContent>
 
