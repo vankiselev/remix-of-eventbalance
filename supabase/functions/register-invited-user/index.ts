@@ -252,21 +252,57 @@ Deno.serve(async (req) => {
 
     // STEP 5: membership (critical, retry-safe)
     if (invitation.tenant_id) {
-      const membershipPayload = {
+      const memberRole = role || invitation.role || "member";
+
+      console.log("[register] STEP 5 membership payload", {
         tenant_id: invitation.tenant_id,
         user_id: userId,
-        role: role || invitation.role || "member",
-      };
+        role: memberRole,
+      });
 
-      const { error: membershipUpsertError } = await adminClient
+      // Check if membership already exists (no unique constraint needed)
+      const { data: existingMembership, error: checkError } = await adminClient
         .from("tenant_memberships")
-        .upsert(membershipPayload, { onConflict: "tenant_id,user_id" });
+        .select("id")
+        .eq("tenant_id", invitation.tenant_id)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (membershipUpsertError && !membershipUpsertError.message.toLowerCase().includes("duplicate")) {
-        return jsonResponse({
-          error: "Аккаунт создан, но не удалось добавить пользователя в организацию. Повторите попытку.",
-          code: "MEMBERSHIP_CREATE_FAILED",
-        }, 500);
+      if (checkError) {
+        console.error("[register] STEP 5 check existing membership error", checkError);
+      }
+
+      if (existingMembership) {
+        console.log("[register] STEP 5 membership already exists, skipping insert", existingMembership.id);
+      } else {
+        // Insert new membership
+        const { error: insertError } = await adminClient
+          .from("tenant_memberships")
+          .insert({
+            tenant_id: invitation.tenant_id,
+            user_id: userId,
+            role: memberRole,
+          });
+
+        if (insertError) {
+          console.error("[register] STEP 5 membership insert FAILED", {
+            error: insertError.message,
+            code: insertError.code,
+            details: insertError.details,
+            hint: insertError.hint,
+          });
+
+          // If duplicate key (race condition), that's OK
+          if (!insertError.message.toLowerCase().includes("duplicate")) {
+            return jsonResponse({
+              error: `Аккаунт создан, но не удалось добавить в организацию: ${insertError.message}`,
+              code: "MEMBERSHIP_CREATE_FAILED",
+              debug: { pg_code: insertError.code, hint: insertError.hint },
+            }, 500);
+          }
+        } else {
+          console.log("[register] STEP 5 membership created successfully");
+        }
       }
     }
 
