@@ -166,12 +166,8 @@ Deno.serve(async (req) => {
       lookupPath,
     });
 
-    if (invitation.id !== invitation_id) {
-      return jsonResponse({
-        error: "Ссылка и submit относятся к разным приглашениям. Откройте ссылку заново.",
-        code: "INVITE_CONTEXT_MISMATCH",
-      }, 409);
-    }
+    // Use the resolved invitation id from RPC (source of truth)
+    const resolvedInvitationId = invitation.id;
 
     if (invitation.email.toLowerCase() !== email.toLowerCase()) {
       return jsonResponse({ error: "Email не совпадает с приглашением.", code: "INVITE_EMAIL_MISMATCH" }, 403);
