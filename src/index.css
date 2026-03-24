@@ -121,9 +121,7 @@ html, body {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
-    /* iOS Safe Areas */
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+    /* Safe areas handled by individual components (header, nav, dialogs) */
   }
 
   /* Responsive Typography - mobile-first approach */

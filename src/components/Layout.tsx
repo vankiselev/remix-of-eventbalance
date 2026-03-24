@@ -319,23 +319,26 @@ const Layout = ({ children }: LayoutProps) => {
         </>
       ) : (
         /* Mobile Layout */
-        <div className="flex-1 flex flex-col">
-          {/* Mobile Header */}
-          <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm safe-area-inset-top">
-            <div className="flex h-12 items-center px-3 justify-between">
+        <div className="flex-1 flex flex-col min-h-[100dvh]">
+          {/* Mobile Header — accounts for iOS status bar */}
+          <header
+            className="sticky top-0 z-50 w-full border-b border-border/30 bg-card/95 backdrop-blur-md"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          >
+            <div className="flex h-11 items-center px-3 justify-between">
               {/* Page Title */}
-              <h1 className="text-base font-semibold text-foreground truncate">
+              <h1 className="text-[15px] font-semibold text-foreground truncate">
                 {pageTitle}
               </h1>
               
-              {/* Right Actions: Notifications & Profile */}
-              <div className="flex items-center gap-1">
+              {/* Right Actions */}
+              <div className="flex items-center gap-0.5">
                 <NotificationsMenu />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/profile')}
-                  className="h-9 w-9 p-0 rounded-full"
+                  className="h-8 w-8 p-0 rounded-full"
                 >
                   <Avatar className="h-7 w-7">
                     {avatarUrl && (
@@ -350,7 +353,7 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          <PullToRefresh className="flex-1 w-full px-3 py-4 pb-24">
+          <PullToRefresh className="flex-1 w-full px-3 py-3">
             {children}
           </PullToRefresh>
           
