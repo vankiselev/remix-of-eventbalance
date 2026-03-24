@@ -36,6 +36,7 @@ interface PendingUser {
   last_name: string;
   full_name: string;
   created_at: string;
+  invitation_role?: string;
 }
 
 export function PendingUsersManagement() {
