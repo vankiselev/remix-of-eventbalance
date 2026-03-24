@@ -64,6 +64,7 @@ function resolveProjectApiCandidates(
 
   const allowedHosts = new Set<string>();
   allowedHosts.add(requestUrl.host);
+  allowedHosts.add("superbag.eventbalance.ru");
 
   const envParsed = parseUrl(envUrl);
   if (envParsed) allowedHosts.add(envParsed.host);
