@@ -107,21 +107,7 @@ export function InvitePage() {
         if (!error && data && data.length > 0) {
           invitationResult = data[0];
         } else {
-          console.warn("[InvitePage] RPC failed:", error?.message || "no data, trying direct query");
-
-          // Fallback 1: direct table query by token
-          const { data: directData, error: directError } = await supabase
-            .from("invitations")
-            .select("id, email, role, expires_at, status")
-            .eq("token", token)
-            .in("status", ["pending", "sent", "accepted"])
-            .single();
-
-          if (!directError && directData) {
-            invitationResult = directData as InvitationData;
-          } else {
-            console.warn("[InvitePage] Direct token query failed:", directError?.message);
-          }
+          console.warn("[InvitePage] RPC get_invitation_by_token failed:", error?.message || "no data");
         }
 
         if (!invitationResult) {
