@@ -67,7 +67,7 @@ export const CategoryIcon = ({ category, isIncome }: CategoryIconProps) => {
   };
 
   return (
-    <div className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center ${iconConfig.bgColor}`}>
+    <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center shrink-0 ${iconConfig.bgColor}`}>
       {renderIcon()}
     </div>
   );

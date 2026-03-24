@@ -20,17 +20,17 @@ export const CollapsibleFilters = ({ children, activeCount = 0 }: CollapsibleFil
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <Button variant="outline" className="w-full justify-between">
+        <Button variant="outline" size="sm" className="w-full justify-between h-9 text-sm">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <span>Фильтрация</span>
+            <Filter className="h-3.5 w-3.5" />
+            <span>Фильтры</span>
             {activeCount > 0 && (
-              <span className="bg-primary text-primary-foreground rounded-full text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+              <span className="bg-primary text-primary-foreground rounded-full text-[10px] px-1.5 min-w-[18px] h-[18px] flex items-center justify-center font-bold leading-none tabular-nums">
                 {activeCount}
               </span>
             )}
           </div>
-          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
