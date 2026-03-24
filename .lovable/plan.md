@@ -1,40 +1,30 @@
+## Invite-flow: Reconciliation complete (2026-03-24)
 
+### Канонический flow
+1. **Validate** (`/invite?token=...`): `get_invitation_by_token(text)` — SECURITY DEFINER RPC
+2. **Submit** (edge function `register-invited-user`):
+   - Lookup по `invitation_id` (primary) → fallback `get_invitation_for_registration(text)`
+   - Создание пользователя, профиль с `invitation_status='pending'`, `tenant_id`
+   - **НЕ создает membership** — deferred на admin approval
+   - Marks invitation `accepted`
+3. **Awaiting** → пользователь на `/awaiting-invitation`
+4. **Admin approval** → `approve_pending_user_membership(uuid)` — единственная точка создания membership
 
-## Причина ошибки
+### Reconciliation migration
+`migrations/20260324220000_a1a1a1a1-invite-flow-reconciliation.sql`:
+- DROP/CREATE всех invite RPCs с каноническими сигнатурами
+- Удаление anon policy на invitations
+- profiles.invitation_status column + index
+- tenant_memberships UNIQUE(tenant_id, user_id)
 
-Миграция `get_invitation_by_token` **не была применена** на self-hosted сервере из-за неправильного имени файла (`20250323171100_fix_get_invitation_by_token.sql` — год 2025, нет UUID). Поэтому на self-hosted до сих пор работает старая версия RPC с типом параметра `uuid`, которая не находит токен (тип `text`).
+### Нейтрализованные файлы
+- `20260324190000_a1b2c3d4-invite-rpcs.sql` → `SELECT 1`
+- `20260324193000_b2c3d4e5-remove-anon-invitations-policy.sql` → `SELECT 1`
+- `20260324200000_d4e5f6a7-ensure-invited-user-membership-rpc.sql` → `SELECT 1`
+- `20260324210000_e5f6a7b8-invite-registration-rpcs.sql` → `SELECT 1`
 
-Fallback через прямой запрос к таблице тоже не работает, потому что пользователь на странице `/invite` **не аутентифицирован**, а RLS на таблице `invitations` требует `is_tenant_member(tenant_id)`.
-
-Итого: оба пути валидации токена молча возвращают пустой результат → "Приглашение не найдено".
-
-## План исправления
-
-### Шаг 1: Переименовать миграцию
-Удалить `migrations/20250323171100_fix_get_invitation_by_token.sql` и создать новый файл с корректным именем по конвенции `[timestamp]_[uuid].sql` (год 2026), содержащий тот же SQL:
-
-```sql
-DROP FUNCTION IF EXISTS public.get_invitation_by_token(uuid);
-DROP FUNCTION IF EXISTS public.get_invitation_by_token(text);
-
-CREATE OR REPLACE FUNCTION public.get_invitation_by_token(invitation_token text)
-RETURNS TABLE(id uuid, email text, role text, expires_at timestamptz, status text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $$ ... $$;
-```
-
-### Шаг 2: Добавить RLS policy для анонимного доступа к приглашениям по токену
-Добавить в ту же миграцию SELECT-политику для `anon` роли на таблице `invitations`, чтобы fallback-запрос работал для неаутентифицированных пользователей (ограниченно — только по токену и статусу):
-
-```sql
-CREATE POLICY "Anon can read invitations by token"
-ON public.invitations FOR SELECT TO anon
-USING (status IN ('pending', 'sent', 'accepted'));
-```
-
-Это не утечка данных — таблица и так не содержит секретов, а токен передаётся через URL.
-
-### Файлы для изменения
-1. Удалить `migrations/20250323171100_fix_get_invitation_by_token.sql`
-2. Создать `migrations/20260323181000_[uuid].sql` с объединённым SQL (RPC + RLS policy)
-
+### Deploy pipeline fix
+`deploy-functions.yml`:
+- Explicit `EDGE_CONTAINER` / `EDGE_FUNCTIONS_PATH` через secrets (нет авто-угадывания)
+- Smoke-check version marker в register-invited-user
+- register-invited-user добавлен в REQUIRED_FUNCS для верификации
