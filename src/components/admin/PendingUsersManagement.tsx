@@ -236,89 +236,155 @@ export function PendingUsersManagement() {
           Пользователи, зарегистрировавшиеся по приглашению и ожидающие одобрения
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {pendingUsers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Нет ожидающих пользователей</p>
+            <UserPlus className="w-10 h-10 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Нет ожидающих пользователей</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Имя</TableHead>
-                <TableHead>Дата регистрации</TableHead>
-                <TableHead>Роль</TableHead>
-                <TableHead className="text-right">Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Desktop table */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Имя</TableHead>
+                    <TableHead>Дата</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead className="text-right">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium text-sm">{user.email}</TableCell>
+                      <TableCell className="text-sm">{getDisplayName(user)}</TableCell>
+                      <TableCell className="text-sm">
+                        {format(new Date(user.created_at), "d MMM yyyy", { locale: ru })}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={selectedRoles[user.id] || ""}
+                          onValueChange={(value) =>
+                            setSelectedRoles((prev) => ({ ...prev, [user.id]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Выберите роль" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center gap-2">
+                                  {role.name}
+                                  {role.is_admin_role && (
+                                    <Badge variant="secondary" className="text-xs">Админ</Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleInviteUser(user)}
+                            disabled={!selectedRoles[user.id] || invitingUserId === user.id}
+                          >
+                            {invitingUserId === user.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <UserPlus className="w-4 h-4 mr-1" />
+                                Одобрить
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRejectUser(user)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="sm:hidden space-y-3">
               {pendingUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.email}</TableCell>
-                  <TableCell>{getDisplayName(user)}</TableCell>
-                  <TableCell>
-                    {format(new Date(user.created_at), "d MMMM yyyy, HH:mm", {
-                      locale: ru,
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={selectedRoles[user.id] || ""}
-                      onValueChange={(value) =>
-                        setSelectedRoles((prev) => ({ ...prev, [user.id]: value }))
-                      }
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Выберите роль" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            <div className="flex items-center gap-2">
-                              {role.name}
-                              {role.is_admin_role && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Админ
-                                </Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleInviteUser(user)}
-                        disabled={!selectedRoles[user.id] || invitingUserId === user.id}
-                      >
-                        {invitingUserId === user.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <UserPlus className="w-4 h-4 mr-1" />
-                            Одобрить
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setRejectUser(user)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </Button>
+                <div key={user.id} className="border rounded-lg p-3 space-y-2.5">
+                  <div>
+                    <p className="text-sm font-medium truncate">{user.email}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground">{getDisplayName(user)}</p>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(user.created_at), "d MMM yyyy", { locale: ru })}
+                      </p>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <Select
+                    value={selectedRoles[user.id] || ""}
+                    onValueChange={(value) =>
+                      setSelectedRoles((prev) => ({ ...prev, [user.id]: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full h-9 text-sm">
+                      <SelectValue placeholder="Выберите роль" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          <div className="flex items-center gap-2">
+                            {role.name}
+                            {role.is_admin_role && (
+                              <Badge variant="secondary" className="text-xs">Админ</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-9 text-sm touch-manipulation"
+                      onClick={() => handleInviteUser(user)}
+                      disabled={!selectedRoles[user.id] || invitingUserId === user.id}
+                    >
+                      {invitingUserId === user.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Одобрить
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setRejectUser(user)}
+                      className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </>
         )}
       </CardContent>
 

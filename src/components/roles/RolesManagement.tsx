@@ -113,18 +113,18 @@ export const RolesManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Управление ролями</h2>
-          <p className="text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold">Управление ролями</h2>
+          <p className="text-sm text-muted-foreground">
             Создавайте и настраивайте роли с различными правами доступа
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="w-full sm:w-auto h-9 text-sm touch-manipulation">
+              <Plus className="h-4 w-4 mr-1.5" />
               Создать роль
             </Button>
           </DialogTrigger>
@@ -229,12 +229,12 @@ export const RolesManagement = () => {
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {roles.map(role => (
-                  <div key={role.id} className="p-4 border rounded-lg space-y-3">
+                  <div key={role.id} className="p-3 sm:p-4 border rounded-lg space-y-2 sm:space-y-3">
                     <div>
-                      <h3 className="font-semibold text-lg">{role.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                      <h3 className="font-semibold text-base sm:text-lg">{role.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{role.description}</p>
                     </div>
                     <div className="flex gap-2">
                       {role.is_system && (
