@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const REGISTER_INVITED_USER_VERSION = "2026-03-24-invite-rebuild-v1";
+const REGISTER_INVITED_USER_VERSION = "2026-03-24-fix-partial-success-v2";
 const TRUSTED_SELF_HOSTED_URL = "https://superbag.eventbalance.ru/a73e88c7ef6a2ca735abc52404257a9f";
 
 const corsHeaders = {
@@ -38,29 +38,21 @@ function deriveProjectApiUrl(req: Request): string {
       return normalizeUrl(`${url.origin}${url.pathname.slice(0, markerIndex)}`);
     }
   } catch {
-    // ignore invalid req.url
+    // ignore
   }
   return "";
 }
 
 function resolveApiUrl(req: Request, projectApiUrlFromBody: unknown): { supabaseUrl: string; source: string } {
-  const bodyUrl =
-    typeof projectApiUrlFromBody === "string" ? normalizeUrl(projectApiUrlFromBody) : "";
+  const bodyUrl = typeof projectApiUrlFromBody === "string" ? normalizeUrl(projectApiUrlFromBody) : "";
   const envUrl = normalizeUrl(Deno.env.get("SUPABASE_URL"));
   const derivedUrl = deriveProjectApiUrl(req);
 
   if (bodyUrl && bodyUrl === TRUSTED_SELF_HOSTED_URL) {
     return { supabaseUrl: bodyUrl, source: "body:trusted-self-hosted" };
   }
-
-  if (envUrl) {
-    return { supabaseUrl: envUrl, source: "env" };
-  }
-
-  if (derivedUrl) {
-    return { supabaseUrl: derivedUrl, source: "derived-from-request" };
-  }
-
+  if (envUrl) return { supabaseUrl: envUrl, source: "env" };
+  if (derivedUrl) return { supabaseUrl: derivedUrl, source: "derived-from-request" };
   return { supabaseUrl: "", source: "none" };
 }
 
@@ -112,7 +104,6 @@ Deno.serve(async (req) => {
       return jsonResponse({
         error: "Ошибка конфигурации backend (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).",
         code: "INVITE_RUNTIME_CONFIG_ERROR",
-        runtime: { source, request_url: req.url },
       }, 500);
     }
 
@@ -120,54 +111,25 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    console.log("[register] invite-flow runtime", {
-      version: REGISTER_INVITED_USER_VERSION,
-      supabaseUrl,
-      source,
-      request_url: req.url,
-      invitation_id,
-    });
+    console.log("[register] runtime", { version: REGISTER_INVITED_USER_VERSION, supabaseUrl, source, invitation_id });
 
-    // STEP 1: lookup via SECURITY DEFINER RPC only (no direct table access)
-    let invitation: InvitationContext | null = null;
-    let lookupPath = "none";
+    // ═══════════════════════════════════════════════════════════
+    // STEP 1: Lookup invitation via SECURITY DEFINER RPC
+    // ═══════════════════════════════════════════════════════════
+    const { data: inviteRows, error: inviteLookupError } = await adminClient.rpc(
+      "get_invitation_for_registration",
+      { invitation_token: normalizedToken },
+    );
 
-    if (normalizedToken) {
-      const { data: inviteRows, error: inviteLookupError } = await adminClient.rpc(
-        "get_invitation_for_registration",
-        { invitation_token: normalizedToken },
-      );
-
-      if (inviteLookupError) {
-        return jsonResponse({
-          error: `Ошибка проверки приглашения: ${inviteLookupError.message}`,
-          code: "INVITE_LOOKUP_FAILED",
-        }, 500);
-      }
-
-      if (Array.isArray(inviteRows) && inviteRows.length > 0) {
-        invitation = inviteRows[0] as InvitationContext;
-        lookupPath = "by-token-rpc";
-      }
+    if (inviteLookupError) {
+      return jsonResponse({ error: `Ошибка проверки приглашения: ${inviteLookupError.message}`, code: "INVITE_LOOKUP_FAILED" }, 500);
     }
 
-    if (!invitation) {
-      return jsonResponse({
-        error: "Приглашение не найдено или уже недоступно.",
-        code: "INVITE_LOOKUP_MISMATCH",
-        debug: { invitation_id, lookupPath },
-      }, 404);
+    if (!Array.isArray(inviteRows) || inviteRows.length === 0) {
+      return jsonResponse({ error: "Приглашение не найдено или уже недоступно.", code: "INVITE_LOOKUP_MISMATCH" }, 404);
     }
 
-    console.log("[register] invite resolved", {
-      invitation_id,
-      resolved_invitation_id: invitation.id,
-      email,
-      lookupPath,
-    });
-
-    // Use the resolved invitation id from RPC (source of truth)
-    const resolvedInvitationId = invitation.id;
+    const invitation = inviteRows[0] as InvitationContext;
 
     if (invitation.email.toLowerCase() !== email.toLowerCase()) {
       return jsonResponse({ error: "Email не совпадает с приглашением.", code: "INVITE_EMAIL_MISMATCH" }, 403);
@@ -187,7 +149,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Срок действия приглашения истёк.", code: "INVITE_EXPIRED" }, 410);
     }
 
-    // STEP 2: avatar upload (non-blocking)
+    console.log("[register] STEP 1 OK — invitation resolved", { id: invitation.id, status: invitation.status, isRetry });
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 2: Avatar upload (non-critical)
+    // ═══════════════════════════════════════════════════════════
     let finalAvatarUrl = avatar_url || null;
     if (avatar_base64) {
       try {
@@ -195,21 +161,19 @@ Deno.serve(async (req) => {
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-
         const fileName = `invite_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-        const { error: uploadError } = await adminClient.storage
-          .from("avatars")
-          .upload(fileName, bytes, { contentType: "image/jpeg" });
-
+        const { error: uploadError } = await adminClient.storage.from("avatars").upload(fileName, bytes, { contentType: "image/jpeg" });
         if (!uploadError) {
           finalAvatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
         }
       } catch (avatarErr) {
-        console.error("[register] avatar processing warning", avatarErr);
+        console.error("[register] avatar warning", avatarErr);
       }
     }
 
-    // STEP 3: create user (or resume on retry)
+    // ═══════════════════════════════════════════════════════════
+    // STEP 3: Create auth user (BLOCKING)
+    // ═══════════════════════════════════════════════════════════
     let userId = "";
 
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
@@ -234,7 +198,6 @@ Deno.serve(async (req) => {
         if (listError) {
           return jsonResponse({ error: "Аккаунт уже создан. Попробуйте войти.", code: "USER_ALREADY_EXISTS" }, 409);
         }
-
         const existingUser = existingUsers.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
         if (!existingUser) {
           return jsonResponse({ error: "Аккаунт уже создан. Попробуйте войти.", code: "USER_ALREADY_EXISTS" }, 409);
@@ -247,7 +210,11 @@ Deno.serve(async (req) => {
       userId = userData.user.id;
     }
 
-    // STEP 4: profile upsert — set invitation_status='invited' (active) and tenant_id
+    console.log("[register] STEP 3 OK — user", { userId });
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 4: Profile upsert (BLOCKING — fail = stop)
+    // ═══════════════════════════════════════════════════════════
     const profilePayload: Record<string, unknown> = {
       id: userId,
       email,
@@ -262,23 +229,21 @@ Deno.serve(async (req) => {
       ...(middle_name ? { middle_name } : {}),
     };
 
-    const { error: profileError } = await adminClient.from("profiles").upsert(
-      profilePayload,
-      { onConflict: "id" }
-    );
+    const { error: profileError } = await adminClient.from("profiles").upsert(profilePayload, { onConflict: "id" });
 
     if (profileError) {
-      console.error("[register] STEP 4 profile upsert failed", profileError);
+      console.error("[register] STEP 4 FAILED — profile upsert", profileError);
+      return jsonResponse({
+        error: `Ошибка создания профиля: ${profileError.message}. Приглашение НЕ использовано — попробуйте снова.`,
+        code: "PROFILE_CREATE_FAILED",
+      }, 500);
     }
 
-    // NOTE: membership is NOT created here.
-    // STEP 5: Create membership immediately via SECURITY DEFINER RPC
-    console.log("[register] STEP 5 membership via RPC", {
-      invitation_id: invitation.id,
-      user_id: userId,
-      role: role || invitation.role || "member",
-    });
+    console.log("[register] STEP 4 OK — profile created");
 
+    // ═══════════════════════════════════════════════════════════
+    // STEP 5: Create membership via RPC (BLOCKING — fail = stop)
+    // ═══════════════════════════════════════════════════════════
     const { data: membershipResult, error: membershipError } = await adminClient.rpc(
       "ensure_invited_user_membership",
       {
@@ -289,35 +254,45 @@ Deno.serve(async (req) => {
     );
 
     if (membershipError) {
-      console.error("[register] STEP 5 membership RPC failed", membershipError);
-      // Non-blocking: user is created, membership can be fixed later
-    } else {
-      console.log("[register] STEP 5 membership OK", membershipResult);
+      console.error("[register] STEP 5 FAILED — membership RPC", membershipError);
+      return jsonResponse({
+        error: `Ошибка добавления в организацию: ${membershipError.message}. Приглашение НЕ использовано — попробуйте снова.`,
+        code: "MEMBERSHIP_CREATE_FAILED",
+      }, 500);
     }
 
-    // STEP 6: audit (non-blocking)
-    await adminClient.from("invitation_audit_log").insert({
-      invitation_id: invitation.id,
-      actor_id: userId,
-      action: isRetry ? "accepted_retry" : "accepted",
-      details: { email },
-    });
+    console.log("[register] STEP 5 OK — membership", membershipResult);
 
-    // STEP 7: accept invitation (critical, single backend path)
+    // ═══════════════════════════════════════════════════════════
+    // STEP 6: Accept invitation — ONLY after everything above succeeded
+    // ═══════════════════════════════════════════════════════════
     if (!isRetry) {
       const { error: acceptError } = await adminClient.rpc("accept_invitation_for_registration", {
         p_invitation_id: invitation.id,
       });
 
       if (acceptError) {
-        return jsonResponse({
-          error: "Аккаунт создан, но статус приглашения не обновился. Нажмите «Создать аккаунт» еще раз.",
-          code: "INVITATION_ACCEPT_FAILED",
-        }, 500);
+        console.error("[register] STEP 6 accept failed (non-critical)", acceptError);
+        // Non-blocking: user+profile+membership already created successfully
+      } else {
+        console.log("[register] STEP 6 OK — invitation accepted");
       }
     }
 
-    // STEP 8: notifications (non-blocking)
+    // ═══════════════════════════════════════════════════════════
+    // STEP 7: Audit + notifications (non-blocking)
+    // ═══════════════════════════════════════════════════════════
+    try {
+      await adminClient.from("invitation_audit_log").insert({
+        invitation_id: invitation.id,
+        actor_id: userId,
+        action: isRetry ? "accepted_retry" : "accepted",
+        details: { email },
+      });
+    } catch (e) {
+      console.error("[register] audit warning", e);
+    }
+
     try {
       const recipientIds: string[] = [];
       if (invitation.invited_by) recipientIds.push(invitation.invited_by);
@@ -328,7 +303,6 @@ Deno.serve(async (req) => {
           .select("user_id")
           .eq("tenant_id", invitation.tenant_id)
           .in("role", ["owner", "admin"]);
-
         if (tenantAdmins) {
           for (const admin of tenantAdmins) recipientIds.push(admin.user_id);
         }
