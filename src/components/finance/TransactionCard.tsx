@@ -59,7 +59,7 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 md:p-4 hover:bg-accent/50 rounded-lg border cursor-pointer transition-colors ${
+      className={`flex items-center gap-2.5 sm:gap-3 p-3 md:p-4 active:bg-accent/70 hover:bg-accent/50 rounded-lg border cursor-pointer transition-colors touch-manipulation ${
         isDraft ? 'bg-blue-500/5 border-blue-500/30' :
         isPending ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-card border-border'
       }`}
@@ -83,33 +83,33 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
       <CategoryIcon category={transaction.category} isIncome={isIncome} />
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {isVoiceTransaction && (
             <Mic className="h-3.5 w-3.5 text-blue-500 shrink-0" />
           )}
-          <span className="font-medium text-sm md:text-base truncate">
+          <span className="font-medium text-[13px] sm:text-sm md:text-base truncate max-w-full">
             {transaction.description}
           </span>
           {isDraft && (
-            <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400 gap-1 text-[10px] px-1.5 py-0">
+            <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400 gap-1 text-[10px] px-1.5 py-0 shrink-0">
               <Mic className="h-2.5 w-2.5" />
               Черновик
             </Badge>
           )}
           {isPending && !isDraft && (
-            <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-1 text-[10px] px-1.5 py-0">
+            <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-1 text-[10px] px-1.5 py-0 shrink-0">
               <Clock className="h-2.5 w-2.5" />
               На проверке
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
           {projectName && (
-            <span>{projectName}</span>
+            <span className="truncate">{projectName}</span>
           )}
-          {projectName && <span className="hidden md:inline">•</span>}
-          <span className="hidden md:inline">{transaction.category}</span>
+          {projectName && <span className="hidden md:inline shrink-0">•</span>}
+          <span className="hidden md:inline truncate">{transaction.category}</span>
         </div>
         {isRejectedTransfer && (
           <div className="flex flex-col gap-1 mt-1">
@@ -127,16 +127,16 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
       </div>
 
       {/* Amount */}
-      <div className="flex flex-col items-end">
+      <div className="flex flex-col items-end shrink-0 ml-1">
         <div
-          className={`font-semibold text-sm md:text-base ${
+          className={`font-semibold text-[13px] sm:text-sm md:text-base tabular-nums ${
             isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
           }`}
         >
           {isIncome ? '+' : '−'}{formatCurrency(amount)}
         </div>
         {transaction.cash_type && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1">
+          <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 mt-0.5">
             {walletDisplay(transaction.cash_type)}
           </Badge>
         )}
