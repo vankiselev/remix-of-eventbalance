@@ -263,13 +263,13 @@ export function InvitationsManagement() {
   const getStatusBadge = (status: string) => {
     const statusMap = {
       sent: { label: "Отправлено", variant: "default" as const },
-      accepted: { label: "Принято", variant: "default" as const },
+      accepted: { label: "Принято", variant: "default" as const, className: "bg-green-500/15 text-green-700 border-green-300 dark:text-green-400 dark:border-green-700" },
       expired: { label: "Истекло", variant: "secondary" as const },
       revoked: { label: "Отозвано", variant: "destructive" as const },
     };
 
     const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.sent;
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    return <Badge variant={statusInfo.variant} className={(statusInfo as any).className || ""}>{statusInfo.label}</Badge>;
   };
 
   const getRoleBadge = (role: string) => {
