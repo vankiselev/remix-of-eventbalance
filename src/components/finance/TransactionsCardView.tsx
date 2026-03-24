@@ -309,7 +309,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4 pb-20 sm:pb-4">
       {/* Compact Filter Buttons */}
       <CollapsibleFilters activeCount={[selectedDates, selectedProjects, selectedWallets, selectedExpenses, selectedIncomes, selectedCategories, selectedPeriods].filter(a => a.length > 0).length}>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pt-4">

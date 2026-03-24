@@ -84,21 +84,21 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
 
       {/* Content */}
       <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {isVoiceTransaction && (
-            <Mic className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+            <Mic className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-500 shrink-0" />
           )}
-          <span className="font-medium text-[13px] sm:text-sm md:text-base truncate max-w-full">
+          <span className="font-medium text-[13px] sm:text-sm md:text-base truncate">
             {transaction.description}
           </span>
           {isDraft && (
-            <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400 gap-1 text-[10px] px-1.5 py-0 shrink-0">
+            <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400 gap-0.5 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 shrink-0 whitespace-nowrap">
               <Mic className="h-2.5 w-2.5" />
               Черновик
             </Badge>
           )}
           {isPending && !isDraft && (
-            <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-1 text-[10px] px-1.5 py-0 shrink-0">
+            <Badge variant="outline" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 gap-0.5 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 shrink-0 whitespace-nowrap">
               <Clock className="h-2.5 w-2.5" />
               На проверке
             </Badge>
