@@ -29,6 +29,34 @@ function deriveProjectApiUrl(req: Request, fallbackUrl: string | null): string {
   return fallbackUrl || "";
 }
 
+function resolveProjectApiUrl(
+  req: Request,
+  fallbackUrl: string | null,
+  projectApiUrlFromBody: unknown,
+): string {
+  const derivedUrl = deriveProjectApiUrl(req, fallbackUrl);
+
+  if (typeof projectApiUrlFromBody === "string" && projectApiUrlFromBody.trim().length > 0) {
+    try {
+      const requestUrl = new URL(req.url);
+      const candidate = new URL(projectApiUrlFromBody.trim());
+
+      if (candidate.origin === requestUrl.origin) {
+        return candidate.toString().replace(/\/$/, "");
+      }
+
+      console.warn("[register] Ignoring project_api_url with different origin", {
+        requestOrigin: requestUrl.origin,
+        candidateOrigin: candidate.origin,
+      });
+    } catch (e) {
+      console.warn("[register] Invalid project_api_url in request body:", e);
+    }
+  }
+
+  return derivedUrl || fallbackUrl || "";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -45,6 +73,7 @@ Deno.serve(async (req) => {
             ? parsedBody.invitationId
             : null,
       invitation_token: typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : null,
+      project_api_url: typeof parsedBody?.project_api_url === "string" ? parsedBody.project_api_url : null,
       email: typeof parsedBody?.email === "string" ? parsedBody.email : null,
     });
 
@@ -54,6 +83,8 @@ Deno.serve(async (req) => {
     const role = typeof parsedBody?.role === "string" ? parsedBody.role : "member";
     const invitation_token =
       typeof parsedBody?.invitation_token === "string" ? parsedBody.invitation_token : "";
+    const project_api_url =
+      typeof parsedBody?.project_api_url === "string" ? parsedBody.project_api_url : null;
     const invitation_id =
       typeof parsedBody?.invitation_id === "string"
         ? parsedBody.invitation_id
@@ -86,6 +117,7 @@ Deno.serve(async (req) => {
     console.log("[register] Canonical lookup input", {
       invitation_id: normalizedInvitationId,
       invitation_token: normalizedToken || null,
+      project_api_url,
       email,
     });
 
@@ -94,8 +126,13 @@ Deno.serve(async (req) => {
     }
 
     const envSupabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseUrl = deriveProjectApiUrl(req, envSupabaseUrl);
+    const supabaseUrl = resolveProjectApiUrl(req, envSupabaseUrl, project_api_url);
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    console.log("[register] Resolved API URL", {
+      supabaseUrl,
+      usedProjectApiUrl: Boolean(project_api_url),
+    });
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("[register] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY", {
