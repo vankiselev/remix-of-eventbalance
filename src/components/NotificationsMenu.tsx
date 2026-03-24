@@ -5,7 +5,6 @@ import {
   Palmtree, ArrowLeftRight, Settings, DollarSign, BellRing 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,23 +88,26 @@ export const NotificationsMenu = () => {
       <div
         key={n.id}
         className={cn(
-          'relative flex gap-3 p-3 rounded-lg transition-colors group',
-          !isTransferWithActions && 'cursor-pointer hover:bg-muted/60',
+          'relative flex gap-2.5 px-3 py-2.5 rounded-lg transition-colors group',
+          !isTransferWithActions && 'cursor-pointer active:bg-muted/80 hover:bg-muted/60',
           !n.read && 'border-l-[3px] border-l-primary bg-primary/5',
           n.read && 'border-l-[3px] border-l-transparent'
         )}
         onClick={() => !isTransferWithActions && handleNotificationClick(n.id, n.read)}
       >
-        {/* Icon */}
-        <div className={cn('flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5', cfg.bg)}>
+        {/* Icon — vertically centered with first line of text */}
+        <div className={cn(
+          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+          cfg.bg
+        )}>
           <Icon className={cn('h-4 w-4', cfg.color)} />
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-1">
+        <div className="flex-1 min-w-0 py-0.5">
+          <div className="flex items-start justify-between gap-2">
             <h4 className={cn(
-              'text-sm leading-tight flex-1 min-w-0',
+              'text-[13px] leading-[1.3] flex-1 min-w-0 break-words',
               !n.read ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'
             )}>
               {n.title}
@@ -113,19 +115,19 @@ export const NotificationsMenu = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 -mr-1"
+              className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 -mr-0.5 rounded-full"
               onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3 text-muted-foreground" />
             </Button>
           </div>
           
-          {/* Message — hide for actionable transfers to avoid redundancy */}
+          {/* Message — hide for actionable transfers */}
           {!isTransferWithActions && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+            <p className="text-xs leading-[1.4] text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
           )}
           
-          <p className="text-[11px] text-muted-foreground/60 mt-1">
+          <p className="text-[10px] text-muted-foreground/50 mt-1 leading-none">
             {format(new Date(n.created_at), 'HH:mm · d MMM', { locale: ru })}
           </p>
 
@@ -149,7 +151,7 @@ export const NotificationsMenu = () => {
             </div>
           )}
 
-          {/* Non-actionable transfer status (already processed) */}
+          {/* Non-actionable transfer status */}
           {n.type === 'money_transfer' && n.data && n.read && n.data.status && (
             <div className="mt-2">
               <MoneyTransferNotification
@@ -189,13 +191,13 @@ export const NotificationsMenu = () => {
     const groups = groupByDate(items);
 
     return (
-      <div className="space-y-1 p-2">
+      <div className="space-y-0.5 p-1.5">
         {groups.map((group) => (
           <div key={group.label}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 pt-3 pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 px-3 pt-3 pb-1">
               {group.label}
             </p>
-            <div className="space-y-0.5">
+            <div className="space-y-px">
               {group.items.map(renderNotification)}
             </div>
           </div>
@@ -211,22 +213,24 @@ export const NotificationsMenu = () => {
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none px-1 tabular-nums"
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
-              </Badge>
+              </span>
             )}
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[85vw] max-w-[420px] flex flex-col gap-0 p-0" hideCloseButton>
-          {/* Header — safe area top + comfortable spacing */}
-          <div className="flex items-center justify-between gap-2 px-4 pb-3" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))' }}>
-            <SheetTitle className="text-lg font-bold flex-shrink-0">Уведомления</SheetTitle>
-            <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Header */}
+          <div
+            className="flex items-center justify-between gap-2 px-4 pb-2 border-b border-border/50"
+            style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
+          >
+            <SheetTitle className="text-base font-bold flex-shrink-0">Уведомления</SheetTitle>
+            <div className="flex items-center gap-1 flex-shrink-0">
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-9 px-2.5 text-xs">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 px-2 text-xs">
                   <Check className="h-3.5 w-3.5 mr-1" />
                   <span className="hidden sm:inline">Прочитать</span>
                 </Button>
@@ -236,14 +240,14 @@ export const NotificationsMenu = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteAllDialogOpen(true)}
-                  className="h-9 px-2.5 text-xs text-destructive hover:text-destructive"
+                  className="h-8 px-2 text-xs text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
                   <span className="hidden sm:inline">Очистить</span>
                 </Button>
               )}
               <SheetClose asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted">
                   <X className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </SheetClose>
@@ -252,30 +256,30 @@ export const NotificationsMenu = () => {
 
           {/* Tabs */}
           <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
-            <div className="px-4 pb-2">
-              <TabsList className="h-9 w-full grid grid-cols-4">
-                <TabsTrigger value="all" className="text-xs px-1">
+            <div className="px-3 py-2">
+              <TabsList className="h-8 w-full grid grid-cols-4">
+                <TabsTrigger value="all" className="text-[11px] px-1">
                   Все
                   {notifications.length > 0 && (
                     <span className="ml-0.5 text-muted-foreground">({notifications.length})</span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="unread" className="text-xs px-1">
+                <TabsTrigger value="unread" className="text-[11px] px-1">
                   Новые
                   {unreadCount > 0 && (
-                    <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-0.5 text-[10px]">
+                    <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-none px-1 tabular-nums">
                       {unreadCount}
-                    </Badge>
+                    </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="transfers" className="text-xs px-1">Переводы</TabsTrigger>
-                <TabsTrigger value="system" className="text-xs px-1">Система</TabsTrigger>
+                <TabsTrigger value="transfers" className="text-[11px] px-1">Переводы</TabsTrigger>
+                <TabsTrigger value="system" className="text-[11px] px-1">Система</TabsTrigger>
               </TabsList>
             </div>
 
             {(['all', 'unread', 'transfers', 'system'] as const).map((tab) => (
               <TabsContent key={tab} value={tab} className="flex-1 mt-0 min-h-0">
-                <ScrollArea className="h-full max-h-[calc(100vh-160px)]">
+                <ScrollArea className="h-full max-h-[calc(100vh-140px)]">
                   {renderList(filtered[tab])}
                 </ScrollArea>
               </TabsContent>
