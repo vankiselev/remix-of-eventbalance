@@ -128,31 +128,11 @@ Deno.serve(async (req) => {
       invitation_id,
     });
 
-    // STEP 1 (canonical): lookup by invitation_id first, token only as fallback
+    // STEP 1: lookup via SECURITY DEFINER RPC only (no direct table access)
     let invitation: InvitationContext | null = null;
     let lookupPath = "none";
 
-    if (invitation_id) {
-      const { data: invitationById, error: invitationByIdError } = await adminClient
-        .from("invitations")
-        .select("id, tenant_id, invited_by, email, role, expires_at, status")
-        .eq("id", invitation_id)
-        .maybeSingle();
-
-      if (invitationByIdError) {
-        return jsonResponse({
-          error: `Ошибка проверки приглашения по id: ${invitationByIdError.message}`,
-          code: "INVITE_LOOKUP_BY_ID_FAILED",
-        }, 500);
-      }
-
-      if (invitationById) {
-        invitation = invitationById as InvitationContext;
-        lookupPath = "by-id";
-      }
-    }
-
-    if (!invitation && normalizedToken) {
+    if (normalizedToken) {
       const { data: inviteRows, error: inviteLookupError } = await adminClient.rpc(
         "get_invitation_for_registration",
         { invitation_token: normalizedToken },
@@ -186,12 +166,8 @@ Deno.serve(async (req) => {
       lookupPath,
     });
 
-    if (invitation.id !== invitation_id) {
-      return jsonResponse({
-        error: "Ссылка и submit относятся к разным приглашениям. Откройте ссылку заново.",
-        code: "INVITE_CONTEXT_MISMATCH",
-      }, 409);
-    }
+    // Use the resolved invitation id from RPC (source of truth)
+    const resolvedInvitationId = invitation.id;
 
     if (invitation.email.toLowerCase() !== email.toLowerCase()) {
       return jsonResponse({ error: "Email не совпадает с приглашением.", code: "INVITE_EMAIL_MISMATCH" }, 403);
