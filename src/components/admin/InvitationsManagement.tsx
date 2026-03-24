@@ -86,6 +86,25 @@ export function InvitationsManagement() {
   const handleResendInvitation = async (invitation: Invitation) => {
     if (!user) return;
     try {
+      // Resolve name: if current invitation has no name, try to find from other invitations
+      let firstName = invitation.first_name || null;
+      let lastName = invitation.last_name || null;
+
+      if (!firstName || !lastName) {
+        const { data: otherInvites } = await supabase
+          .from("invitations")
+          .select("first_name, last_name")
+          .ilike("email", invitation.email)
+          .not("first_name", "is", null)
+          .not("last_name", "is", null)
+          .limit(1);
+
+        if (otherInvites && otherInvites.length > 0) {
+          firstName = firstName || otherInvites[0].first_name;
+          lastName = lastName || otherInvites[0].last_name;
+        }
+      }
+
       await supabase
         .from("invitations")
         .update({ status: "revoked" })
@@ -103,8 +122,8 @@ export function InvitationsManagement() {
         .from("invitations") as any)
         .insert({
           ...baseInsertPayload,
-          first_name: invitation.first_name ?? null,
-          last_name: invitation.last_name ?? null,
+          first_name: firstName,
+          last_name: lastName,
         })
         .select()
         .single();
@@ -127,8 +146,8 @@ export function InvitationsManagement() {
         body: {
           email: invitation.email,
           token: newInvitation.token,
-          firstName: invitation.first_name,
-          lastName: invitation.last_name,
+          firstName: firstName,
+          lastName: lastName,
           role: invitation.role,
           roleName: roleDisplayName,
         },
