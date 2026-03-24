@@ -25,46 +25,53 @@ const AdministrationPage = () => {
         </div>
 
         <Tabs defaultValue="companies" className="w-full">
-          <TabsList className="w-full overflow-x-auto scrollbar-hide">
-            <TabsTrigger value="companies" className="flex items-center gap-2 whitespace-nowrap">
-              <Building2 className="h-4 w-4" />
-              Компании
+          <TabsList className="w-full overflow-x-auto scrollbar-hide h-auto flex-wrap sm:flex-nowrap gap-0.5 p-1">
+            <TabsTrigger value="companies" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Компании</span>
+              <span className="sm:hidden">Комп.</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2 whitespace-nowrap">
-              <Shield className="h-4 w-4" />
-              Выдача прав
+            <TabsTrigger value="roles" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Права
             </TabsTrigger>
-            <TabsTrigger value="invitations" className="flex items-center gap-2 whitespace-nowrap">
-              <UserPlus className="h-4 w-4" />
-              Приглашения
+            <TabsTrigger value="invitations" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Приглашения</span>
+              <span className="sm:hidden">Пригл.</span>
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2 whitespace-nowrap">
-              <Tags className="h-4 w-4" />
-              Категории
+            <TabsTrigger value="categories" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Tags className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Категории</span>
+              <span className="sm:hidden">Кат.</span>
             </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-2 whitespace-nowrap">
-              <FolderKanban className="h-4 w-4" />
-              Проекты
+            <TabsTrigger value="projects" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Проекты</span>
+              <span className="sm:hidden">Проек.</span>
             </TabsTrigger>
-            <TabsTrigger value="icons" className="flex items-center gap-2 whitespace-nowrap">
-              <Palette className="h-4 w-4" />
-              Иконки
+            <TabsTrigger value="icons" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Иконки</span>
+              <span className="sm:hidden">Ик.</span>
             </TabsTrigger>
-            <TabsTrigger value="warehouse-categories" className="flex items-center gap-2 whitespace-nowrap">
-              <Package className="h-4 w-4" />
-              Категории товаров
+            <TabsTrigger value="warehouse-categories" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Категории товаров</span>
+              <span className="sm:hidden">Товары</span>
             </TabsTrigger>
-            <TabsTrigger value="warehouse-locations" className="flex items-center gap-2 whitespace-nowrap">
-              <MapPin className="h-4 w-4" />
-              Локации
+            <TabsTrigger value="warehouse-locations" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Локации</span>
+              <span className="sm:hidden">Лок.</span>
             </TabsTrigger>
-            <TabsTrigger value="warehouse" className="flex items-center gap-2 whitespace-nowrap">
-              <Settings className="h-4 w-4" />
+            <TabsTrigger value="warehouse" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Склад
             </TabsTrigger>
-            <TabsTrigger value="testing" className="flex items-center gap-2 whitespace-nowrap">
-              <FlaskConical className="h-4 w-4" />
-              Тестирование
+            <TabsTrigger value="testing" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <FlaskConical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Тест
             </TabsTrigger>
           </TabsList>
 

@@ -261,105 +261,118 @@ export function InvitationsManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Управление приглашениями</h1>
-        <Button onClick={() => setShowInviteDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Пригласить пользователя
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold">Приглашения</h2>
+        <Button onClick={() => setShowInviteDialog(true)} className="w-full sm:w-auto h-9 text-sm touch-manipulation">
+          <Plus className="w-4 h-4 mr-1.5" />
+          Пригласить
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Список приглашений</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {invitations.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+      {invitations.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-center text-muted-foreground">
               Приглашения не найдены
             </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Имя</TableHead>
-                  <TableHead>Роль</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead>Приглашен</TableHead>
-                  <TableHead>Истекает</TableHead>
-                  <TableHead>Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invitations.map((invitation) => (
-                  <TableRow key={invitation.id}>
-                    <TableCell className="font-medium">{invitation.email}</TableCell>
-                    <TableCell>
-                      {invitation.first_name && invitation.last_name
-                        ? `${invitation.first_name} ${invitation.last_name}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>{getRoleBadge(invitation.role)}</TableCell>
-                    <TableCell>{getStatusBadge(invitation.status)}</TableCell>
-                    <TableCell>
-                      {format(new Date(invitation.invited_at), 'd MMMM yyyy, HH:mm', {
-                        locale: ru,
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {isExpired(invitation.expires_at) ? (
-                        <span className="text-destructive">Истекло</span>
-                      ) : (
-                        format(new Date(invitation.expires_at), 'd MMMM yyyy, HH:mm', {
-                          locale: ru,
-                        })
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        {/* Кнопка повторить для всех статусов */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleResendInvitation(invitation)}
-                          title="Повторно отправить"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </Button>
-                        
-                        {/* Кнопка отозвать только для активных приглашений */}
-                        {invitation.status === "sent" && !isExpired(invitation.expires_at) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRevokeInvitation(invitation)}
-                            title="Отозвать"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                        
-                        {/* Кнопка удалить для всех */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleteInvitation(invitation)}
-                          title="Удалить"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <Card className="hidden sm:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Имя</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Приглашен</TableHead>
+                    <TableHead>Действия</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {invitations.map((invitation) => (
+                    <TableRow key={invitation.id}>
+                      <TableCell className="font-medium text-sm">{invitation.email}</TableCell>
+                      <TableCell className="text-sm">
+                        {invitation.first_name && invitation.last_name
+                          ? `${invitation.first_name} ${invitation.last_name}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{getRoleBadge(invitation.role)}</TableCell>
+                      <TableCell>{getStatusBadge(invitation.status)}</TableCell>
+                      <TableCell className="text-sm">
+                        {format(new Date(invitation.invited_at), 'd MMM yyyy', { locale: ru })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => handleResendInvitation(invitation)} title="Повторно отправить" className="h-8 w-8 p-0">
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </Button>
+                          {invitation.status === "sent" && !isExpired(invitation.expires_at) && (
+                            <Button size="sm" variant="outline" onClick={() => handleRevokeInvitation(invitation)} title="Отозвать" className="h-8 w-8 p-0">
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => setDeleteInvitation(invitation)} title="Удалить" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2">
+            {invitations.map((invitation) => (
+              <Card key={invitation.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{invitation.email}</p>
+                      {invitation.first_name && invitation.last_name && (
+                        <p className="text-xs text-muted-foreground">{invitation.first_name} {invitation.last_name}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {getStatusBadge(invitation.status)}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getRoleBadge(invitation.role)}
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(invitation.invited_at), 'd MMM yyyy', { locale: ru })}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => handleResendInvitation(invitation)} className="h-8 w-8 p-0 touch-manipulation">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </Button>
+                      {invitation.status === "sent" && !isExpired(invitation.expires_at) && (
+                        <Button size="sm" variant="outline" onClick={() => handleRevokeInvitation(invitation)} className="h-8 w-8 p-0 touch-manipulation">
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => setDeleteInvitation(invitation)} className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       <InviteUserDialog
         open={showInviteDialog}
