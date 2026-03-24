@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays } from "lucide-react";
 import CalendarWeekView from "./CalendarWeekView";
 import CalendarMonthView, { getOwnerColor } from "./CalendarMonthView";
 import CalendarYearView from "./CalendarYearView";
@@ -148,16 +148,17 @@ const CalendarV2 = () => {
 
   return (
     <div className="w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-5 flex-wrap">
-        <div className="flex items-center gap-2">
+      {/* Header — mobile-optimized */}
+      <div className="flex items-center justify-between gap-2 mb-3 sm:mb-5">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={goToToday}
-            className="text-xs font-medium"
+            className="text-xs font-medium h-8 px-2 sm:px-3 touch-manipulation flex-shrink-0"
           >
-            Сегодня
+            <span className="hidden sm:inline">Сегодня</span>
+            <span className="sm:hidden">Сег.</span>
           </Button>
 
           <div className="flex items-center">
@@ -165,38 +166,45 @@ const CalendarV2 = () => {
               variant="ghost"
               size="sm"
               onClick={() => viewMode === "year" ? navigateYear('prev') : navigateMonth('prev')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 touch-manipulation"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
             {viewMode !== "year" && (
-              <div className="flex items-center gap-1">
-                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                  <SelectTrigger className="w-28 text-xs border-0 shadow-none font-semibold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS.map((month, index) => (
-                      <SelectItem key={index} value={index.toString()}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-0 sm:gap-1">
+                {/* Mobile: plain text month+year */}
+                <span className="sm:hidden text-sm font-semibold whitespace-nowrap">
+                  {MONTHS[selectedMonth].substring(0, 3)} {selectedYear}
+                </span>
+                {/* Desktop: selects */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                    <SelectTrigger className="w-28 text-xs border-0 shadow-none font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((month, index) => (
+                        <SelectItem key={index} value={index.toString()}>
+                          {month}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                  <SelectTrigger className="w-20 text-xs border-0 shadow-none font-semibold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                    <SelectTrigger className="w-20 text-xs border-0 shadow-none font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
 
@@ -208,125 +216,212 @@ const CalendarV2 = () => {
               variant="ghost"
               size="sm"
               onClick={() => viewMode === "year" ? navigateYear('next') : navigateMonth('next')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 touch-manipulation"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <div className="flex items-center bg-muted rounded-lg p-0.5">
             {(["week", "month", "year"] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                className={`px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-md transition-all touch-manipulation ${
                   viewMode === mode 
                     ? 'bg-background shadow-sm text-foreground' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {mode === "week" ? "Неделя" : mode === "month" ? "Месяц" : "Год"}
+                {mode === "week" ? "Нед" : mode === "month" ? "Мес" : "Год"}
               </button>
             ))}
           </div>
 
-          <Button size="sm" onClick={handleCreateEvent} className="gap-1.5">
+          <Button size="sm" onClick={handleCreateEvent} className="gap-1 h-8 px-2 sm:px-3 touch-manipulation">
             <Plus className="h-3.5 w-3.5" />
-            Добавить
+            <span className="hidden sm:inline">Добавить</span>
           </Button>
         </div>
       </div>
 
       {/* Main content: split layout for month view */}
       {viewMode === "month" ? (
-        <div className="flex gap-0 border rounded-xl overflow-hidden bg-background shadow-sm">
-          {/* Left panel - selected day events */}
-          <div className="w-[320px] min-w-[320px] border-r bg-muted/20 flex flex-col">
-            <div className="p-4 border-b bg-background/80">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold">
-                    {format(selectedDate, 'd MMMM', { locale: ru })}
-                  </h3>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {format(selectedDate, 'EEEE', { locale: ru })}
-                  </p>
+        <>
+          {/* Desktop: split layout */}
+          <div className="hidden sm:flex gap-0 border rounded-xl overflow-hidden bg-background shadow-sm">
+            {/* Left panel - selected day events */}
+            <div className="w-[320px] min-w-[320px] border-r bg-muted/20 flex flex-col">
+              <div className="p-4 border-b bg-background/80">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold">
+                      {format(selectedDate, 'd MMMM', { locale: ru })}
+                    </h3>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {format(selectedDate, 'EEEE', { locale: ru })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    <CalendarDays className="h-3 w-3" />
+                    {selectedDayEvents.length}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                  <CalendarDays className="h-3 w-3" />
-                  {selectedDayEvents.length}
-                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {selectedDayEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center">
+                    <CalendarDays className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">Нет мероприятий</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Выберите день в календаре</p>
+                  </div>
+                ) : (
+                  selectedDayEvents.map((event) => {
+                    const colors = getOwnerColor(event.project_owner);
+                    return (
+                      <div
+                        key={event.id}
+                        className={`p-3 rounded-lg border-l-[3px] cursor-pointer transition-all hover:shadow-md hover:translate-x-0.5 ${colors.border} ${colors.bg}`}
+                        onClick={() => handleEventClick(event)}
+                      >
+                        <h4 className={`font-semibold text-sm leading-tight mb-1.5 ${colors.text}`}>
+                          {event.name}
+                        </h4>
+                        <div className="space-y-1">
+                          {event.event_time && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span>{event.event_time.substring(0, 5)}{event.end_time ? ` — ${event.end_time.substring(0, 5)}` : ''}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                          )}
+                          {event.project_owner && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <User className="h-3 w-3 flex-shrink-0" />
+                              <span>{event.project_owner}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {selectedDayEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-center">
-                  <CalendarDays className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                  <p className="text-sm text-muted-foreground">Нет мероприятий</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Выберите день в календаре</p>
+            {/* Right panel - calendar grid */}
+            <div className="flex-1 p-4">
+              {loading ? (
+                <div className="flex items-center justify-center h-96">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
                 </div>
               ) : (
-                selectedDayEvents.map((event) => {
-                  const colors = getOwnerColor(event.project_owner);
-                  return (
-                    <div
-                      key={event.id}
-                      className={`p-3 rounded-lg border-l-[3px] cursor-pointer transition-all hover:shadow-md hover:translate-x-0.5 ${colors.border} ${colors.bg}`}
-                      onClick={() => handleEventClick(event)}
-                    >
-                      <h4 className={`font-semibold text-sm leading-tight mb-1.5 ${colors.text}`}>
-                        {event.name}
-                      </h4>
-                      <div className="space-y-1">
-                        {event.event_time && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3 flex-shrink-0" />
-                            <span>{event.event_time.substring(0, 5)}{event.end_time ? ` — ${event.end_time.substring(0, 5)}` : ''}</span>
-                          </div>
-                        )}
-                        {event.location && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{event.location}</span>
-                          </div>
-                        )}
-                        {event.project_owner && (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <User className="h-3 w-3 flex-shrink-0" />
-                            <span>{event.project_owner}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                <CalendarMonthView
+                  month={selectedMonth}
+                  year={selectedYear}
+                  events={events}
+                  onEventClick={handleEventClick}
+                  onDateSelect={handleDateSelect}
+                  selectedDate={selectedDate}
+                />
               )}
             </div>
           </div>
 
-          {/* Right panel - calendar grid */}
-          <div className="flex-1 p-4">
-            {loading ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+          {/* Mobile: stacked layout — compact grid + day events below */}
+          <div className="sm:hidden space-y-3">
+            {/* Month grid */}
+            <div className="border rounded-xl overflow-hidden bg-background shadow-sm">
+              {loading ? (
+                <div className="flex items-center justify-center h-48">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+                </div>
+              ) : (
+                <CalendarMonthView
+                  month={selectedMonth}
+                  year={selectedYear}
+                  events={events}
+                  onEventClick={handleEventClick}
+                  onDateSelect={handleDateSelect}
+                  selectedDate={selectedDate}
+                  compact
+                />
+              )}
+            </div>
+
+            {/* Selected day events */}
+            <div>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold">
+                    {format(selectedDate, 'd MMMM', { locale: ru })}
+                  </h3>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {format(selectedDate, 'EEEE', { locale: ru })}
+                  </span>
+                </div>
+                {selectedDayEvents.length > 0 && (
+                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full tabular-nums">
+                    {selectedDayEvents.length}
+                  </span>
+                )}
               </div>
-            ) : (
-              <CalendarMonthView
-                month={selectedMonth}
-                year={selectedYear}
-                events={events}
-                onEventClick={handleEventClick}
-                onDateSelect={handleDateSelect}
-                selectedDate={selectedDate}
-              />
-            )}
+
+              {selectedDayEvents.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p className="text-sm">Нет мероприятий</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedDayEvents.map((event) => {
+                    const colors = getOwnerColor(event.project_owner);
+                    return (
+                      <div
+                        key={event.id}
+                        className={`p-2.5 rounded-lg border-l-[3px] cursor-pointer active:scale-[0.98] transition-transform touch-manipulation ${colors.border} ${colors.bg}`}
+                        onClick={() => handleEventClick(event)}
+                      >
+                        <h4 className={`font-semibold text-sm leading-tight mb-1 ${colors.text}`}>
+                          {event.name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {event.event_time && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span>{event.event_time.substring(0, 5)}{event.end_time ? `–${event.end_time.substring(0, 5)}` : ''}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate max-w-[140px]">{event.location}</span>
+                            </div>
+                          )}
+                          {event.project_owner && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <User className="h-3 w-3 flex-shrink-0" />
+                              <span>{event.project_owner}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="border rounded-xl overflow-hidden bg-background shadow-sm p-4">
+        <div className="border rounded-xl overflow-hidden bg-background shadow-sm p-2 sm:p-4">
           {loading ? (
             <div className="flex items-center justify-center h-96">
               <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>

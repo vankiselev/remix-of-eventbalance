@@ -17,6 +17,8 @@ interface CalendarMonthViewProps {
   onEventClick: (event: Event) => void;
   onDateSelect: (date: Date) => void;
   selectedDate?: Date;
+  /** Mobile compact mode: dot indicators only, no event text */
+  compact?: boolean;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -30,7 +32,7 @@ export const getOwnerColor = (owner: string | null) => {
   return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
 };
 
-const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate }: CalendarMonthViewProps) => {
+const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate, compact = false }: CalendarMonthViewProps) => {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
@@ -64,6 +66,93 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
     return now.getDate() === day && now.getMonth() === month && now.getFullYear() === year;
   };
 
+  // Compact mobile view
+  if (compact) {
+    const renderCompactDays = () => {
+      const days = [];
+      
+      for (let i = 1; i < startingDayOfWeek; i++) {
+        days.push(<div key={`empty-${i}`} className="aspect-square" />);
+      }
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayEvents = getEventsForDate(day);
+        const selected = isSelected(day);
+        const today = isToday(day);
+        const hasEvents = dayEvents.length > 0;
+        
+        // Collect unique owner dots (max 3)
+        const uniqueDots = dayEvents
+          .map(e => getOwnerColor(e.project_owner).dot)
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .slice(0, 3);
+        
+        days.push(
+          <div
+            key={day}
+            className={`aspect-square flex flex-col items-center justify-center cursor-pointer rounded-lg transition-colors touch-manipulation relative
+              ${selected ? 'bg-primary/10 ring-2 ring-primary/40' : 'active:bg-accent/50'}
+            `}
+            onClick={() => onDateSelect(new Date(year, month, day))}
+          >
+            <span className={`text-[13px] font-medium leading-none
+              ${today ? 'bg-primary text-primary-foreground w-7 h-7 rounded-full flex items-center justify-center' : ''}
+              ${selected && !today ? 'text-primary font-bold' : ''}
+            `}>
+              {day}
+            </span>
+            {hasEvents && (
+              <div className="flex items-center gap-[3px] mt-0.5 h-[6px]">
+                {uniqueDots.map((dotClass, i) => (
+                  <div key={i} className={`w-[5px] h-[5px] rounded-full ${dotClass}`} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      return days;
+    };
+
+    return (
+      <div className="w-full px-2 py-2">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {WEEKDAYS.map((day, i) => (
+            <div key={day} className={`text-center text-[11px] font-medium py-1.5 text-muted-foreground
+              ${i >= 5 ? 'text-muted-foreground/60' : ''}
+            `}>
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {/* Compact grid */}
+        <div className="grid grid-cols-7 gap-0.5">
+          {renderCompactDays()}
+        </div>
+
+        {/* Compact legend */}
+        <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-border/30">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-violet-500" />
+            <span className="text-[10px] text-muted-foreground">Настя</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-orange-500" />
+            <span className="text-[10px] text-muted-foreground">Лера</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span className="text-[10px] text-muted-foreground">Ваня</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full desktop view
   const renderCalendarDays = () => {
     const days = [];
     
