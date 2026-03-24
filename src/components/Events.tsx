@@ -450,7 +450,7 @@ const Events = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 w-full overflow-x-hidden">
+    <div className="space-y-3 sm:space-y-6 w-full overflow-x-hidden">
       {/* Event Detail Dialog */}
       <EventDetailDialog
         event={selectedEvent}
@@ -459,7 +459,7 @@ const Events = () => {
         onSave={handleEventSave}
       />
 
-      <div className="flex flex-col gap-3 sm:gap-4 w-full">
+      <div className="flex flex-col gap-2 sm:gap-4 w-full">
         {/* Header hidden on mobile — Layout shows page title */}
         <div className="min-w-0 hidden sm:block">
           <h1 className="text-2xl md:text-3xl font-bold truncate">Мероприятия</h1>
@@ -510,12 +510,12 @@ const Events = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1.5 h-8 sm:h-9 touch-manipulation"
                   >
-                    <Filter className="h-4 w-4" />
-                    Фильтр
+                    <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="text-[13px] sm:text-sm">Фильтр</span>
                     {(selectedMonth || selectedYear || selectedProjectOwner || selectedManagers.length > 0 || selectedVenue) && (
-                      <span className="ml-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                      <span className="ml-0.5 bg-primary text-primary-foreground text-[10px] min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full tabular-nums font-bold">
                         {[selectedMonth, selectedYear, selectedProjectOwner, selectedManagers.length > 0, selectedVenue].filter(Boolean).length}
                       </span>
                     )}
@@ -669,9 +669,9 @@ const Events = () => {
                   variant="outline"
                   size="sm"
                   onClick={toggleSortOrder}
-                  className="flex items-center gap-1.5"
+                  className="flex items-center gap-1 h-8 touch-manipulation"
                 >
-                  <ArrowUpDown className="h-4 w-4" />
+                  <ArrowUpDown className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
                 </Button>
               ) : (
@@ -723,13 +723,13 @@ const Events = () => {
               )}
 
               {/* Поиск */}
-              <div className="relative flex-1 min-w-[120px] sm:min-w-[200px]">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 min-w-[100px] sm:min-w-[200px]">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
                   placeholder={isMobile ? "Поиск..." : "Поиск по названию, описанию, месту..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-[13px] sm:text-sm"
+                  className="pl-8 sm:pl-10 h-8 sm:h-9 text-[13px] sm:text-sm"
                 />
               </div>
             </>
@@ -737,7 +737,7 @@ const Events = () => {
           
           {/* Кнопка создания */}
           {hasPermission('events.create') && !selectionMode && (
-            <Button size="sm" onClick={handleCreateNew} className="ml-auto">
+            <Button size="sm" onClick={handleCreateNew} className="h-8 sm:h-9 touch-manipulation ml-auto">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Создать мероприятие</span>
             </Button>
@@ -807,9 +807,9 @@ const Events = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6 pb-4">
           {Object.entries(groupedEvents).map(([dayKey, dayEvents]) => (
-            <div key={dayKey} className="space-y-4">
+            <div key={dayKey} className="space-y-2 sm:space-y-4">
                 {dayEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
                   const eventDate = new Date(event.start_date);
@@ -820,7 +820,7 @@ const Events = () => {
                   return (
                     <Card 
                       key={event.id} 
-                      className={`cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      className={`cursor-pointer hover:shadow-lg active:bg-accent/30 transition-all hover:border-primary/50 relative touch-manipulation ${isSelected ? 'ring-2 ring-primary' : ''}`}
                       onClick={() => selectionMode ? toggleEventSelection(event.id) : handleEventClick(event)}
                     >
                       {selectionMode && (
@@ -853,19 +853,19 @@ const Events = () => {
                           </div>
                           
                           {/* Бейджи: владелец + менеджеры */}
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1">
                             {event.project_owner && (
-                              <Badge variant="secondary" className="text-xs gap-1">
-                                <User className="h-3 w-3" />
+                              <Badge variant="secondary" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1.5 py-0">
+                                <User className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 {event.project_owner}
                               </Badge>
                             )}
                             {(() => {
                               const managerNames = getManagerNames(event);
                               return managerNames !== '—' ? (
-                                <Badge variant="outline" className="text-xs gap-1">
-                                  <Target className="h-3 w-3" />
-                                  {managerNames}
+                                <Badge variant="outline" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1.5 py-0">
+                                  <Target className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                  <span className="truncate max-w-[120px] sm:max-w-none">{managerNames}</span>
                                 </Badge>
                               ) : null;
                             })()}
@@ -879,23 +879,23 @@ const Events = () => {
                             const hasDetails = locationDisplay !== '—' || timeRange !== '—' || animatorNames !== '—';
                             if (!hasDetails) return null;
                             return (
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-muted-foreground pt-1">
+                              <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-0.5 sm:gap-y-1 text-[11px] sm:text-sm text-muted-foreground pt-0.5 sm:pt-1">
                                 {locationDisplay !== '—' && (
-                                  <div className="flex items-center gap-1.5">
-                                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                                    <span className="truncate max-w-[200px]">{locationDisplay}</span>
+                                  <div className="flex items-center gap-1 sm:gap-1.5">
+                                    <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                    <span className="truncate max-w-[140px] sm:max-w-[200px]">{locationDisplay}</span>
                                   </div>
                                 )}
                                 {timeRange !== '—' && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <div className="flex items-center gap-1 sm:gap-1.5">
+                                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                                     <span>{timeRange}</span>
                                   </div>
                                 )}
                                 {animatorNames !== '—' && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Users className="h-3.5 w-3.5 flex-shrink-0" />
-                                    <span className="truncate max-w-[200px]">{animatorNames}</span>
+                                  <div className="flex items-center gap-1 sm:gap-1.5">
+                                    <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                                    <span className="truncate max-w-[140px] sm:max-w-[200px]">{animatorNames}</span>
                                   </div>
                                 )}
                               </div>
