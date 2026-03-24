@@ -359,39 +359,35 @@ export function TransactionDetailDialog({
         <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-6 px-4 py-3 sm:px-0 sm:py-0">
           {/* Money Transfer Status - Show if it's a transfer */}
           {isMoneyTransfer && (
-            <div className={`p-4 rounded-lg border-2 ${
+            <div className={`p-3 sm:p-4 rounded-lg border ${
               transaction.transfer_status === 'pending' 
                 ? 'bg-yellow-50 border-yellow-300' 
                 : transaction.transfer_status === 'accepted'
                 ? 'bg-green-50 border-green-300'
                 : 'bg-red-50 border-red-300'
             }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💸</span>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold mb-2">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <span className="text-lg sm:text-2xl">💸</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs sm:text-sm font-semibold mb-1">
                     {transaction.transfer_status === 'pending' && '⏳ Ожидает подтверждения'}
                     {transaction.transfer_status === 'accepted' && '✅ Передача подтверждена'}
                     {transaction.transfer_status === 'rejected' && '❌ Передача отклонена'}
                   </h3>
                   {transaction.transfer_to_user && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Получатель: {formatDisplayName(transaction.transfer_to_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_from_user && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Отправитель: {formatDisplayName(transaction.transfer_from_user.full_name)}
                     </p>
                   )}
                   {transaction.transfer_status === 'rejected' && transaction.transfer_rejection_reason && (
-                    <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-800">
-                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        Причина отклонения:
-                      </p>
-                      <p className="text-sm text-gray-800 dark:text-gray-200">
-                        {transaction.transfer_rejection_reason}
-                      </p>
+                    <div className="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-red-200 dark:border-red-800">
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Причина отклонения:</p>
+                      <p className="text-xs">{transaction.transfer_rejection_reason}</p>
                     </div>
                   )}
                 </div>
@@ -399,28 +395,39 @@ export function TransactionDetailDialog({
             </div>
           )}
 
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Amount highlight */}
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3 sm:p-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Дата операции</label>
-              <p className="text-sm">{formatDate(transaction.operation_date)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Тип операции</label>
-              <p className={`text-sm font-medium ${isExpense ? 'text-red-600' : 'text-blue-600'}`}>
-                {isExpense ? "Расход" : "Доход"}
+              <p className="text-xs text-muted-foreground mb-0.5">Сумма</p>
+              <p className={`text-lg sm:text-xl font-bold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                {isExpense ? '−' : '+'}{formatCurrency(amount)}
               </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground mb-0.5">Тип</p>
+              <Badge variant={isExpense ? "destructive" : "default"} className="text-xs">
+                {isExpense ? "Расход" : "Доход"}
+              </Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Compact info grid */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Проект</label>
-              <p className="text-sm">{transaction.static_project_name || transaction.events?.name || "—"}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Дата</p>
+              <p className="text-xs sm:text-sm font-medium">{formatDate(transaction.operation_date)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Чей проект</label>
-              <p className="text-sm">{transaction.project_owner || "—"}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Категория</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.category || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Проект</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.static_project_name || transaction.events?.name || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">Чей проект</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{transaction.project_owner || "—"}</p>
             </div>
           </div>
 
