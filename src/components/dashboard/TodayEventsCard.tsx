@@ -107,7 +107,7 @@ const TodayEventsCard = () => {
               {events.map((event) => (
                 <div 
                   key={event.id} 
-                  className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="border rounded-lg p-3 space-y-1.5 cursor-pointer hover:bg-accent/50 active:bg-accent/70 transition-colors touch-manipulation"
                   onClick={() => handleEventClick(event.id)}
                 >
                   <div className="flex-1 min-w-0">

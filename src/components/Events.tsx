@@ -450,7 +450,7 @@ const Events = () => {
   }
 
   return (
-    <div className="space-y-6 w-full overflow-x-hidden">
+    <div className="space-y-4 sm:space-y-6 w-full overflow-x-hidden">
       {/* Event Detail Dialog */}
       <EventDetailDialog
         event={selectedEvent}
@@ -459,14 +459,15 @@ const Events = () => {
         onSave={handleEventSave}
       />
 
-      <div className="flex flex-col gap-4 w-full">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-3 sm:gap-4 w-full">
+        {/* Header hidden on mobile — Layout shows page title */}
+        <div className="min-w-0 hidden sm:block">
           <h1 className="text-2xl md:text-3xl font-bold truncate">Мероприятия</h1>
           <p className="text-sm md:text-base text-muted-foreground truncate">Управляйте вашими мероприятиями</p>
         </div>
         
         {/* Верхняя панель: Фильтр, Сортировка, Поиск, Создать */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {selectionMode ? (
             <>
               <Button
@@ -722,13 +723,13 @@ const Events = () => {
               )}
 
               {/* Поиск */}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 min-w-[120px] sm:min-w-[200px]">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Поиск по названию, описанию, месту..."
+                  placeholder={isMobile ? "Поиск..." : "Поиск по названию, описанию, месту..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-9"
+                  className="pl-9 h-9 text-[13px] sm:text-sm"
                 />
               </div>
             </>
@@ -746,7 +747,6 @@ const Events = () => {
 
       {/* Период - отдельная секция */}
       <div>
-        <div className="text-sm mb-2 font-medium">Период</div>
         <ToggleGroup 
           type="single" 
           value={periodFilter}
@@ -757,27 +757,27 @@ const Events = () => {
         >
           <ToggleGroupItem 
             value="future" 
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
           >
-            Предстоящие
+            Будущие
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="past"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
           >
-            Прошедшие
+            Прошлые
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="all"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
           >
             Все
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="cancelled"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-8 sm:h-9 touch-manipulation"
           >
-            Отмененные
+            Отмена
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -829,12 +829,12 @@ const Events = () => {
                         </div>
                       )}
                       
-                      <div className="flex gap-4 p-4 sm:p-5">
+                      <div className="flex gap-3 sm:gap-4 p-3 sm:p-5">
                         {/* Левый блок с датой */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-xl w-20 h-20 sm:w-24 sm:h-24 border gap-1">
-                          <div className="text-2xl sm:text-3xl font-bold leading-none">{day}</div>
-                          <div className="text-xs sm:text-sm capitalize text-muted-foreground">{month}</div>
-                          <div className="text-[10px] sm:text-xs font-medium capitalize text-muted-foreground/70">{weekday}</div>
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-muted rounded-xl w-16 h-16 sm:w-24 sm:h-24 border gap-0.5 sm:gap-1">
+                          <div className="text-xl sm:text-3xl font-bold leading-none">{day}</div>
+                          <div className="text-[10px] sm:text-sm capitalize text-muted-foreground leading-tight">{month}</div>
+                          <div className="text-[9px] sm:text-xs font-medium capitalize text-muted-foreground/70 leading-tight">{weekday}</div>
                         </div>
                         
                         {/* Правый блок с информацией */}

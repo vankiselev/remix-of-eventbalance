@@ -5,7 +5,7 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="space-y-6 w-full overflow-x-hidden">
+    <div className="space-y-4 sm:space-y-6 w-full overflow-x-hidden">
       {/* Header — hidden on mobile since Layout already shows page title */}
       {!isMobile && (
         <div className="min-w-0">
