@@ -319,7 +319,7 @@ const Layout = ({ children }: LayoutProps) => {
         </>
       ) : (
         /* Mobile Layout */
-        <div className="flex-1 flex flex-col min-h-[100dvh]">
+        <div className="flex-1 flex flex-col min-h-[100dvh] w-full overflow-x-hidden">
           {/* Mobile Header — accounts for iOS status bar */}
           <header
             className="sticky top-0 z-50 w-full border-b border-border/30 bg-card/95 backdrop-blur-md"
