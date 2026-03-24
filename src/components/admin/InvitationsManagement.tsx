@@ -18,6 +18,7 @@ import { InviteUserDialog } from "./InviteUserDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoles } from "@/hooks/useRoles";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -45,6 +46,7 @@ export function InvitationsManagement() {
   const [deleteInvitation, setDeleteInvitation] = useState<Invitation | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { roles } = useRoles();
   const queryClient = useQueryClient();
 
   const { data: invitations = [], isLoading: loading } = useQuery({
@@ -103,6 +105,7 @@ export function InvitationsManagement() {
 
       if (createError) throw createError;
 
+      const roleDisplayName = roles.find((r) => r.code === invitation.role)?.name || invitation.role;
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           email: invitation.email,
@@ -110,6 +113,7 @@ export function InvitationsManagement() {
           firstName: invitation.first_name,
           lastName: invitation.last_name,
           role: invitation.role,
+          roleName: roleDisplayName,
         },
       });
 
@@ -233,11 +237,14 @@ export function InvitationsManagement() {
   };
 
   const getRoleBadge = (role: string) => {
-    const roleDisplayMap: Record<string, string> = {
+    const mappedRoleName = roles.find((r) => r.code === role)?.name;
+    const fallbackMap: Record<string, string> = {
       admin: "Администратор",
       employee: "Сотрудник",
+      financier: "Финансист",
     };
-    const displayName = roleDisplayMap[role] || role;
+    const displayName = mappedRoleName || fallbackMap[role] || role;
+
     return (
       <Badge variant={role === "admin" ? "default" : "outline"}>
         {displayName}
