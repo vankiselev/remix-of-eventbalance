@@ -279,6 +279,7 @@ export function InvitePage() {
         role: invitation.role,
         invitation_token: token,
         invitation_id: invitation.id ?? null,
+        project_api_url: supabaseUrl,
       };
 
       console.log("[InvitePage] Submit request body (sanitized)", {
