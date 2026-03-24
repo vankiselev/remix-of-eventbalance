@@ -94,6 +94,17 @@ export function PendingUsersManagement() {
 
       if (updateError) throw updateError;
 
+      // Создаём membership в tenant через безопасную RPC
+      const { data: membershipResult, error: membershipError } = await supabase
+        .rpc("approve_pending_user_membership" as any, { p_user_id: user.id });
+
+      if (membershipError) {
+        console.error("Membership creation failed:", membershipError);
+        // Non-blocking: user is approved but membership might need manual fix
+      } else {
+        console.log("Membership created:", membershipResult);
+      }
+
       // Назначаем RBAC роль
       const { error: roleError } = await supabase
         .from("user_role_assignments")

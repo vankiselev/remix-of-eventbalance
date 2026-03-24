@@ -1546,6 +1546,10 @@ export type Database = {
         Args: { p_transaction_id: string }
         Returns: undefined
       }
+      approve_pending_user_membership: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       calculate_user_cash_totals: {
         Args: { p_user_id: string }
         Returns: {
