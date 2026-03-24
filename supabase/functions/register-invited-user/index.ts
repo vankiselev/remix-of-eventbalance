@@ -213,31 +213,32 @@ Deno.serve(async (req) => {
     console.log("[register] STEP 3 OK — user", { userId });
 
     // ═══════════════════════════════════════════════════════════
-    // STEP 4: Profile upsert (BLOCKING — fail = stop)
+    // STEP 4: Profile upsert via SECURITY DEFINER RPC (BLOCKING)
     // ═══════════════════════════════════════════════════════════
-    const profilePayload: Record<string, unknown> = {
-      id: userId,
-      email,
-      full_name: full_name || email,
-      ...(finalAvatarUrl ? { avatar_url: finalAvatarUrl } : {}),
-      ...(phone ? { phone } : {}),
-      ...(birth_date ? { birth_date } : {}),
-      ...(first_name ? { first_name } : {}),
-      ...(last_name ? { last_name } : {}),
-      ...(middle_name ? { middle_name } : {}),
-    };
-
-    const { error: profileError } = await adminClient.from("profiles").upsert(profilePayload, { onConflict: "id" });
+    const { data: profileResult, error: profileError } = await adminClient.rpc(
+      "upsert_invited_user_profile",
+      {
+        p_user_id: userId,
+        p_email: email,
+        p_full_name: full_name || email,
+        p_first_name: first_name || null,
+        p_last_name: last_name || null,
+        p_middle_name: middle_name || null,
+        p_phone: phone || null,
+        p_birth_date: birth_date || null,
+        p_avatar_url: finalAvatarUrl,
+      },
+    );
 
     if (profileError) {
-      console.error("[register] STEP 4 FAILED — profile upsert", profileError);
+      console.error("[register] STEP 4 FAILED — profile RPC", profileError);
       return jsonResponse({
         error: `Ошибка создания профиля: ${profileError.message}. Приглашение НЕ использовано — попробуйте снова.`,
         code: "PROFILE_CREATE_FAILED",
       }, 500);
     }
 
-    console.log("[register] STEP 4 OK — profile created");
+    console.log("[register] STEP 4 OK — profile created via RPC", profileResult);
 
     // ═══════════════════════════════════════════════════════════
     // STEP 5: Create membership via RPC (BLOCKING — fail = stop)

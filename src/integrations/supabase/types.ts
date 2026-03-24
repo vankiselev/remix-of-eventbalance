@@ -1643,6 +1643,20 @@ export type Database = {
             Args: { employee_user_id?: string; p_user_id?: string }
             Returns: undefined
           }
+      upsert_invited_user_profile: {
+        Args: {
+          p_avatar_url?: string
+          p_birth_date?: string
+          p_email: string
+          p_first_name?: string
+          p_full_name?: string
+          p_last_name?: string
+          p_middle_name?: string
+          p_phone?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       user_belongs_to_tenant: {
         Args: { p_tenant_id: string }
         Returns: boolean
