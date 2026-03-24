@@ -55,17 +55,74 @@ Deno.serve(async (req) => {
     });
 
     // ── STEP 1: Validate invitation ──
-    // First do an unrestricted lookup to give specific error messages
-    console.log("[register] Step 1: Looking up token...");
-    const { data: invData, error: invError } = await adminClient
-      .from("invitations")
-      .select("id, tenant_id, invited_by, email, expires_at, status")
-      .eq("token", invitation_token)
-      .single();
+    const invitationSelect = "id, tenant_id, invited_by, email, expires_at, status";
+    let invData: any = null;
+    let invError: any = null;
 
-    if (invError || !invData) {
-      console.error("[register] Token not found in DB:", invError?.message);
-      return jsonResponse({ error: "Токен приглашения не найден. Проверьте ссылку." }, 404);
+    // 1a. Primary lookup by token (works for both text and uuid columns)
+    if (normalizedToken) {
+      console.log("[register] Step 1: Looking up by token...");
+      const tokenLookup = await adminClient
+        .from("invitations")
+        .select(invitationSelect)
+        .eq("token", normalizedToken)
+        .maybeSingle();
+      invData = tokenLookup.data;
+      invError = tokenLookup.error;
+    }
+
+    // 1b. Fallback by invitation id (for retry flows where token may already be rotated/cleared)
+    if (!invData && normalizedInvitationId) {
+      console.log("[register] Step 1: Token lookup missed, trying invitation_id fallback...");
+      const idLookup = await adminClient
+        .from("invitations")
+        .select(invitationSelect)
+        .eq("id", normalizedInvitationId)
+        .maybeSingle();
+
+      if (idLookup.data) {
+        invData = idLookup.data;
+        invError = null;
+      } else if (idLookup.error) {
+        invError = idLookup.error;
+      }
+    }
+
+    // 1c. Fallback via RPC (handles schema variants from older self-hosted installs)
+    if (!invData && normalizedToken) {
+      console.log("[register] Step 1: Trying RPC fallback get_invitation_by_token...");
+      const rpcLookup = await adminClient.rpc("get_invitation_by_token", {
+        invitation_token: normalizedToken,
+      });
+
+      if (!rpcLookup.error && Array.isArray(rpcLookup.data) && rpcLookup.data.length > 0) {
+        const rpcInvitationId = rpcLookup.data[0]?.id;
+        if (rpcInvitationId) {
+          const byIdLookup = await adminClient
+            .from("invitations")
+            .select(invitationSelect)
+            .eq("id", rpcInvitationId)
+            .maybeSingle();
+
+          if (byIdLookup.data) {
+            invData = byIdLookup.data;
+            invError = null;
+          }
+        }
+      } else if (rpcLookup.error) {
+        invError = rpcLookup.error;
+      }
+    }
+
+    if (!invData) {
+      console.error("[register] Invitation not found:", {
+        tokenProvided: Boolean(normalizedToken),
+        invitationIdProvided: Boolean(normalizedInvitationId),
+        tokenError: invError?.message ?? null,
+      });
+      return jsonResponse({
+        error: "Токен приглашения не найден. Возможно, ссылка устарела или уже была использована. Запросите новое приглашение.",
+      }, 404);
     }
 
     // Now check specific conditions and return targeted errors
