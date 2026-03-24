@@ -304,21 +304,12 @@ export function InvitePage() {
       if (result?.error) throw new Error(result.error);
 
       toast({
-        title: "Добро пожаловать!",
-        description: "Ваш аккаунт успешно создан.",
+        title: "Регистрация завершена!",
+        description: "Ваш аккаунт создан. Ожидайте одобрения администратора.",
       });
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: invitation.email,
-        password: data.password,
-      });
-
-      if (signInError) {
-        console.error("Auto sign-in error:", signInError);
-        navigate("/auth");
-      } else {
-        navigate("/");
-      }
+      // Do NOT auto-login — redirect to awaiting approval screen
+      navigate("/awaiting-invitation");
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
       const msg = error.message || "Не удалось принять приглашение";
