@@ -340,20 +340,23 @@ export function TransactionDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isVoiceTransaction && <Mic className="h-5 w-5 text-blue-500" />}
-            {isDraft ? 'Черновик транзакции' : 'Детали транзакции'}
-          </DialogTitle>
-          <DialogDescription>
-            {isDraft 
-              ? 'Проверьте данные и отправьте на проверку финансисту'
-              : 'Подробная информация о финансовой операции'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] flex flex-col overflow-hidden p-0 sm:p-6 gap-0">
+        {/* Mobile-optimized header */}
+        <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3 sm:px-0 sm:pt-0 sm:pb-0 border-b sm:border-b-0">
+          <DialogHeader className="space-y-0.5 sm:space-y-1.5 pr-8">
+            <DialogTitle className="flex items-center gap-1.5 text-base sm:text-lg">
+              {isVoiceTransaction && <Mic className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />}
+              {isDraft ? 'Черновик' : 'Детали транзакции'}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm leading-tight">
+              {isDraft 
+                ? 'Проверьте и отправьте на проверку'
+                : 'Информация о финансовой операции'}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-6 px-4 py-3 sm:px-0 sm:py-0">
           {/* Money Transfer Status - Show if it's a transfer */}
           {isMoneyTransfer && (
             <div className={`p-4 rounded-lg border-2 ${
