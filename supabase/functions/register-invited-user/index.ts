@@ -271,12 +271,12 @@ Deno.serve(async (req) => {
       userId = userData.user.id;
     }
 
-    // STEP 4: profile upsert — set invitation_status='pending' and tenant_id for later admin approval
+    // STEP 4: profile upsert — set invitation_status='invited' (active) and tenant_id
     const profilePayload: Record<string, unknown> = {
       id: userId,
       email,
       full_name: full_name || email,
-      invitation_status: "pending",
+      invitation_status: "invited",
       ...(invitation.tenant_id ? { tenant_id: invitation.tenant_id } : {}),
       ...(finalAvatarUrl ? { avatar_url: finalAvatarUrl } : {}),
       ...(phone ? { phone } : {}),
