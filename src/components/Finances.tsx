@@ -197,27 +197,21 @@ const Finances = () => {
 
   // Admin dashboard view
   return (
-    <div className="space-y-4 sm:space-y-6 w-full">
+    <div className="space-y-3 sm:space-y-6 w-full">
       <div className="space-y-3 sm:space-y-4 w-full">
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold truncate">Финансы</h1>
-            <p className="text-muted-foreground hidden md:block truncate">Управление доходами и расходами компании</p>
+        {/* Action buttons — header hidden on mobile (Layout shows title) */}
+        {hasPermission('finances.create') && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setShowVoiceDialog(true)} className="h-9 sm:h-10 touch-manipulation">
+              <Mic className="mr-1.5 sm:mr-2 h-4 w-4" />
+              <span className="text-[13px] sm:text-sm">Голосом</span>
+            </Button>
+            <Button onClick={() => setShowTransactionForm(true)} className="flex-1 sm:flex-initial h-9 sm:h-10 touch-manipulation">
+              <Plus className="mr-1.5 sm:mr-2 h-4 w-4" />
+              <span className="text-[13px] sm:text-sm">Добавить</span>
+            </Button>
           </div>
-          
-          {hasPermission('finances.create') && (
-            <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setShowVoiceDialog(true)} className="h-10">
-                <Mic className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Голосом</span>
-              </Button>
-              <Button onClick={() => setShowTransactionForm(true)} className="w-full sm:w-auto h-10">
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить транзакцию
-              </Button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Summary cards with advances */}
         <div className="grid gap-4 md:grid-cols-2 w-full">
@@ -234,38 +228,35 @@ const Finances = () => {
 
       <MoneyTransferRequests />
 
-      <Card className="w-full">
+      <Card className="w-full border-border/50">
         <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
-          <CardHeader className="py-3 sm:py-4 border-b px-3 sm:px-6">
-            <TabsList className="w-full overflow-x-auto scrollbar-hide h-9 sm:h-10">
-              <TabsTrigger value="my-transactions" className="whitespace-nowrap">
-                Мои транзакции
+          <CardHeader className="py-2 sm:py-4 border-b px-2 sm:px-6">
+            <TabsList className="w-full overflow-x-auto scrollbar-hide h-8 sm:h-10">
+              <TabsTrigger value="my-transactions" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+                Мои
               </TabsTrigger>
-              <TabsTrigger value="employees" className="whitespace-nowrap">
+              <TabsTrigger value="employees" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
                 Сотрудники
               </TabsTrigger>
-              <TabsTrigger value="all-transactions" className="whitespace-nowrap">
-                Все транзакции
+              <TabsTrigger value="all-transactions" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+                Все
               </TabsTrigger>
               {isFinancier && (
-                <TabsTrigger value="review" className="whitespace-nowrap relative">
+                <TabsTrigger value="review" className="whitespace-nowrap relative text-[12px] sm:text-sm px-2 sm:px-3">
                   Проверка
                   {pendingCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] rounded-full"
-                    >
+                    <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-none tabular-nums">
                       {pendingCount}
-                    </Badge>
+                    </span>
                   )}
                 </TabsTrigger>
               )}
               {(isAdmin || isFinancier) && (
-                <TabsTrigger value="fin-reports" className="whitespace-nowrap">
-                  Финотчёты
+                <TabsTrigger value="fin-reports" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+                  Отчёты
                 </TabsTrigger>
               )}
-              <TabsTrigger value="audit-log" className="whitespace-nowrap">
+              <TabsTrigger value="audit-log" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
                 Журнал
               </TabsTrigger>
             </TabsList>
