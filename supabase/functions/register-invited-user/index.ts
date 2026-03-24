@@ -610,6 +610,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ user: { id: userId, email } });
   } catch (error) {
     console.error("[register] ❌ Unhandled error:", error);
-    return jsonResponse({ error: error.message || "Внутренняя ошибка сервера" }, 500);
+    const errorMessage = error instanceof Error ? error.message : "Внутренняя ошибка сервера";
+    return jsonResponse({ error: errorMessage }, 500);
   }
 });
