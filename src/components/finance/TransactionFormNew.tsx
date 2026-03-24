@@ -1888,21 +1888,21 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
               )}
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-1">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                className="flex-1 h-10 sm:h-9"
               >
                 Отмена
               </Button>
               <Button 
                 type="submit" 
                 disabled={submitting}
-                className="flex-1"
+                className="flex-1 h-10 sm:h-9"
               >
-                {submitting ? "Сохранение..." : editTransaction ? "Обновить" : "Сохранить операцию"}
+                {submitting ? "Сохранение..." : editTransaction ? "Обновить" : "Сохранить"}
               </Button>
             </div>
           </form>
@@ -1915,19 +1915,23 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editTransaction ? "Редактировать транзакцию" : "Внести трату/приход"}
-          </DialogTitle>
-          <DialogDescription>
-            {editTransaction 
-              ? "Внесите изменения в транзакцию" 
-              : "Заполните форму для добавления новой финансовой транзакции"
-            }
-          </DialogDescription>
-        </DialogHeader>
-        {formContent}
+      <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden p-0">
+        <div className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg">
+              {editTransaction ? "Редактировать транзакцию" : "Внести трату/приход"}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {editTransaction 
+                ? "Внесите изменения в транзакцию" 
+                : "Заполните форму для добавления новой финансовой транзакции"
+              }
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
+          {formContent}
+        </div>
       </DialogContent>
     </Dialog>
   );
