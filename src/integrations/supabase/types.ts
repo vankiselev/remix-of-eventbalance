@@ -1538,6 +1538,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation_for_registration: {
+        Args: { p_invitation_id: string }
+        Returns: Json
+      }
       accept_money_transfer: {
         Args: { p_transaction_id: string }
         Returns: undefined
@@ -1574,6 +1578,18 @@ export type Database = {
           id: string
           role: string
           status: string
+        }[]
+      }
+      get_invitation_for_registration: {
+        Args: { invitation_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+          status: string
+          tenant_id: string
         }[]
       }
       get_system_secret: { Args: { secret_key: string }; Returns: string }
