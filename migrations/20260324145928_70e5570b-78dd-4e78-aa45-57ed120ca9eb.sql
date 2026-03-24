@@ -8,12 +8,8 @@ DECLARE
   v_tenant_id uuid;
   v_admin_id uuid;
 BEGIN
-  -- Find the main tenant
+  -- Find tenant if it exists (do not fail migration when tenants table is empty)
   SELECT id INTO v_tenant_id FROM public.tenants ORDER BY created_at LIMIT 1;
-  
-  IF v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'No tenant found';
-  END IF;
 
   -- Find an admin user for invited_by
   SELECT ura.user_id INTO v_admin_id
