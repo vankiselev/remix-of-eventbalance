@@ -25,12 +25,6 @@ interface MobileNavEnhancedProps {
   onOpenCommandPalette: () => void;
 }
 
-const iconMap: Record<string, LucideIcon> = {
-  Home, DollarSign, Plus, CalendarDays, Calendar, ListChecks,
-  Package, Users, Cake, Plane, Briefcase, FileText, ClipboardCheck,
-  Shield, MoreHorizontal,
-};
-
 const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => {
   const { isAdmin } = useUserRbacRoles();
   const { isFinancier } = useFinancierPermissions();
@@ -76,9 +70,12 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
 
   return (
     <>
-      {/* Fixed bottom navigation - z-[60] to stay above Sheet overlay */}
-      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-card border-t border-border/20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-center justify-around px-1 py-2 max-w-screen-sm mx-auto">
+      {/* Fixed bottom navigation */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-card/95 backdrop-blur-md border-t border-border/30"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex items-stretch justify-around max-w-screen-sm mx-auto">
           {/* Main nav items */}
           {mainNavItems.map((item) => {
             const IconComponent = item.icon;
@@ -88,24 +85,24 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 min-w-[56px] py-1 rounded-xl transition-all duration-300",
-                  active && "scale-105"
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 pt-2 pb-1.5 touch-manipulation transition-colors",
+                  active ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                <div
-                  className={cn(
-                    "flex items-center justify-center h-9 w-9 rounded-xl transition-all duration-300",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
-                      : "text-foreground hover:bg-accent"
+                <div className="relative">
+                  <IconComponent
+                    className={cn("h-[22px] w-[22px]", active && "drop-shadow-sm")}
+                    strokeWidth={active ? 2.5 : 1.8}
+                  />
+                  {/* Active indicator dot */}
+                  {active && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
                   )}
-                >
-                  <IconComponent className="h-[18px] w-[18px]" strokeWidth={active ? 2.5 : 2} />
                 </div>
                 <span
                   className={cn(
-                    "text-[10px] font-medium transition-colors duration-200 leading-tight",
-                    active ? "text-primary" : "text-muted-foreground"
+                    "text-[10px] leading-tight mt-0.5",
+                    active ? "font-semibold" : "font-medium"
                   )}
                 >
                   {item.shortLabel}
@@ -117,57 +114,61 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
           {/* More Menu */}
           <Sheet open={isMoreMenuOpen} onOpenChange={setIsMoreMenuOpen}>
             <SheetTrigger asChild>
-              <button className="flex flex-col items-center gap-0.5 min-w-[56px] py-1">
-                <div className="flex items-center justify-center h-9 w-9 rounded-xl text-foreground hover:bg-accent transition-all duration-300">
-                  <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
-                </div>
-                <span className="text-[10px] font-medium text-muted-foreground leading-tight">Ещё</span>
+              <button
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 pt-2 pb-1.5 touch-manipulation transition-colors",
+                  isMoreMenuOpen ? "text-primary" : "text-muted-foreground active:text-foreground"
+                )}
+              >
+                <MoreHorizontal className="h-[22px] w-[22px]" strokeWidth={1.8} />
+                <span className="text-[10px] font-medium leading-tight mt-0.5">Ещё</span>
               </button>
             </SheetTrigger>
-            <SheetContent 
-              side="bottom" 
+            <SheetContent
+              side="bottom"
               hideCloseButton
-              className="rounded-t-3xl border-t-0 px-4 pb-4 pt-2 mb-[calc(88px+env(safe-area-inset-bottom))] mx-2 rounded-b-2xl"
+              className="rounded-t-2xl border-t-0 px-4 pt-2 pb-4 mx-0"
+              style={{ marginBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
             >
-              <div className="w-12 h-1.5 bg-border/60 rounded-full mx-auto mb-4" />
-              
+              {/* Drag handle */}
+              <div className="w-10 h-1 bg-border/50 rounded-full mx-auto mb-4" />
+
               {/* Icon Grid */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-y-5 gap-x-2">
                 {moreMenuItems.map((item) => {
                   const IconComponent = item.icon;
                   const active = isActive(item.path);
                   const badgeCount = getBadgeCount(item.path);
-                  
+
                   return (
                     <button
                       key={item.path}
                       onClick={() => handleNavigation(item.path)}
-                      className="flex flex-col items-center gap-1.5 outline-none focus:outline-none focus-visible:ring-0"
+                      className="flex flex-col items-center gap-1.5 outline-none touch-manipulation active:scale-95 transition-transform"
                     >
                       <div className="relative">
                         <div
                           className={cn(
-                            "flex items-center justify-center h-12 w-12 rounded-2xl transition-all duration-200 active:scale-95",
+                            "flex items-center justify-center h-12 w-12 rounded-2xl transition-colors",
                             active
-                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                              : "bg-accent/50 text-foreground hover:bg-accent"
+                              ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                              : "bg-accent/60 text-foreground"
                           )}
                         >
-                          <IconComponent className="h-5 w-5" strokeWidth={2} />
+                          <IconComponent className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
                         </div>
                         {badgeCount > 0 && (
-                          <Badge 
-                            variant="destructive" 
-                            className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center px-1.5 text-[10px] rounded-full"
-                          >
+                          <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none px-1 tabular-nums">
                             {badgeCount}
-                          </Badge>
+                          </span>
                         )}
                       </div>
-                      <span className={cn(
-                        "text-[11px] font-medium text-center leading-tight",
-                        active ? "text-primary" : "text-muted-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[11px] text-center leading-tight",
+                          active ? "font-semibold text-primary" : "font-medium text-muted-foreground"
+                        )}
+                      >
                         {item.shortLabel}
                       </span>
                     </button>
@@ -177,10 +178,13 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
             </SheetContent>
           </Sheet>
         </div>
-      </div>
+      </nav>
 
-      {/* Bottom padding to prevent content overlap */}
-      <div className="h-20 flex-shrink-0" />
+      {/* Spacer to prevent content from hiding under nav */}
+      <div
+        className="flex-shrink-0"
+        style={{ height: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
+      />
     </>
   );
 };
