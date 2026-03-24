@@ -19,13 +19,27 @@ Deno.serve(async (req) => {
 
   try {
     const {
-      email, password, full_name, role, invitation_token,
+      email, password, full_name, role, invitation_token, invitation_id,
       first_name, last_name, middle_name, phone, birth_date,
       avatar_url, avatar_base64,
     } = await req.json();
 
-    if (!email || !password || !invitation_token) {
-      return jsonResponse({ error: "Email, password and invitation token are required" }, 400);
+    let normalizedToken = "";
+    if (typeof invitation_token === "string") {
+      try {
+        normalizedToken = decodeURIComponent(invitation_token).trim();
+      } catch {
+        normalizedToken = invitation_token.trim();
+      }
+    }
+
+    const normalizedInvitationId =
+      typeof invitation_id === "string" && invitation_id.trim().length > 0
+        ? invitation_id.trim()
+        : null;
+
+    if (!email || !password || (!normalizedToken && !normalizedInvitationId)) {
+      return jsonResponse({ error: "Email, password и invitation token обязательны" }, 400);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
