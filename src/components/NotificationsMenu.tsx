@@ -279,7 +279,7 @@ export const NotificationsMenu = () => {
 
             {(['all', 'unread', 'transfers', 'system'] as const).map((tab) => (
               <TabsContent key={tab} value={tab} className="flex-1 mt-0 min-h-0">
-                <ScrollArea className="h-full max-h-[calc(100vh-140px)]">
+                <ScrollArea className="h-full max-h-[calc(100dvh-140px)]">
                   {renderList(filtered[tab])}
                 </ScrollArea>
               </TabsContent>

@@ -113,6 +113,7 @@ html, body {
     overflow-x: hidden;
     font-size: clamp(14px, 1.5vw, 16px);
     line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
   }
   
   body {
@@ -121,7 +122,15 @@ html, body {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
     /* Safe areas handled by individual components (header, nav, dialogs) */
+  }
+
+  /* Ensure buttons and interactive elements have proper touch behavior on iOS */
+  @media (max-width: 639px) {
+    button, a, [role="button"], [role="tab"], input, select, textarea {
+      -webkit-tap-highlight-color: transparent;
+    }
   }
 
   /* Responsive Typography - mobile-first approach */
