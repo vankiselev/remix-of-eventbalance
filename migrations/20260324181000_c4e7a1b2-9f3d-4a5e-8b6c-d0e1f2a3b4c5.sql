@@ -1,5 +1,7 @@
 -- Fix get_invitation_by_token: change param type from uuid to text, support pending/sent/accepted statuses
+-- Add anon RLS policy for invitation validation on /invite page
 -- Idempotent: drops both uuid and text overloads before recreating
+
 DROP FUNCTION IF EXISTS public.get_invitation_by_token(uuid);
 DROP FUNCTION IF EXISTS public.get_invitation_by_token(text);
 
@@ -27,3 +29,9 @@ AS $$
     AND (i.status = 'accepted' OR i.expires_at > now())
   LIMIT 1;
 $$;
+
+-- Allow anon users to read invitations by token (for /invite page validation)
+DROP POLICY IF EXISTS "Anon can read invitations by token" ON public.invitations;
+CREATE POLICY "Anon can read invitations by token"
+ON public.invitations FOR SELECT TO anon
+USING (status IN ('pending', 'sent', 'accepted'));
