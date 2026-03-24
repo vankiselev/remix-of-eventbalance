@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -13,31 +13,53 @@ const PullToRefresh = ({ children, className = "" }: PullToRefreshProps) => {
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef<number | null>(null);
+  const isPulling = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
+  // Prevent native pull-to-refresh on the container
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const preventNative = (e: TouchEvent) => {
+      if (isPulling.current && pullDistance > 0) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("touchmove", preventNative, { passive: false });
+    return () => el.removeEventListener("touchmove", preventNative);
+  }, [pullDistance]);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
+    const el = containerRef.current;
+    if (el && el.scrollTop <= 0 && !refreshing) {
       startY.current = e.touches[0].clientY;
+      isPulling.current = false;
     } else {
       startY.current = null;
     }
-  }, []);
+  }, [refreshing]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (startY.current === null || refreshing) return;
     const delta = e.touches[0].clientY - startY.current;
-    if (delta > 0) {
-      setPullDistance(Math.min(delta * 0.5, THRESHOLD * 1.5));
+    if (delta > 10) {
+      isPulling.current = true;
+      setPullDistance(Math.min((delta - 10) * 0.5, THRESHOLD * 1.5));
+    } else {
+      isPulling.current = false;
+      setPullDistance(0);
     }
   }, [refreshing]);
 
   const handleTouchEnd = useCallback(async () => {
     if (startY.current === null) return;
+    isPulling.current = false;
     if (pullDistance >= THRESHOLD && !refreshing) {
       setRefreshing(true);
       await queryClient.invalidateQueries();
-      // Small delay for visual feedback
       await new Promise(r => setTimeout(r, 400));
       setRefreshing(false);
     }
@@ -51,6 +73,7 @@ const PullToRefresh = ({ children, className = "" }: PullToRefreshProps) => {
     <div
       ref={containerRef}
       className={`relative overflow-auto ${className}`}
+      style={{ overscrollBehaviorY: "contain", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
