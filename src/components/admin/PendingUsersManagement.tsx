@@ -95,6 +95,24 @@ export function PendingUsersManagement() {
     refetchInterval: 30 * 1000,
   });
 
+  // Pre-fill roles from invitations
+  useEffect(() => {
+    if (pendingUsers.length > 0 && roles.length > 0) {
+      setSelectedRoles(prev => {
+        const updated = { ...prev };
+        for (const user of pendingUsers) {
+          if (!updated[user.id] && user.invitation_role) {
+            const matchedRole = roles.find(r => r.code === user.invitation_role);
+            if (matchedRole) {
+              updated[user.id] = matchedRole.id;
+            }
+          }
+        }
+        return updated;
+      });
+    }
+  }, [pendingUsers, roles]);
+
   const refetchPendingUsers = () => {
     queryClient.invalidateQueries({ queryKey: ['pending-users'] });
   };
