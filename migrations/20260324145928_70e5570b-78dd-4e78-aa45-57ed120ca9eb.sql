@@ -1,61 +1,69 @@
-
--- Bulk insert invitations for 15 employees
--- Tokens are generated as UUIDs, token_hash computed via md5
--- After migration runs on self-hosted, admin can resend emails from UI
+-- Bulk insert invitations for 15 users (self-hosted safe variant)
+-- Idempotent: skips emails that already have active invite or existing profile
 
 DO $$
 DECLARE
   v_tenant_id uuid;
-  v_admin_id uuid;
 BEGIN
-  -- Find tenant if it exists (do not fail migration when tenants table is empty)
-  SELECT id INTO v_tenant_id FROM public.tenants ORDER BY created_at LIMIT 1;
+  -- Prefer tenant from memberships (works even if tenants table shape differs)
+  IF to_regclass('public.tenant_memberships') IS NOT NULL THEN
+    SELECT tm.tenant_id
+    INTO v_tenant_id
+    FROM public.tenant_memberships tm
+    WHERE tm.tenant_id IS NOT NULL
+    LIMIT 1;
+  END IF;
 
-  -- Find an admin user for invited_by
-  SELECT ura.user_id INTO v_admin_id
-  FROM public.user_role_assignments ura
-  JOIN public.role_definitions rd ON rd.id = ura.role_id
-  WHERE rd.is_admin_role = true
-  LIMIT 1;
+  -- Fallback: first tenant record
+  IF v_tenant_id IS NULL AND to_regclass('public.tenants') IS NOT NULL THEN
+    SELECT t.id
+    INTO v_tenant_id
+    FROM public.tenants t
+    LIMIT 1;
+  END IF;
 
-  -- Insert invitations (skip if email already has active invitation or existing profile)
-  INSERT INTO public.invitations (email, role, status, token, token_hash, tenant_id, invited_by, expires_at)
-  SELECT 
-    v.email,
-    v.role,
-    'sent',
-    v.token,
-    md5(v.token::text),
-    v_tenant_id,
-    v_admin_id,
-    now() + interval '30 days'
-  FROM (VALUES
-    ('nastya.beloucova@gmail.com',       'employee',  gen_random_uuid()::text),
-    ('kolokolnikovaud@gmail.com',        'employee',  gen_random_uuid()::text),
-    ('gssavushkina2022@gmail.com',       'employee',  gen_random_uuid()::text),
-    ('valerijapasternak23@gmail.com',    'employee',  gen_random_uuid()::text),
-    ('Nikitagabov@yandex.ru',            'employee',  gen_random_uuid()::text),
-    ('ilona.khudieva@gmail.com',         'employee',  gen_random_uuid()::text),
-    ('safonov.ni1999@gmail.com',         'employee',  gen_random_uuid()::text),
-    ('kolozubchikshmakajop@gmail.com',   'employee',  gen_random_uuid()::text),
-    ('kazanzh21@gmail.com',              'employee',  gen_random_uuid()::text),
-    ('egorprimazchikov2015@mail.ru',     'employee',  gen_random_uuid()::text),
-    ('rundzya@gmail.com',                'employee',  gen_random_uuid()::text),
-    ('buh.funtasy@yandex.ru',            'financier', gen_random_uuid()::text),
-    ('andreyzuz19@gmail.com',            'employee',  gen_random_uuid()::text),
-    ('Ryzhovavika08@gmail.com',          'employee',  gen_random_uuid()::text),
-    ('dkekov@gmail.com',                 'employee',  gen_random_uuid()::text)
-  ) AS v(email, role, token)
-  WHERE NOT EXISTS (
-    SELECT 1 FROM public.invitations i 
-    WHERE lower(i.email) = lower(v.email) 
-    AND i.status IN ('sent', 'pending', 'accepted')
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM public.profiles p 
-    WHERE lower(p.email) = lower(v.email)
-  );
+  -- If tenant still not found, do not fail the whole deploy pipeline
+  IF v_tenant_id IS NULL THEN
+    RAISE NOTICE 'Skipping bulk invite migration: tenant_id not found';
+  ELSE
+    INSERT INTO public.invitations (email, role, status, token, tenant_id, expires_at)
+    SELECT
+      v.email,
+      v.role,
+      'sent',
+      md5(v.email || ':' || clock_timestamp()::text || ':' || random()::text),
+      v_tenant_id,
+      now() + interval '30 days'
+    FROM (VALUES
+      ('nastya.beloucova@gmail.com',       'employee'),
+      ('kolokolnikovaud@gmail.com',        'employee'),
+      ('gssavushkina2022@gmail.com',       'employee'),
+      ('valerijapasternak23@gmail.com',    'employee'),
+      ('Nikitagabov@yandex.ru',            'employee'),
+      ('ilona.khudieva@gmail.com',         'employee'),
+      ('safonov.ni1999@gmail.com',         'employee'),
+      ('kolozubchikshmakajop@gmail.com',   'employee'),
+      ('kazanzh21@gmail.com',              'employee'),
+      ('egorprimazchikov2015@mail.ru',     'employee'),
+      ('rundzya@gmail.com',                'employee'),
+      ('buh.funtasy@yandex.ru',            'financier'),
+      ('andreyzuz19@gmail.com',            'employee'),
+      ('Ryzhovavika08@gmail.com',          'employee'),
+      ('dkekov@gmail.com',                 'employee')
+    ) AS v(email, role)
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.invitations i
+      WHERE lower(i.email) = lower(v.email)
+        AND i.status IN ('sent', 'pending', 'accepted')
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE lower(p.email) = lower(v.email)
+    );
 
-  RAISE NOTICE 'Invitations inserted for tenant %', v_tenant_id;
+    RAISE NOTICE 'Bulk invite migration done for tenant %', v_tenant_id;
+  END IF;
 END;
 $$;
