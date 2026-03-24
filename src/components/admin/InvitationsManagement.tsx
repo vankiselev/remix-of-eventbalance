@@ -69,7 +69,7 @@ export function InvitationsManagement() {
       const registeredEmails = new Set((registeredProfiles || []).map(p => p.email));
 
       return (data || []).map(inv => {
-        if (registeredEmails.has(inv.email) && inv.status !== 'accepted') {
+        if (registeredEmails.has(inv.email) && (inv.status === 'sent' || inv.status === 'pending')) {
           return { ...inv, status: 'accepted' };
         }
         return inv;
