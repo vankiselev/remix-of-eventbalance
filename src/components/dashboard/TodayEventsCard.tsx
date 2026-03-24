@@ -89,21 +89,21 @@ const TodayEventsCard = () => {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 justify-center">
-          <CalendarDays className="w-5 h-5 text-primary" />
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+        <CardTitle className="flex items-center gap-2 justify-center text-sm sm:text-base">
+          <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           Ближайшие мероприятия
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col overflow-hidden">
+      <CardContent className="flex-1 flex flex-col overflow-hidden px-3 sm:px-6">
         {events.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
-            <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>На ближайшую неделю нет запланированных мероприятий</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[120px] sm:min-h-[180px]">
+            <CalendarDays className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-30" />
+            <p className="text-sm">На ближайшую неделю нет мероприятий</p>
           </div>
         ) : (
           <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-3 pr-3 pb-1">
+            <div className="space-y-2 sm:space-y-3 pr-2 sm:pr-3 pb-1">
               {events.map((event) => (
                 <div 
                   key={event.id} 

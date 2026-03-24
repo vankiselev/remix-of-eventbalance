@@ -67,22 +67,22 @@ const TodayVacationsCard = () => {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 justify-center">
-          <Plane className="w-5 h-5 text-primary" />
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+        <CardTitle className="flex items-center gap-2 justify-center text-sm sm:text-base">
+          <Plane className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           Не на связи
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="flex-1 flex flex-col px-3 sm:px-6">
         {todayVacations.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
-            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Все на связи!</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[120px] sm:min-h-[180px]">
+            <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-30" />
+            <p className="text-sm">Все на связи!</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {todayVacations.map((vacation, index) => (
-              <div key={vacation.id || `vacation-${index}`} className="border rounded-lg p-3 space-y-1">
+              <div key={vacation.id || `vacation-${index}`} className="border rounded-lg p-2.5 sm:p-3 space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
@@ -97,7 +97,7 @@ const TodayVacationsCard = () => {
                       </p>
                     )}
                   </div>
-                  <Badge className={getVacationTypeColor(vacation.vacation_type)} variant="secondary">
+                  <Badge className={`${getVacationTypeColor(vacation.vacation_type)} text-[10px] sm:text-xs whitespace-nowrap`} variant="secondary">
                     {getVacationTypeLabel(vacation.vacation_type)}
                   </Badge>
                 </div>
