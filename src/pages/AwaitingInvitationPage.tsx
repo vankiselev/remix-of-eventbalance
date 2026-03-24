@@ -7,29 +7,33 @@ import { Clock, LogOut, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const AwaitingInvitationPage = () => {
-  const { user, signOut, userProfile } = useAuth();
+  const { user, signOut, userProfile, isPendingInvitation } = useAuth();
   const navigate = useNavigate();
 
-  // Подписка на изменение статуса в реальном времени
+  // If user already has membership, redirect to dashboard
+  useEffect(() => {
+    if (user && !isPendingInvitation) {
+      window.location.href = '/';
+    }
+  }, [user, isPendingInvitation]);
+
+  // Listen for membership creation in realtime
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('invitation-status-change')
+      .channel('membership-approval')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`,
+          table: 'tenant_memberships',
+          filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          const newStatus = (payload.new as any).invitation_status;
-          if (newStatus === 'invited') {
-            // Перезагружаем страницу для обновления контекста авторизации
-            window.location.href = '/dashboard';
-          }
+        () => {
+          // Membership created — admin approved! Reload to get fresh context.
+          window.location.href = '/';
         }
       )
       .subscribe();
@@ -37,7 +41,26 @@ const AwaitingInvitationPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, navigate]);
+  }, [user]);
+
+  // Poll fallback every 15s in case realtime doesn't fire
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('tenant_memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (data && data.length > 0) {
+        window.location.href = '/';
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -51,9 +74,9 @@ const AwaitingInvitationPage = () => {
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <Clock className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Ожидание приглашения</CardTitle>
+          <CardTitle className="text-2xl">Ожидание одобрения</CardTitle>
           <CardDescription className="text-base">
-            Ваша заявка на регистрацию отправлена на рассмотрение
+            Ваш аккаунт создан и ожидает одобрения администратора
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -71,10 +94,10 @@ const AwaitingInvitationPage = () => {
 
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>
-              Администратор системы рассмотрит вашу заявку и предоставит доступ.
+              Администратор рассмотрит вашу заявку и предоставит доступ.
             </p>
             <p>
-              Вы получите уведомление, когда ваш аккаунт будет активирован.
+              Страница обновится автоматически после одобрения.
             </p>
           </div>
 

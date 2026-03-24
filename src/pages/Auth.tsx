@@ -63,18 +63,7 @@ const Auth = () => {
         return;
       }
 
-      // Отдельный запрос для invitation_status (новая колонка)
-      const { data: invitationData } = await supabase
-        .from('profiles')
-        .select('invitation_status' as any)
-        .eq('id', userId)
-        .single();
-
-      // @ts-ignore - invitation_status is a new column
-      if ((invitationData as any)?.invitation_status === 'pending') {
-        navigate('/awaiting-invitation');
-        return;
-      }
+      // Pending check is handled by ProtectedRoute via AuthContext.isPendingInvitation
 
       navigate("/dashboard");
     } catch (error) {

@@ -81,16 +81,7 @@ const AuthPage = () => {
           return;
         }
 
-        const { data: invitationData } = await supabase
-          .from('profiles')
-          .select('invitation_status' as any)
-          .eq('id', data.user.id)
-          .single();
-
-        if ((invitationData as any)?.invitation_status === 'pending') {
-          window.location.href = '/awaiting-invitation';
-          return;
-        }
+        // Pending check is handled by ProtectedRoute via AuthContext.isPendingInvitation
 
         toast.success("Вход выполнен успешно!", {
           description: "Добро пожаловать в систему.",

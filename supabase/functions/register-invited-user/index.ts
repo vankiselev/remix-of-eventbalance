@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const REGISTER_INVITED_USER_VERSION = "2026-03-24-fix-partial-success-v2";
+const REGISTER_INVITED_USER_VERSION = "2026-03-24-approval-flow-v1";
 const TRUSTED_SELF_HOSTED_URL = "https://superbag.eventbalance.ru/a73e88c7ef6a2ca735abc52404257a9f";
 
 const corsHeaders = {
@@ -241,29 +241,12 @@ Deno.serve(async (req) => {
     console.log("[register] STEP 4 OK — profile created via RPC", profileResult);
 
     // ═══════════════════════════════════════════════════════════
-    // STEP 5: Create membership via RPC (BLOCKING — fail = stop)
+    // STEP 5: Accept invitation (DEFERRED membership — admin approval)
+    // Membership is NOT created here. Admin must approve via RPC.
     // ═══════════════════════════════════════════════════════════
-    const { data: membershipResult, error: membershipError } = await adminClient.rpc(
-      "ensure_invited_user_membership",
-      {
-        p_invitation_id: invitation.id,
-        p_user_id: userId,
-        p_role: role || invitation.role || "member",
-      },
-    );
-
-    if (membershipError) {
-      console.error("[register] STEP 5 FAILED — membership RPC", membershipError);
-      return jsonResponse({
-        error: `Ошибка добавления в организацию: ${membershipError.message}. Приглашение НЕ использовано — попробуйте снова.`,
-        code: "MEMBERSHIP_CREATE_FAILED",
-      }, 500);
-    }
-
-    console.log("[register] STEP 5 OK — membership", membershipResult);
 
     // ═══════════════════════════════════════════════════════════
-    // STEP 6: Accept invitation — ONLY after everything above succeeded
+    // STEP 6: Accept invitation — profile created, mark as accepted
     // ═══════════════════════════════════════════════════════════
     if (!isRetry) {
       const { error: acceptError } = await adminClient.rpc("accept_invitation_for_registration", {
@@ -272,9 +255,8 @@ Deno.serve(async (req) => {
 
       if (acceptError) {
         console.error("[register] STEP 6 accept failed (non-critical)", acceptError);
-        // Non-blocking: user+profile+membership already created successfully
       } else {
-        console.log("[register] STEP 6 OK — invitation accepted");
+        console.log("[register] STEP 6 OK — invitation accepted, awaiting admin approval");
       }
     }
 
@@ -326,6 +308,7 @@ Deno.serve(async (req) => {
     return jsonResponse({
       user: { id: userId, email },
       invite: { id: invitation.id, status: isRetry ? "accepted" : "accepted_now" },
+      pending_approval: true,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Внутренняя ошибка сервера";

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,22 +50,44 @@ export function PendingUsersManagement() {
   const { data: pendingUsers = [], isLoading: loading } = useQuery({
     queryKey: ['pending-users'],
     queryFn: async () => {
-      // @ts-ignore - invitation_status column will exist after migration
-      const { data, error } = await supabase
+      // Find profiles that have an accepted invitation but NO tenant_membership
+      // Step 1: Get all accepted invitations for our tenant
+      const { data: acceptedInvitations, error: invErr } = await supabase
+        .from("invitations")
+        .select("email")
+        .eq("status", "accepted");
+
+      if (invErr || !acceptedInvitations?.length) return [];
+
+      const acceptedEmails = acceptedInvitations.map(i => i.email.toLowerCase());
+
+      // Step 2: Get all profiles
+      const { data: allProfiles, error: profErr } = await supabase
         .from("profiles")
         .select("id, email, first_name, last_name, full_name, created_at")
-        .eq("invitation_status", "pending")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        if (error.message?.includes('invitation_status')) return [];
-        throw error;
-      }
-      return (data as unknown as PendingUser[]) || [];
+      if (profErr || !allProfiles?.length) return [];
+
+      // Step 3: Get all tenant memberships
+      const { data: memberships, error: memErr } = await supabase
+        .from("tenant_memberships")
+        .select("user_id");
+
+      const memberUserIds = new Set((memberships || []).map(m => m.user_id));
+
+      // Step 4: Filter: profile email is in accepted invitations AND has no membership
+      const pending = allProfiles.filter(p => 
+        p.email && 
+        acceptedEmails.includes(p.email.toLowerCase()) && 
+        !memberUserIds.has(p.id)
+      );
+
+      return pending as PendingUser[];
     },
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 30 * 1000, // Poll every 30s instead of realtime subscription
+    refetchInterval: 30 * 1000,
   });
 
   const refetchPendingUsers = () => {
@@ -83,40 +105,27 @@ export function PendingUsersManagement() {
     setInvitingUserId(user.id);
 
     try {
-      // Обновляем статус пользователя
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ 
-          invitation_status: "invited",
-          invited_at: new Date().toISOString()
-        } as Record<string, unknown>)
-        .eq("id", user.id);
-
-      if (updateError) throw updateError;
-
-      // Создаём membership в tenant через безопасную RPC
+      // Create membership via secure RPC
       const { data: membershipResult, error: membershipError } = await supabase
         .rpc("approve_pending_user_membership" as any, { p_user_id: user.id });
 
       if (membershipError) {
-        console.error("Membership creation failed:", membershipError);
-        // Non-blocking: user is approved but membership might need manual fix
-      } else {
-        console.log("Membership created:", membershipResult);
+        throw new Error(`Ошибка создания membership: ${membershipError.message}`);
       }
 
-      // Назначаем RBAC роль
+      console.log("Membership created:", membershipResult);
+
+      // Assign RBAC role
       const { error: roleError } = await supabase
         .from("user_role_assignments")
         .upsert({
           user_id: user.id,
           role_id: roleId,
-          assigned_by: authUser?.id
         }, { onConflict: "user_id" });
 
       if (roleError) throw roleError;
 
-      // Создаем уведомление для пользователя об одобрении
+      // Notify user
       await supabase.from("notifications").insert({
         user_id: user.id,
         title: "Доступ одобрен",
@@ -124,7 +133,7 @@ export function PendingUsersManagement() {
         type: "system",
       } as any);
 
-      toast.success(`Пользователь ${user.email} приглашен в систему`);
+      toast.success(`Пользователь ${user.email} одобрен`);
 
       // Send approval email (fire-and-forget)
       try {
@@ -141,8 +150,8 @@ export function PendingUsersManagement() {
         return rest;
       });
     } catch (error: any) {
-      console.error("Error inviting user:", error);
-      toast.error(error.message || "Не удалось пригласить пользователя");
+      console.error("Error approving user:", error);
+      toast.error(error.message || "Не удалось одобрить пользователя");
     } finally {
       setInvitingUserId(null);
     }
@@ -154,13 +163,10 @@ export function PendingUsersManagement() {
     setRejectingUserId(rejectUser.id);
 
     try {
-      // Удаляем профиль напрямую (каскадное удаление обработает остальное)
-      // @ts-ignore - invitation_status column will exist after migration
       const { error } = await supabase
         .from("profiles")
         .delete()
-        .eq("id", rejectUser.id)
-        .eq("invitation_status", "pending");
+        .eq("id", rejectUser.id);
 
       if (error) throw error;
 
@@ -201,10 +207,10 @@ export function PendingUsersManagement() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="w-5 h-5" />
-          Ожидающие регистрации
+          Ожидающие одобрения
         </CardTitle>
         <CardDescription>
-          Пользователи, которые самостоятельно зарегистрировались и ожидают приглашения
+          Пользователи, зарегистрировавшиеся по приглашению и ожидающие одобрения
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -272,7 +278,7 @@ export function PendingUsersManagement() {
                         ) : (
                           <>
                             <UserPlus className="w-4 h-4 mr-1" />
-                            Пригласить
+                            Одобрить
                           </>
                         )}
                       </Button>

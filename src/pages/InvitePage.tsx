@@ -273,11 +273,22 @@ export function InvitePage() {
 
       toast({
         title: "Регистрация завершена!",
-        description: "Ваш аккаунт создан. Войдите с вашим email и паролем.",
+        description: "Ваш аккаунт создан. Ожидайте одобрения администратора.",
       });
 
-      // Redirect to login — no auto-login to avoid masking backend issues
-      setTimeout(() => navigate("/auth"), 1500);
+      // Auto-login then redirect to awaiting page
+      try {
+        await supabase.auth.signInWithPassword({
+          email: invitation.email,
+          password: data.password,
+        });
+      } catch (loginErr) {
+        console.warn("[InvitePage] Auto-login failed, redirecting to awaiting anyway", loginErr);
+      }
+
+      setTimeout(() => {
+        window.location.href = "/awaiting-invitation";
+      }, 1200);
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
       const msg = error.message || "Не удалось принять приглашение";

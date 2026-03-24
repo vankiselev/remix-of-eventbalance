@@ -17,7 +17,7 @@ interface UserProfile {
   first_name?: string;
   middle_name?: string;
   avatar_url: string | null;
-  invitation_status?: string;
+  has_membership?: boolean;
 }
 
 interface UserData {
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Date.now() - timestamp < CACHE_DURATION && data.profile) {
           const adminStatus = data.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
           setUserData({
-            userRole: adminStatus ? 'admin' : (data.profile.role || 'employee'),
+            userRole: adminStatus ? 'admin' : 'employee',
             userRoleName: data.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'),
             userProfile: {
               full_name: formatFullName(data.profile),
@@ -89,11 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               first_name: data.profile.first_name,
               middle_name: data.profile.middle_name,
               avatar_url: normalizeAvatarUrl(data.profile.avatar_url),
+              has_membership: data.profile.has_membership,
             },
             rbacRoles: data.rbac_roles || [],
             permissions: data.permissions || [],
             isAdmin: adminStatus,
-            isPendingInvitation: data.profile.invitation_status === 'pending',
+            isPendingInvitation: data.profile.has_membership === false,
           });
           return true;
         }
@@ -158,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const adminStatus = profileData.rbac_roles?.some((r: RbacRole) => r.is_admin_role) || false;
 
         setUserData({
-          userRole: adminStatus ? 'admin' : (profileData.profile.role || 'employee'),
+          userRole: adminStatus ? 'admin' : 'employee',
           userRoleName: profileData.rbac_roles?.[0]?.name || (adminStatus ? 'Администратор' : 'Сотрудник'),
           userProfile: {
             full_name: formatFullName(profileData.profile),
@@ -166,12 +167,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             first_name: profileData.profile.first_name,
             middle_name: profileData.profile.middle_name,
             avatar_url: normalizeAvatarUrl(profileData.profile.avatar_url),
-            invitation_status: profileData.profile.invitation_status,
+            has_membership: profileData.profile.has_membership,
           },
           rbacRoles: profileData.rbac_roles || [],
           permissions: profileData.permissions || [],
           isAdmin: adminStatus,
-          isPendingInvitation: profileData.profile.invitation_status === 'pending',
+          isPendingInvitation: profileData.profile.has_membership === false,
         });
 
         // Cache the data

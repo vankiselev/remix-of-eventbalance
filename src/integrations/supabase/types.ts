@@ -1607,6 +1607,7 @@ export type Database = {
           id: string
         }[]
       }
+      get_user_profile_with_roles: { Args: never; Returns: Json }
       get_user_tenant_memberships: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
