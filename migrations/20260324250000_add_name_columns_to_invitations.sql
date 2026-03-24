@@ -30,7 +30,7 @@ AS $$
     i.first_name,
     i.last_name
   FROM public.invitations i
-  WHERE i.token = invitation_token 
+  WHERE i.token::text = invitation_token 
     AND i.status IN ('pending', 'sent', 'accepted')
     AND (i.status = 'accepted' OR i.expires_at IS NULL OR i.expires_at > now())
   LIMIT 1;
