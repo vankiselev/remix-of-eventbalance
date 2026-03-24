@@ -75,7 +75,15 @@ export function InvitePage() {
     },
   });
 
-  const token = searchParams.get("token");
+  const rawToken = searchParams.get("token");
+  const token = (() => {
+    if (!rawToken) return null;
+    try {
+      return decodeURIComponent(rawToken).trim();
+    } catch {
+      return rawToken.trim();
+    }
+  })();
 
   useEffect(() => {
     const validateInvitation = async () => {
@@ -231,6 +239,7 @@ export function InvitePage() {
             avatar_base64: avatarBase64,
             role: invitation.role,
             invitation_token: token,
+            invitation_id: invitation.id,
           }),
         }
       );
