@@ -17,6 +17,9 @@ jobs:
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       WORKFLOW_NAME: Deploy Edge Functions to Self-Hosted Supabase
       RUN_TITLE: ${{ github.event.head_commit.message || github.workflow }}
+      # Explicit target — no more guessing
+      EDGE_CONTAINER: ${{ secrets.EDGE_RUNTIME_CONTAINER || 'supabase-edge-functions' }}
+      EDGE_FUNCTIONS_PATH: ${{ secrets.EDGE_FUNCTIONS_PATH || '/home/deno/functions' }}
     
     steps:
       - name: Checkout code
@@ -39,40 +42,28 @@ jobs:
           EOF
           .github/scripts/send-telegram.sh "$RUNNER_TEMP/telegram_start.txt"
       
-      - name: Find Edge Runtime container + functions path
+      - name: Verify container exists
         id: find-target
         continue-on-error: true
         run: |
           set -o pipefail
           {
-            echo "🔍 Looking for Edge Runtime container and functions directory..."
+            echo "🔍 Using explicit container: ${EDGE_CONTAINER}"
+            echo "📂 Functions path: ${EDGE_FUNCTIONS_PATH}"
 
-            CANDIDATES=$(docker ps --format '{{.Names}}' | grep -E 'supabase|edge|runtime|functions' || true)
-
-            if [ -z "$CANDIDATES" ]; then
-              echo "❌ No candidate containers found"
+            if ! docker ps --format '{{.Names}}' | grep -qx "${EDGE_CONTAINER}"; then
+              echo "❌ Container '${EDGE_CONTAINER}' not found or not running"
+              echo "Running containers:"
               docker ps --format '{{.Names}}'
               exit 1
             fi
 
-            PATHS="/home/deno/functions /app/functions /var/lib/supabase/functions"
+            if ! docker exec "${EDGE_CONTAINER}" sh -lc "test -d '${EDGE_FUNCTIONS_PATH}'" >/dev/null 2>&1; then
+              echo "❌ Functions path '${EDGE_FUNCTIONS_PATH}' not found in container"
+              exit 1
+            fi
 
-            for c in $CANDIDATES; do
-              for p in $PATHS; do
-                if docker exec "$c" sh -lc "test -d '$p'" >/dev/null 2>&1; then
-                  echo "✅ Using container: $c"
-                  echo "✅ Functions path: $p"
-                  echo "container=$c" >> "$GITHUB_OUTPUT"
-                  echo "functions_path=$p" >> "$GITHUB_OUTPUT"
-                  exit 0
-                fi
-              done
-            done
-
-            echo "❌ Could not find an Edge Runtime container with a functions directory."
-            echo "Candidates were:"
-            echo "$CANDIDATES" | sed 's/^/  - /'
-            exit 1
+            echo "✅ Container and path verified"
           } 2>&1 | tee "$RUNNER_TEMP/find_target.log"
       
       - name: List functions to deploy
@@ -97,12 +88,9 @@ jobs:
         run: |
           set -o pipefail
           {
-            CONTAINER="${{ steps.find-target.outputs.container }}"
-            TARGET="${{ steps.find-target.outputs.functions_path }}"
-            
-            echo "🚀 Deploying functions to $CONTAINER -> $TARGET ..."
-            docker exec "$CONTAINER" sh -lc "mkdir -p '$TARGET'"
-            docker cp supabase/functions/. "$CONTAINER:$TARGET/"
+            echo "🚀 Deploying functions to ${EDGE_CONTAINER} -> ${EDGE_FUNCTIONS_PATH} ..."
+            docker exec "${EDGE_CONTAINER}" sh -lc "mkdir -p '${EDGE_FUNCTIONS_PATH}'"
+            docker cp supabase/functions/. "${EDGE_CONTAINER}:${EDGE_FUNCTIONS_PATH}/"
             
             if [ $? -eq 0 ]; then
               echo "✅ Functions copied successfully"
@@ -119,15 +107,13 @@ jobs:
         run: |
           set -o pipefail
           {
-            CONTAINER="${{ steps.find-target.outputs.container }}"
-
-            echo "🔄 Restarting $CONTAINER to apply changes..."
-            docker restart "$CONTAINER" >/dev/null
+            echo "🔄 Restarting ${EDGE_CONTAINER} to apply changes..."
+            docker restart "${EDGE_CONTAINER}" >/dev/null
 
             echo "⏳ Waiting for container to be ready..."
             READY=0
             for i in $(seq 1 30); do
-              STATE=$(docker inspect -f '{{.State.Status}}|{{.State.Running}}|{{.State.Restarting}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.ExitCode}}' "$CONTAINER" 2>/dev/null || echo "missing|false|false|none|1")
+              STATE=$(docker inspect -f '{{.State.Status}}|{{.State.Running}}|{{.State.Restarting}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.ExitCode}}' "${EDGE_CONTAINER}" 2>/dev/null || echo "missing|false|false|none|1")
               STATUS=$(echo "$STATE" | cut -d'|' -f1)
               RUNNING=$(echo "$STATE" | cut -d'|' -f2)
               RESTARTING=$(echo "$STATE" | cut -d'|' -f3)
@@ -153,9 +139,9 @@ jobs:
             else
               echo "❌ Container failed to restart"
               echo "🔎 docker inspect:"
-              docker inspect "$CONTAINER" --format '{{json .State}}' || true
+              docker inspect "${EDGE_CONTAINER}" --format '{{json .State}}' || true
               echo "🔎 container logs (tail 80):"
-              docker logs "$CONTAINER" --tail 80 || true
+              docker logs "${EDGE_CONTAINER}" --tail 80 || true
               exit 1
             fi
           } 2>&1 | tee "$RUNNER_TEMP/restart_runtime.log"
@@ -167,17 +153,14 @@ jobs:
         run: |
           set -o pipefail
           {
-            CONTAINER="${{ steps.find-target.outputs.container }}"
-            TARGET="${{ steps.find-target.outputs.functions_path }}"
-            
             echo "🔍 Verifying deployed functions..."
-            docker exec "$CONTAINER" sh -lc "ls -la '$TARGET'" 2>/dev/null || echo "⚠️ Could not list functions directory in container"
+            docker exec "${EDGE_CONTAINER}" sh -lc "ls -la '${EDGE_FUNCTIONS_PATH}'" 2>/dev/null || echo "⚠️ Could not list functions directory in container"
 
-            REQUIRED_FUNCS="check-transaction-description suggest-transaction-fields voice-transaction"
+            REQUIRED_FUNCS="check-transaction-description suggest-transaction-fields voice-transaction register-invited-user"
             MISSING=0
             for fn in $REQUIRED_FUNCS; do
-              if ! docker exec "$CONTAINER" sh -lc "test -f '$TARGET/$fn/index.ts'" >/dev/null 2>&1; then
-                echo "❌ Missing entrypoint: $TARGET/$fn/index.ts"
+              if ! docker exec "${EDGE_CONTAINER}" sh -lc "test -f '${EDGE_FUNCTIONS_PATH}/$fn/index.ts'" >/dev/null 2>&1; then
+                echo "❌ Missing entrypoint: ${EDGE_FUNCTIONS_PATH}/$fn/index.ts"
                 MISSING=1
               else
                 echo "✅ Entrypoint OK: $fn/index.ts"
@@ -187,13 +170,35 @@ jobs:
             if [ "$MISSING" -ne 0 ]; then
               echo ""
               echo "🔎 Debug tree (index files):"
-              docker exec "$CONTAINER" sh -lc "find '$TARGET' -maxdepth 2 -type f -name 'index.*' -print" || true
+              docker exec "${EDGE_CONTAINER}" sh -lc "find '${EDGE_FUNCTIONS_PATH}' -maxdepth 2 -type f -name 'index.*' -print" || true
               exit 1
             fi
             
             echo ""
             echo "🎉 Edge Functions deployment complete!"
           } 2>&1 | tee "$RUNNER_TEMP/verify_deployment.log"
+
+      - name: Smoke-check register-invited-user version
+        id: smoke_check
+        if: steps.verify_deployment.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            echo "🧪 Smoke-checking register-invited-user version marker..."
+            
+            EXPECTED_VERSION="2026-03-24-invite-rebuild-v1"
+            
+            RESPONSE=$(docker exec "${EDGE_CONTAINER}" sh -lc "cat '${EDGE_FUNCTIONS_PATH}/register-invited-user/index.ts' | head -5" 2>/dev/null || echo "")
+            
+            if echo "$RESPONSE" | grep -q "$EXPECTED_VERSION"; then
+              echo "✅ Version marker matches: $EXPECTED_VERSION"
+            else
+              echo "⚠️ Version marker check: could not verify (non-blocking)"
+              echo "Expected: $EXPECTED_VERSION"
+              echo "Got: $RESPONSE"
+            fi
+          } 2>&1 | tee "$RUNNER_TEMP/smoke_check.log"
       
       - name: Notify Telegram and finish
         if: always()
@@ -209,23 +214,23 @@ jobs:
           if [ "${{ steps.find-target.outcome }}" != "success" ]; then
             STATUS="failure"
             STAGE="find edge runtime container"
-            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/find_target.log" 2>/dev/null || echo "Target discovery failed before logs were captured.")"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/find_target.log" 2>/dev/null || echo "Target discovery failed.")"
           elif [ "${{ steps.list_functions.outcome }}" = "failure" ]; then
             STATUS="failure"
             STAGE="list functions to deploy"
-            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/list_functions.log" 2>/dev/null || echo "Function listing failed before logs were captured.")"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/list_functions.log" 2>/dev/null || echo "Function listing failed.")"
           elif [ "${{ steps.deploy_functions.outcome }}" != "success" ]; then
             STATUS="failure"
             STAGE="copy functions into container"
-            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/deploy_functions.log" 2>/dev/null || echo "Function copy failed before logs were captured.")"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/deploy_functions.log" 2>/dev/null || echo "Function copy failed.")"
           elif [ "${{ steps.restart_runtime.outcome }}" != "success" ]; then
             STATUS="failure"
             STAGE="restart edge runtime"
-            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/restart_runtime.log" 2>/dev/null || echo "Runtime restart failed before logs were captured.")"
+            ERROR_DETAILS="$(tail -n 30 "$RUNNER_TEMP/restart_runtime.log" 2>/dev/null || echo "Runtime restart failed.")"
           elif [ "${{ steps.verify_deployment.outcome }}" != "success" ]; then
             STATUS="failure"
             STAGE="verify deployment"
-            ERROR_DETAILS="$(tail -n 40 "$RUNNER_TEMP/verify_deployment.log" 2>/dev/null || echo "Deployment verification failed before logs were captured.")"
+            ERROR_DETAILS="$(tail -n 40 "$RUNNER_TEMP/verify_deployment.log" 2>/dev/null || echo "Verification failed.")"
           fi
 
           if [ "$STATUS" = "success" ]; then
