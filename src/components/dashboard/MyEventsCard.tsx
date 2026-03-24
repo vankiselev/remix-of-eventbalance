@@ -61,24 +61,24 @@ const MyEventsCard = () => {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 justify-center">
-          <Briefcase className="w-5 h-5 text-primary" />
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+        <CardTitle className="flex items-center gap-2 justify-center text-sm sm:text-base">
+          <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           Где я работаю?
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="flex-1 flex flex-col px-3 sm:px-6">
         {events.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[180px]">
-            <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>У вас пока нет назначенных мероприятий</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground min-h-[120px] sm:min-h-[180px]">
+            <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 opacity-30" />
+            <p className="text-sm">У вас нет назначенных мероприятий</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {events.slice(0, 4).map((event) => (
               <div 
                 key={event.id} 
-                className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-accent/50 transition-colors"
+                className="border rounded-lg p-2.5 sm:p-3 space-y-1.5 sm:space-y-2 cursor-pointer hover:bg-accent/50 active:bg-accent/70 transition-colors touch-manipulation"
                 onClick={() => handleEventClick(event.id)}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -89,11 +89,11 @@ const MyEventsCard = () => {
                       {event.event_time && ` • ${formatTime(event.event_time)}`}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <Badge variant={getStatusVariant(event.status)} className="text-xs">
+                  <div className="flex flex-wrap gap-1 flex-shrink-0">
+                    <Badge variant={getStatusVariant(event.status)} className="text-[10px] sm:text-xs whitespace-nowrap">
                       {getStatusText(event.status)}
                     </Badge>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs whitespace-nowrap">
                       {getRoleBadgeText(event.role)}
                     </Badge>
                   </div>

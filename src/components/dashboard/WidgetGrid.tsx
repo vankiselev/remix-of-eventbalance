@@ -5,7 +5,7 @@ import MyEventsCard from './MyEventsCard';
 
 export function WidgetGrid() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {/* Ближайшие мероприятия - занимает 2 колонки и 2 ряда на десктопе */}
       <div className="md:col-span-2 lg:row-span-2">
         <TodayEventsCard />
