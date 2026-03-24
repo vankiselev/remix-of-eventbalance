@@ -271,12 +271,12 @@ Deno.serve(async (req) => {
       userId = userData.user.id;
     }
 
-    // STEP 4: profile upsert — set invitation_status='pending' and tenant_id for later admin approval
+    // STEP 4: profile upsert — set invitation_status='invited' (active) and tenant_id
     const profilePayload: Record<string, unknown> = {
       id: userId,
       email,
       full_name: full_name || email,
-      invitation_status: "pending",
+      invitation_status: "invited",
       ...(invitation.tenant_id ? { tenant_id: invitation.tenant_id } : {}),
       ...(finalAvatarUrl ? { avatar_url: finalAvatarUrl } : {}),
       ...(phone ? { phone } : {}),
@@ -296,8 +296,28 @@ Deno.serve(async (req) => {
     }
 
     // NOTE: membership is NOT created here.
-    // It will be created by admin during approval via approve_pending_user_membership RPC.
-    console.log("[register] STEP 5 skipped — membership deferred to admin approval");
+    // STEP 5: Create membership immediately via SECURITY DEFINER RPC
+    console.log("[register] STEP 5 membership via RPC", {
+      invitation_id: invitation.id,
+      user_id: userId,
+      role: role || invitation.role || "member",
+    });
+
+    const { data: membershipResult, error: membershipError } = await adminClient.rpc(
+      "ensure_invited_user_membership",
+      {
+        p_invitation_id: invitation.id,
+        p_user_id: userId,
+        p_role: role || invitation.role || "member",
+      },
+    );
+
+    if (membershipError) {
+      console.error("[register] STEP 5 membership RPC failed", membershipError);
+      // Non-blocking: user is created, membership can be fixed later
+    } else {
+      console.log("[register] STEP 5 membership OK", membershipResult);
+    }
 
     // STEP 6: audit (non-blocking)
     await adminClient.from("invitation_audit_log").insert({
