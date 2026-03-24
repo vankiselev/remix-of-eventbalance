@@ -1,10 +1,11 @@
 -- Add first_name and last_name columns to invitations table
--- Also update RPC to return these fields for pre-filling registration form
+-- Self-hosted compatible and idempotent
 
 ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS first_name text;
 ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS last_name text;
 
--- Update get_invitation_by_token to return first_name/last_name
+-- Recreate both possible overloads to avoid signature drift between environments
+DROP FUNCTION IF EXISTS public.get_invitation_by_token(uuid);
 DROP FUNCTION IF EXISTS public.get_invitation_by_token(text);
 
 CREATE OR REPLACE FUNCTION public.get_invitation_by_token(invitation_token text)
@@ -12,16 +13,17 @@ RETURNS TABLE(
   id uuid,
   email text,
   role text,
-  expires_at timestamp with time zone,
+  expires_at timestamptz,
   status text,
   first_name text,
   last_name text
 )
 LANGUAGE sql
-STABLE SECURITY DEFINER
+STABLE
+SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-  SELECT 
+  SELECT
     i.id,
     i.email,
     i.role,
@@ -30,8 +32,9 @@ AS $$
     i.first_name,
     i.last_name
   FROM public.invitations i
-  WHERE i.token::text = invitation_token 
+  WHERE i.token::text = invitation_token::text
     AND i.status IN ('pending', 'sent', 'accepted')
     AND (i.status = 'accepted' OR i.expires_at IS NULL OR i.expires_at > now())
+  ORDER BY i.created_at DESC
   LIMIT 1;
 $$;
