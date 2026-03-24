@@ -340,7 +340,7 @@ export function TransactionDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isVoiceTransaction && <Mic className="h-5 w-5 text-blue-500" />}
@@ -353,7 +353,7 @@ export function TransactionDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 pr-1">
           {/* Money Transfer Status - Show if it's a transfer */}
           {isMoneyTransfer && (
             <div className={`p-4 rounded-lg border-2 ${
@@ -536,7 +536,7 @@ export function TransactionDetailDialog({
 
         {/* Action Buttons */}
         {(canEdit || isRejectedTransfer || isDraft) && (
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 pt-4 border-t">
             {/* Draft: Show publish button prominently */}
             {isDraft && (
               <Button 
