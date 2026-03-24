@@ -110,40 +110,8 @@ export function InvitePage() {
           console.warn("[InvitePage] RPC get_invitation_by_token failed:", error?.message || "no data");
         }
 
-        if (!invitationResult) {
+        if (!invitationResult?.id) {
           toast({ title: "Ошибка", description: "Приглашение не найдено или уже использовано", variant: "destructive" });
-          navigate("/auth");
-          return;
-        }
-
-        if (!invitationResult.id) {
-          console.warn("[InvitePage] invitation.id is missing after validate lookup, requesting canonical record by token");
-          const { data: idLookupData, error: idLookupError } = await supabase
-            .from("invitations")
-            .select("id, email, role, expires_at, status")
-            .eq("token", token)
-            .in("status", ["pending", "sent", "accepted"])
-            .maybeSingle();
-
-          if (!idLookupError && idLookupData?.id) {
-            invitationResult = {
-              ...invitationResult,
-              ...idLookupData,
-            };
-          } else {
-            console.error("[InvitePage] Failed to hydrate invitation.id", {
-              idLookupError: idLookupError?.message,
-              token,
-            });
-          }
-        }
-
-        if (!invitationResult.id) {
-          toast({
-            title: "Ошибка",
-            description: "Не удалось определить идентификатор приглашения. Откройте ссылку повторно.",
-            variant: "destructive",
-          });
           navigate("/auth");
           return;
         }
@@ -318,11 +286,10 @@ export function InvitePage() {
       if (isAlreadyRegistered) {
         toast({
           title: "Аккаунт уже создан",
-          description: "Попробуйте войти с паролем, который вы указали при регистрации.",
+          description: "Вы уже зарегистрированы. Ожидайте одобрения администратора.",
           variant: "default",
         });
-        // Auto-redirect to login after a delay
-        setTimeout(() => navigate("/auth"), 3000);
+        setTimeout(() => navigate("/awaiting-invitation"), 1200);
       } else {
         toast({
           title: "Ошибка",
