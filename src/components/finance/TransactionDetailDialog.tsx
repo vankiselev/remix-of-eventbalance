@@ -536,7 +536,7 @@ export function TransactionDetailDialog({
 
         {/* Action Buttons */}
         {(canEdit || isRejectedTransfer || isDraft) && (
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 pt-4 border-t">
             {/* Draft: Show publish button prominently */}
             {isDraft && (
               <Button 
