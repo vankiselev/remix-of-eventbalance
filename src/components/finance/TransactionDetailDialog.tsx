@@ -431,163 +431,118 @@ export function TransactionDetailDialog({
             </div>
           </div>
 
+          {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-600">Описание</label>
-            <p className="text-sm bg-gray-50 p-3 rounded-lg">{transaction.description}</p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mb-1">Описание</p>
+            <p className="text-xs sm:text-sm bg-muted/30 p-2.5 sm:p-3 rounded-lg leading-relaxed">{transaction.description}</p>
           </div>
 
           {transaction.notes && (
             <div>
-              <label className="text-sm font-medium text-gray-600">Дополнительные заметки</label>
-              <p className="text-sm bg-gray-50 p-3 rounded-lg">{transaction.notes}</p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground mb-1">Заметки</p>
+              <p className="text-xs sm:text-sm bg-muted/30 p-2.5 sm:p-3 rounded-lg leading-relaxed">{transaction.notes}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Сумма</label>
-              <p className={`text-lg font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                {isExpense ? '-' : '+'}{formatCurrency(amount)}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Категория</label>
-              <p className="text-sm">
-                {transaction.category}
-              </p>
-            </div>
-          </div>
-
-          {/* Attachments Section */}
+          {/* Attachments */}
           <div>
-            <label className="text-sm font-medium text-gray-600 mb-3 block">Вложения</label>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mb-1.5">Вложения</p>
             <AttachmentsView
               transactionId={transaction.id}
               noReceipt={transaction.no_receipt}
               noReceiptReason={transaction.no_receipt_reason}
               canDelete={canEdit}
-              onAttachmentsChange={() => {
-                // Refresh parent component if needed
-              }}
+              onAttachmentsChange={() => {}}
             />
           </div>
 
-          {/* Audit History - Only for Admins */}
+          {/* Audit History */}
           {isAdmin && (
-            <div className="border-t pt-4">
+            <div className="border-t border-border pt-3 sm:pt-4">
               <Collapsible defaultOpen={false} onOpenChange={(open) => {
-                if (open && !auditHistoryLoaded) {
-                  loadAuditHistory();
-                }
+                if (open && !auditHistoryLoaded) loadAuditHistory();
               }}>
-                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline w-full">
-                  <History className="h-4 w-4" />
+                <CollapsibleTrigger className="flex items-center gap-2 text-xs sm:text-sm font-medium hover:underline w-full">
+                  <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   История изменений
                   {auditHistory.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{auditHistory.length}</Badge>
+                    <Badge variant="secondary" className="ml-auto text-[10px] sm:text-xs">{auditHistory.length}</Badge>
                   )}
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-2">
+                <CollapsibleContent className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
                   {isLoadingHistory ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      Загрузка истории...
-                    </div>
+                    <div className="text-center py-3 text-xs text-muted-foreground">Загрузка...</div>
                   ) : auditHistory.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      История изменений пуста
-                    </div>
+                    <div className="text-center py-3 text-xs text-muted-foreground">История пуста</div>
                   ) : (
                     auditHistory.map(log => {
-                    const actionIcon = {
-                      'CREATE': <Plus className="h-3 w-3 text-green-600" />,
-                      'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
-                      'DELETE': <Trash2 className="h-3 w-3 text-red-600" />,
-                      'RESEND': <RefreshCw className="h-3 w-3 text-orange-600" />
-                    }[log.action] || <History className="h-3 w-3" />;
-
-                    const actionText = {
-                      'CREATE': 'создал транзакцию',
-                      'UPDATE': 'обновил транзакцию',
-                      'DELETE': 'удалил транзакцию',
-                      'RESEND': 'отправил повторно'
-                    }[log.action] || log.action;
-
-                    return (
-                      <div key={log.id} className="flex items-start gap-2 text-xs bg-muted/30 p-2 rounded">
-                        {actionIcon}
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium">{log.user_name}</span>
-                          {' '}{actionText}
-                          {log.change_description && (
-                            <span className="text-muted-foreground block mt-1 text-[11px]">
-                              {log.change_description}
-                            </span>
-                          )}
+                      const actionIcon = {
+                        'CREATE': <Plus className="h-3 w-3 text-green-600" />,
+                        'UPDATE': <Pencil className="h-3 w-3 text-blue-600" />,
+                        'DELETE': <Trash2 className="h-3 w-3 text-red-600" />,
+                        'RESEND': <RefreshCw className="h-3 w-3 text-orange-600" />
+                      }[log.action] || <History className="h-3 w-3" />;
+                      const actionText = {
+                        'CREATE': 'создал', 'UPDATE': 'обновил', 'DELETE': 'удалил', 'RESEND': 'повторил'
+                      }[log.action] || log.action;
+                      return (
+                        <div key={log.id} className="flex items-start gap-1.5 text-[11px] sm:text-xs bg-muted/30 p-1.5 sm:p-2 rounded">
+                          {actionIcon}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{log.user_name}</span> {actionText}
+                            {log.change_description && (
+                              <span className="text-muted-foreground block mt-0.5 text-[10px] sm:text-[11px]">{log.change_description}</span>
+                            )}
+                          </div>
+                          <span className="text-muted-foreground whitespace-nowrap text-[10px] sm:text-[11px]">
+                            {format(parseISO(log.changed_at), 'd MMM HH:mm', { locale: ru })}
+                          </span>
                         </div>
-                        <span className="text-muted-foreground whitespace-nowrap text-[11px]">
-                          {format(parseISO(log.changed_at), 'd MMM в HH:mm', { locale: ru })}
-                        </span>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                   )}
                 </CollapsibleContent>
               </Collapsible>
             </div>
           )}
 
-          {/* Meta Info */}
-          <div className="border-t pt-4">
-            <div className="text-xs text-gray-500">
+          {/* Meta */}
+          <div className="border-t border-border pt-2 sm:pt-4">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Создано: {new Date(transaction.created_at).toLocaleString("ru-RU")}
-            </div>
+            </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — mobile-friendly sticky footer */}
         {(canEdit || isRejectedTransfer || isDraft) && (
-          <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 pt-4 border-t">
-            {/* Draft: Show publish button prominently */}
+          <div className="flex-shrink-0 border-t border-border px-4 py-3 sm:px-0 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 flex flex-col sm:flex-row gap-2 sm:justify-end bg-background">
             {isDraft && (
-              <Button 
-                onClick={handlePublishDraft} 
-                disabled={isPublishing}
-                className="w-full sm:w-auto"
-                variant="default"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {isPublishing ? "Отправка..." : "Отправить на проверку"}
+              <Button onClick={handlePublishDraft} disabled={isPublishing} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                <Send className="mr-1.5 h-4 w-4" />
+                {isPublishing ? "Отправка..." : "На проверку"}
               </Button>
             )}
             {isRejectedTransfer && (
-              <Button 
-                onClick={handleResendTransfer} 
-                disabled={isResending}
-                className="w-full sm:w-auto"
-                variant="default"
-              >
+              <Button onClick={handleResendTransfer} disabled={isResending} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
                 {isResending ? "Отправка..." : "Отправить снова"}
               </Button>
             )}
             {canEdit && (
               <>
                 {onEdit && (
-                  <Button onClick={handleEdit} className="w-full sm:w-auto" variant="outline">
-                    <Pencil className="mr-2 h-4 w-4" />
+                  <Button onClick={handleEdit} variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                    <Pencil className="mr-1.5 h-4 w-4" />
                     Редактировать
                   </Button>
                 )}
-                <Button 
-                  onClick={() => setDeleteDialogOpen(true)} 
-                  className="w-full sm:w-auto"
-                  variant="destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                  <Trash2 className="mr-1.5 h-4 w-4" />
                   Удалить
                 </Button>
               </>
             )}
-          </DialogFooter>
+          </div>
         )}
       </DialogContent>
 
