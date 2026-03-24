@@ -22,6 +22,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { isMissingInvitationNameColumnsError } from "./invitationNameColumnsFallback";
 
 interface Invitation {
   id: string;
@@ -90,20 +91,36 @@ export function InvitationsManagement() {
         .update({ status: "revoked" })
         .eq("id", invitation.id);
 
-      const { data: newInvitation, error: createError } = await supabase
-        .from("invitations")
+      const baseInsertPayload = {
+        email: invitation.email,
+        role: invitation.role,
+        invited_by: user.id,
+        token_hash: "",
+        tenant_id: invitation.tenant_id ?? null,
+      };
+
+      let { data: newInvitation, error: createError } = await (supabase
+        .from("invitations") as any)
         .insert({
-          email: invitation.email,
-          role: invitation.role,
-          first_name: invitation.first_name,
-          last_name: invitation.last_name,
-          invited_by: user.id,
-          token_hash: '',
+          ...baseInsertPayload,
+          first_name: invitation.first_name ?? null,
+          last_name: invitation.last_name ?? null,
         })
         .select()
         .single();
 
-      if (createError) throw createError;
+      if (createError && isMissingInvitationNameColumnsError(createError)) {
+        const fallbackResult = await supabase
+          .from("invitations")
+          .insert(baseInsertPayload)
+          .select()
+          .single();
+
+        newInvitation = fallbackResult.data as Invitation | null;
+        createError = fallbackResult.error;
+      }
+
+      if (createError || !newInvitation) throw createError || new Error("Не удалось создать повторное приглашение");
 
       const roleDisplayName = roles.find((r) => r.code === invitation.role)?.name || invitation.role;
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
