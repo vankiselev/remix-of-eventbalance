@@ -117,12 +117,16 @@ export function InvitationsManagement() {
         console.error("Email sending error:", emailError);
       }
 
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: newInvitation.id,
-        user_id: user.id,
-        action: "resent",
-        details: { email: invitation.email },
-      });
+      try {
+        await supabase.from("invitation_audit_log").insert({
+          invitation_id: newInvitation.id,
+          actor_id: user.id,
+          action: "resent",
+          details: { email: invitation.email },
+        });
+      } catch (auditErr) {
+        console.warn("Audit log insert failed (non-blocking):", auditErr);
+      }
 
       toast({
         title: "Приглашение отправлено повторно",
@@ -150,12 +154,16 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: invitation.id,
-        user_id: user.id,
-        action: "revoked",
-        details: { email: invitation.email },
-      });
+      try {
+        await supabase.from("invitation_audit_log").insert({
+          invitation_id: invitation.id,
+          actor_id: user.id,
+          action: "revoked",
+          details: { email: invitation.email },
+        });
+      } catch (auditErr) {
+        console.warn("Audit log insert failed (non-blocking):", auditErr);
+      }
 
       toast({
         title: "Приглашение отозвано",
@@ -184,12 +192,16 @@ export function InvitationsManagement() {
 
       if (error) throw error;
 
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: deleteInvitation.id,
-        user_id: user.id,
-        action: "deleted",
-        details: { email: deleteInvitation.email },
-      });
+      try {
+        await supabase.from("invitation_audit_log").insert({
+          invitation_id: deleteInvitation.id,
+          actor_id: user.id,
+          action: "revoked", // Use "revoked" instead of "deleted" to avoid check constraint
+          details: { email: deleteInvitation.email, was_deleted: true },
+        });
+      } catch (auditErr) {
+        console.warn("Audit log insert failed (non-blocking):", auditErr);
+      }
 
       toast({
         title: "Приглашение удалено",

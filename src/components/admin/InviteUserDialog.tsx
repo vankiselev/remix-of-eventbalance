@@ -119,16 +119,20 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
 
       // Assign role via user_role_assignments (will be done after user accepts)
       // Store role_id in invitation audit log for later processing
-      await supabase.from("invitation_audit_log").insert({
-        invitation_id: invitation.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id!,
-        action: "created",
-        details: { 
-          email: data.email, 
-          role_id: data.role_id,
-          role_name: roles.find(r => r.id === data.role_id)?.name 
-        },
-      });
+      try {
+        await supabase.from("invitation_audit_log").insert({
+          invitation_id: invitation.id,
+          actor_id: (await supabase.auth.getUser()).data.user?.id!,
+          action: "created",
+          details: { 
+            email: data.email, 
+            role_id: data.role_id,
+            role_name: roles.find(r => r.id === data.role_id)?.name 
+          },
+        });
+      } catch (auditErr) {
+        console.warn("Audit log insert failed (non-blocking):", auditErr);
+      }
 
       // Send invitation email
       const selectedRole = roles.find(r => r.id === data.role_id);
