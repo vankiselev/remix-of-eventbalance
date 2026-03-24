@@ -29,14 +29,6 @@ function deriveProjectApiUrl(req: Request, fallbackUrl: string | null): string {
   return fallbackUrl || "";
 }
 
-async function sha256Hex(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  const digestArray = Array.from(new Uint8Array(digest));
-  return digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -83,17 +75,35 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // ── STEP 1: Validate invitation ──
-    const invitationSelect = "id, tenant_id, invited_by, email, expires_at, status";
+    // ── STEP 1: Validate invitation (canonical: invitation_id -> token/RPC fallback) ──
+    const invitationSelect = "id, tenant_id, invited_by, email, expires_at, status, token";
     let invData: any = null;
     let invError: any = null;
     let lookupPath = "none";
 
-    const tokenHash = normalizedToken ? await sha256Hex(normalizedToken) : null;
+    // 1a. Primary: lookup by invitation_id from validated invite page
+    if (normalizedInvitationId) {
+      console.log("[register] Step 1a: Lookup by invitation_id...");
+      const idLookup = await adminClient
+        .from("invitations")
+        .select(invitationSelect)
+        .eq("id", normalizedInvitationId)
+        .maybeSingle();
 
-    // 1a. Primary: RPC get_invitation_by_token (handles type casting, filters by status/expiry)
-    if (normalizedToken) {
-      console.log("[register] Step 1a: RPC lookup by token...");
+      if (idLookup.data) {
+        invData = idLookup.data;
+        lookupPath = "table:id";
+        invError = null;
+        console.log("[register] Step 1a OK: found via invitation_id", normalizedInvitationId);
+      } else if (idLookup.error) {
+        invError = idLookup.error;
+        console.warn("[register] Step 1a: invitation_id lookup error:", idLookup.error.message);
+      }
+    }
+
+    // 1b. Fallback: RPC get_invitation_by_token (type-safe and centralized)
+    if (!invData && normalizedToken) {
+      console.log("[register] Step 1b: RPC lookup by token...");
       try {
         const rpcLookup = await adminClient.rpc("get_invitation_by_token", {
           invitation_token: normalizedToken,
@@ -102,7 +112,6 @@ Deno.serve(async (req) => {
         if (!rpcLookup.error && Array.isArray(rpcLookup.data) && rpcLookup.data.length > 0) {
           const rpcInvId = rpcLookup.data[0]?.id;
           if (rpcInvId) {
-            // Fetch full record with tenant_id and invited_by
             const { data: fullRec } = await adminClient
               .from("invitations")
               .select(invitationSelect)
@@ -111,20 +120,21 @@ Deno.serve(async (req) => {
             if (fullRec) {
               invData = fullRec;
               lookupPath = "rpc:get_invitation_by_token";
-              console.log("[register] Step 1a OK: found via RPC, id:", rpcInvId);
+              console.log("[register] Step 1b OK: found via RPC, id:", rpcInvId);
             }
           }
         } else if (rpcLookup.error) {
-          console.warn("[register] Step 1a: RPC error (non-fatal):", rpcLookup.error.message);
+          invError = rpcLookup.error;
+          console.warn("[register] Step 1b: RPC error (non-fatal):", rpcLookup.error.message);
         }
       } catch (rpcErr) {
-        console.warn("[register] Step 1a: RPC exception (non-fatal):", rpcErr);
+        console.warn("[register] Step 1b: RPC exception (non-fatal):", rpcErr);
       }
     }
 
-    // 1b. Fallback: direct query by token (works when token column is text)
+    // 1c. Fallback: direct query by token
     if (!invData && normalizedToken) {
-      console.log("[register] Step 1b: Direct token lookup...");
+      console.log("[register] Step 1c: Direct token lookup...");
       const tokenLookup = await adminClient
         .from("invitations")
         .select(invitationSelect)
@@ -133,47 +143,10 @@ Deno.serve(async (req) => {
       if (tokenLookup.data) {
         invData = tokenLookup.data;
         lookupPath = "table:token";
-        console.log("[register] Step 1b OK: found via direct query");
+        console.log("[register] Step 1c OK: found via direct query");
       } else if (tokenLookup.error) {
         invError = tokenLookup.error;
-        console.warn("[register] Step 1b: direct query error:", tokenLookup.error.message);
-      }
-    }
-
-    // 1c. Fallback: direct query by token_hash
-    if (!invData && tokenHash) {
-      console.log("[register] Step 1c: Direct token_hash lookup...");
-      const hashLookup = await adminClient
-        .from("invitations")
-        .select(invitationSelect)
-        .eq("token_hash", tokenHash)
-        .maybeSingle();
-
-      if (hashLookup.data) {
-        invData = hashLookup.data;
-        lookupPath = "table:token_hash";
-        console.log("[register] Step 1c OK: found via token_hash");
-      } else if (hashLookup.error) {
-        invError = hashLookup.error;
-        console.warn("[register] Step 1c: token_hash query error:", hashLookup.error.message);
-      }
-    }
-
-    // 1d. Fallback: by invitation_id (for retry flows)
-    if (!invData && normalizedInvitationId) {
-      console.log("[register] Step 1d: Lookup by invitation_id...");
-      const idLookup = await adminClient
-        .from("invitations")
-        .select(invitationSelect)
-        .eq("id", normalizedInvitationId)
-        .maybeSingle();
-      if (idLookup.data) {
-        invData = idLookup.data;
-        lookupPath = "table:id";
-        invError = null;
-        console.log("[register] Step 1d OK: found via invitation_id");
-      } else if (idLookup.error) {
-        invError = idLookup.error;
+        console.warn("[register] Step 1c: direct query error:", tokenLookup.error.message);
       }
     }
 
@@ -181,16 +154,22 @@ Deno.serve(async (req) => {
       console.error("[register] Invitation not found:", {
         tokenProvided: Boolean(normalizedToken),
         invitationIdProvided: Boolean(normalizedInvitationId),
-        tokenHashProvided: Boolean(tokenHash),
         lookupPath,
         normalizedToken,
-        tokenHash,
         normalizedInvitationId,
         tokenError: invError?.message ?? null,
       });
       return jsonResponse({
         error: "Токен приглашения не найден в submit-обработчике. Код: INVITE_LOOKUP_MISMATCH. Откройте ссылку-приглашение заново или запросите новое.",
       }, 404);
+    }
+
+    if (normalizedToken && invData.token && invData.token !== normalizedToken) {
+      console.error("[register] Token mismatch for invitation_id", {
+        invitationId: invData.id,
+        lookupPath,
+      });
+      return jsonResponse({ error: "Ссылка приглашения не совпадает с найденным приглашением. Откройте ссылку из письма заново." }, 403);
     }
 
     // Now check specific conditions and return targeted errors
@@ -215,7 +194,15 @@ Deno.serve(async (req) => {
       console.error("[register] Email mismatch:", email, "vs", invData.email);
       return jsonResponse({ error: "Email не совпадает с приглашением" }, 403);
     }
-    console.log("[register] Step 1 OK: invitation valid, status:", invData.status, "isRetry:", isRetry, "lookupPath:", lookupPath);
+    console.log("[register] Step 1 OK", {
+      invitation_id: invData.id,
+      email: invData.email,
+      status: invData.status,
+      isRetry,
+      lookupPath,
+      requestInvitationId: normalizedInvitationId,
+      tokenProvided: Boolean(normalizedToken),
+    });
 
     // ── STEP 2: Upload avatar (non-blocking) ──
     let finalAvatarUrl = avatar_url || null;
