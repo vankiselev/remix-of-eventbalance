@@ -375,7 +375,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
       <div className="border-b"></div>
 
       {/* Grouped Transactions */}
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         {Object.entries(groupedTransactions).map(([dateLabel, dayTransactions]) => {
           const dailyTotal = getDailyTotal(dayTransactions);
           const totalColorClass = dailyTotal > 0 
@@ -385,19 +385,19 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
             : 'text-muted-foreground';
 
           return (
-            <div key={dateLabel} className="space-y-2">
+            <div key={dateLabel} className="space-y-1.5 sm:space-y-2">
               {/* Date header */}
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-sm font-semibold uppercase text-muted-foreground">
+              <div className="flex items-center justify-between px-1 sm:px-2">
+                <h3 className="text-[11px] sm:text-sm font-semibold uppercase text-muted-foreground tracking-wide">
                   {dateLabel}
                 </h3>
-                <span className={`text-sm font-semibold ${totalColorClass}`}>
+                <span className={`text-[11px] sm:text-sm font-semibold tabular-nums ${totalColorClass}`}>
                   {dailyTotal > 0 && '+'}{dailyTotal !== 0 && formatCurrency(Math.abs(dailyTotal))}
                 </span>
               </div>
 
               {/* Transaction cards */}
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 {dayTransactions.map(transaction => (
                   <TransactionCard
                     key={transaction.id}
