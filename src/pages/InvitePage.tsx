@@ -75,6 +75,16 @@ export function InvitePage() {
     },
   });
 
+  // Pre-fill form when invitation data arrives with name
+  useEffect(() => {
+    if (invitation?.first_name) {
+      form.setValue("firstName", invitation.first_name);
+    }
+    if (invitation?.last_name) {
+      form.setValue("lastName", invitation.last_name);
+    }
+  }, [invitation, form]);
+
   const rawToken = searchParams.get("token");
   const token = (() => {
     if (!rawToken) return null;

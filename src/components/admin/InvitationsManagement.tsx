@@ -233,9 +233,14 @@ export function InvitationsManagement() {
   };
 
   const getRoleBadge = (role: string) => {
+    const roleDisplayMap: Record<string, string> = {
+      admin: "Администратор",
+      employee: "Сотрудник",
+    };
+    const displayName = roleDisplayMap[role] || role;
     return (
       <Badge variant={role === "admin" ? "default" : "outline"}>
-        {role === "admin" ? "Администратор" : "Сотрудник"}
+        {displayName}
       </Badge>
     );
   };

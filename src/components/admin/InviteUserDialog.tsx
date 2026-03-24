@@ -105,7 +105,7 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
         .from("invitations")
         .insert({
           email: data.email,
-          role: 'employee', // Legacy field, will be ignored
+          role: roles.find(r => r.id === data.role_id)?.name || 'employee',
           first_name: data.firstName || null,
           last_name: data.lastName || null,
           invited_by: (await supabase.auth.getUser()).data.user?.id!,
