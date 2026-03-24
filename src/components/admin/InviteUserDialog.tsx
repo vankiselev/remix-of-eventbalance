@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useRoles } from "@/hooks/useRoles";
 import { useTenant } from "@/contexts/TenantContext";
+import { isMissingInvitationNameColumnsError } from "./invitationNameColumnsFallback";
 
 const inviteSchema = z.object({
   email: z.string().email("Введите корректный email"),
@@ -63,6 +64,8 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
     }
 
     const selectedTenant = availableTenants.find(t => t.id === selectedTenantId);
+    const selectedRole = roles.find(r => r.id === data.role_id);
+    const currentUserId = (await supabase.auth.getUser()).data.user?.id;
 
     try {
       setIsSubmitting(true);
@@ -101,33 +104,48 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       }
 
       // Create invitation (token_hash will be filled by trigger)
-      const { data: invitation, error: invitationError } = await supabase
-        .from("invitations")
+      const baseInsertPayload = {
+        email: data.email,
+        role: selectedRole?.code || 'employee',
+        invited_by: currentUserId!,
+        token_hash: '', // Will be overridden by trigger
+        tenant_id: selectedTenantId,
+      };
+
+      let { data: invitation, error: invitationError } = await (supabase
+        .from("invitations") as any)
         .insert({
-          email: data.email,
-          role: roles.find(r => r.id === data.role_id)?.code || 'employee',
+          ...baseInsertPayload,
           first_name: data.firstName || null,
           last_name: data.lastName || null,
-          invited_by: (await supabase.auth.getUser()).data.user?.id!,
-          token_hash: '', // Will be overridden by trigger
-          tenant_id: selectedTenantId,
         })
         .select()
         .single();
 
-      if (invitationError) throw invitationError;
+      if (invitationError && isMissingInvitationNameColumnsError(invitationError)) {
+        const fallbackResult = await supabase
+          .from("invitations")
+          .insert(baseInsertPayload)
+          .select()
+          .single();
+
+        invitation = fallbackResult.data as any;
+        invitationError = fallbackResult.error;
+      }
+
+      if (invitationError || !invitation) throw invitationError || new Error("Не удалось создать приглашение");
 
       // Assign role via user_role_assignments (will be done after user accepts)
       // Store role_id in invitation audit log for later processing
       try {
         await supabase.from("invitation_audit_log").insert({
           invitation_id: invitation.id,
-          actor_id: (await supabase.auth.getUser()).data.user?.id!,
+          actor_id: currentUserId!,
           action: "created",
           details: { 
             email: data.email, 
             role_id: data.role_id,
-            role_name: roles.find(r => r.id === data.role_id)?.name 
+            role_name: selectedRole?.name 
           },
         });
       } catch (auditErr) {
@@ -135,7 +153,6 @@ export function InviteUserDialog({ open, onOpenChange, onInviteSent }: InviteUse
       }
 
       // Send invitation email
-      const selectedRole = roles.find(r => r.id === data.role_id);
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           email: data.email,
