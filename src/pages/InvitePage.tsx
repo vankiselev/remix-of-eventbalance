@@ -130,6 +130,38 @@ export function InvitePage() {
           return;
         }
 
+        if (!invitationResult.id) {
+          console.warn("[InvitePage] invitation.id is missing after validate lookup, requesting canonical record by token");
+          const { data: idLookupData, error: idLookupError } = await supabase
+            .from("invitations")
+            .select("id, email, role, expires_at, status")
+            .eq("token", token)
+            .in("status", ["pending", "sent", "accepted"])
+            .maybeSingle();
+
+          if (!idLookupError && idLookupData?.id) {
+            invitationResult = {
+              ...invitationResult,
+              ...idLookupData,
+            };
+          } else {
+            console.error("[InvitePage] Failed to hydrate invitation.id", {
+              idLookupError: idLookupError?.message,
+              token,
+            });
+          }
+        }
+
+        if (!invitationResult.id) {
+          toast({
+            title: "Ошибка",
+            description: "Не удалось определить идентификатор приглашения. Откройте ссылку повторно.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
         if (
           invitationResult.status !== "accepted" &&
           invitationResult.expires_at &&
@@ -233,12 +265,30 @@ export function InvitePage() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      console.log("[InvitePage] Submit register-invited-user", {
-        invitation_id: invitation.id,
+      const submitPayload = {
         email: invitation.email,
-        status: invitation.status,
-        token,
+        password: data.password,
+        full_name: fullName,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        middle_name: data.middleName,
+        phone: toE164(normalizePhone(data.phone)),
+        birth_date: data.birthDate,
+        avatar_url: avatarUrl,
+        avatar_base64: avatarBase64,
+        role: invitation.role,
+        invitation_token: token,
+        invitation_id: invitation.id ?? null,
+      };
+
+      console.log("[InvitePage] Submit request body (sanitized)", {
+        ...submitPayload,
+        password: "***",
       });
+
+      if (!submitPayload.invitation_id) {
+        throw new Error("Не удалось определить invitation_id для регистрации. Откройте ссылку приглашения заново.");
+      }
       
       const response = await fetch(
         `${supabaseUrl}/functions/v1/register-invited-user`,
@@ -249,21 +299,7 @@ export function InvitePage() {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`,
           },
-          body: JSON.stringify({
-            email: invitation.email,
-            password: data.password,
-            full_name: fullName,
-            first_name: data.firstName,
-            last_name: data.lastName,
-            middle_name: data.middleName,
-            phone: toE164(normalizePhone(data.phone)),
-            birth_date: data.birthDate,
-            avatar_url: avatarUrl,
-            avatar_base64: avatarBase64,
-            role: invitation.role,
-            invitation_token: token,
-            invitation_id: invitation.id,
-          }),
+          body: JSON.stringify(submitPayload),
         }
       );
 
