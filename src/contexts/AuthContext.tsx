@@ -253,7 +253,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
 
         if (!error && !data) {
-          await forceSignOut('Ваш аккаунт был удалён');
+          // Grace period: don't force sign out for newly created accounts
+          const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+          const accountAge = Date.now() - createdAt;
+          if (accountAge > 60000) {
+            await forceSignOut('Ваш аккаунт был удалён');
+          }
         }
       } catch (e) {
         // Silently ignore network errors in health check
