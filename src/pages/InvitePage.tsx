@@ -273,11 +273,25 @@ export function InvitePage() {
 
       toast({
         title: "Регистрация завершена!",
-        description: "Ваш аккаунт создан. Ожидайте одобрения администратора.",
+        description: "Ваш аккаунт создан. Выполняем вход...",
       });
 
-      // Do NOT auto-login — redirect to awaiting approval screen
-      navigate("/awaiting-invitation");
+      // Auto-login after successful registration
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.warn("[InvitePage] Auto-login failed, redirecting to auth:", signInError.message);
+        toast({
+          title: "Аккаунт создан",
+          description: "Войдите с вашим email и паролем.",
+        });
+        navigate("/auth");
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
       const msg = error.message || "Не удалось принять приглашение";
@@ -286,10 +300,10 @@ export function InvitePage() {
       if (isAlreadyRegistered) {
         toast({
           title: "Аккаунт уже создан",
-          description: "Вы уже зарегистрированы. Ожидайте одобрения администратора.",
+          description: "Вы уже зарегистрированы. Попробуйте войти.",
           variant: "default",
         });
-        setTimeout(() => navigate("/awaiting-invitation"), 1200);
+        setTimeout(() => navigate("/auth"), 1200);
       } else {
         toast({
           title: "Ошибка",
