@@ -171,7 +171,7 @@ const Finances = () => {
   };
 
   const handleTransactionSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.refetchQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['company-cash-summary'] });
     queryClient.invalidateQueries({ queryKey: ['user-cash-summary'] });
     queryClient.invalidateQueries({ queryKey: ['pending-transactions-count'] });
