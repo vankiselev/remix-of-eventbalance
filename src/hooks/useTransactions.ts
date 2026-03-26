@@ -113,9 +113,10 @@ export const useTransactions = (options: UseTransactionsOptions = {}) => {
     queryKey,
     queryFn: () => fetchTransactionsData(userId, isAdmin, limit),
     enabled,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
   });
 
   // Realtime invalidation handled by RealtimeSync in App.tsx
