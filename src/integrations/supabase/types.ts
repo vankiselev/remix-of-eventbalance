@@ -953,6 +953,107 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_verifications: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          fd: string | null
+          fn: string | null
+          fns_error_code: string | null
+          fns_error_message: string | null
+          fns_message_id: string | null
+          fns_response: Json | null
+          fns_ticket_id: string | null
+          fp: string | null
+          id: string
+          input_method: string | null
+          last_retry_at: string | null
+          manual_review_comment: string | null
+          manual_reviewed_at: string | null
+          manual_reviewed_by: string | null
+          needs_manual_review: boolean | null
+          operation_type: number | null
+          qr_parsed: boolean | null
+          qr_raw: string | null
+          receipt_date: string | null
+          receipt_sum: number | null
+          retry_count: number | null
+          status: string
+          tenant_id: string | null
+          transaction_id: string
+          updated_at: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          fd?: string | null
+          fn?: string | null
+          fns_error_code?: string | null
+          fns_error_message?: string | null
+          fns_message_id?: string | null
+          fns_response?: Json | null
+          fns_ticket_id?: string | null
+          fp?: string | null
+          id?: string
+          input_method?: string | null
+          last_retry_at?: string | null
+          manual_review_comment?: string | null
+          manual_reviewed_at?: string | null
+          manual_reviewed_by?: string | null
+          needs_manual_review?: boolean | null
+          operation_type?: number | null
+          qr_parsed?: boolean | null
+          qr_raw?: string | null
+          receipt_date?: string | null
+          receipt_sum?: number | null
+          retry_count?: number | null
+          status?: string
+          tenant_id?: string | null
+          transaction_id: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          fd?: string | null
+          fn?: string | null
+          fns_error_code?: string | null
+          fns_error_message?: string | null
+          fns_message_id?: string | null
+          fns_response?: Json | null
+          fns_ticket_id?: string | null
+          fp?: string | null
+          id?: string
+          input_method?: string | null
+          last_retry_at?: string | null
+          manual_review_comment?: string | null
+          manual_reviewed_at?: string | null
+          manual_reviewed_by?: string | null
+          needs_manual_review?: boolean | null
+          operation_type?: number | null
+          qr_parsed?: boolean | null
+          qr_raw?: string | null
+          receipt_date?: string | null
+          receipt_sum?: number | null
+          retry_count?: number | null
+          status?: string
+          tenant_id?: string | null
+          transaction_id?: string
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_verifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_definitions: {
         Row: {
           code: string | null

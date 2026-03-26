@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, History, Plus, RefreshCw, Send, Mic } from "lucide-react";
+import { ReceiptVerificationPanel } from './ReceiptVerificationPanel';
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
 import { AttachmentsView } from './AttachmentsView';
@@ -455,6 +456,14 @@ export function TransactionDetailDialog({
               onAttachmentsChange={() => {}}
             />
           </div>
+
+          {/* Receipt Verification via ФНС */}
+          {isExpense && !transaction.no_receipt && (
+            <ReceiptVerificationPanel
+              transactionId={transaction.id}
+              expenseAmount={transaction.expense_amount}
+            />
+          )}
 
           {/* Audit History */}
           {isAdmin && (
