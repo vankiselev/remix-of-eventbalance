@@ -256,7 +256,7 @@ function parseByRules(text: string, defaultWallet: string): ParsedTx {
 }
 
 async function parseByAI(text: string): Promise<ParsedTx | null> {
-  if (!Deno.env.get("LOVABLE_API_KEY")) return null;
+  if (!Deno.env.get("GIGACHAT_CLIENT_ID")) return null;
 
   const systemPrompt = `Верни только JSON для финансовой транзакции из русского текста:
 {
