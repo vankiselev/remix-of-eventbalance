@@ -809,6 +809,36 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          category: string
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          scope_type: string | null
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          scope_type?: string | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          scope_type?: string | null
+        }
+        Relationships: []
+      }
       profile_edit_history: {
         Row: {
           changes: Json | null
@@ -1083,6 +1113,51 @@ export type Database = {
           permissions?: string[] | null
         }
         Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          granted: boolean
+          id: string
+          permission_id: string
+          role_id: string
+          scope: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          granted?: boolean
+          id?: string
+          permission_id: string
+          role_id: string
+          scope?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          granted?: boolean
+          id?: string
+          permission_id?: string
+          role_id?: string
+          scope?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "role_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salary_advances: {
         Row: {
