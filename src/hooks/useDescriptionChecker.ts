@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 
+
+function capitalizeFirst(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
 const CLOUD_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYmJyZ211dmtvcGtqaWpiZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MzA2NzUsImV4cCI6MjA4NTIwNjY3NX0.hKgvQ679v764rIIYWU1CCiwCtgNA_c6N4L9oK5XuxEg';
 
@@ -84,7 +91,7 @@ export function useDescriptionChecker(
         const result: CheckResult = await response.json();
 
         setHasErrors(result.has_errors);
-        setCorrectedText(result.has_errors ? result.corrected_text : null);
+        setCorrectedText(result.has_errors ? capitalizeFirst(result.corrected_text) : null);
         setErrors(result.errors || []);
       } catch (err) {
         console.error('Exception checking description:', err);
