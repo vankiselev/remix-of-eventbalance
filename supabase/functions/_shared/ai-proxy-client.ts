@@ -83,14 +83,20 @@ async function getAccessToken(): Promise<string> {
     );
   }
 
+  // Trim whitespace/newlines that may be in stored secrets
+  const trimmedId = clientId.trim();
+  const trimmedSecret = clientSecret.trim();
+
   const scope = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
-  // Use TextEncoder for proper base64 encoding (btoa fails on non-ASCII)
-  const encoder = new TextEncoder();
-  const credentialsBytes = encoder.encode(`${clientId}:${clientSecret}`);
-  const credentials = btoa(String.fromCharCode(...credentialsBytes));
+  const credentials = btoa(`${trimmedId}:${trimmedSecret}`);
   const rquid = crypto.randomUUID();
 
-  console.log("[gigachat-oauth] Requesting token...", { scope, hasClientId: !!clientId });
+  console.log("[gigachat-oauth] Requesting token...", {
+    scope,
+    clientIdLen: trimmedId.length,
+    clientSecretLen: trimmedSecret.length,
+    credentialsB64Len: credentials.length,
+  });
 
   const res = await fetch(OAUTH_URL, {
     method: "POST",
