@@ -109,11 +109,7 @@ async function getAccessToken(): Promise<string> {
     throw new Error("GigaChat: provide both CLIENT_ID+CLIENT_SECRET or a pre-encoded auth key as CLIENT_SECRET.");
   }
 
-  console.log("[gigachat-oauth] Requesting token...", {
-    scope,
-    authMode,
-    credentialsB64Len: credentials.length,
-  });
+  console.log("[gigachat-oauth] Requesting token...", { scope, authMode });
 
   const res = await fetch(OAUTH_URL, {
     method: "POST",
