@@ -84,7 +84,10 @@ async function getAccessToken(): Promise<string> {
   }
 
   const scope = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
-  const credentials = btoa(`${clientId}:${clientSecret}`);
+  // Use TextEncoder for proper base64 encoding (btoa fails on non-ASCII)
+  const encoder = new TextEncoder();
+  const credentialsBytes = encoder.encode(`${clientId}:${clientSecret}`);
+  const credentials = btoa(String.fromCharCode(...credentialsBytes));
   const rquid = crypto.randomUUID();
 
   console.log("[gigachat-oauth] Requesting token...", { scope, hasClientId: !!clientId });
