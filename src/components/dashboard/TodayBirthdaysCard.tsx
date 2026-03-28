@@ -1,10 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Cake, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { parseISO, isSameWeek, format } from "date-fns";
+import { parseISO, isSameWeek, format, startOfDay, differenceInCalendarDays } from "date-fns";
 import { ru } from "date-fns/locale";
 import { formatDisplayName } from "@/utils/formatName";
 import { useQuery } from "@tanstack/react-query";
+
+const showPastBirthdays = true;
 
 interface BirthdayEmployee {
   id: string;
@@ -23,6 +26,23 @@ function isThisWeekBirthday(birthDate: string): boolean {
   const now = new Date();
   const thisYearBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
   return isSameWeek(thisYearBd, now, { weekStartsOn: 1 }) && !matchesMonthDay(birthDate, now);
+}
+
+function getDayLabel(birthDate: string): string | null {
+  const bd = parseISO(birthDate);
+  const now = startOfDay(new Date());
+  const thisYearBd = startOfDay(new Date(now.getFullYear(), bd.getMonth(), bd.getDate()));
+  const diff = differenceInCalendarDays(thisYearBd, now);
+
+  if (diff === 0) return "Сегодня";
+  if (diff === 1) return "Завтра";
+  if (diff < 0) {
+    const absDiff = Math.abs(diff);
+    if (absDiff === 1) return "1 день назад";
+    if (absDiff >= 2 && absDiff <= 4) return `${absDiff} дня назад`;
+    return `${absDiff} дней назад`;
+  }
+  return null;
 }
 
 const TodayBirthdaysCard = () => {
@@ -45,6 +65,11 @@ const TodayBirthdaysCard = () => {
         if (matchesMonthDay(emp.birth_date, now)) {
           today.push(emp);
         } else if (isThisWeekBirthday(emp.birth_date)) {
+          // Filter past birthdays if flag is off
+          const bd = parseISO(emp.birth_date);
+          const thisYearBd = startOfDay(new Date(now.getFullYear(), bd.getMonth(), bd.getDate()));
+          const isPast = thisYearBd < startOfDay(now);
+          if (isPast && !showPastBirthdays) return;
           week.push(emp);
         }
       });
@@ -71,31 +96,42 @@ const TodayBirthdaysCard = () => {
     return format(thisYearBd, "d MMMM", { locale: ru });
   };
 
-  const BirthdayItem = ({ employee, showDate }: { employee: BirthdayEmployee; showDate?: boolean }) => (
-    <div className="flex items-center space-x-2.5 sm:space-x-3 p-2.5 sm:p-3 rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10">
-      <div className="flex-shrink-0">
-        {employee.avatar_url ? (
-          <img
-            src={employee.avatar_url}
-            alt={formatDisplayName(employee.full_name)}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+  const BirthdayItem = ({ employee, showDate }: { employee: BirthdayEmployee; showDate?: boolean }) => {
+    const label = showDate ? getDayLabel(employee.birth_date) : null;
+
+    return (
+      <div className="flex items-center space-x-2.5 sm:space-x-3 p-2.5 sm:p-3 rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10">
+        <div className="flex-shrink-0">
+          {employee.avatar_url ? (
+            <img
+              src={employee.avatar_url}
+              alt={formatDisplayName(employee.full_name)}
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h4 className="font-medium text-foreground text-[13px] sm:text-sm truncate">{formatDisplayName(employee.full_name)}</h4>
+            {label && (
+              <Badge variant={label.includes("назад") ? "outline" : "secondary"} className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                {label}
+              </Badge>
+            )}
           </div>
-        )}
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            {showDate ? `${formatBirthday(employee.birth_date)} · ` : ""}
+            {calculateAge(employee.birth_date)} лет
+          </p>
+        </div>
+        <Cake className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
       </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-foreground text-[13px] sm:text-sm truncate">{formatDisplayName(employee.full_name)}</h4>
-        <p className="text-[11px] sm:text-xs text-muted-foreground">
-          {showDate ? `${formatBirthday(employee.birth_date)} · ` : ""}
-          {calculateAge(employee.birth_date)} лет
-        </p>
-      </div>
-      <Cake className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
