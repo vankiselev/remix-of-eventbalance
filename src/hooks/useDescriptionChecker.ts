@@ -84,7 +84,7 @@ export function useDescriptionChecker(
         const result: CheckResult = await response.json();
 
         setHasErrors(result.has_errors);
-        setCorrectedText(result.has_errors ? result.corrected_text : null);
+        setCorrectedText(result.has_errors ? capitalizeFirst(result.corrected_text) : null);
         setErrors(result.errors || []);
       } catch (err) {
         console.error('Exception checking description:', err);
