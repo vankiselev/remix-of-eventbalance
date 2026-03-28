@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import MobileNavEnhanced from "@/components/navigation/MobileNavEnhanced";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -305,12 +305,14 @@ const Layout = ({ children }: LayoutProps) => {
             {/* Footer */}
             <footer className="border-t bg-card mt-auto">
               <div className="px-6 py-4">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                   <p>© 2025 EventBalance. Все права защищены.</p>
-                  <div className="flex items-center gap-4">
-                    <a href="/about" className="hover:text-foreground transition-colors">О компании</a>
-                    <a href="/support" className="hover:text-foreground transition-colors">Поддержка</a>
-                    <a href="/contacts-info" className="hover:text-foreground transition-colors">Контакты</a>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Link to="/privacy-policy" className="hover:text-foreground transition-colors">Политика конфиденциальности</Link>
+                    <Link to="/terms-of-use" className="hover:text-foreground transition-colors">Условия использования</Link>
+                    <Link to="/about" className="hover:text-foreground transition-colors">О компании</Link>
+                    <Link to="/support" className="hover:text-foreground transition-colors">Поддержка</Link>
+                    <Link to="/contacts-info" className="hover:text-foreground transition-colors">Контакты</Link>
                   </div>
                 </div>
               </div>
