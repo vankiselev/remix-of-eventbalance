@@ -55,7 +55,7 @@ export const RoleEditDialog = ({
         <DialogHeader>
           <DialogTitle>Редактирование роли</DialogTitle>
           <DialogDescription>
-            Изменение параметров роли "{role.name}"
+            Изменение параметров роли "{role.display_name || role.name}"
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
