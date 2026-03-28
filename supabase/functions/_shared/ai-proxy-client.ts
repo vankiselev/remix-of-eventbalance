@@ -10,7 +10,9 @@
  *   GIGACHAT_TIMEOUT_MS      — (optional) default 20000
  */
 
-// ---------- Interfaces (kept identical for callers) ----------
+import { RUSSIAN_TRUSTED_ROOT_CA, RUSSIAN_TRUSTED_SUB_CA } from "./russian-ca-certs.ts";
+
+// ---------- Interfaces ----------
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -47,6 +49,19 @@ interface AIProxyResponse {
   }>;
 }
 
+// ---------- TLS client for Russian CA ----------
+
+let _httpClient: Deno.HttpClient | null = null;
+
+function getHttpClient(): Deno.HttpClient {
+  if (!_httpClient) {
+    _httpClient = Deno.createHttpClient({
+      caCerts: [RUSSIAN_TRUSTED_ROOT_CA, RUSSIAN_TRUSTED_SUB_CA],
+    });
+  }
+  return _httpClient;
+}
+
 // ---------- OAuth token cache ----------
 
 let cachedToken: string | null = null;
@@ -55,7 +70,6 @@ let tokenExpiresAt = 0; // epoch ms
 const OAUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
 
 async function getAccessToken(): Promise<string> {
-  // Return cached token if still valid (with 60 s margin)
   if (cachedToken && Date.now() < tokenExpiresAt - 60_000) {
     return cachedToken;
   }
@@ -63,15 +77,43 @@ async function getAccessToken(): Promise<string> {
   const clientId = Deno.env.get("GIGACHAT_CLIENT_ID");
   const clientSecret = Deno.env.get("GIGACHAT_CLIENT_SECRET");
 
-  if (!clientId || !clientSecret) {
+  if (!clientId && !clientSecret) {
     throw new Error(
-      "GigaChat credentials not configured. Set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET."
+      "GigaChat credentials not configured. Set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET (or GIGACHAT_AUTH_KEY)."
     );
   }
 
+  // Trim whitespace/newlines/quotes
+  const trimmedId = (clientId || '').trim().replace(/^["']|["']$/g, '');
+  const trimmedSecret = (clientSecret || '').trim().replace(/^["']|["']$/g, '');
+
   const scope = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
-  const credentials = btoa(`${clientId}:${clientSecret}`);
   const rquid = crypto.randomUUID();
+
+  // Detect if GIGACHAT_CLIENT_SECRET is already base64(client_id:client_secret)
+  // from developers.sber.ru "Authorization Data" field.
+  // Heuristic: if it looks like valid base64 and decodes to something with ":",
+  // use it directly. Otherwise encode client_id:client_secret.
+  let credentials: string;
+  let authMode: string;
+
+  if (isAlreadyBase64AuthKey(trimmedSecret)) {
+    // Secret is already the full base64-encoded auth key
+    credentials = trimmedSecret;
+    authMode = "pre-encoded";
+  } else if (trimmedId && trimmedSecret) {
+    // Raw client_id + client_secret → encode
+    credentials = btoa(`${trimmedId}:${trimmedSecret}`);
+    authMode = "encoded";
+  } else {
+    throw new Error("GigaChat: provide both CLIENT_ID+CLIENT_SECRET or a pre-encoded auth key as CLIENT_SECRET.");
+  }
+
+  console.log("[gigachat-oauth] Requesting token...", {
+    scope,
+    authMode,
+    credentialsB64Len: credentials.length,
+  });
 
   const res = await fetch(OAUTH_URL, {
     method: "POST",
@@ -82,6 +124,8 @@ async function getAccessToken(): Promise<string> {
       Authorization: `Basic ${credentials}`,
     },
     body: `scope=${scope}`,
+    // @ts-ignore — Deno-specific option for custom TLS
+    client: getHttpClient(),
   });
 
   if (!res.ok) {
@@ -92,13 +136,31 @@ async function getAccessToken(): Promise<string> {
 
   const data = await res.json();
   cachedToken = data.access_token as string;
-  // Token lives 30 min; expires_at is epoch ms
   tokenExpiresAt = Number(data.expires_at) || Date.now() + 30 * 60 * 1000;
 
+  console.log("[gigachat-oauth] Token obtained, expires in ~30 min");
   return cachedToken!;
 }
 
 // ---------- Helpers ----------
+
+/**
+ * Detect if a string is already a base64-encoded auth key (from developers.sber.ru).
+ * These are typically base64(uuid:secret) and decode to contain a ":" separator.
+ */
+function isAlreadyBase64AuthKey(value: string): boolean {
+  if (!value || value.length < 20) return false;
+  // Check if it's valid base64
+  if (!/^[A-Za-z0-9+/]+=*$/.test(value)) return false;
+  try {
+    const decoded = atob(value);
+    return decoded.includes(':');
+  } catch {
+    return false;
+  }
+}
+
+
 
 function getTimeoutMs(): number {
   const raw = Deno.env.get("GIGACHAT_TIMEOUT_MS");
@@ -130,7 +192,6 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
     messages: request.messages,
   };
 
-  // GigaChat supports function_call / tools natively
   if (request.tools?.length) {
     body.functions = request.tools.map((t) => ({
       name: t.function.name,
@@ -145,10 +206,13 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const endpoint = `${baseUrl}/api/v1/chat/completions`;
+
+  console.log("[gigachat] Request:", { endpoint, model, messagesCount: request.messages.length, hasTools: !!request.tools?.length });
 
   let res: Response;
   try {
-    res = await fetch(`${baseUrl}/api/v1/chat/completions`, {
+    res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -157,6 +221,8 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
       },
       body: JSON.stringify(body),
       signal: controller.signal,
+      // @ts-ignore — Deno-specific option for custom TLS
+      client: getHttpClient(),
     });
   } catch (err) {
     clearTimeout(timer);
@@ -168,12 +234,13 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
     clearTimeout(timer);
   }
 
+  console.log("[gigachat] Response status:", res.status);
+
   if (!res.ok) {
     const errorText = await res.text();
     console.error("[gigachat] API error:", res.status, errorText);
 
     if (res.status === 401) {
-      // Invalidate cached token so next call re-authenticates
       cachedToken = null;
       tokenExpiresAt = 0;
       throw new Error("GigaChat auth failed. Please check credentials.");
@@ -188,22 +255,18 @@ export async function callAIProxy(request: AIProxyRequest): Promise<AIProxyRespo
   }
 
   const data = await res.json();
-
-  // Normalize GigaChat response to OpenAI-compatible shape
   return normalizeResponse(data, request.tools);
 }
 
-/**
- * GigaChat returns function_call at message level instead of tool_calls array.
- * Normalize to the shape callers expect.
- */
+// ---------- Response normalization ----------
+
 function normalizeResponse(
   raw: Record<string, unknown>,
   tools?: Tool[]
 ): AIProxyResponse {
   const choices = (raw.choices as Array<Record<string, unknown>>) || [];
   const normalized = choices.map((c) => {
-    const msg = c.message as Record<string, unknown> || {};
+    const msg = (c.message as Record<string, unknown>) || {};
     const result: AIProxyResponse["choices"][0] = {
       message: {
         role: String(msg.role || "assistant"),
@@ -211,7 +274,6 @@ function normalizeResponse(
       },
     };
 
-    // GigaChat uses `function_call` field on the message
     const fc = msg.function_call as Record<string, unknown> | undefined;
     if (fc && fc.name) {
       let args = fc.arguments;
@@ -228,8 +290,6 @@ function normalizeResponse(
       ];
     }
 
-    // Also handle if GigaChat sends content with embedded JSON when tool was requested
-    // but didn't use function_call format — fallback parsing
     if (!result.message.tool_calls && tools?.length && result.message.content) {
       const parsed = tryParseToolCallFromContent(result.message.content, tools);
       if (parsed) {
@@ -243,10 +303,6 @@ function normalizeResponse(
   return { choices: normalized };
 }
 
-/**
- * Fallback: if model returns JSON in content instead of function_call,
- * wrap it to look like a tool call so callers don't break.
- */
 function tryParseToolCallFromContent(
   content: string,
   tools: Tool[]
@@ -257,7 +313,6 @@ function tryParseToolCallFromContent(
     const parsed = JSON.parse(jsonMatch[0]);
     if (typeof parsed !== "object" || parsed === null) return null;
 
-    // Use first tool name
     const toolName = tools[0]?.function?.name;
     if (!toolName) return null;
 
@@ -272,11 +327,8 @@ function tryParseToolCallFromContent(
   }
 }
 
-// ---------- Extractors (unchanged API) ----------
+// ---------- Extractors ----------
 
-/**
- * Extract tool call arguments from AI response
- */
 export function extractToolCallArgs<T>(
   response: AIProxyResponse,
   toolName: string
@@ -295,9 +347,6 @@ export function extractToolCallArgs<T>(
   }
 }
 
-/**
- * Extract text content from AI response
- */
 export function extractTextContent(response: AIProxyResponse): string | null {
   return response.choices?.[0]?.message?.content ?? null;
 }
