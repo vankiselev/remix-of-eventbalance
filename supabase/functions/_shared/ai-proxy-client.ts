@@ -144,6 +144,24 @@ async function getAccessToken(): Promise<string> {
 
 // ---------- Helpers ----------
 
+/**
+ * Detect if a string is already a base64-encoded auth key (from developers.sber.ru).
+ * These are typically base64(uuid:secret) and decode to contain a ":" separator.
+ */
+function isAlreadyBase64AuthKey(value: string): boolean {
+  if (!value || value.length < 20) return false;
+  // Check if it's valid base64
+  if (!/^[A-Za-z0-9+/]+=*$/.test(value)) return false;
+  try {
+    const decoded = atob(value);
+    return decoded.includes(':');
+  } catch {
+    return false;
+  }
+}
+
+
+
 function getTimeoutMs(): number {
   const raw = Deno.env.get("GIGACHAT_TIMEOUT_MS");
   if (raw) {
