@@ -278,7 +278,7 @@ export function PendingUsersManagement() {
                             {roles.map((role) => (
                               <SelectItem key={role.id} value={role.id}>
                                 <div className="flex items-center gap-2">
-                                  {role.name}
+                                  {role.display_name || role.name}
                                   {role.is_admin_role && (
                                     <Badge variant="secondary" className="text-xs">Админ</Badge>
                                   )}
@@ -347,7 +347,7 @@ export function PendingUsersManagement() {
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           <div className="flex items-center gap-2">
-                            {role.name}
+                            {role.display_name || role.name}
                             {role.is_admin_role && (
                               <Badge variant="secondary" className="text-xs">Админ</Badge>
                             )}

@@ -1,6 +1,7 @@
 export interface Role {
   id: string;
   name: string;
+  display_name: string;
   code: string;
   description: string | null;
   is_system: boolean;

@@ -26,7 +26,7 @@ export const RoleCard = ({
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-xl">{role.name}</CardTitle>
+              <CardTitle className="text-xl">{role.display_name || role.name}</CardTitle>
               {role.is_system && (
                 <Badge variant="secondary" className="text-xs">
                   Системная

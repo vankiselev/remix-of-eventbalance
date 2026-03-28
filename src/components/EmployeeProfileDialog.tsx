@@ -921,7 +921,7 @@ export const EmployeeProfileDialog = ({
                           <SelectContent>
                             {roles.map((role) => (
                               <SelectItem key={role.id} value={role.id}>
-                                {role.name}
+                                {role.display_name || role.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
