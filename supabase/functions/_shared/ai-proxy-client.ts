@@ -77,31 +77,42 @@ async function getAccessToken(): Promise<string> {
   const clientId = Deno.env.get("GIGACHAT_CLIENT_ID");
   const clientSecret = Deno.env.get("GIGACHAT_CLIENT_SECRET");
 
-  if (!clientId || !clientSecret) {
+  if (!clientId && !clientSecret) {
     throw new Error(
-      "GigaChat credentials not configured. Set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET."
+      "GigaChat credentials not configured. Set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET (or GIGACHAT_AUTH_KEY)."
     );
   }
 
-  // Trim whitespace/newlines/quotes that may be in stored secrets
-  const trimmedId = clientId.trim().replace(/^["']|["']$/g, '');
-  const trimmedSecret = clientSecret.trim().replace(/^["']|["']$/g, '');
+  // Trim whitespace/newlines/quotes
+  const trimmedId = (clientId || '').trim().replace(/^["']|["']$/g, '');
+  const trimmedSecret = (clientSecret || '').trim().replace(/^["']|["']$/g, '');
 
   const scope = Deno.env.get("GIGACHAT_SCOPE") || "GIGACHAT_API_PERS";
-  
-  // Safe base64 encoding using TextEncoder (handles non-Latin1 chars)
-  const rawStr = `${trimmedId}:${trimmedSecret}`;
-  const bytes = new TextEncoder().encode(rawStr);
-  const binStr = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
-  const credentials = btoa(binStr);
   const rquid = crypto.randomUUID();
+
+  // Detect if GIGACHAT_CLIENT_SECRET is already base64(client_id:client_secret)
+  // from developers.sber.ru "Authorization Data" field.
+  // Heuristic: if it looks like valid base64 and decodes to something with ":",
+  // use it directly. Otherwise encode client_id:client_secret.
+  let credentials: string;
+  let authMode: string;
+
+  if (isAlreadyBase64AuthKey(trimmedSecret)) {
+    // Secret is already the full base64-encoded auth key
+    credentials = trimmedSecret;
+    authMode = "pre-encoded";
+  } else if (trimmedId && trimmedSecret) {
+    // Raw client_id + client_secret → encode
+    credentials = btoa(`${trimmedId}:${trimmedSecret}`);
+    authMode = "encoded";
+  } else {
+    throw new Error("GigaChat: provide both CLIENT_ID+CLIENT_SECRET or a pre-encoded auth key as CLIENT_SECRET.");
+  }
 
   console.log("[gigachat-oauth] Requesting token...", {
     scope,
-    clientIdLen: trimmedId.length,
-    clientSecretLen: trimmedSecret.length,
+    authMode,
     credentialsB64Len: credentials.length,
-    clientIdPrefix: trimmedId.substring(0, 8), // UUID prefix is safe to log
   });
 
   const res = await fetch(OAUTH_URL, {
