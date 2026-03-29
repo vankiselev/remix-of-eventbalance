@@ -152,9 +152,10 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       PushNotifications.addListener('registration', async (token) => {
         const { data: user } = await supabase.auth.getUser();
         if (!user.user) { reject(new Error('not_authenticated: Войдите в аккаунт')); return; }
+        const nativePlatform = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : 'android';
         const { error } = await supabase
           .from('push_subscriptions')
-          .upsert({ user_id: user.user.id, endpoint: token.value, auth: '', p256dh: '' }, { onConflict: 'user_id,endpoint' });
+          .upsert({ user_id: user.user.id, endpoint: token.value, auth: '', p256dh: '', platform: nativePlatform } as any, { onConflict: 'user_id,endpoint' });
         if (error) { reject(new Error(`db_error: ${error.message}`)); } else { resolve(true); }
       });
       PushNotifications.addListener('registrationError', (error) => {
@@ -232,7 +233,8 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
         endpoint: subJson.endpoint!,
         auth: subJson.keys?.auth || '',
         p256dh: subJson.keys?.p256dh || '',
-      },
+        platform: 'web',
+      } as any,
       { onConflict: 'user_id,endpoint' }
     );
 
@@ -272,7 +274,8 @@ export const repairPushSubscription = async (): Promise<boolean> => {
         endpoint: subJson.endpoint,
         auth: subJson.keys.auth,
         p256dh: subJson.keys.p256dh,
-      },
+        platform: 'web',
+      } as any,
       { onConflict: 'user_id,endpoint' }
     );
 
