@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ interface ReviewTabProps {
 }
 
 export const ReviewTab = ({ enabled }: ReviewTabProps) => {
+  const { getWalletDisplayName } = useWalletNames();
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -244,7 +246,7 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
                     {isIncome ? '+' : '-'} {formatCurrency(amount)}
                   </p>
                   {transaction.cash_type && (
-                    <p className="text-xs text-muted-foreground">{transaction.cash_type}</p>
+                    <p className="text-xs text-muted-foreground">{getWalletDisplayName(transaction.cash_type)}</p>
                   )}
                 </div>
               </div>

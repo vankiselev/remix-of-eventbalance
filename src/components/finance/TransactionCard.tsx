@@ -4,15 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Clock, Mic } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatFullName, getInitials } from "@/utils/formatName";
-
-const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
-const walletDisplay = (s?: string | null) => {
-  const v = normalizeWallet(s || undefined);
-  if (v === 'наличка настя' || v === 'nastya') return 'Наличка Настя';
-  if (v === 'наличка лера' || v === 'lera') return 'Наличка Лера';
-  if (v === 'наличка ваня' || v === 'vanya') return 'Наличка Ваня';
-  return s || 'Не указан';
-};
+import { useWalletNames } from "@/hooks/useWalletNames";
 
 interface TransactionCardProps {
   transaction: {
@@ -45,6 +37,7 @@ interface TransactionCardProps {
 }
 
 export const TransactionCard = ({ transaction, onClick, verification_status, ownerProfile }: TransactionCardProps) => {
+  const { getWalletDisplayName } = useWalletNames();
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
@@ -137,7 +130,7 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
         </div>
         {transaction.cash_type && (
           <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 mt-0.5">
-            {walletDisplay(transaction.cash_type)}
+            {getWalletDisplayName(transaction.cash_type)}
           </Badge>
         )}
       </div>

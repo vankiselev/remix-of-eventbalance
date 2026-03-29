@@ -12,6 +12,7 @@ export interface Transaction {
   income_amount: number;
   project_owner: string;
   cash_type: string | null;
+  wallet_key?: string | null;
   project_id: string | null;
   static_project_name?: string | null;
   no_receipt: boolean;
