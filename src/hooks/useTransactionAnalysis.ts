@@ -31,6 +31,7 @@ interface UseTransactionAnalysisResult {
   suggestedCategory: string | null;
   suggestedTransactionType: 'expense' | 'income' | null;
   confidence: number;
+  analysisError: string | null;
   applyCorrection: () => void;
   applyCategory: () => void;
   applyAll: () => void;
