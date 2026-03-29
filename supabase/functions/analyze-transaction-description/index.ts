@@ -105,7 +105,7 @@ ${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
           properties: {
             corrected_text: { type: "string", description: "Corrected text (starts with uppercase, no trailing dot)" },
             has_errors: { type: "boolean", description: "Whether the original text had errors" },
-            category: { type: "string", description: "Best matching category from the list, or null" },
+            category: { type: "string", description: "Best matching category from the provided list. Must be EXACTLY one of the listed categories, word-for-word. If unsure, use the closest match." },
             confidence: { type: "number", description: "Confidence 0..1 for category" },
             transaction_type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
             reasoning: { type: "string", description: "Brief reasoning (1 sentence)" },
@@ -150,17 +150,33 @@ ${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
       corrected = corrected.slice(0, -1);
     }
 
-    // Validate category against list
-    const validCategory = result.category && CATEGORIES.includes(result.category)
-      ? result.category
-      : null;
+    // Validate category against list (fuzzy: trim + case-insensitive)
+    const rawCategory = (result.category || '').trim();
+    let validCategory: string | null = null;
+    if (rawCategory) {
+      // Exact match first
+      validCategory = CATEGORIES.find(c => c === rawCategory) || null;
+      // Case-insensitive fallback
+      if (!validCategory) {
+        validCategory = CATEGORIES.find(c => c.toLowerCase() === rawCategory.toLowerCase()) || null;
+      }
+      // Partial match fallback (category starts with or contains)
+      if (!validCategory) {
+        validCategory = CATEGORIES.find(c => c.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.toLowerCase())) || null;
+      }
+    }
 
     const confidence = Math.max(0, Math.min(1, result.confidence || 0));
 
+    // Debug logging
     console.log("[analyze-transaction] Done:", {
-      has_errors: result.has_errors,
-      category: validCategory,
+      raw_category: result.category,
+      validated_category: validCategory,
       confidence,
+      threshold: MIN_CONFIDENCE_TO_RETURN_CATEGORY,
+      category_returned: confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY ? validCategory : null,
+      has_errors: result.has_errors,
+      corrected_text: corrected,
     });
 
     return new Response(JSON.stringify({

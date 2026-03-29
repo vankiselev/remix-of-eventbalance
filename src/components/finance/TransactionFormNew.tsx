@@ -1189,8 +1189,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
                    {/* Unified AI block: suggestions */}
                    {(() => {
-                     const showCategory = !!(aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY);
-                     const showCorrection = !!(hasErrors && correctedText);
+                      const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
+                      const showCorrection = !!(hasErrors && correctedText);
                      if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection)) return null;
 
                      const buttonLabel = showCategory && showCorrection
@@ -1222,7 +1222,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                            {showCategory && (
                              <p className="text-sm text-foreground">
                                <span className="font-medium">Категория:</span>{' '}
-                               {aiSuggestions!.category}
+                               {suggestedCategory}
                                <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                                  {Math.round(aiConfidence * 100)}%
                                </span>
