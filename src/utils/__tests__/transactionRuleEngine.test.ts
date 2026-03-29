@@ -110,10 +110,16 @@ describe('transactionRuleEngine', () => {
     expect(r.confidence).toBe(0);
   });
 
-  // Edge: conflicting — "аванс" triggers salary, not transport
-  it('conflict: "аванс" → salary, not transport', () => {
+  // Edge: conflicting — both "аванс" and "такси" in text, first P1 rule (transport) wins
+  it('conflict: "Аванс водителю такси" → transport wins (first P1 rule)', () => {
     const r = analyzeWithRules('Аванс водителю такси');
-    // "аванс" is checked before "такси" in P1 since same priority, first rule wins
+    // transport rule is listed before salary in rules array, so it wins
+    expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
+  });
+
+  // But "Аванс сотруднику" without transport keywords → salary
+  it('conflict: "Аванс сотруднику" → salary (no transport keyword)', () => {
+    const r = analyzeWithRules('Аванс сотруднику');
     expect(r.category).toBe('Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)');
   });
 
