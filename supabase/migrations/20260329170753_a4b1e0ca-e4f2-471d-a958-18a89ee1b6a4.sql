@@ -1,0 +1,1 @@
+DELETE FROM public.system_secrets WHERE key IN ('VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY');
