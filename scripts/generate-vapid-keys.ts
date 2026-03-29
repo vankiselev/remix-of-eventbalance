@@ -1,51 +1,51 @@
 /**
- * VAPID Keys Generator Script
- * 
- * Run this script to generate VAPID keys for Web Push notifications:
+ * VAPID Keys Generator Script (web-push only)
+ *
+ * Run:
  * npx tsx scripts/generate-vapid-keys.ts
- * 
- * Or use online generator: https://www.stephane-quantin.com/en/tools/generators/vapid-keys
  */
 
-async function generateVapidKeys() {
+import webpush from 'web-push';
+
+const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+
+function sanitize(value: string): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/[\s\n\r"']/g, '')
+    .replace(/=+$/g, '');
+}
+
+function mask(value: string): string {
+  if (!value) return '***';
+  return value.length < 12 ? '***' : `${value.slice(0, 6)}...${value.slice(-6)}`;
+}
+
+function assertBase64url(label: string, value: string): void {
+  if (!BASE64URL_RE.test(value)) {
+    throw new Error(`${label} is not valid base64url`);
+  }
+}
+
+function generateVapidKeys() {
   try {
-    // Check if running in Node.js environment with crypto
-    const crypto = await import('crypto');
-    
-    // Generate ECDH key pair
-    const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
-      namedCurve: 'prime256v1',
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'der'
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'der'
-      }
-    });
-    
-    // Convert to base64url format
-    const publicKeyBase64 = publicKey.toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    
-    const privateKeyBase64 = privateKey.toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    
-    console.log('\n✅ VAPID Keys generated successfully!\n');
+    const { publicKey, privateKey } = webpush.generateVAPIDKeys();
+
+    const cleanedPublicKey = sanitize(publicKey);
+    const cleanedPrivateKey = sanitize(privateKey);
+
+    assertBase64url('VAPID_PUBLIC_KEY', cleanedPublicKey);
+    assertBase64url('VAPID_PRIVATE_KEY', cleanedPrivateKey);
+
+    console.log('\n✅ VAPID Keys generated successfully (web-push)!\n');
     console.log('📋 Public Key (add to .env as VITE_VAPID_PUBLIC_KEY):');
-    console.log(publicKeyBase64);
-    console.log('\n🔒 Private Key (add to Supabase Secrets as VAPID_PRIVATE_KEY):');
-    console.log(privateKeyBase64);
-    console.log('\n⚠️  Keep the private key secret! Never commit it to version control.\n');
-    
+    console.log(cleanedPublicKey);
+    console.log('\n🔒 Private Key (add to system_secrets / runtime secrets as VAPID_PRIVATE_KEY):');
+    console.log(cleanedPrivateKey);
+    console.log(`\n🔎 Masked preview: public=${mask(cleanedPublicKey)}, private=${mask(cleanedPrivateKey)}\n`);
+    console.log('⚠️  Keep the private key secret! Never commit it to version control.\n');
   } catch (error) {
     console.error('❌ Error generating VAPID keys:', error);
-    console.log('\n💡 Alternative: Use online generator at https://www.stephane-quantin.com/en/tools/generators/vapid-keys\n');
   }
 }
 
