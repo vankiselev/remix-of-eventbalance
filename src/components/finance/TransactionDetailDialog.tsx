@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -90,6 +91,7 @@ export function TransactionDetailDialog({
   onEdit
 }: TransactionDetailDialogProps) {
   const { toast } = useToast();
+  const { getWalletDisplayName } = useWalletNames();
   const queryClient = useQueryClient();
   const { hasPermission } = useUserPermissions();
   const isAdmin = hasPermission('transactions.view_all');
@@ -315,17 +317,7 @@ export function TransactionDetailDialog({
 
   const getCashTypeLabel = (cashType: string | null) => {
     if (!cashType) return null;
-    
-    const cashTypes: Record<string, string> = {
-      nastya: "Настя",
-      lera: "Лера",
-      vanya: "Ваня",
-      "Наличка Настя": "Настя",
-      "Наличка Лера": "Лера",
-      "Наличка Ваня": "Ваня"
-    };
-
-    return cashTypes[cashType] || cashType;
+    return getWalletDisplayName(cashType);
   };
 
   const isExpense = transaction.expense_amount && transaction.expense_amount > 0;

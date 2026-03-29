@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +53,7 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
   const { toast } = useToast();
   const { user } = useAuth();
   
+  const { getWalletDisplayName } = useWalletNames();
   // Use optimized hook with React Query caching
   const { transactions, isLoading } = useTransactions({ userId, isAdmin });
 
@@ -346,19 +348,10 @@ export function EnhancedTransactionTable({ userId, isAdmin, onEdit }: Transactio
 
   const getCashTypeBadge = (cashType: string | null) => {
     if (!cashType) return null;
-    
-    const cashTypes = {
-      nastya: { label: "Настя", className: "badge-nastya" },
-      lera: { label: "Лера", className: "badge-lera" },
-      vanya: { label: "Ваня", className: "badge-vanya" }
-    };
-
-    const type = cashTypes[cashType as keyof typeof cashTypes];
-    if (!type) return null;
-
+    const displayName = getWalletDisplayName(cashType);
     return (
-      <Badge variant="outline" className={`${type.className} text-xs`}>
-        {type.label}
+      <Badge variant="outline" className="text-xs">
+        {displayName}
       </Badge>
     );
   };
