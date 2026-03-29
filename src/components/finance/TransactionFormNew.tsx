@@ -1210,11 +1210,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             <p className="text-sm text-blue-700 dark:text-blue-300">
                               <span className="font-medium">Категория:</span> {aiSuggestions.category}
                             </p>
-                            {aiSuggestions.project && (
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                <span className="font-medium">Проект:</span> {aiSuggestions.project}
-                              </p>
-                            )}
                             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                               Уверенность: {Math.round(aiConfidence * 100)}%
                             </p>
