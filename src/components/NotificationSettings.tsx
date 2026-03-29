@@ -4,23 +4,47 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle, Volume2, Send } from 'lucide-react';
+import { Bell, BellOff, Smartphone, Globe, CheckCircle2, AlertCircle, Volume2, Send, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   subscribeToPushNotifications, 
   unsubscribeFromPushNotifications, 
   checkPushSubscription,
-  requestNotificationPermission 
+  requestNotificationPermission,
+  diagnosePush,
+  resetPushSubscription,
+  type PushDiagnostics,
 } from '@/utils/pushNotifications';
 import { notificationSound } from '@/utils/notificationSound';
 import { NotificationsFAQ } from './NotificationsFAQ';
 import { supabase } from '@/integrations/supabase/client';
 
+const diagnosisMessages: Record<string, string> = {
+  permission_denied: 'Разрешение на уведомления отклонено. Измените в настройках браузера.',
+  vapid_missing: 'VAPID-ключ не настроен. Обратитесь к администратору.',
+  sw_unsupported: 'Браузер не поддерживает Service Worker.',
+  push_unsupported: 'PushManager недоступен. На iPhone откройте как приложение с экрана «Домой».',
+  sw_register_failed: 'Не удалось зарегистрировать Service Worker.',
+  sw_not_ready: 'Service Worker не готов. Попробуйте обновить страницу.',
+  subscribe_failed: 'Не удалось создать push-подписку. Попробуйте пересоздать подписку.',
+  not_authenticated: 'Вы не авторизованы. Войдите в аккаунт.',
+  db_error: 'Ошибка сохранения подписки в базу данных.',
+  native_registration_failed: 'Ошибка регистрации нативных уведомлений.',
+};
+
+function getFriendlyError(error: any): string {
+  const msg = error?.message || String(error);
+  const code = msg.split(':')[0];
+  return diagnosisMessages[code] || msg;
+}
+
 export const NotificationSettings = () => {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isSoundEnabled, setIsSoundEnabled] = useState(notificationSound.isEnabled());
+  const [diagnostics, setDiagnostics] = useState<PushDiagnostics | null>(null);
   const { toast } = useToast();
   const isInIframe = typeof window !== 'undefined' && window.top !== window.self;
 
@@ -48,21 +72,67 @@ export const NotificationSettings = () => {
         toast({ title: 'Не авторизован', description: 'Войдите в аккаунт', variant: 'destructive' });
         return;
       }
-      const { error, data } = await supabase.functions.invoke('send-push-notification', {
-        body: {
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           user_id: user.id,
           title: 'Тестовое уведомление',
           message: 'Если вы видите это — Web Push работает',
           type: 'system',
           data: { source: 'test' },
-        }
+        }),
       });
-      if (error) throw error;
-      toast({ title: 'Отправлено', description: 'Проверьте уведомления (может прийти с задержкой 1-2 сек.)' });
-      console.log('Test push response:', data);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          title: 'Ошибка отправки',
+          description: result?.error || `HTTP ${response.status}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const desc = `push_sent: ${result.push_sent}, подписок: ${result.total_subscriptions}`;
+      toast({
+        title: result.push_sent > 0 ? '✅ Push отправлен' : '⚠️ Нет активных подписок',
+        description: desc,
+        variant: result.push_sent > 0 ? 'default' : 'destructive',
+      });
+      console.log('Test push response:', result);
     } catch (e: any) {
       console.error('Test push failed:', e);
       toast({ title: 'Ошибка отправки теста', description: e?.message || 'Не удалось отправить уведомление', variant: 'destructive' });
+    }
+  };
+
+  const handleResetSubscription = async () => {
+    setIsResetting(true);
+    try {
+      await resetPushSubscription();
+      setIsPushEnabled(true);
+      toast({
+        title: 'Подписка пересоздана',
+        description: 'Push-подписка обновлена с текущим VAPID-ключом',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка пересоздания',
+        description: getFriendlyError(error),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -70,14 +140,15 @@ export const NotificationSettings = () => {
     const checkStatus = async () => {
       setIsChecking(true);
       
-      // Check notification permission
       if ('Notification' in window) {
         setNotificationPermission(Notification.permission);
       }
       
-      // Check if already subscribed
       const isSubscribed = await checkPushSubscription();
       setIsPushEnabled(isSubscribed);
+
+      const diag = await diagnosePush();
+      setDiagnostics(diag);
       
       setIsChecking(false);
     };
@@ -86,7 +157,6 @@ export const NotificationSettings = () => {
   }, []);
 
   useEffect(() => {
-    // React to permission changes in browser settings (Chrome/Edge/Firefox)
     try {
       const anyNav: any = navigator as any;
       if (anyNav.permissions?.query) {
@@ -104,7 +174,6 @@ export const NotificationSettings = () => {
   const handleTogglePush = async (enabled: boolean) => {
     try {
       if (enabled) {
-        // Request permission first
         const hasPermission = await requestNotificationPermission();
         
         if (!hasPermission) {
@@ -116,7 +185,6 @@ export const NotificationSettings = () => {
           return;
         }
 
-        // Subscribe to push notifications
         try {
           const success = await subscribeToPushNotifications();
           
@@ -139,12 +207,11 @@ export const NotificationSettings = () => {
           console.error('Subscribe error:', subscribeError);
           toast({
             title: 'Ошибка подписки',
-            description: subscribeError?.message || 'Неизвестная ошибка при подписке на уведомления',
+            description: getFriendlyError(subscribeError),
             variant: 'destructive',
           });
         }
       } else {
-        // Unsubscribe from push notifications
         const success = await unsubscribeFromPushNotifications();
         
         if (success) {
@@ -171,12 +238,12 @@ export const NotificationSettings = () => {
     }
   };
 
-  // iOS Safari supports Web Push only for installed Web Apps (Add to Home Screen)
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
   const hasBasics = 'Notification' in window && 'serviceWorker' in navigator;
   const hasPushManager = 'PushManager' in window;
   const isSupported = hasBasics && (hasPushManager || (isIOS && isStandalone));
+  const showResetButton = isStandalone && notificationPermission === 'granted' && !isPushEnabled;
 
   return (
     <div className="space-y-6">
@@ -199,6 +266,17 @@ export const NotificationSettings = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* VAPID key missing warning */}
+        {diagnostics && !diagnostics.vapidKeyAvailable && (
+          <Alert className="border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-900 dark:text-orange-100">
+              VAPID-ключ не настроен. Push-уведомления не будут работать. Обратитесь к администратору.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Sound notifications */}
         <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-3 flex-1">
@@ -264,7 +342,6 @@ export const NotificationSettings = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Status indicator */}
             {isPushEnabled && (
               <Alert className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20">
                 <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -274,12 +351,30 @@ export const NotificationSettings = () => {
               </Alert>
             )}
 
-            {/* iOS standalone prompt to enable */}
             {isIOS && isStandalone && !isPushEnabled && (
               <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
                 <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <AlertDescription className="text-blue-900 dark:text-blue-100">
                   Приложение установлено! Теперь включите переключатель ниже, чтобы получать push-уведомления.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Reset subscription button for iOS standalone with permission but no subscription */}
+            {showResetButton && (
+              <Alert className="border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20">
+                <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <AlertDescription className="text-orange-900 dark:text-orange-100 flex items-center justify-between gap-3">
+                  <span>Разрешение есть, но подписка не найдена. Попробуйте пересоздать.</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleResetSubscription}
+                    disabled={isResetting}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+                    Пересоздать
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}
@@ -312,7 +407,7 @@ export const NotificationSettings = () => {
                   id="push-web"
                   checked={isPushEnabled}
                   onCheckedChange={handleTogglePush}
-                  disabled={isChecking || notificationPermission === 'denied'}
+                  disabled={isChecking || notificationPermission === 'denied' || (diagnostics && !diagnostics.vapidKeyAvailable)}
                 />
                 {notificationPermission !== 'granted' && (
                   <Button
