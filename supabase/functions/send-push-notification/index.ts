@@ -18,17 +18,21 @@ interface NotificationRequest {
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
+function sanitizeBase64url(val: string): string {
+  // Convert standard base64 to base64url and strip padding
+  return val.trim().replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 function isValidBase64url(val: string | null | undefined): boolean {
   if (!val || typeof val !== 'string') return false;
-  const cleaned = val.trim().replace(/=+$/, '');
+  const cleaned = sanitizeBase64url(val);
   return cleaned.length > 0 && BASE64URL_RE.test(cleaned);
 }
 
 function isValidEndpoint(val: string | null | undefined): boolean {
   if (!val || typeof val !== 'string') return false;
-  const trimmed = val.trim();
   try {
-    const url = new URL(trimmed);
+    const url = new URL(val.trim());
     return url.protocol === 'https:';
   } catch {
     return false;
