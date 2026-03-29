@@ -19,6 +19,7 @@ interface ReviewTabProps {
 }
 
 export const ReviewTab = ({ enabled }: ReviewTabProps) => {
+  const { getWalletDisplayName } = useWalletNames();
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
