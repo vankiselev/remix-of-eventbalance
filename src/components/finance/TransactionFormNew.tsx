@@ -498,19 +498,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     }
   }, [whoseProjectSelectOpen]);
 
-  // Local deterministic project detection by keywords
-  useEffect(() => {
-    if (!watchDescription || watchDescription.trim().length < 3) {
-      setDetectedProject(null);
-      return;
-    }
-    const result = detectProjectByDescription(watchDescription);
-    if (result.project && result.confidence === 1.0) {
-      setDetectedProject({ project: result.project, reason: result.reason || '' });
-    } else {
-      setDetectedProject(null);
-    }
-  }, [watchDescription]);
+  // (Rule engine detection now handled above in the unified useEffect)
 
   useEffect(() => {
     if (isOpen) {
