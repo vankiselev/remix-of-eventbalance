@@ -124,6 +124,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [isWhoseProjectAutoFilled, setIsWhoseProjectAutoFilled] = useState(false);
   const [isDescriptionAutoFilled, setIsDescriptionAutoFilled] = useState(false);
+  const [detectedProject, setDetectedProject] = useState<{ project: string; reason: string } | null>(null);
+  const [isProjectManuallySet, setIsProjectManuallySet] = useState(false);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {
