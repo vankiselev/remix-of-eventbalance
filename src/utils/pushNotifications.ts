@@ -119,20 +119,14 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
             return;
           }
 
-          // Delete existing subscriptions for this user on native (no unique constraint on user_id+endpoint)
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('user_id', user.user.id);
-
           const { error } = await supabase
             .from('push_subscriptions')
-            .insert({
+            .upsert({
               user_id: user.user.id,
               endpoint: token.value,
               auth: '',
               p256dh: '',
-            });
+            }, { onConflict: 'user_id,endpoint' });
 
           if (error) {
             reject(new Error(`db_error: ${error.message}`));
@@ -215,21 +209,14 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
 
       const subscriptionJson = subscription.toJSON();
       
-      // Delete old subscriptions for this user, then insert new one
-      // (no unique constraint on user_id+endpoint, so upsert won't work)
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', user.user.id);
-
       const { error } = await supabase
         .from('push_subscriptions')
-        .insert({
+        .upsert({
           user_id: user.user.id,
           endpoint: subscriptionJson.endpoint!,
           auth: subscriptionJson.keys!.auth,
           p256dh: subscriptionJson.keys!.p256dh,
-        });
+        }, { onConflict: 'user_id,endpoint' });
 
       if (error) throw new Error(`db_error: ${error.message}`);
 
@@ -287,20 +274,14 @@ export const resetPushSubscription = async (): Promise<boolean> => {
 
     const subJson = newSub.toJSON();
 
-    // Delete old, insert new (no unique constraint on user_id+endpoint)
-    await supabase
-      .from('push_subscriptions')
-      .delete()
-      .eq('user_id', userData.user.id);
-
     const { error } = await supabase
       .from('push_subscriptions')
-      .insert({
+      .upsert({
         user_id: userData.user.id,
         endpoint: subJson.endpoint!,
         auth: subJson.keys!.auth,
         p256dh: subJson.keys!.p256dh,
-      });
+      }, { onConflict: 'user_id,endpoint' });
 
     if (error) throw new Error(`db_error: ${error.message}`);
     console.log('Push subscription reset successfully');
