@@ -15,6 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       visibleToasts={3}
       duration={4000}
       gap={8}
+      closeButton
       toastOptions={{
         classNames: {
           toast:
@@ -26,7 +27,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-xl group-[.toast]:text-xs group-[.toast]:h-8 group-[.toast]:px-3",
           closeButton:
-            "group-[.toast]:text-foreground/40 group-[.toast]:hover:text-foreground/70",
+            "group-[.toast]:!static group-[.toast]:!transform-none group-[.toast]:shrink-0 group-[.toast]:h-9 group-[.toast]:w-9 group-[.toast]:rounded-full group-[.toast]:border group-[.toast]:border-border/40 group-[.toast]:bg-background/80 group-[.toast]:text-foreground/60 group-[.toast]:hover:bg-accent group-[.toast]:hover:text-foreground group-[.toast]:hover:border-border group-[.toast]:transition-all group-[.toast]:active:scale-95",
           success:
             "group-[.toaster]:border-[hsl(var(--success)/0.3)] group-[.toaster]:bg-[hsl(var(--success)/0.08)] group-[.toaster]:text-foreground",
           error:
