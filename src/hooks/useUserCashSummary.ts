@@ -33,20 +33,19 @@ function parseCashResult(data: any[]): CashSummary {
   }
 
   // Grouped format: aggregate from rows
-  let total_cash = 0;
   let cash_nastya = 0;
   let cash_lera = 0;
   let cash_vanya = 0;
 
   for (const row of data) {
     const net = (Number(row.total_income) || 0) - (Number(row.total_expense) || 0);
-    total_cash += net;
     const ct = (row.cash_type || '').trim();
     if (ct === 'Наличка Настя') cash_nastya += net;
     else if (ct === 'Наличка Лера') cash_lera += net;
     else if (ct === 'Наличка Ваня') cash_vanya += net;
   }
 
+  const total_cash = cash_nastya + cash_lera + cash_vanya;
   return { total_cash, cash_nastya, cash_lera, cash_vanya };
 }
 
