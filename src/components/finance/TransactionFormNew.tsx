@@ -1193,102 +1193,61 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     <p className="text-xs text-destructive mt-1">{analysisError}</p>
                   )}
                   
-                  {/* AI Transaction Suggestions */}
-                  {isAnalyzing && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Анализ описания...</span>
-                    </div>
-                  )}
+                   {/* Unified AI block: loading */}
+                   {(isAnalyzing || isChecking) && (
+                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                       <Loader2 className="h-4 w-4 animate-spin" />
+                       <span>Анализ описания...</span>
+                     </div>
+                   )}
 
-                  {aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY && !isAnalyzing && (
-                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
-                      <div className="flex items-start gap-2">
-                        <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                            AI предлагает:
-                          </p>
-                          <div className="space-y-1">
-                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                              <span className="font-medium">Категория:</span> {aiSuggestions.category}
-                            </p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                              Уверенность: {Math.round(aiConfidence * 100)}%
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button 
-                            type="button"
-                            size="sm" 
-                            onClick={applyAISuggestions}
-                            className="h-10 min-h-[44px] text-xs"
-                          >
-                            Применить
-                          </Button>
-                          <Button 
-                            type="button"
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={dismissSuggestions}
-                            className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* AI Grammar Check Feedback */}
-                  {isChecking && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Проверка текста...</span>
-                    </div>
-                  )}
-
-                  {hasErrors && correctedText && !isChecking && (
-                    <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                            Найдены ошибки в описании
-                          </p>
-                          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                            Исправленный вариант: <strong>{correctedText}</strong>
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handleApplyCorrection}
-                          className="h-10 min-h-[44px] flex-shrink-0"
-                        >
-                          <Check className="h-4 w-4 mr-2" />
-                          Применить
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Apply All button - shown when both correction and suggestions are available */}
-                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY && !isAnalyzing && (
-                    <div className="mt-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleApplyAll}
-                        className="w-full h-10 min-h-[44px]"
-                      >
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Применить все предложения
-                      </Button>
-                    </div>
-                  )}
+                   {/* Unified AI block: suggestions */}
+                   {!isAnalyzing && !isChecking && (
+                     (aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY) || (hasErrors && correctedText)
+                   ) && (
+                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
+                       <div className="flex items-start gap-2">
+                         <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                         <div className="flex-1 min-w-0 space-y-1.5">
+                           <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                             AI предлагает:
+                           </p>
+                           {aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY && (
+                             <p className="text-sm text-blue-700 dark:text-blue-300">
+                               <span className="font-medium">Категория:</span> {aiSuggestions.category}
+                               <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
+                                 ({Math.round(aiConfidence * 100)}%)
+                               </span>
+                             </p>
+                           )}
+                           {hasErrors && correctedText && (
+                             <p className="text-sm text-blue-700 dark:text-blue-300">
+                               <span className="font-medium">Исправление:</span> {correctedText}
+                             </p>
+                           )}
+                         </div>
+                         <div className="flex items-center gap-1 flex-shrink-0">
+                           <Button
+                             type="button"
+                             size="sm"
+                             onClick={handleApplyAll}
+                             className="h-10 min-h-[44px] text-xs"
+                           >
+                             Применить
+                           </Button>
+                           <Button
+                             type="button"
+                             size="sm"
+                             variant="ghost"
+                             onClick={dismissSuggestions}
+                             className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
+                           >
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       </div>
+                     </div>
+                   )}
                 </FormItem>
               )}
             />
