@@ -312,15 +312,7 @@ html, body {
     color: #EF4444; /* Red - exact ТЗ color */
   }
 
-  /* Toast Positioning - Top Right Corner */
-  .toaster {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 100;
-    max-width: 420px;
-    width: 100%;
-  }
+  /* Toast container — positioning handled by Sonner offset prop */
 
   /* Toast Styling - Semantic Colors */
   .toast-error {
