@@ -1,0 +1,249 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Wallet, User, Banknote, Plus, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDisplayName } from "@/utils/formatName";
+import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
+import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { AdvanceEditDialog } from "./AdvanceEditDialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { Separator } from "@/components/ui/separator";
+
+interface CashSummary {
+  total_cash: number;
+  cash_nastya: number;
+  cash_lera: number;
+  cash_vanya: number;
+}
+
+interface FinanceHeaderCardProps {
+  summary: CashSummary;
+  isLoading?: boolean;
+  employeeId?: string;
+}
+
+export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHeaderCardProps) {
+  const { isAdmin } = useUserRbacRoles();
+  const { user } = useAuth();
+  const { data: allAdvances, isLoading: isLoadingAll } = useAllAdvances();
+
+  const targetUserId = employeeId || (!isAdmin ? user?.id : undefined);
+  const { data: advanceInfo, isLoading: isLoadingMy } = useMyAdvance(targetUserId);
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | undefined>();
+  const [editingAmount, setEditingAmount] = useState<number>(0);
+  const [isAdvancesExpanded, setIsAdvancesExpanded] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = async (empId: string, name: string) => {
+    try {
+      const { error } = await (supabase.from('profiles') as any)
+        .update({ advance_balance: 0, advance_issued_by: null, advance_issued_at: null })
+        .eq('id', empId);
+      if (error) throw error;
+      toast({ title: "Аванс удалён", description: `Аванс у ${name} обнулён` });
+      queryClient.invalidateQueries({ queryKey: ['all-advances'] });
+      queryClient.invalidateQueries({ queryKey: ['my-advance'] });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingEmployeeId(undefined);
+    setEditingAmount(0);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEdit = (empId: string, amount: number) => {
+    setEditingEmployeeId(empId);
+    setEditingAmount(amount);
+    setIsEditDialogOpen(true);
+  };
+
+  const advancesLoading = (isAdmin && !employeeId && isLoadingAll) || isLoadingMy;
+
+  if (isLoading || advancesLoading) {
+    return (
+      <Card className="border-border/50">
+        <CardContent className="p-3 sm:p-4 space-y-2">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Determine advance info
+  const isAdminOverview = isAdmin && !employeeId;
+  const advanceTotal = isAdminOverview
+    ? (allAdvances?.total || 0)
+    : (advanceInfo?.amount || 0);
+  const advanceEmployees = isAdminOverview ? (allAdvances?.employees || []) : [];
+
+  const wallets = [
+    { label: "Настя", value: summary.cash_nastya, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Лера", value: summary.cash_lera, color: "text-green-600", bg: "bg-green-50" },
+    { label: "Ваня", value: summary.cash_vanya, color: "text-purple-600", bg: "bg-purple-50" },
+  ];
+
+  return (
+    <>
+      <Card className="border-border/50 shadow-sm">
+        <CardContent className="p-3 sm:p-4">
+          {/* Row 1: Total + advance add button */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                <Wallet className="h-4 w-4 text-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground leading-none mb-0.5">Итого на руках</p>
+                <p className="text-xl font-bold text-foreground leading-tight">{formatCurrency(summary.total_cash)}</p>
+              </div>
+            </div>
+
+            {/* Advance badge + add button */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 bg-muted/60 rounded-lg px-2.5 py-1.5">
+                <Banknote className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Авансы:</span>
+                <span className="text-xs font-semibold text-foreground">{formatCurrency(advanceTotal)}</span>
+              </div>
+              {isAdmin && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 rounded-lg touch-manipulation"
+                  onClick={handleAddNew}
+                  aria-label="Добавить аванс"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Wallet breakdown — compact inline */}
+          <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+            {wallets.map((w) => (
+              <div key={w.label} className="flex items-center gap-1.5">
+                <div className={`w-4 h-4 ${w.bg} rounded flex items-center justify-center`}>
+                  <User className={`h-2.5 w-2.5 ${w.color}`} />
+                </div>
+                <span className="text-xs text-muted-foreground">{w.label}</span>
+                <span className={`text-xs font-semibold ${w.color}`}>{formatCurrency(w.value)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Row 3: Expandable advance details (admin overview only) */}
+          {isAdminOverview && advanceEmployees.length > 0 && (
+            <>
+              <Separator className="my-2.5" />
+              <Collapsible open={isAdvancesExpanded} onOpenChange={setIsAdvancesExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between h-8 text-xs text-muted-foreground px-1"
+                  >
+                    <span>Подробнее · {advanceEmployees.length} сотр.</span>
+                    {isAdvancesExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-0.5 mt-1">
+                  {advanceEmployees.map((employee) => (
+                    <div
+                      key={employee.id}
+                      className="flex items-center justify-between text-sm py-1.5 px-1 rounded hover:bg-accent/50 group"
+                    >
+                      <span className="text-foreground text-xs">
+                        {formatDisplayName(employee.full_name)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium">
+                          {formatCurrency(employee.advance_balance)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEdit(employee.id, employee.advance_balance)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Удалить аванс?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Аванс у {formatDisplayName(employee.full_name)} ({formatCurrency(employee.advance_balance)}) будет обнулён.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Отмена</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(employee.id, formatDisplayName(employee.full_name))}>
+                                Удалить
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          )}
+
+          {/* Employee/self advance detail (non-admin or specific employee view) */}
+          {!isAdminOverview && advanceTotal > 0 && (
+            <>
+              <Separator className="my-2.5" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {advanceInfo?.issuedByName
+                    ? `Выдал(а): ${advanceInfo.issuedByName}`
+                    : "Выдано"}
+                  {advanceInfo?.issuedAt && (
+                    <span className="ml-1">
+                      · {format(new Date(advanceInfo.issuedAt), 'd MMM yyyy', { locale: ru })}
+                    </span>
+                  )}
+                </span>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <AdvanceEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        employeeId={editingEmployeeId}
+        currentAmount={editingAmount}
+      />
+    </>
+  );
+}

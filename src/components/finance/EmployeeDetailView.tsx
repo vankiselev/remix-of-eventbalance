@@ -20,7 +20,7 @@ import { TransactionsCardView } from "@/components/finance/TransactionsCardView"
 import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
 import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
 import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
-import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
+import { FinanceHeaderCard } from "@/components/finance/FinanceHeaderCard";
 import { useUserCashSummary } from "@/hooks/useUserCashSummary";
 import { VoiceTransactionDialog } from "@/components/finance/VoiceTransactionDialog";
 
@@ -166,14 +166,12 @@ export const EmployeeDetailView = ({ selectedEmployee, isAdmin, onBack, onEmploy
         </div>
       )}
 
-      <div className="sticky top-0 z-10 bg-background pb-2 space-y-4 w-full">
-        <div className="grid gap-4 md:grid-cols-2 w-full">
-          <AdvancesSummaryCard employeeId={selectedEmployee?.id} />
-          <FinanceSummaryCards 
-            summary={summary} 
-            isLoading={false} 
-          />
-        </div>
+      <div className="sticky top-0 z-10 bg-background pb-2 w-full">
+        <FinanceHeaderCard
+          summary={summary}
+          isLoading={false}
+          employeeId={selectedEmployee?.id}
+        />
         <ImportProgressWindow />
         <BackgroundImportStatus />
       </div>
