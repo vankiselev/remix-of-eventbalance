@@ -1227,7 +1227,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       const effectiveShowCategory = showCategory && !aiStillLoading;
                       const effectiveShowCorrection = showCorrection && !aiStillLoading;
 
-                      const hasAiSuggestions = showCategory || showCorrection;
+                      const hasAiSuggestions = effectiveShowCategory || effectiveShowCorrection;
 
                       const handleApplyDetectedProject = () => {
                         form.setValue('project_id', detectedProject!.project);
@@ -1251,11 +1251,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
                       const buttonLabel = (hasAiSuggestions && showProject)
                         ? 'Применить всё'
-                        : showCategory && showCorrection
+                        : effectiveShowCategory && effectiveShowCorrection
                           ? 'Применить всё'
-                          : showCategory
+                          : effectiveShowCategory
                             ? 'Применить категорию'
-                            : showCorrection
+                            : effectiveShowCorrection
                               ? 'Применить исправление'
                               : 'Применить проект';
 
