@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { resolveOwnerKey, DEFAULT_OWNER_COLORS, buildOwnerColorSet } from "@/constants/ownerColors";
 
 interface Event {
   id: string;
@@ -23,13 +24,20 @@ interface CalendarMonthViewProps {
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
+/**
+ * Returns inline-style-compatible owner color tokens.
+ * Used by CalendarMonthView, CalendarWeekView, CalendarDayView, CalendarV2.
+ * Falls back to gray for unknown owners.
+ */
 export const getOwnerColor = (owner: string | null) => {
-  if (!owner) return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
-  const o = owner.toLowerCase();
-  if (o.includes("настя")) return { bg: "bg-violet-50 dark:bg-violet-950/30", dot: "bg-violet-500", border: "border-violet-400", text: "text-violet-700 dark:text-violet-300" };
-  if (o.includes("лера")) return { bg: "bg-orange-50 dark:bg-orange-950/30", dot: "bg-orange-500", border: "border-orange-400", text: "text-orange-700 dark:text-orange-300" };
-  if (o.includes("ваня") || o.includes("иван")) return { bg: "bg-yellow-50 dark:bg-yellow-950/30", dot: "bg-yellow-500", border: "border-yellow-400", text: "text-yellow-700 dark:text-yellow-300" };
-  return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
+  const key = resolveOwnerKey(owner);
+  if (!key) return {
+    dot: '#9CA3AF', bg: 'rgba(156,163,175,0.08)', border: 'rgba(156,163,175,0.3)',
+    text: '#6B7280',
+  };
+  const d = DEFAULT_OWNER_COLORS[key];
+  const set = buildOwnerColorSet(key, d.hex, d.label);
+  return { dot: set.dot, bg: set.bg, border: set.border, text: set.text };
 };
 
 const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate, compact = false }: CalendarMonthViewProps) => {
