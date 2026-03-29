@@ -40,6 +40,9 @@ interface AnalysisResult {
   reasoning: string | null;
 }
 
+/** Minimum confidence to include category in response (below → null) */
+const MIN_CONFIDENCE_TO_RETURN_CATEGORY = 0.6;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
