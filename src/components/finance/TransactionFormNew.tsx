@@ -344,76 +344,64 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchCategory = form.watch("category");
   const watchDescription = form.watch("description");
 
-  // AI-powered description checker
+  // Unified AI analysis (description check + category suggestion in one call)
   const {
     isChecking,
     hasErrors,
     correctedText,
-    errors,
-    suppressNextCheck,
-    clearCorrection,
-  } = useDescriptionChecker(watchDescription, watchCategory);
-
-  // AI-powered transaction suggestions
-  const {
-    suggestions: aiSuggestions,
-    isAnalyzing,
+    suggestedCategory,
     confidence: aiConfidence,
-    applySuggestions: applyAISuggestions,
+    applyCorrection: applyAnalysisCorrection,
+    applyCategory: applyAnalysisCategory,
+    applyAll: applyAnalysisAll,
     dismissSuggestions,
     suppressNextAnalysis,
-  } = useTransactionSuggestions(watchDescription, (suggestions) => {
-    // Apply AI suggestions to form
-    if (suggestions.category) {
-      form.setValue('category', suggestions.category);
+    clearCorrection,
+  } = useTransactionAnalysis(
+    watchDescription,
+    watchCategory,
+    // onApplyCorrection
+    (text) => {
+      form.setValue("description", text);
+      toast({ title: "Исправление применено", description: "Описание обновлено" });
+    },
+    // onApplyCategory
+    (category, transactionType) => {
+      form.setValue('category', category);
       
       // Handle special categories
-      if (suggestions.category === 'Передано или получено от сотрудника') {
+      if (category === 'Передано или получено от сотрудника') {
         setIsMoneyTransfer(true);
         form.setValue('no_receipt', true);
         form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
         form.setValue('income_amount', undefined);
       }
-    }
-    
-    if (suggestions.project) {
-      form.setValue('project_id', suggestions.project);
-    }
 
-    toast({
-      title: "Применены предложения AI",
-      description: "Категория и проект заполнены автоматически",
-      duration: 3000,
-    });
-  });
+      toast({
+        title: "Категория применена",
+        description: `Категория: ${category}`,
+        duration: 3000,
+      });
+    },
+  );
 
-  // Apply correction without triggering re-analysis
+  // Compat aliases for existing UI references
+  const isAnalyzing = isChecking;
+  const aiSuggestions = suggestedCategory ? { category: suggestedCategory } : null;
+
   const handleApplyCorrection = () => {
-    if (!correctedText) return;
-    suppressNextCheck();
-    suppressNextAnalysis();
-    form.setValue("description", correctedText);
-    clearCorrection();
-    toast({
-      title: "Исправление применено",
-      description: "Описание обновлено",
-    });
+    applyAnalysisCorrection();
   };
 
-  // Apply all AI suggestions at once
+  const applyAISuggestions = () => {
+    applyAnalysisCategory();
+  };
+
   const handleApplyAll = () => {
-    if (hasErrors && correctedText) {
-      suppressNextCheck();
-      suppressNextAnalysis();
-      form.setValue("description", correctedText);
-      clearCorrection();
-    }
-    if (aiSuggestions && aiConfidence > 0.6) {
-      applyAISuggestions();
-    }
+    applyAnalysisAll();
     toast({
       title: "Все предложения применены",
-      description: "Описание, категория и проект обновлены",
+      description: "Описание и категория обновлены",
       duration: 3000,
     });
   };
