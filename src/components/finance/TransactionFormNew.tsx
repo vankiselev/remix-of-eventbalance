@@ -1187,10 +1187,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                      </div>
                    )}
 
-                   {/* Unified AI block: suggestions */}
+                   {/* Unified AI block: suggestions
+                      * Two thresholds (see docs/ai-analysis.md):
+                      * - MIN_CONFIDENCE_TO_RETURN_CATEGORY (0.6): backend returns category (otherwise null)
+                      * - MIN_CONFIDENCE_TO_AUTO_APPLY (0.75): UI auto-applies without user confirmation
+                      * Below 0.6 → no category shown. 0.6–0.75 → shown but user must confirm. ≥0.75 → auto-apply.
+                      */}
                    {(() => {
-                      const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
-                      const showCorrection = !!(hasErrors && correctedText);
+                       const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
+                       const showCorrection = !!(hasErrors && correctedText);
                      if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection)) return null;
 
                      const buttonLabel = showCategory && showCorrection

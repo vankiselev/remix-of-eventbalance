@@ -160,7 +160,7 @@ ${categoriesNumbered}`;
       corrected = corrected.slice(0, -1);
     }
 
-    // Validate category against list (fuzzy: trim + case-insensitive)
+    // Validate category against whitelist (fuzzy: trim + case-insensitive + partial)
     const rawCategory = (result.category || '').trim();
     let validCategory: string | null = null;
     if (rawCategory) {
@@ -173,6 +173,10 @@ ${categoriesNumbered}`;
       // Partial match fallback (category starts with or contains)
       if (!validCategory) {
         validCategory = CATEGORIES.find(c => c.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.toLowerCase())) || null;
+      }
+      // Guard: if no match found after all attempts, log and return null gracefully
+      if (!validCategory) {
+        console.warn("[analyze-transaction] Category not in whitelist, returning null. raw_category:", rawCategory);
       }
     }
 
