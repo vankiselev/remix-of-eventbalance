@@ -106,7 +106,7 @@ export function useTransactionAnalysis(
           return;
         }
 
-        const analysisData = data as AnalysisResult;
+        const analysisData = data as AnalysisResult & { error?: string };
         if (analysisData?.success) {
           setResult(analysisData);
         } else {
@@ -195,6 +195,7 @@ export function useTransactionAnalysis(
     suggestedCategory: result?.category || null,
     suggestedTransactionType: result?.transaction_type || null,
     confidence: result?.confidence || 0,
+    analysisError,
     applyCorrection,
     applyCategory,
     applyAll,
