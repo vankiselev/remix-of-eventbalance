@@ -17,6 +17,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
+import { resolveWalletType } from '@/constants/walletTypes';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";

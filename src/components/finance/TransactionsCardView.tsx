@@ -13,15 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTransactions, Transaction } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const normalizeWallet = (s?: string) => (s || '').trim().toLowerCase();
-const walletDisplay = (s?: string | null) => {
-  const v = normalizeWallet(s || undefined);
-  if (v === 'наличка настя' || v === 'nastya') return 'Наличка Настя';
-  if (v === 'наличка лера' || v === 'lera') return 'Наличка Лера';
-  if (v === 'наличка ваня' || v === 'vanya') return 'Наличка Ваня';
-  return s || 'Не указан';
-};
+import { useWalletNames } from "@/hooks/useWalletNames";
 
 interface TransactionsCardViewProps {
   userId?: string;
