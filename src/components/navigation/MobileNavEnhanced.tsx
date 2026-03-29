@@ -20,8 +20,8 @@ import type { LucideIcon } from "lucide-react";
  *  "circle" — circular outline around the icon
  */
 type ActiveTabStyle = "pill" | "circle";
-// Use `as ActiveTabStyle` so TS doesn't narrow to a literal and block comparisons
-const ACTIVE_TAB_STYLE = "pill" as ActiveTabStyle;
+const ACTIVE_TAB_STYLE: ActiveTabStyle =
+  (import.meta.env.VITE_ACTIVE_TAB_STYLE as ActiveTabStyle) || "pill";
 
 const activeIndicatorClass = (active: boolean): string => {
   if (!active) return "border border-transparent";
