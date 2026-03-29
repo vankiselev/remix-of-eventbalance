@@ -1198,7 +1198,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     </div>
                   )}
 
-                  {aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                  {aiSuggestions && aiConfidence >= 0.75 && !isAnalyzing && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
                       <div className="flex items-start gap-2">
                         <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
