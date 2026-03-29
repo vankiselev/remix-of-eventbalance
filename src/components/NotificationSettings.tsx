@@ -115,7 +115,10 @@ export const NotificationSettings = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        const errText = result?.error || `HTTP ${response.status}`;
+        const isVapidError = result?.error === 'vapid_invalid';
+        const errText = isVapidError
+          ? `Неверный формат VAPID ключа: ${result?.detail || 'проверьте настройки'}`
+          : (result?.error || `HTTP ${response.status}`);
         setLastError(`Тест push: ${errText}`);
         toast({ title: 'Ошибка', description: errText, variant: 'destructive' });
         return;
@@ -126,10 +129,26 @@ export const NotificationSettings = () => {
       if (result.invalid_removed > 0) parts.push(`удалено невалидных: ${result.invalid_removed}`);
       if (result.push_errors?.length) parts.push(`ошибки: ${result.push_errors.length}`);
 
+      // Specific user-facing messages
+      let toastTitle = '✅ Push отправлен';
+      let toastVariant: 'default' | 'destructive' = 'default';
+
+      if (result.vapid_valid === false) {
+        toastTitle = '❌ Неверный формат VAPID ключа';
+        toastVariant = 'destructive';
+      } else if (result.invalid_removed > 0 && result.push_sent === 0) {
+        toastTitle = '⚠️ Повреждённая подписка, пересоздайте';
+        toastVariant = 'destructive';
+        setLastError(`Повреждённые подписки удалены (${result.invalid_removed}). Нажмите «Пересоздать подписку».`);
+      } else if (result.push_sent === 0) {
+        toastTitle = '⚠️ Push не доставлен';
+        toastVariant = 'destructive';
+      }
+
       toast({
-        title: result.push_sent > 0 ? '✅ Push отправлен' : '⚠️ Push не доставлен',
+        title: toastTitle,
         description: parts.join(' · '),
-        variant: result.push_sent > 0 ? 'default' : 'destructive',
+        variant: toastVariant,
       });
 
       await refreshDiagnostics();

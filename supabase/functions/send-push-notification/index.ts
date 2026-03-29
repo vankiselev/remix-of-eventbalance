@@ -18,17 +18,21 @@ interface NotificationRequest {
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
+function sanitizeBase64url(val: string): string {
+  // Convert standard base64 to base64url and strip padding
+  return val.trim().replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 function isValidBase64url(val: string | null | undefined): boolean {
   if (!val || typeof val !== 'string') return false;
-  const cleaned = val.trim().replace(/=+$/, '');
+  const cleaned = sanitizeBase64url(val);
   return cleaned.length > 0 && BASE64URL_RE.test(cleaned);
 }
 
 function isValidEndpoint(val: string | null | undefined): boolean {
   if (!val || typeof val !== 'string') return false;
-  const trimmed = val.trim();
   try {
-    const url = new URL(trimmed);
+    const url = new URL(val.trim());
     return url.protocol === 'https:';
   } catch {
     return false;
@@ -80,22 +84,24 @@ serve(async (req) => {
 
     // Get VAPID keys from database and sanitize
     const secrets = await getSystemSecrets(['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'WEB_PUSH_CONTACT']);
-    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
-    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
+    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY'] ? sanitizeBase64url(secrets['VAPID_PUBLIC_KEY']) : null;
+    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY'] ? sanitizeBase64url(secrets['VAPID_PRIVATE_KEY']) : null;
     const contact = (secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com").trim();
 
-    // Validate base64url format
-    if (vapidPublicKey && !BASE64URL_RE.test(vapidPublicKey)) {
-      console.error("[send-push] VAPID_PUBLIC_KEY contains invalid base64url characters");
+    const vapidPubValid = isValidBase64url(vapidPublicKey);
+    const vapidPrivValid = isValidBase64url(vapidPrivateKey);
+    
+    if (vapidPublicKey && !vapidPubValid) {
+      console.error("[send-push] VAPID_PUBLIC_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "VAPID_PUBLIC_KEY содержит недопустимые символы. Допустимы только A-Z, a-z, 0-9, - и _" }),
+        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PUBLIC_KEY невалидный base64url", vapid_valid: false }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
-    if (vapidPrivateKey && !BASE64URL_RE.test(vapidPrivateKey)) {
-      console.error("[send-push] VAPID_PRIVATE_KEY contains invalid base64url characters");
+    if (vapidPrivateKey && !vapidPrivValid) {
+      console.error("[send-push] VAPID_PRIVATE_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "VAPID_PRIVATE_KEY содержит недопустимые символы" }),
+        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PRIVATE_KEY невалидный base64url", vapid_valid: false }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
@@ -188,8 +194,8 @@ serve(async (req) => {
           const subscription = {
             endpoint: sub.endpoint.trim(),
             keys: {
-              p256dh: sub.p256dh.trim().replace(/=+$/, ''),
-              auth: sub.auth.trim().replace(/=+$/, ''),
+              p256dh: sanitizeBase64url(sub.p256dh),
+              auth: sanitizeBase64url(sub.auth),
             },
           };
 
@@ -219,6 +225,7 @@ serve(async (req) => {
         total_subscriptions: subscriptions?.length || 0,
         valid_subscriptions: validSubscriptions,
         invalid_removed: invalidRemoved,
+        vapid_valid: vapidConfigured,
         vapid_configured: vapidConfigured,
         ...(pushErrors.length > 0 ? { push_errors: pushErrors } : {}),
       }),
