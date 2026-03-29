@@ -6,42 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const CATEGORIES = [
-  'Агентская комиссия',
-  'Аниматоры / Шоу программа (мастер-классы, попвата, интерактивы, пиньята)',
-  'Аренда (оборудование, костюмы, мебель, декор, аттракционы, шатры)',
-  'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)',
-  'Выступление артистов (диджеи, селебрити, кавер-группы)',
-  'Дизайн / Оформление (флористика, шарики, фотозона, услуги дизайнера)',
-  'Доставка / Трансфер / Парковка / Вывоз мусора',
-  'Еда / Напитки (сладкий стол, торт, кейтеринг)',
-  'Закупки / Оплаты (ФИН, офис, склад, компания)',
-  'Залог (внесли/вернули)',
-  'Комиссия за перевод',
-  'Монтаж / Демонтаж',
-  'Накладные расходы (райдер, траты вне сметы)',
-  'Передано или получено от Леры/Насти/Вани',
-  'Передано или получено от сотрудника',
-  'Печать (баннеры, меню, карточки)',
-  'Площадка (депозит, аренда, доп. услуги)',
-  'Получено/Возвращено клиенту',
-  'Производство (декорации, костюмы)',
-  'Прочие специалисты',
-  'Фотограф / Видеограф',
-  'Налог / УСН',
-];
-
-interface AnalysisResult {
+interface GrammarResult {
   corrected_text: string;
   has_errors: boolean;
-  category: string | null;
-  confidence: number;
-  transaction_type: 'expense' | 'income';
-  reasoning: string | null;
 }
-
-/** Minimum confidence to include category in response (below → null) */
-const MIN_CONFIDENCE_TO_RETURN_CATEGORY = 0.6;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,76 +19,43 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const description = typeof body.description === 'string' ? body.description.trim() : '';
-    const currentCategory = body.currentCategory || null;
 
     if (!description || description.length < 2) {
       return new Response(JSON.stringify({
         success: true,
         corrected_text: description,
         has_errors: false,
-        category: currentCategory,
-        confidence: 0,
-        transaction_type: 'expense',
-        reasoning: null,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Truncate overly long descriptions
     const safeDescription = description.slice(0, 500);
 
-    const categoriesNumbered = CATEGORIES.map((c, i) => `${i + 1}. "${c}"`).join('\n');
+    const systemPrompt = `Ты — корректор русского текста для финансовых заметок. 
 
-    const systemPrompt = `Ты — помощник финансовой системы учёта мероприятий. Выполни ДВЕ задачи одновременно:
-
-**ЗАДАЧА 1 — Исправление текста:**
-- Исправь орфографию, грамматику, склонение имён (передал кому? — Камилле, Насте, Лере)
+**Твоя ЕДИНСТВЕННАЯ задача — исправить текст:**
+- Исправь орфографию и грамматику
+- Исправь склонение имён (передал кому? — Камилле, Насте, Лере)
 - Текст ВСЕГДА должен начинаться с заглавной буквы
 - Имена собственные — с заглавной буквы
 - НЕ добавляй точку в конце (это короткие заметки)
 - Не меняй числа, даты, суммы, смысл
 - Если ошибок нет — верни оригинал без изменений, has_errors=false
 
-**ЗАДАЧА 2 — Категоризация:**
-- ОБЯЗАТЕЛЬНО выбери наиболее подходящую категорию из списка ниже
-- Верни category ТОЧНО как написано в списке (копируй строку)
-- Определи тип: "expense" (расход) или "income" (приход)
-- Укажи confidence (0..1) — насколько ты уверен
-- ВСЕГДА старайся выбрать категорию, даже если уверенность средняя
-
-**Примеры категоризации:**
-- "бензин", "такси", "курьер" → "Доставка / Трансфер / Парковка / Вывоз мусора"
-- "купили реквизит", "материалы" → "Производство (декорации, костюмы)"
-- "аванс сотруднику", "зарплата" → "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)"
-- "аренда площадки", "депозит" → "Площадка (депозит, аренда, доп. услуги)"
-- "оплата от клиента" → "Получено/Возвращено клиенту"
-- "перевел/передал/получил от Насти/Леры/Вани" → "Передано или получено от Леры/Насти/Вани"
-- "перевел/передал/получил от" другого имени → "Передано или получено от сотрудника"
-- "еда", "торт", "кейтеринг" → "Еда / Напитки (сладкий стол, торт, кейтеринг)"
-- "баннер", "печать", "визитки" → "Печать (баннеры, меню, карточки)"
-
-**Полный список категорий (используй ТОЛЬКО из этого списка, ДОСЛОВНО):**
-${categoriesNumbered}`;
-
-    const userPrompt = currentCategory
-      ? `Описание: "${safeDescription}"\nТекущая категория: ${currentCategory}`
-      : `Описание: "${safeDescription}"`;
+**НЕ определяй категорию, проект, кошелёк или тип операции — только текст.**`;
 
     const tools = [{
       type: "function" as const,
       function: {
-        name: "analyze_transaction",
-        description: "Return text correction and category analysis for a transaction description",
+        name: "correct_text",
+        description: "Return corrected text for a transaction description",
         parameters: {
           type: "object",
           properties: {
             corrected_text: { type: "string", description: "Corrected text (starts with uppercase, no trailing dot)" },
             has_errors: { type: "boolean", description: "Whether the original text had errors" },
-            category: { type: "string", description: "Best matching category from the provided list. Must be EXACTLY one of the listed categories, word-for-word. If unsure, use the closest match." },
-            confidence: { type: "number", description: "Confidence 0..1 for category" },
-            transaction_type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
-            reasoning: { type: "string", description: "Brief reasoning (1 sentence)" },
           },
-          required: ["corrected_text", "has_errors", "category", "confidence", "transaction_type"],
+          required: ["corrected_text", "has_errors"],
         },
       },
     }];
@@ -128,25 +63,20 @@ ${categoriesNumbered}`;
     const response = await callAIProxy({
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "user", content: `Текст: "${safeDescription}"` },
       ],
       tools,
-      tool_choice: { type: "function", function: { name: "analyze_transaction" } },
+      tool_choice: { type: "function", function: { name: "correct_text" } },
     });
 
-    const result = extractToolCallArgs<AnalysisResult>(response, "analyze_transaction");
+    const result = extractToolCallArgs<GrammarResult>(response, "correct_text");
 
     if (!result) {
       console.error("[analyze-transaction] No tool call in response");
       return new Response(JSON.stringify({
-        success: false,
-        error: "Failed to parse AI response",
+        success: true,
         corrected_text: safeDescription,
         has_errors: false,
-        category: currentCategory,
-        confidence: 0,
-        transaction_type: 'expense',
-        reasoning: null,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -160,47 +90,16 @@ ${categoriesNumbered}`;
       corrected = corrected.slice(0, -1);
     }
 
-    // Validate category against whitelist (fuzzy: trim + case-insensitive + partial)
-    const rawCategory = (result.category || '').trim();
-    let validCategory: string | null = null;
-    if (rawCategory) {
-      // Exact match first
-      validCategory = CATEGORIES.find(c => c === rawCategory) || null;
-      // Case-insensitive fallback
-      if (!validCategory) {
-        validCategory = CATEGORIES.find(c => c.toLowerCase() === rawCategory.toLowerCase()) || null;
-      }
-      // Partial match fallback (category starts with or contains)
-      if (!validCategory) {
-        validCategory = CATEGORIES.find(c => c.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.toLowerCase())) || null;
-      }
-      // Guard: if no match found after all attempts, log and return null gracefully
-      if (!validCategory) {
-        console.warn("[analyze-transaction] Category not in whitelist, returning null. raw_category:", rawCategory);
-      }
-    }
-
-    const confidence = Math.max(0, Math.min(1, result.confidence || 0));
-
-    // Debug logging
-    console.log("[analyze-transaction] Done:", {
-      raw_category: result.category,
-      validated_category: validCategory,
-      confidence,
-      threshold: MIN_CONFIDENCE_TO_RETURN_CATEGORY,
-      category_returned: confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY ? validCategory : null,
+    console.log("[analyze-transaction] Grammar done:", {
       has_errors: result.has_errors,
-      corrected_text: corrected,
+      original: safeDescription,
+      corrected,
     });
 
     return new Response(JSON.stringify({
       success: true,
       corrected_text: corrected,
       has_errors: !!result.has_errors,
-      category: confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY ? validCategory : null,
-      confidence,
-      transaction_type: result.transaction_type || 'expense',
-      reasoning: result.reasoning || null,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {

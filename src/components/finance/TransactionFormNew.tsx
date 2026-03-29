@@ -19,10 +19,10 @@ import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
 import { resolveWalletType } from '@/constants/walletTypes';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
-import { detectProjectByDescription } from '@/utils/projectAutoDetect';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
-import { useTransactionAnalysis, MIN_CONFIDENCE_TO_AUTO_APPLY, MIN_CONFIDENCE_TO_RETURN_CATEGORY } from "@/hooks/useTransactionAnalysis";
+import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
+import { analyzeWithRules, walletKeyToDisplayName, type RuleEngineResult } from '@/utils/transactionRuleEngine';
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
@@ -126,6 +126,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [isDescriptionAutoFilled, setIsDescriptionAutoFilled] = useState(false);
   const [detectedProject, setDetectedProject] = useState<{ project: string; reason: string } | null>(null);
   const [isProjectManuallySet, setIsProjectManuallySet] = useState(false);
+  const [ruleResult, setRuleResult] = useState<RuleEngineResult | null>(null);
+  const [isCategoryManuallySet, setIsCategoryManuallySet] = useState(false);
+  const [isWalletManuallySet, setIsWalletManuallySet] = useState(false);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {
@@ -345,56 +348,76 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchCategory = form.watch("category");
   const watchDescription = form.watch("description");
 
-  // Unified AI analysis (description check + category suggestion in one call)
+  // AI analysis — grammar only
   const {
     isChecking,
     hasErrors,
     correctedText,
-    suggestedCategory,
-    confidence: aiConfidence,
     analysisError,
-    applyAll: applyAnalysisAll,
+    applyCorrection,
     dismissSuggestions,
     suppressNextAnalysis,
     clearCorrection,
   } = useTransactionAnalysis(
     watchDescription,
-    watchCategory,
     // onApplyCorrection
     (text) => {
       form.setValue("description", text);
       toast({ title: "Исправление применено", description: "Описание обновлено" });
     },
-    // onApplyCategory
-    (category, transactionType) => {
-      form.setValue('category', category);
-      
-      // Handle special categories
-      if (category === 'Передано или получено от сотрудника') {
-        setIsMoneyTransfer(true);
-        form.setValue('no_receipt', true);
-        form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-        form.setValue('income_amount', undefined);
-      }
-
-      toast({
-        title: "Категория применена",
-        description: `Категория: ${category}`,
-        duration: 3000,
-      });
-    },
   );
+
+  // Local rule engine — category, project, wallet, transaction type
+  useEffect(() => {
+    if (!watchDescription || watchDescription.trim().length < 3) {
+      setRuleResult(null);
+      setDetectedProject(null);
+      return;
+    }
+    const result = analyzeWithRules(watchDescription);
+    setRuleResult(result.confidence > 0 ? result : null);
+    if (result.project) {
+      setDetectedProject({ project: result.project, reason: result.reasons.find(r => r.includes('project')) || '' });
+    } else {
+      setDetectedProject(null);
+    }
+  }, [watchDescription]);
 
   // Compat aliases for existing UI references
   const isAnalyzing = isChecking;
-  const aiSuggestions = suggestedCategory ? { category: suggestedCategory } : null;
-
 
   const handleApplyAll = () => {
-    applyAnalysisAll();
+    // Apply AI correction
+    if (hasErrors && correctedText) {
+      applyCorrection();
+    }
+    // Apply rule-based suggestions
+    if (ruleResult) {
+      if (ruleResult.category && !isCategoryManuallySet) {
+        form.setValue('category', ruleResult.category);
+        if (ruleResult.category === 'Передано или получено от сотрудника') {
+          setIsMoneyTransfer(true);
+          form.setValue('no_receipt', true);
+          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+          form.setValue('income_amount', undefined);
+        }
+      }
+      if (ruleResult.project && !isProjectManuallySet) {
+        form.setValue('project_id', ruleResult.project);
+      }
+      if (ruleResult.wallet_key && !isWalletManuallySet) {
+        const displayName = walletKeyToDisplayName(ruleResult.wallet_key);
+        form.setValue('whose_project', displayName);
+        setIsWhoseProjectAutoFilled(true);
+      }
+      if (ruleResult.transaction_type === 'income') {
+        form.setValue('income_amount', form.getValues('expense_amount') || undefined);
+        form.setValue('expense_amount', undefined);
+      }
+    }
     toast({
       title: "Все предложения применены",
-      description: "Описание и категория обновлены",
+      description: "Изменения внесены",
       duration: 3000,
     });
   };
@@ -475,19 +498,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     }
   }, [whoseProjectSelectOpen]);
 
-  // Local deterministic project detection by keywords
-  useEffect(() => {
-    if (!watchDescription || watchDescription.trim().length < 3) {
-      setDetectedProject(null);
-      return;
-    }
-    const result = detectProjectByDescription(watchDescription);
-    if (result.project && result.confidence === 1.0) {
-      setDetectedProject({ project: result.project, reason: result.reason || '' });
-    } else {
-      setDetectedProject(null);
-    }
-  }, [watchDescription]);
+  // (Rule engine detection now handled above in the unified useEffect)
 
   useEffect(() => {
     if (isOpen) {
@@ -531,7 +542,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         setIsWhoseProjectAutoFilled(false);
         setIsDescriptionAutoFilled(false);
         setIsProjectManuallySet(false);
+        setIsCategoryManuallySet(false);
+        setIsWalletManuallySet(false);
         setDetectedProject(null);
+        setRuleResult(null);
         form.reset({
           operation_date: new Date(),
           project_id: undefined,
@@ -1211,53 +1225,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                      </div>
                    )}
 
-                   {/* Unified AI block: suggestions
-                      * Two thresholds (see docs/ai-analysis.md):
-                      * - MIN_CONFIDENCE_TO_RETURN_CATEGORY (0.6): backend returns category (otherwise null)
-                      * - MIN_CONFIDENCE_TO_AUTO_APPLY (0.75): UI auto-applies without user confirmation
-                      * Below 0.6 → no category shown. 0.6–0.75 → shown but user must confirm. ≥0.75 → auto-apply.
-                      */}
+                   {/* Suggestion block: AI grammar + Rule-engine fields */}
                    {(() => {
-                        const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
-                        const showCorrection = !!(hasErrors && correctedText);
-                        const showProject = !!(detectedProject && !isProjectManuallySet && watchProjectId !== detectedProject.project);
-                      if (!showCategory && !showCorrection && !showProject) return null;
-                      // Hide AI suggestions while analyzing, but keep local project suggestion visible
-                      const aiStillLoading = isAnalyzing || isChecking;
-                      const effectiveShowCategory = showCategory && !aiStillLoading;
-                      const effectiveShowCorrection = showCorrection && !aiStillLoading;
+                        const showCorrection = !!(hasErrors && correctedText) && !isChecking;
+                        const showProject = !!(ruleResult?.project && !isProjectManuallySet && watchProjectId !== ruleResult.project);
+                        const showCategory = !!(ruleResult?.category && !isCategoryManuallySet && watchCategory !== ruleResult.category);
+                        const showWallet = !!(ruleResult?.wallet_key && !isWalletManuallySet);
 
-                      const hasAiSuggestions = effectiveShowCategory || effectiveShowCorrection;
-
-                      const handleApplyDetectedProject = () => {
-                        form.setValue('project_id', detectedProject!.project);
-                        setIsProjectManuallySet(false);
-                        toast({
-                          title: "Проект применён",
-                          description: `Проект: ${detectedProject!.project}`,
-                          duration: 3000,
-                        });
-                      };
-
-                      const handleApplyAllWithProject = () => {
-                        if (hasAiSuggestions) applyAnalysisAll();
-                        if (showProject) handleApplyDetectedProject();
-                        toast({
-                          title: "Все предложения применены",
-                          description: "Описание, категория и проект обновлены",
-                          duration: 3000,
-                        });
-                      };
-
-                      const buttonLabel = (hasAiSuggestions && showProject)
-                        ? 'Применить всё'
-                        : effectiveShowCategory && effectiveShowCorrection
-                          ? 'Применить всё'
-                          : effectiveShowCategory
-                            ? 'Применить категорию'
-                            : effectiveShowCorrection
-                              ? 'Применить исправление'
-                              : 'Применить проект';
+                        const hasRuleSuggestions = showProject || showCategory || showWallet;
+                        if (!showCorrection && !hasRuleSuggestions) return null;
 
                       return (
                         <div className="mt-2 p-3 bg-accent/40 border border-border/60 rounded-2xl animate-in fade-in-50 duration-300">
@@ -1266,13 +1242,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-primary" />
                               <span className="text-xs font-medium text-muted-foreground">
-                                {hasAiSuggestions ? 'Предложения AI' : 'Предложения'}
+                                Предложения
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => {
                                 dismissSuggestions();
+                                setRuleResult(null);
                                 setDetectedProject(null);
                               }}
                               className="rounded-full p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
@@ -1282,44 +1259,52 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             </button>
                           </div>
 
-                          {/* Content */}
-                          <div className="space-y-1.5">
-                            {showProject && (
-                              <div>
-                                <p className="text-sm text-foreground">
-                                  <span className="font-medium">Проект:</span>{' '}
-                                  {detectedProject!.project}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  Определено по ключевым словам
-                                </p>
-                              </div>
-                            )}
-                            {effectiveShowCategory && (
-                              <p className="text-sm text-foreground">
-                                <span className="font-medium">Категория:</span>{' '}
-                                {suggestedCategory}
-                                <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                                  {Math.round(aiConfidence * 100)}%
-                                </span>
-                              </p>
-                            )}
-                            {effectiveShowCorrection && (
+                          {/* AI Grammar correction */}
+                          {showCorrection && (
+                            <div className="space-y-0.5 mb-1.5">
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Исправление:</span>{' '}
                                 {correctedText}
                               </p>
-                            )}
-                          </div>
+                              <p className="text-[11px] text-muted-foreground">AI</p>
+                            </div>
+                          )}
 
-                          {/* Action button — full width on mobile */}
+                          {/* Rule-engine suggestions */}
+                          {hasRuleSuggestions && (
+                            <div className="space-y-1">
+                              {showProject && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Проект:</span>{' '}
+                                  {ruleResult!.project}
+                                </p>
+                              )}
+                              {showCategory && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Категория:</span>{' '}
+                                  {ruleResult!.category}
+                                </p>
+                              )}
+                              {showWallet && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Кошелёк:</span>{' '}
+                                  {walletKeyToDisplayName(ruleResult!.wallet_key!)}
+                                </p>
+                              )}
+                              <p className="text-[11px] text-muted-foreground">
+                                Определено по ключевым словам
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Action button */}
                           <Button
                             type="button"
                             size="sm"
-                            onClick={hasAiSuggestions ? handleApplyAllWithProject : handleApplyDetectedProject}
+                            onClick={handleApplyAll}
                             className="w-full mt-2.5 h-9 min-h-[44px] text-xs rounded-xl"
                           >
-                            {buttonLabel}
+                            Применить всё
                           </Button>
                         </div>
                       );
@@ -1506,6 +1491,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={(value) => {
                         field.onChange(value);
+                        setIsCategoryManuallySet(true);
                         // Automatically enable money transfer for employee transfer category
                         if (MONEY_TRANSFER_CATEGORIES.includes(value)) {
                           setIsMoneyTransfer(true);
@@ -1727,6 +1713,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={(value) => {
                         field.onChange(value);
+                        setIsWalletManuallySet(true);
                         // If user manually changes the value, remove auto-fill indicator
                         setIsWhoseProjectAutoFilled(false);
                       }}
