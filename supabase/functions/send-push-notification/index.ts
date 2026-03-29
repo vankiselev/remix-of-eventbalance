@@ -225,6 +225,7 @@ serve(async (req) => {
         total_subscriptions: subscriptions?.length || 0,
         valid_subscriptions: validSubscriptions,
         invalid_removed: invalidRemoved,
+        vapid_valid: vapidConfigured,
         vapid_configured: vapidConfigured,
         ...(pushErrors.length > 0 ? { push_errors: pushErrors } : {}),
       }),
