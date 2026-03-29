@@ -1273,7 +1273,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   )}
 
                   {/* Apply All button - shown when both correction and suggestions are available */}
-                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence >= 0.75 && !isAnalyzing && (
                     <div className="mt-2">
                       <Button
                         type="button"
