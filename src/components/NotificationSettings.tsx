@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Bell, BellOff, Globe, CheckCircle2, AlertCircle, Volume2, 
-  Send, RefreshCw, Eye, Smartphone, ChevronDown, ChevronUp 
+  Send, RefreshCw, Eye, Smartphone, ChevronDown, ChevronUp, Copy, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -16,6 +16,7 @@ import {
   requestNotificationPermission,
   diagnosePush,
   resetPushSubscription,
+  repairPushSubscription,
   validateVapidKey,
   type PushDiagnostics,
 } from '@/utils/pushNotifications';
@@ -32,8 +33,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   sw_register_failed: 'Не удалось зарегистрировать Service Worker.',
   sw_not_ready: 'Service Worker не готов. Обновите страницу.',
   subscribe_failed: 'Не удалось создать подписку. Попробуйте «Пересоздать».',
-  not_authenticated: 'Вы не авторизованы.',
-  db_error: 'Ошибка сохранения. Попробуйте ещё раз.',
+  not_authenticated: 'Вы не авторизованы. Войдите в аккаунт.',
+  db_error: 'Ошибка сохранения в базу данных.',
   native_error: 'Ошибка нативных уведомлений.',
   ios_not_standalone: 'На iPhone push работает только с экрана «Домой».',
 };
@@ -62,11 +63,13 @@ export const NotificationSettings = () => {
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isSoundEnabled, setIsSoundEnabled] = useState(notificationSound.isEnabled());
   const [diagnostics, setDiagnostics] = useState<PushDiagnostics | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const { toast } = useToast();
   const isInIframe = typeof window !== 'undefined' && window.top !== window.self;
 
@@ -112,10 +115,13 @@ export const NotificationSettings = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        toast({ title: 'Ошибка', description: result?.error || `HTTP ${response.status}`, variant: 'destructive' });
+        const errText = result?.error || `HTTP ${response.status}`;
+        setLastError(`Тест push: ${errText}`);
+        toast({ title: 'Ошибка', description: errText, variant: 'destructive' });
         return;
       }
 
+      setLastError(null);
       const parts = [`push: ${result.push_sent}/${result.valid_subscriptions}`];
       if (result.invalid_removed > 0) parts.push(`удалено невалидных: ${result.invalid_removed}`);
       if (result.push_errors?.length) parts.push(`ошибки: ${result.push_errors.length}`);
@@ -126,21 +132,43 @@ export const NotificationSettings = () => {
         variant: result.push_sent > 0 ? 'default' : 'destructive',
       });
 
-      // Refresh diagnostics after test
       await refreshDiagnostics();
     } catch (e: any) {
-      toast({ title: 'Ошибка теста', description: e?.message || 'Не удалось отправить', variant: 'destructive' });
+      const errText = e?.message || 'Не удалось отправить';
+      setLastError(`Тест push: ${errText}`);
+      toast({ title: 'Ошибка теста', description: errText, variant: 'destructive' });
+    }
+  };
+
+  // "Починить" — save existing browser subscription to DB
+  const handleRepairSubscription = async () => {
+    setIsRepairing(true);
+    setLastError(null);
+    try {
+      await repairPushSubscription();
+      setIsPushEnabled(true);
+      await refreshDiagnostics();
+      toast({ title: '✅ Подписка сохранена в БД' });
+    } catch (error: any) {
+      const rawMsg = error?.message || String(error);
+      setLastError(`Починка: ${rawMsg}`);
+      toast({ title: 'Ошибка', description: getFriendlyError(error), variant: 'destructive' });
+    } finally {
+      setIsRepairing(false);
     }
   };
 
   const handleResetSubscription = async () => {
     setIsResetting(true);
+    setLastError(null);
     try {
       await resetPushSubscription();
       setIsPushEnabled(true);
       await refreshDiagnostics();
       toast({ title: '✅ Подписка пересоздана' });
     } catch (error: any) {
+      const rawMsg = error?.message || String(error);
+      setLastError(`Пересоздание: ${rawMsg}`);
       toast({ title: 'Ошибка', description: getFriendlyError(error), variant: 'destructive' });
     } finally {
       setIsResetting(false);
@@ -171,6 +199,7 @@ export const NotificationSettings = () => {
 
   const handleTogglePush = async (enabled: boolean) => {
     setIsSubscribing(true);
+    setLastError(null);
     try {
       if (enabled) {
         await subscribeToPushNotifications();
@@ -187,11 +216,21 @@ export const NotificationSettings = () => {
         }
       }
     } catch (error: any) {
+      const rawMsg = error?.message || String(error);
+      setLastError(`Включение push: ${rawMsg}`);
       toast({ title: 'Ошибка', description: getFriendlyError(error), variant: 'destructive' });
       setIsPushEnabled(await checkPushSubscription());
       await refreshDiagnostics();
     } finally {
       setIsSubscribing(false);
+    }
+  };
+
+  const copyError = () => {
+    if (lastError) {
+      navigator.clipboard.writeText(lastError).then(() => {
+        toast({ title: 'Скопировано' });
+      });
     }
   };
 
@@ -260,9 +299,7 @@ export const NotificationSettings = () => {
                 <BellOff className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Push на iPhone</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Работает только из установленного приложения (PWA).
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Работает только из установленного приложения (PWA).</p>
                 </div>
               </div>
               <div className="p-2.5 bg-background border rounded-lg">
@@ -314,12 +351,35 @@ export const NotificationSettings = () => {
                   <AlertCircle className="h-4 w-4 text-orange-600" />
                   <AlertDescription className="text-sm flex items-center justify-between gap-2">
                     <span>Подписка есть, но не в БД</span>
-                    <Button variant="outline" size="sm" className="h-7 text-xs flex-shrink-0" onClick={handleResetSubscription} disabled={isResetting}>
-                      <RefreshCw className={`h-3 w-3 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+                    <Button variant="outline" size="sm" className="h-7 text-xs flex-shrink-0" onClick={handleRepairSubscription} disabled={isRepairing}>
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isRepairing ? 'animate-spin' : ''}`} />
                       Починить
                     </Button>
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {/* ── Inline error block (full text, not toast) ── */}
+              {lastError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-destructive mb-1">Ошибка</p>
+                        <p className="text-xs text-foreground break-all whitespace-pre-wrap select-all">{lastError}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={copyError} title="Скопировать ошибку">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setLastError(null)} title="Закрыть">
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Main toggle */}

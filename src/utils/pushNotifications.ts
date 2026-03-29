@@ -241,6 +241,46 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
   return true;
 };
 
+// ── Repair: save existing browser subscription to DB without full reset ──
+export const repairPushSubscription = async (): Promise<boolean> => {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('not_authenticated: Войдите в аккаунт');
+
+  if (!('serviceWorker' in navigator)) throw new Error('sw_unsupported: Service Worker не поддерживается');
+
+  const reg = await navigator.serviceWorker.getRegistration('/');
+  if (!reg?.pushManager) throw new Error('sw_not_ready: Service Worker не готов');
+
+  let subscription = await reg.pushManager.getSubscription();
+  const subJson = subscription?.toJSON();
+
+  // If current subscription is damaged (missing keys), do a full reset
+  if (!subscription || !subJson?.endpoint || !subJson?.keys?.auth || !subJson?.keys?.p256dh) {
+    console.log('[push] Existing subscription damaged or missing, doing full reset');
+    return resetPushSubscription();
+  }
+
+  // Delete ALL old DB records for this user first
+  await supabase.from('push_subscriptions').delete().eq('user_id', userData.user.id);
+
+  // Save current valid subscription
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .upsert(
+      {
+        user_id: userData.user.id,
+        endpoint: subJson.endpoint,
+        auth: subJson.keys.auth,
+        p256dh: subJson.keys.p256dh,
+      },
+      { onConflict: 'user_id,endpoint' }
+    );
+
+  if (error) throw new Error(`db_error: ${error.message} (code: ${error.code}, details: ${error.details})`);
+  console.log('[push] Subscription repaired in DB');
+  return true;
+};
+
 // ── Reset subscription (deletes ALL old records for user first) ───
 export const resetPushSubscription = async (): Promise<boolean> => {
   const vapidCheck = validateVapidKey();
