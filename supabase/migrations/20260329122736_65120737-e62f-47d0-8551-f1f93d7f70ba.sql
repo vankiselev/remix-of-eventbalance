@@ -1,0 +1,1 @@
+INSERT INTO public.system_secrets (key, value) VALUES ('WEB_PUSH_CONTACT', 'mailto:admin@eventbalance.ru') ON CONFLICT DO NOTHING;
