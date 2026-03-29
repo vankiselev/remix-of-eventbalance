@@ -94,11 +94,16 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
   const advanceEmployees = isAdminOverview ? (allAdvances?.employees || []) : [];
   const hasAdvanceDetails = isAdminOverview && advanceEmployees.length > 0;
 
-  const wallets = [
-    { label: "Настя", value: summary.cash_nastya, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Лера", value: summary.cash_lera, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Ваня", value: summary.cash_vanya, color: "text-purple-600", bg: "bg-purple-50" },
+  const walletDefs = [
+    { key: 'nastya' as const, dataKey: 'cash_nastya' as const },
+    { key: 'lera' as const, dataKey: 'cash_lera' as const },
+    { key: 'vanya' as const, dataKey: 'cash_vanya' as const },
   ];
+  const wallets = walletDefs.map(w => ({
+    label: DEFAULT_OWNER_COLORS[w.key].label,
+    value: summary[w.dataKey],
+    hex: DEFAULT_OWNER_COLORS[w.key].hex,
+  }));
 
   return (
     <>

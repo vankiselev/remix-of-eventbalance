@@ -45,10 +45,11 @@ const CalendarDayView = ({ date, events, onEventClick }: CalendarDayViewProps) =
             return (
               <div
                 key={event.id}
-                className={`p-3 rounded-lg border-l-[3px] hover:shadow-md cursor-pointer transition-all ${colors.border} ${colors.bg}`}
+                className="p-3 rounded-lg border-l-[3px] hover:shadow-md cursor-pointer transition-all"
+                style={{ borderColor: colors.border, backgroundColor: colors.bg }}
                 onClick={() => onEventClick(event)}
               >
-                <h3 className={`font-semibold text-sm mb-1.5 ${colors.text}`}>{event.name}</h3>
+                <h3 className="font-semibold text-sm mb-1.5" style={{ color: colors.text }}>{event.name}</h3>
                 <div className="space-y-1">
                   {event.event_time && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
