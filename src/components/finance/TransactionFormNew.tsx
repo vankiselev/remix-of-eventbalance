@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, AlertCircle, Check, Sparkles, X } from "lucide-react";
+import { CalendarIcon, Loader2, Sparkles, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUpload, UploadedFile } from './FileUpload';
@@ -349,8 +349,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     suggestedCategory,
     confidence: aiConfidence,
     analysisError,
-    applyCorrection: applyAnalysisCorrection,
-    applyCategory: applyAnalysisCategory,
+    applyAll: applyAnalysisAll,
     applyAll: applyAnalysisAll,
     dismissSuggestions,
     suppressNextAnalysis,
