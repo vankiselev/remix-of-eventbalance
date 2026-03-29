@@ -753,29 +753,29 @@ const Events = () => {
           onValueChange={(value) => {
             if (value) setPeriodFilter(value as 'future' | 'past' | 'all' | 'cancelled');
           }}
-          className="grid grid-cols-4 w-full border rounded-md"
+          className="grid grid-cols-4 w-full border rounded-xl"
         >
           <ToggleGroupItem 
             value="future" 
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Будущие
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="past"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Прошлые
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="all"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Все
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="cancelled"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Отмена
           </ToggleGroupItem>
