@@ -68,6 +68,8 @@ serve(async (req) => {
     // Truncate overly long descriptions
     const safeDescription = description.slice(0, 500);
 
+    const categoriesNumbered = CATEGORIES.map((c, i) => `${i + 1}. "${c}"`).join('\n');
+
     const systemPrompt = `Ты — помощник финансовой системы учёта мероприятий. Выполни ДВЕ задачи одновременно:
 
 **ЗАДАЧА 1 — Исправление текста:**
@@ -79,17 +81,25 @@ serve(async (req) => {
 - Если ошибок нет — верни оригинал без изменений, has_errors=false
 
 **ЗАДАЧА 2 — Категоризация:**
-- Определи наиболее подходящую категорию из списка ниже
+- ОБЯЗАТЕЛЬНО выбери наиболее подходящую категорию из списка ниже
+- Верни category ТОЧНО как написано в списке (копируй строку)
 - Определи тип: "expense" (расход) или "income" (приход)
-- Укажи confidence (0..1)
-- Если не уверен (< 0.6), верни category: null
+- Укажи confidence (0..1) — насколько ты уверен
+- ВСЕГДА старайся выбрать категорию, даже если уверенность средняя
 
-**Особые правила категоризации:**
+**Примеры категоризации:**
+- "бензин", "такси", "курьер" → "Доставка / Трансфер / Парковка / Вывоз мусора"
+- "купили реквизит", "материалы" → "Производство (декорации, костюмы)"
+- "аванс сотруднику", "зарплата" → "Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)"
+- "аренда площадки", "депозит" → "Площадка (депозит, аренда, доп. услуги)"
+- "оплата от клиента" → "Получено/Возвращено клиенту"
 - "перевел/передал/получил от Насти/Леры/Вани" → "Передано или получено от Леры/Насти/Вани"
 - "перевел/передал/получил от" другого имени → "Передано или получено от сотрудника"
+- "еда", "торт", "кейтеринг" → "Еда / Напитки (сладкий стол, торт, кейтеринг)"
+- "баннер", "печать", "визитки" → "Печать (баннеры, меню, карточки)"
 
-**Категории:**
-${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
+**Полный список категорий (используй ТОЛЬКО из этого списка, ДОСЛОВНО):**
+${categoriesNumbered}`;
 
     const userPrompt = currentCategory
       ? `Описание: "${safeDescription}"\nТекущая категория: ${currentCategory}`
@@ -105,7 +115,7 @@ ${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
           properties: {
             corrected_text: { type: "string", description: "Corrected text (starts with uppercase, no trailing dot)" },
             has_errors: { type: "boolean", description: "Whether the original text had errors" },
-            category: { type: "string", description: "Best matching category from the list, or null" },
+            category: { type: "string", description: "Best matching category from the provided list. Must be EXACTLY one of the listed categories, word-for-word. If unsure, use the closest match." },
             confidence: { type: "number", description: "Confidence 0..1 for category" },
             transaction_type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
             reasoning: { type: "string", description: "Brief reasoning (1 sentence)" },
@@ -150,17 +160,33 @@ ${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
       corrected = corrected.slice(0, -1);
     }
 
-    // Validate category against list
-    const validCategory = result.category && CATEGORIES.includes(result.category)
-      ? result.category
-      : null;
+    // Validate category against list (fuzzy: trim + case-insensitive)
+    const rawCategory = (result.category || '').trim();
+    let validCategory: string | null = null;
+    if (rawCategory) {
+      // Exact match first
+      validCategory = CATEGORIES.find(c => c === rawCategory) || null;
+      // Case-insensitive fallback
+      if (!validCategory) {
+        validCategory = CATEGORIES.find(c => c.toLowerCase() === rawCategory.toLowerCase()) || null;
+      }
+      // Partial match fallback (category starts with or contains)
+      if (!validCategory) {
+        validCategory = CATEGORIES.find(c => c.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.toLowerCase())) || null;
+      }
+    }
 
     const confidence = Math.max(0, Math.min(1, result.confidence || 0));
 
+    // Debug logging
     console.log("[analyze-transaction] Done:", {
-      has_errors: result.has_errors,
-      category: validCategory,
+      raw_category: result.category,
+      validated_category: validCategory,
       confidence,
+      threshold: MIN_CONFIDENCE_TO_RETURN_CATEGORY,
+      category_returned: confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY ? validCategory : null,
+      has_errors: result.has_errors,
+      corrected_text: corrected,
     });
 
     return new Response(JSON.stringify({
