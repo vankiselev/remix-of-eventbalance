@@ -64,6 +64,17 @@ describe('parseCashSummary', () => {
     expect(result.cash_lera).toBe(100);
   });
 
+  it('grouped: client paid does not affect total_cash', () => {
+    const data = [
+      { cash_type: 'Оплатил(а) клиент', total_income: 1000, total_expense: 0 },
+    ];
+    const result = parseCashSummary(data);
+    expect(result.cash_nastya).toBe(0);
+    expect(result.cash_lera).toBe(0);
+    expect(result.cash_vanya).toBe(0);
+    expect(result.total_cash).toBe(0);
+  });
+
   // --- Flat format (from get_company_cash_summary) ---
 
   it('flat: recalculates total_cash from wallets', () => {
