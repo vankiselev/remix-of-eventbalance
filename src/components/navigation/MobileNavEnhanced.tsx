@@ -14,6 +14,28 @@ import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
+/**
+ * Active tab indicator style:
+ *  "pill"   — rounded-xl pill highlight (default)
+ *  "circle" — circular outline around the icon
+ */
+type ActiveTabStyle = "pill" | "circle";
+// Use `as ActiveTabStyle` so TS doesn't narrow to a literal and block comparisons
+const ACTIVE_TAB_STYLE = "pill" as ActiveTabStyle;
+
+const activeIndicatorClass = (active: boolean): string => {
+  if (!active) return "border border-transparent";
+  if (ACTIVE_TAB_STYLE === "circle") {
+    return "bg-primary/10 border border-primary/25 rounded-full px-2";
+  }
+  return "bg-primary/10 border border-primary/25";
+};
+
+const indicatorBaseClass =
+  ACTIVE_TAB_STYLE === "circle"
+    ? "flex items-center justify-center rounded-full px-2 py-1 transition-all duration-200"
+    : "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200";
+
 interface NavItem {
   path: string;
   label: string;
@@ -89,15 +111,8 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                   active ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                {/* Pill background for active state */}
                 <div
-                  className={cn(
-                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
-                    active
-                      ? "bg-primary/10 border border-primary/25"
-                      : "border border-transparent"
-                    /* Alt: circle style → active ? "bg-primary/10 border border-primary/25 rounded-full px-2" */
-                  )}
+                  className={cn(indicatorBaseClass, activeIndicatorClass(active))}
                 >
                   <IconComponent
                     className="h-[20px] w-[20px]"
@@ -126,12 +141,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 )}
               >
                 <div
-                  className={cn(
-                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
-                    isMoreMenuOpen
-                      ? "bg-primary/10 border border-primary/25"
-                      : "border border-transparent"
-                  )}
+                  className={cn(indicatorBaseClass, activeIndicatorClass(isMoreMenuOpen))}
                 >
                   <MoreHorizontal className="h-[20px] w-[20px]" strokeWidth={1.8} />
                 </div>
