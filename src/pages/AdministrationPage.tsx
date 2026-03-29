@@ -79,6 +79,7 @@ const AdministrationPage = () => {
               <span className="hidden sm:inline">Цвета</span>
               <span className="sm:hidden">Цвета</span>
             </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="companies" className="mt-6">
             <TenantsManagement />
