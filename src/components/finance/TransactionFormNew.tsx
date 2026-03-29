@@ -350,7 +350,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     confidence: aiConfidence,
     analysisError,
     applyAll: applyAnalysisAll,
-    applyAll: applyAnalysisAll,
     dismissSuggestions,
     suppressNextAnalysis,
     clearCorrection,
