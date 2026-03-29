@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { 
   Table, 
   TableBody, 
@@ -54,6 +55,7 @@ interface TransactionTableProps {
 }
 
 export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTableProps) {
+  const { getWalletDisplayName } = useWalletNames();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,19 +177,10 @@ export function TransactionTable({ userId, isAdmin, onEdit }: TransactionTablePr
 
   const getCashTypeBadge = (cashType: string | null) => {
     if (!cashType) return null;
-    
-    const cashTypes = {
-      nastya: { label: "Настя", className: "badge-nastya" },
-      lera: { label: "Лера", className: "badge-lera" },
-      vanya: { label: "Ваня", className: "badge-vanya" }
-    };
-
-    const type = cashTypes[cashType as keyof typeof cashTypes];
-    if (!type) return null;
-
+    const displayName = getWalletDisplayName(cashType);
     return (
-      <Badge variant="outline" className={`${type.className} text-xs`}>
-        {type.label}
+      <Badge variant="outline" className="text-xs">
+        {displayName}
       </Badge>
     );
   };
