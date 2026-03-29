@@ -145,7 +145,7 @@ serve(async (req) => {
 
     if (!user_id || !title) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: user_id and title" }),
+        JSON.stringify({ error: "Missing required fields: user_id and title", version_sha: SEND_PUSH_VERSION_SHA }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
