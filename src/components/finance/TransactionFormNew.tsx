@@ -542,7 +542,10 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         setIsWhoseProjectAutoFilled(false);
         setIsDescriptionAutoFilled(false);
         setIsProjectManuallySet(false);
+        setIsCategoryManuallySet(false);
+        setIsWalletManuallySet(false);
         setDetectedProject(null);
+        setRuleResult(null);
         form.reset({
           operation_date: new Date(),
           project_id: undefined,
@@ -1222,53 +1225,15 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                      </div>
                    )}
 
-                   {/* Unified AI block: suggestions
-                      * Two thresholds (see docs/ai-analysis.md):
-                      * - MIN_CONFIDENCE_TO_RETURN_CATEGORY (0.6): backend returns category (otherwise null)
-                      * - MIN_CONFIDENCE_TO_AUTO_APPLY (0.75): UI auto-applies without user confirmation
-                      * Below 0.6 → no category shown. 0.6–0.75 → shown but user must confirm. ≥0.75 → auto-apply.
-                      */}
+                   {/* Suggestion block: AI grammar + Rule-engine fields */}
                    {(() => {
-                        const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
-                        const showCorrection = !!(hasErrors && correctedText);
-                        const showProject = !!(detectedProject && !isProjectManuallySet && watchProjectId !== detectedProject.project);
-                      if (!showCategory && !showCorrection && !showProject) return null;
-                      // Hide AI suggestions while analyzing, but keep local project suggestion visible
-                      const aiStillLoading = isAnalyzing || isChecking;
-                      const effectiveShowCategory = showCategory && !aiStillLoading;
-                      const effectiveShowCorrection = showCorrection && !aiStillLoading;
+                        const showCorrection = !!(hasErrors && correctedText) && !isChecking;
+                        const showProject = !!(ruleResult?.project && !isProjectManuallySet && watchProjectId !== ruleResult.project);
+                        const showCategory = !!(ruleResult?.category && !isCategoryManuallySet && watchCategory !== ruleResult.category);
+                        const showWallet = !!(ruleResult?.wallet_key && !isWalletManuallySet);
 
-                      const hasAiSuggestions = effectiveShowCategory || effectiveShowCorrection;
-
-                      const handleApplyDetectedProject = () => {
-                        form.setValue('project_id', detectedProject!.project);
-                        setIsProjectManuallySet(false);
-                        toast({
-                          title: "Проект применён",
-                          description: `Проект: ${detectedProject!.project}`,
-                          duration: 3000,
-                        });
-                      };
-
-                      const handleApplyAllWithProject = () => {
-                        if (hasAiSuggestions) applyAnalysisAll();
-                        if (showProject) handleApplyDetectedProject();
-                        toast({
-                          title: "Все предложения применены",
-                          description: "Описание, категория и проект обновлены",
-                          duration: 3000,
-                        });
-                      };
-
-                      const buttonLabel = (hasAiSuggestions && showProject)
-                        ? 'Применить всё'
-                        : effectiveShowCategory && effectiveShowCorrection
-                          ? 'Применить всё'
-                          : effectiveShowCategory
-                            ? 'Применить категорию'
-                            : effectiveShowCorrection
-                              ? 'Применить исправление'
-                              : 'Применить проект';
+                        const hasRuleSuggestions = showProject || showCategory || showWallet;
+                        if (!showCorrection && !hasRuleSuggestions) return null;
 
                       return (
                         <div className="mt-2 p-3 bg-accent/40 border border-border/60 rounded-2xl animate-in fade-in-50 duration-300">
@@ -1277,13 +1242,14 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-3.5 w-3.5 text-primary" />
                               <span className="text-xs font-medium text-muted-foreground">
-                                {hasAiSuggestions ? 'Предложения AI' : 'Предложения'}
+                                Предложения
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => {
                                 dismissSuggestions();
+                                setRuleResult(null);
                                 setDetectedProject(null);
                               }}
                               className="rounded-full p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
@@ -1293,44 +1259,52 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             </button>
                           </div>
 
-                          {/* Content */}
-                          <div className="space-y-1.5">
-                            {showProject && (
-                              <div>
-                                <p className="text-sm text-foreground">
-                                  <span className="font-medium">Проект:</span>{' '}
-                                  {detectedProject!.project}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  Определено по ключевым словам
-                                </p>
-                              </div>
-                            )}
-                            {effectiveShowCategory && (
-                              <p className="text-sm text-foreground">
-                                <span className="font-medium">Категория:</span>{' '}
-                                {suggestedCategory}
-                                <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                                  {Math.round(aiConfidence * 100)}%
-                                </span>
-                              </p>
-                            )}
-                            {effectiveShowCorrection && (
+                          {/* AI Grammar correction */}
+                          {showCorrection && (
+                            <div className="space-y-0.5 mb-1.5">
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Исправление:</span>{' '}
                                 {correctedText}
                               </p>
-                            )}
-                          </div>
+                              <p className="text-[11px] text-muted-foreground">AI</p>
+                            </div>
+                          )}
 
-                          {/* Action button — full width on mobile */}
+                          {/* Rule-engine suggestions */}
+                          {hasRuleSuggestions && (
+                            <div className="space-y-1">
+                              {showProject && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Проект:</span>{' '}
+                                  {ruleResult!.project}
+                                </p>
+                              )}
+                              {showCategory && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Категория:</span>{' '}
+                                  {ruleResult!.category}
+                                </p>
+                              )}
+                              {showWallet && (
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Кошелёк:</span>{' '}
+                                  {walletKeyToDisplayName(ruleResult!.wallet_key!)}
+                                </p>
+                              )}
+                              <p className="text-[11px] text-muted-foreground">
+                                Определено по ключевым словам
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Action button */}
                           <Button
                             type="button"
                             size="sm"
-                            onClick={hasAiSuggestions ? handleApplyAllWithProject : handleApplyDetectedProject}
+                            onClick={handleApplyAll}
                             className="w-full mt-2.5 h-9 min-h-[44px] text-xs rounded-xl"
                           >
-                            {buttonLabel}
+                            Применить всё
                           </Button>
                         </div>
                       );
