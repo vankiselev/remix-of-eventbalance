@@ -110,29 +110,71 @@ describe('transactionRuleEngine', () => {
     expect(r.confidence).toBe(0);
   });
 
-  // Edge: conflicting — both "аванс" and "такси" in text, first P1 rule (transport) wins
-  it('conflict: "Аванс водителю такси" → transport wins (first P1 rule)', () => {
+  // ============================================================
+  // CONFLICT CASES — weight-based resolution
+  // ============================================================
+
+  // Conflict 1: "Аванс водителю такси" — both salary(W40) and transport(W30) match
+  // salary wins because W40 > W30
+  it('conflict: "Аванс водителю такси" → salary wins (W40 > W30)', () => {
     const r = analyzeWithRules('Аванс водителю такси');
-    // transport rule is listed before salary in rules array, so it wins
-    expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
+    expect(r.category).toBe('Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)');
+    expect(r.reasons[0]).toContain('cat_salary');
+    expect(r.reasons[0]).toContain('beat');
+    expect(r.reasons[0]).toContain('cat_transport');
   });
 
-  // But "Аванс сотруднику" without transport keywords → salary
-  it('conflict: "Аванс сотруднику" → salary (no transport keyword)', () => {
+  // Conflict 2: "Доставка банкета" — transport(W30) and food(W25) match
+  // transport wins because W30 > W25
+  it('conflict: "Доставка банкета" → transport wins (W30 > W25)', () => {
+    const r = analyzeWithRules('Доставка банкета');
+    expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
+    expect(r.reasons[0]).toContain('cat_transport');
+  });
+
+  // Conflict 3: "Печать баннера для офиса" — print(W20) matches category, project_office matches project
+  // Both fields filled independently
+  it('conflict: "Печать баннера для офиса" → print + project office', () => {
+    const r = analyzeWithRules('Печать баннера для офиса');
+    expect(r.category).toBe('Печать (баннеры, меню, карточки)');
+    expect(r.project).toBe('Склад / Офис');
+  });
+
+  // "Аванс сотруднику" without transport → salary (no conflict)
+  it('no conflict: "Аванс сотруднику" → salary', () => {
     const r = analyzeWithRules('Аванс сотруднику');
     expect(r.category).toBe('Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)');
   });
 
-  // Edge: case insensitive
+  // Case insensitive
   it('case insensitive', () => {
     const r = analyzeWithRules('ТАКСИ ДО ПЛОЩАДКИ');
     expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
   });
 
-  // Reasons logged
-  it('includes reasons', () => {
+  // Reasons include rule id and weight
+  it('reasons include rule id, weight, and explain', () => {
     const r = analyzeWithRules('Закупка в офис');
     expect(r.reasons.length).toBeGreaterThan(0);
     expect(r.reasons[0]).toContain('P0');
+    expect(r.reasons[0]).toContain('W100');
+    expect(r.reasons[0]).toContain('project_office');
+  });
+
+  // Reason explains beaten rules
+  it('reason explains beaten rules', () => {
+    const r = analyzeWithRules('Аванс водителю такси');
+    const catReason = r.reasons.find(r => r.includes('category'));
+    expect(catReason).toBeDefined();
+    expect(catReason).toContain('beat');
+  });
+
+  // Multi-field: project + category + wallet all detected
+  it('triple: project + category + wallet', () => {
+    const r = analyzeWithRules('Доставка в офис наличка Ваня');
+    expect(r.project).toBe('Склад / Офис');
+    expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
+    expect(r.wallet_key).toBe('cash_vanya');
+    expect(r.reasons.length).toBe(3);
   });
 });
