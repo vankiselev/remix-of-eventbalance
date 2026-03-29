@@ -214,26 +214,26 @@ html, body {
     color: #000000; /* Pure black - exact ТЗ color */
   }
 
-  /* Cash Type Badges - ТЗ Compliant */
+  /* Cash Type Badges — derive from CSS custom properties */
   .badge-nastya {
     @apply px-2 py-1 rounded-md text-xs font-medium border;
-    background-color: #EFF6FF; /* Light blue */
-    color: #000000; /* Pure black text */
-    border-color: #DBEAFE; /* Blue border */
+    background-color: hsl(var(--cash-nastya) / 0.08);
+    color: hsl(var(--cash-nastya));
+    border-color: hsl(var(--cash-nastya) / 0.3);
   }
 
   .badge-lera {
     @apply px-2 py-1 rounded-md text-xs font-medium border;
-    background-color: #ECFDF5; /* Light green */
-    color: #000000; /* Pure black text */
-    border-color: #D1FAE5; /* Green border */
+    background-color: hsl(var(--cash-lera) / 0.08);
+    color: hsl(var(--cash-lera));
+    border-color: hsl(var(--cash-lera) / 0.3);
   }
 
   .badge-vanya {
     @apply px-2 py-1 rounded-md text-xs font-medium border;
-    background-color: #FAF5FF; /* Light purple */
-    color: #000000; /* Pure black text */
-    border-color: #E9D5FF; /* Purple border */
+    background-color: hsl(var(--cash-vanya) / 0.08);
+    color: hsl(var(--cash-vanya));
+    border-color: hsl(var(--cash-vanya) / 0.3);
   }
 
   /* Table Styles - ТЗ Compliant Zebra Pattern */
