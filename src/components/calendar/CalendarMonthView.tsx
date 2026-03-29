@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { resolveOwnerKey, DEFAULT_OWNER_COLORS, buildOwnerColorSet } from "@/constants/ownerColors";
+import { resolveOwnerKey, DEFAULT_OWNER_COLORS, OWNER_KEYS, buildOwnerColorSet } from "@/constants/ownerColors";
 
 interface Event {
   id: string;
