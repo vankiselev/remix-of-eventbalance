@@ -411,15 +411,15 @@ const Staff = () => {
       <Tabs value={statusTab} onValueChange={(value: any) => setStatusTab(value)}>
         {isAdmin && (
           <TabsList className="w-full overflow-x-auto scrollbar-hide">
-            <TabsTrigger value="active" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 touch-manipulation">
+            <TabsTrigger value="active" className="whitespace-nowrap text-sm px-3 touch-manipulation">
               <span className="hidden sm:inline">Активные сотрудники</span>
               <span className="sm:hidden">Активные</span>
             </TabsTrigger>
-            <TabsTrigger value="terminated" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 touch-manipulation">
+            <TabsTrigger value="terminated" className="whitespace-nowrap text-sm px-3 touch-manipulation">
               Уволенные
             </TabsTrigger>
-            <TabsTrigger value="salaries" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 touch-manipulation">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+            <TabsTrigger value="salaries" className="whitespace-nowrap text-sm px-3 touch-manipulation">
+              <DollarSign className="h-4 w-4 mr-1" />
               Оклады
             </TabsTrigger>
           </TabsList>
@@ -429,7 +429,7 @@ const Staff = () => {
           {statusTab !== "salaries" && (
             <>
               {/* Search Controls */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="action-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
