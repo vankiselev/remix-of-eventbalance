@@ -16,8 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePendingTransactionsCount } from "@/hooks/usePendingTransactionsCount";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 
-import { FinanceSummaryCards } from "@/components/finance/FinanceSummaryCards";
-import { AdvancesSummaryCard } from "@/components/finance/AdvancesSummaryCard";
+import { FinanceHeaderCard } from "@/components/finance/FinanceHeaderCard";
 import { ImportProgressWindow } from "@/components/finance/ImportProgressWindow";
 import { BackgroundImportStatus } from "@/components/finance/BackgroundImportStatus";
 import { MoneyTransferRequests } from "@/components/finance/MoneyTransferRequests";
@@ -213,14 +212,11 @@ const Finances = () => {
           </div>
         )}
 
-        {/* Summary cards with advances */}
-        <div className="grid gap-4 md:grid-cols-2 w-full">
-          <AdvancesSummaryCard />
-          <FinanceSummaryCards 
-            summary={activeTab === 'all-transactions' ? companySummary : userSummary} 
-            isLoading={false} 
-          />
-        </div>
+        {/* Unified finance header: cash summary + advances */}
+        <FinanceHeaderCard
+          summary={activeTab === 'all-transactions' ? companySummary : userSummary}
+          isLoading={false}
+        />
         
         <ImportProgressWindow />
         <BackgroundImportStatus />
