@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Bell, BellOff, Globe, CheckCircle2, AlertCircle, Volume2, 
-  Send, RefreshCw, Shield, Wifi, Eye, Smartphone, ChevronDown, ChevronUp 
+  Send, RefreshCw, Eye, Smartphone, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -24,18 +24,18 @@ import { NotificationsFAQ } from './NotificationsFAQ';
 import { supabase } from '@/integrations/supabase/client';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  permission_denied: 'Разрешение на уведомления отклонено. Измените в настройках браузера/устройства.',
+  permission_denied: 'Разрешение на уведомления отклонено. Измените в настройках браузера.',
   vapid_invalid: 'VAPID-ключ невалиден. Обратитесь к администратору.',
   vapid_missing: 'VAPID-ключ не настроен. Обратитесь к администратору.',
   sw_unsupported: 'Браузер не поддерживает Service Worker.',
-  push_unsupported: 'PushManager недоступен. На iPhone откройте приложение с экрана «Домой».',
-  sw_register_failed: 'Не удалось зарегистрировать Service Worker. Обновите страницу.',
-  sw_not_ready: 'Service Worker не готов. Обновите страницу и попробуйте снова.',
-  subscribe_failed: 'Не удалось создать push-подписку. Попробуйте «Пересоздать подписку».',
-  not_authenticated: 'Вы не авторизованы. Войдите в аккаунт.',
-  db_error: 'Ошибка сохранения подписки. Попробуйте ещё раз.',
+  push_unsupported: 'PushManager недоступен. На iPhone — откройте с экрана «Домой».',
+  sw_register_failed: 'Не удалось зарегистрировать Service Worker.',
+  sw_not_ready: 'Service Worker не готов. Обновите страницу.',
+  subscribe_failed: 'Не удалось создать подписку. Попробуйте «Пересоздать».',
+  not_authenticated: 'Вы не авторизованы.',
+  db_error: 'Ошибка сохранения. Попробуйте ещё раз.',
   native_error: 'Ошибка нативных уведомлений.',
-  ios_not_standalone: 'На iPhone push работает только из приложения на экране «Домой».',
+  ios_not_standalone: 'На iPhone push работает только с экрана «Домой».',
 };
 
 function getFriendlyError(error: any): string {
@@ -44,7 +44,6 @@ function getFriendlyError(error: any): string {
   return ERROR_MESSAGES[code] || msg;
 }
 
-// ── Diagnostics status item ───────────────────────────────────────
 function DiagItem({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
     <div className="flex items-start gap-2 text-sm">
@@ -77,22 +76,17 @@ export const NotificationSettings = () => {
     return diag;
   };
 
-  // ── Sound ───────────────────────────────────────────────────────
   const handleToggleSound = (enabled: boolean) => {
     notificationSound.setEnabled(enabled);
     setIsSoundEnabled(enabled);
-    toast({
-      title: enabled ? 'Звук включен' : 'Звук отключен',
-      description: enabled ? 'Звуковые уведомления активны' : 'Звуковые уведомления отключены',
-    });
+    toast({ title: enabled ? 'Звук включен' : 'Звук отключен' });
   };
 
-  // ── Test push ───────────────────────────────────────────────────
   const handleTestPush = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast({ title: 'Не авторизован', description: 'Войдите в аккаунт', variant: 'destructive' });
+        toast({ title: 'Не авторизован', variant: 'destructive' });
         return;
       }
 
@@ -109,7 +103,7 @@ export const NotificationSettings = () => {
         body: JSON.stringify({
           user_id: user.id,
           title: 'Тестовое уведомление',
-          message: 'Если вы видите это — Web Push работает! 🎉',
+          message: 'Web Push работает! 🎉',
           type: 'system',
           data: { source: 'test' },
         }),
@@ -118,38 +112,34 @@ export const NotificationSettings = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        toast({ title: 'Ошибка отправки', description: result?.error || `HTTP ${response.status}`, variant: 'destructive' });
+        toast({ title: 'Ошибка', description: result?.error || `HTTP ${response.status}`, variant: 'destructive' });
         return;
       }
 
-      const statusParts = [
-        `vapid: ${result.vapid_configured ? '✅' : '❌'}`,
-        `push: ${result.push_sent}/${result.total_subscriptions}`,
-      ];
-      if (result.push_errors?.length) {
-        statusParts.push(`ошибки: ${result.push_errors.length}`);
-      }
+      const parts = [`push: ${result.push_sent}/${result.valid_subscriptions}`];
+      if (result.invalid_removed > 0) parts.push(`удалено невалидных: ${result.invalid_removed}`);
+      if (result.push_errors?.length) parts.push(`ошибки: ${result.push_errors.length}`);
 
       toast({
-        title: result.push_sent > 0 ? '✅ Push отправлен!' : '⚠️ Push не доставлен',
-        description: statusParts.join(' · '),
+        title: result.push_sent > 0 ? '✅ Push отправлен' : '⚠️ Push не доставлен',
+        description: parts.join(' · '),
         variant: result.push_sent > 0 ? 'default' : 'destructive',
       });
 
-      console.log('[push-test] Response:', { ...result, push_errors: result.push_errors?.map((e: string) => e.substring(0, 80)) });
+      // Refresh diagnostics after test
+      await refreshDiagnostics();
     } catch (e: any) {
       toast({ title: 'Ошибка теста', description: e?.message || 'Не удалось отправить', variant: 'destructive' });
     }
   };
 
-  // ── Reset subscription ──────────────────────────────────────────
   const handleResetSubscription = async () => {
     setIsResetting(true);
     try {
       await resetPushSubscription();
       setIsPushEnabled(true);
       await refreshDiagnostics();
-      toast({ title: '✅ Подписка пересоздана', description: 'Push-подписка обновлена с текущим VAPID-ключом' });
+      toast({ title: '✅ Подписка пересоздана' });
     } catch (error: any) {
       toast({ title: 'Ошибка', description: getFriendlyError(error), variant: 'destructive' });
     } finally {
@@ -157,7 +147,6 @@ export const NotificationSettings = () => {
     }
   };
 
-  // ── Init ────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       setIsChecking(true);
@@ -170,7 +159,6 @@ export const NotificationSettings = () => {
     init();
   }, []);
 
-  // Listen for permission changes
   useEffect(() => {
     try {
       (navigator as any).permissions?.query?.({ name: 'notifications' as any })
@@ -181,7 +169,6 @@ export const NotificationSettings = () => {
     } catch {}
   }, []);
 
-  // ── Toggle push ─────────────────────────────────────────────────
   const handleTogglePush = async (enabled: boolean) => {
     setIsSubscribing(true);
     try {
@@ -190,21 +177,17 @@ export const NotificationSettings = () => {
         setIsPushEnabled(true);
         setNotificationPermission('granted');
         await refreshDiagnostics();
-        toast({ title: '✅ Push-уведомления включены', description: 'Уведомления будут приходить даже при закрытом браузере' });
+        toast({ title: '✅ Push включены' });
       } else {
         const ok = await unsubscribeFromPushNotifications();
         if (ok) {
           setIsPushEnabled(false);
           await refreshDiagnostics();
-          toast({ title: 'Push-уведомления отключены' });
-        } else {
-          toast({ title: 'Ошибка отключения', variant: 'destructive' });
+          toast({ title: 'Push отключены' });
         }
       }
     } catch (error: any) {
-      console.error('[push] Toggle error:', error);
       toast({ title: 'Ошибка', description: getFriendlyError(error), variant: 'destructive' });
-      // Refresh state
       setIsPushEnabled(await checkPushSubscription());
       await refreshDiagnostics();
     } finally {
@@ -220,8 +203,6 @@ export const NotificationSettings = () => {
   const vapidValid = validateVapidKey().valid;
   const canSubscribe = isSupported && vapidValid && notificationPermission !== 'denied';
   const showIosInstallGuide = isIOS && !isStandalone;
-
-  // Anomaly states
   const hasPermissionNoSub = notificationPermission === 'granted' && !isPushEnabled && isSupported;
   const hasBrowserSubNoDb = diagnostics?.existingSubscription && !diagnostics?.savedInDb;
 
@@ -231,143 +212,132 @@ export const NotificationSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Настройки уведомлений
+            Уведомления
           </CardTitle>
-          <CardDescription>Управляйте push и звуковыми уведомлениями</CardDescription>
+          <CardDescription>Push и звуковые уведомления</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-4">
 
-          {/* ── iframe warning ──────────────────────────────────── */}
           {isInIframe && (
             <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
-              <AlertDescription className="flex items-center justify-between gap-3">
+              <AlertDescription className="flex items-center justify-between gap-3 text-sm">
                 Push нельзя включить в предпросмотре.
-                <Button variant="outline" size="sm" onClick={() => window.open(window.location.href, '_blank')}>Открыть в новой вкладке</Button>
+                <Button variant="outline" size="sm" onClick={() => window.open(window.location.href, '_blank')}>Открыть</Button>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* ── VAPID invalid ──────────────────────────────────── */}
           {diagnostics && !diagnostics.vapidKeyValid && (
             <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-900 dark:text-red-100">
-                {diagnostics.vapidError || 'VAPID-ключ не настроен. Push-уведомления не будут работать.'}
+              <AlertDescription className="text-sm text-red-900 dark:text-red-100">
+                {diagnostics.vapidError || 'VAPID не настроен. Push не будут работать.'}
               </AlertDescription>
             </Alert>
           )}
 
-          {/* ── Sound section ──────────────────────────────────── */}
-          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3 flex-1">
-              <Volume2 className="h-5 w-5 text-primary" />
-              <div>
-                <Label htmlFor="sound-toggle" className="text-base font-medium">Звуковые уведомления</Label>
-                <p className="text-sm text-muted-foreground">Звук при получении уведомления</p>
+          {/* Sound */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Volume2 className="h-5 w-5 text-primary flex-shrink-0" />
+              <div className="min-w-0">
+                <Label htmlFor="sound-toggle" className="text-sm font-medium">Звук</Label>
+                <p className="text-xs text-muted-foreground">При получении уведомления</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Switch id="sound-toggle" checked={isSoundEnabled} onCheckedChange={handleToggleSound} />
-              <Button variant="outline" size="sm" onClick={() => { notificationSound.beep(); notificationSound.testSound(); }}>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => { notificationSound.beep(); notificationSound.testSound(); }}>
                 Тест
               </Button>
             </div>
           </div>
 
-          {/* ── iOS install guide ──────────────────────────────── */}
+          {/* iOS install guide */}
           {showIosInstallGuide && (
-            <div className="p-4 bg-muted rounded-lg space-y-3">
-              <div className="flex items-start gap-3">
-                <BellOff className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-start gap-2">
+                <BellOff className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">Push-уведомления на iPhone</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Push работает только из установленного приложения (PWA). Сейчас вы в Safari.
+                  <p className="text-sm font-medium">Push на iPhone</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Работает только из установленного приложения (PWA).
                   </p>
                 </div>
               </div>
-              <div className="p-3 bg-background border rounded-lg">
-                <p className="text-sm font-medium mb-2">Как установить:</p>
-                <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+              <div className="p-2.5 bg-background border rounded-lg">
+                <p className="text-xs font-medium mb-1.5">Как установить:</p>
+                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                   <li>Нажмите <strong>«Поделиться»</strong> (↑) внизу Safari</li>
                   <li>Выберите <strong>«На экран Домой»</strong></li>
-                  <li>Нажмите <strong>«Добавить»</strong></li>
-                  <li>Откройте приложение с иконки на экране «Домой»</li>
-                  <li>Включите уведомления в настройках</li>
+                  <li>Откройте с иконки → включите уведомления</li>
                 </ol>
-                <p className="text-xs text-muted-foreground mt-2 italic">⚠️ Требуется iOS 16.4+</p>
+                <p className="text-[11px] text-muted-foreground mt-1.5 italic">Требуется iOS 16.4+</p>
               </div>
             </div>
           )}
 
-          {/* ── Push section (supported) ───────────────────────── */}
+          {/* Push section */}
           {(isSupported || (isIOS && isStandalone)) && (
             <div className="space-y-3">
-              {/* Success state */}
               {isPushEnabled && (
                 <Alert className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20">
                   <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <AlertDescription className="text-green-900 dark:text-green-100">
-                    Web Push активны{diagnostics?.savedInDb ? ' и сохранены в базе' : ''}.
-                    {diagnostics && ` Подписок в БД: ${diagnostics.dbSubscriptionCount}`}
+                  <AlertDescription className="text-sm text-green-900 dark:text-green-100">
+                    Push активны{diagnostics?.savedInDb ? ` · в БД: ${diagnostics.dbSubscriptionCount}` : ''}
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* iOS standalone — ready to subscribe */}
               {isIOS && isStandalone && !isPushEnabled && notificationPermission !== 'denied' && (
                 <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
                   <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-900 dark:text-blue-100">
-                    Приложение установлено! Включите переключатель ниже.
-                  </AlertDescription>
+                  <AlertDescription className="text-sm">Приложение установлено! Включите push ниже.</AlertDescription>
                 </Alert>
               )}
 
-              {/* Anomaly: permission granted but no subscription */}
               {hasPermissionNoSub && (
                 <Alert className="border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20">
                   <AlertCircle className="h-4 w-4 text-orange-600" />
-                  <AlertDescription className="text-orange-900 dark:text-orange-100 flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span className="flex-1">Разрешение есть, но подписки нет. Включите переключатель или пересоздайте подписку.</span>
-                    <Button variant="outline" size="sm" onClick={handleResetSubscription} disabled={isResetting} className="flex-shrink-0">
-                      <RefreshCw className={`h-4 w-4 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
-                      Пересоздать
+                  <AlertDescription className="text-sm flex items-center justify-between gap-2">
+                    <span>Разрешение есть, подписки нет</span>
+                    <Button variant="outline" size="sm" className="h-7 text-xs flex-shrink-0" onClick={handleResetSubscription} disabled={isResetting}>
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+                      Создать
                     </Button>
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Anomaly: browser sub exists but not in DB */}
               {hasBrowserSubNoDb && isPushEnabled && (
                 <Alert className="border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/20">
                   <AlertCircle className="h-4 w-4 text-orange-600" />
-                  <AlertDescription className="text-orange-900 dark:text-orange-100 flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span className="flex-1">Подписка есть в браузере, но не сохранена в базу. Push не придут.</span>
-                    <Button variant="outline" size="sm" onClick={handleResetSubscription} disabled={isResetting} className="flex-shrink-0">
-                      <RefreshCw className={`h-4 w-4 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
-                      Пересоздать
+                  <AlertDescription className="text-sm flex items-center justify-between gap-2">
+                    <span>Подписка есть, но не в БД</span>
+                    <Button variant="outline" size="sm" className="h-7 text-xs flex-shrink-0" onClick={handleResetSubscription} disabled={isResetting}>
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+                      Починить
                     </Button>
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Main toggle row */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3 flex-1">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label htmlFor="push-web" className="text-base font-medium">Web Push-уведомления</Label>
-                    <p className="text-sm text-muted-foreground">Уведомления даже при закрытой вкладке</p>
+              {/* Main toggle */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Globe className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0">
+                    <Label htmlFor="push-web" className="text-sm font-medium">Web Push</Label>
+                    <p className="text-xs text-muted-foreground">Уведомления при закрытой вкладке</p>
                     {notificationPermission === 'denied' && (
-                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <p className="text-xs text-destructive mt-0.5 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        Разрешение отклонено. Измените в настройках.
+                        Разрешение отклонено
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Switch
                     id="push-web"
                     checked={isPushEnabled}
@@ -375,13 +345,12 @@ export const NotificationSettings = () => {
                     disabled={isChecking || isSubscribing || !canSubscribe}
                   />
                   {notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
-                    <Button variant="outline" size="sm" onClick={async () => {
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={async () => {
                       const ok = await requestNotificationPermission();
                       setNotificationPermission(Notification.permission);
                       await refreshDiagnostics();
                       toast({
                         title: ok ? 'Разрешение получено' : 'Не получено',
-                        description: ok ? 'Теперь включите переключатель' : 'Измените настройку в адресной строке',
                         variant: ok ? 'default' : 'destructive',
                       });
                     }}>
@@ -393,31 +362,28 @@ export const NotificationSettings = () => {
 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={handleResetSubscription} disabled={isResetting || !canSubscribe}>
-                  <RefreshCw className={`h-4 w-4 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
-                  Пересоздать подписку
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleResetSubscription} disabled={isResetting || !canSubscribe}>
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isResetting ? 'animate-spin' : ''}`} />
+                  Пересоздать
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleTestPush} disabled={!isPushEnabled}>
-                  <Send className="h-4 w-4 mr-1" />
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleTestPush} disabled={!isPushEnabled}>
+                  <Send className="h-3.5 w-3.5 mr-1" />
                   Тест
                 </Button>
               </div>
 
-              {/* Permission denied instructions */}
               {notificationPermission === 'denied' && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-sm text-destructive font-medium mb-1.5">Как включить уведомления:</p>
-                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <div className="p-2.5 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-xs text-destructive font-medium mb-1">Как включить:</p>
+                  <ol className="text-xs text-muted-foreground space-y-0.5 list-decimal list-inside">
                     {isIOS ? (
                       <>
-                        <li>Откройте «Настройки» → найдите Safari</li>
-                        <li>Проверьте «Уведомления» для этого сайта</li>
-                        <li>Или удалите приложение с экрана Домой и добавьте заново</li>
+                        <li>Настройки → Safari → Уведомления</li>
+                        <li>Или удалите и добавьте PWA заново</li>
                       </>
                     ) : (
                       <>
-                        <li>Нажмите на иконку замка/настроек в адресной строке</li>
-                        <li>Найдите «Уведомления» → «Разрешить»</li>
+                        <li>Нажмите замок в адресной строке → Уведомления → Разрешить</li>
                         <li>Обновите страницу</li>
                       </>
                     )}
@@ -427,51 +393,44 @@ export const NotificationSettings = () => {
             </div>
           )}
 
-          {/* ── Not supported at all ───────────────────────────── */}
           {!isSupported && !showIosInstallGuide && (
-            <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-              <BellOff className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Push-уведомления недоступны</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ваш браузер не поддерживает Web Push. Попробуйте Chrome, Firefox или Edge.
-                </p>
-              </div>
+            <div className="flex items-start gap-2 p-3 bg-muted rounded-lg">
+              <BellOff className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <p className="text-sm text-muted-foreground">Push недоступны. Попробуйте Chrome, Firefox или Edge.</p>
             </div>
           )}
 
-          {/* ── Diagnostics panel ──────────────────────────────── */}
+          {/* Diagnostics */}
           <div className="border rounded-lg overflow-hidden">
             <button
               onClick={async () => {
                 if (!showDiagnostics) await refreshDiagnostics();
                 setShowDiagnostics(!showDiagnostics);
               }}
-              className="w-full flex items-center justify-between p-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+              className="w-full flex items-center justify-between p-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
             >
-              <span className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Диагностика Push
+              <span className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                Диагностика
               </span>
-              {showDiagnostics ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {showDiagnostics ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
 
             {showDiagnostics && diagnostics && (
-              <div className="p-3 border-t space-y-2 bg-muted/20">
-                <DiagItem ok={diagnostics.isHttps} label="HTTPS" detail={diagnostics.isHttps ? 'Безопасное соединение' : 'Push требует HTTPS'} />
+              <div className="p-2.5 border-t space-y-1.5 bg-muted/20">
+                <DiagItem ok={diagnostics.isHttps} label="HTTPS" />
                 <DiagItem ok={diagnostics.hasServiceWorker} label="Service Worker API" />
-                <DiagItem ok={diagnostics.serviceWorkerReady} label={`Service Worker: ${diagnostics.serviceWorkerState}`} detail={!diagnostics.serviceWorkerReady ? 'Попробуйте обновить страницу' : undefined} />
-                <DiagItem ok={diagnostics.hasNotificationAPI} label="Notification API" />
-                <DiagItem ok={diagnostics.hasPushManager} label="PushManager API" detail={!diagnostics.hasPushManager && diagnostics.isIOS ? 'На iPhone доступен только в PWA (с экрана Домой)' : undefined} />
+                <DiagItem ok={diagnostics.serviceWorkerReady} label={`SW: ${diagnostics.serviceWorkerState}`} />
+                <DiagItem ok={diagnostics.hasPushManager} label="PushManager" detail={!diagnostics.hasPushManager && diagnostics.isIOS ? 'На iPhone — только в PWA' : undefined} />
                 <DiagItem ok={diagnostics.notificationPermission === 'granted'} label={`Разрешение: ${diagnostics.notificationPermission}`} />
-                <DiagItem ok={diagnostics.vapidKeyValid} label="VAPID ключ" detail={diagnostics.vapidError} />
-                <DiagItem ok={diagnostics.existingSubscription} label={diagnostics.existingSubscription ? 'Подписка в браузере: есть' : 'Подписка в браузере: нет'} />
-                <DiagItem ok={diagnostics.savedInDb} label={`В базе данных: ${diagnostics.dbSubscriptionCount} подписок`} />
+                <DiagItem ok={diagnostics.vapidKeyValid} label="VAPID" detail={diagnostics.vapidError} />
+                <DiagItem ok={diagnostics.existingSubscription} label={`Браузер: ${diagnostics.existingSubscription ? 'подписка есть' : 'нет'}`} />
+                <DiagItem ok={diagnostics.savedInDb} label={`БД: ${diagnostics.dbSubscriptionCount} подписок`} />
                 {diagnostics.isIOS && (
-                  <DiagItem ok={diagnostics.isStandalone} label={diagnostics.isStandalone ? 'iPhone PWA (standalone)' : 'iPhone Safari (не standalone)'} detail={!diagnostics.isStandalone ? 'Установите на экран Домой для push' : undefined} />
+                  <DiagItem ok={diagnostics.isStandalone} label={diagnostics.isStandalone ? 'PWA (standalone)' : 'Safari (не PWA)'} />
                 )}
-                <div className="pt-2 border-t">
-                  <Button variant="ghost" size="sm" onClick={refreshDiagnostics} className="text-xs">
+                <div className="pt-1.5 border-t">
+                  <Button variant="ghost" size="sm" onClick={refreshDiagnostics} className="text-xs h-7">
                     <RefreshCw className="h-3 w-3 mr-1" /> Обновить
                   </Button>
                 </div>
@@ -479,12 +438,11 @@ export const NotificationSettings = () => {
             )}
           </div>
 
-          {/* ── Mobile native info ─────────────────────────────── */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Smartphone className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Smartphone className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                Для нативного iOS/Android приложения push работает через Capacitor автоматически после сборки.
+                Нативные iOS/Android push работают через Capacitor после сборки.
               </p>
             </div>
           </div>

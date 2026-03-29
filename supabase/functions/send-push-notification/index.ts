@@ -16,6 +16,25 @@ interface NotificationRequest {
   data?: any;
 }
 
+const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+
+function isValidBase64url(val: string | null | undefined): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const cleaned = val.trim().replace(/=+$/, '');
+  return cleaned.length > 0 && BASE64URL_RE.test(cleaned);
+}
+
+function isValidEndpoint(val: string | null | undefined): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -66,15 +85,14 @@ serve(async (req) => {
     const contact = (secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com").trim();
 
     // Validate base64url format
-    const base64urlRegex = /^[A-Za-z0-9_-]+$/;
-    if (vapidPublicKey && !base64urlRegex.test(vapidPublicKey)) {
+    if (vapidPublicKey && !BASE64URL_RE.test(vapidPublicKey)) {
       console.error("[send-push] VAPID_PUBLIC_KEY contains invalid base64url characters");
       return new Response(
         JSON.stringify({ error: "VAPID_PUBLIC_KEY содержит недопустимые символы. Допустимы только A-Z, a-z, 0-9, - и _" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
-    if (vapidPrivateKey && !base64urlRegex.test(vapidPrivateKey)) {
+    if (vapidPrivateKey && !BASE64URL_RE.test(vapidPrivateKey)) {
       console.error("[send-push] VAPID_PRIVATE_KEY contains invalid base64url characters");
       return new Response(
         JSON.stringify({ error: "VAPID_PRIVATE_KEY содержит недопустимые символы" }),
@@ -121,6 +139,8 @@ serve(async (req) => {
     if (subscriptionsError) throw subscriptionsError;
 
     let pushSentCount = 0;
+    let invalidRemoved = 0;
+    let validSubscriptions = 0;
     const pushErrors: string[] = [];
 
     if (!vapidConfigured) {
@@ -135,22 +155,43 @@ serve(async (req) => {
       });
 
       for (const sub of subscriptions) {
-        try {
-          // Web push via VAPID
-          if (!vapidConfigured) continue;
+        // ── Validate subscription fields before attempting send ──
+        const endpointValid = isValidEndpoint(sub.endpoint);
+        const authValid = isValidBase64url(sub.auth);
+        const p256dhValid = isValidBase64url(sub.p256dh);
 
+        if (!endpointValid || !authValid || !p256dhValid) {
+          const reasons: string[] = [];
+          if (!endpointValid) reasons.push('endpoint');
+          if (!authValid) reasons.push('auth');
+          if (!p256dhValid) reasons.push('p256dh');
+          
+          console.warn(`[send-push] invalid_subscription ${sub.id}: bad ${reasons.join(',')}`);
+          pushErrors.push(`invalid_subscription ${sub.id}: bad ${reasons.join(',')}`);
+          
+          // Remove invalid subscription from DB
+          try {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            invalidRemoved++;
+            console.log(`[send-push] Removed invalid subscription ${sub.id}`);
+          } catch (delErr: any) {
+            console.error(`[send-push] Failed to delete invalid sub ${sub.id}:`, delErr?.message);
+          }
+          continue;
+        }
+
+        validSubscriptions++;
+
+        if (!vapidConfigured) continue;
+
+        try {
           const subscription = {
-            endpoint: sub.endpoint?.trim(),
+            endpoint: sub.endpoint.trim(),
             keys: {
-              p256dh: sub.p256dh?.trim().replace(/=+$/, ''),
-              auth: sub.auth?.trim().replace(/=+$/, ''),
+              p256dh: sub.p256dh.trim().replace(/=+$/, ''),
+              auth: sub.auth.trim().replace(/=+$/, ''),
             },
           };
-
-          if (!subscription.endpoint || !subscription.keys.p256dh || !subscription.keys.auth) {
-            pushErrors.push(`Subscription ${sub.id}: missing endpoint/keys`);
-            continue;
-          }
 
           await webpush.sendNotification(subscription as any, payload, { TTL: 86400 });
           pushSentCount++;
@@ -160,9 +201,10 @@ serve(async (req) => {
           console.error("[send-push] Push error:", errMsg);
           pushErrors.push(errMsg);
 
-          // Remove invalid subscriptions (410 Gone, 404, etc.)
+          // Remove expired/gone subscriptions (410 Gone, 404, etc.)
           if ([404, 410].includes(err?.statusCode)) {
             await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            invalidRemoved++;
             console.log(`[send-push] Removed expired subscription ${sub.id}`);
           }
         }
@@ -175,6 +217,8 @@ serve(async (req) => {
         notification,
         push_sent: pushSentCount,
         total_subscriptions: subscriptions?.length || 0,
+        valid_subscriptions: validSubscriptions,
+        invalid_removed: invalidRemoved,
         vapid_configured: vapidConfigured,
         ...(pushErrors.length > 0 ? { push_errors: pushErrors } : {}),
       }),
