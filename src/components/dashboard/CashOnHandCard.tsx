@@ -34,16 +34,16 @@ const CashOnHandCard = () => {
         ]);
 
         if (myResult.error) throw myResult.error;
-        setCashData(parseCashRows(myResult.data as any[] || []));
+        setCashData(parseCashSummary(myResult.data as any[] || []));
         
         if (!companyResult.error && companyResult.data) {
           const companyRows = Array.isArray(companyResult.data) ? companyResult.data : [companyResult.data];
-          setCompanyCashData(parseCashRows(companyRows as any[]));
+          setCompanyCashData(parseCashSummary(companyRows as any[]));
         }
       } else {
         const { data, error } = await supabase.rpc('calculate_user_cash_totals', { p_user_id: user?.id });
         if (error) throw error;
-        setCashData(parseCashRows(data as any[] || []));
+        setCashData(parseCashSummary(data as any[] || []));
       }
     } catch (error) {
       console.error('Error fetching cash data:', error);
