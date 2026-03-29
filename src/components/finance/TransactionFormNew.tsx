@@ -20,8 +20,10 @@ import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
-import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
-import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+// TODO: Legacy hooks — remove after unified endpoint is stable
+// import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
+// import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
