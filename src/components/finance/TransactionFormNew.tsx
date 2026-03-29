@@ -1180,65 +1180,79 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   </FormControl>
                   <FormMessage />
 
-                  {/* AI Analysis Error */}
-                  {analysisError && !isChecking && (
-                    <p className="text-xs text-destructive mt-1">{analysisError}</p>
-                  )}
-                  
                    {/* Unified AI block: loading */}
                    {(isAnalyzing || isChecking) && (
                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                        <Loader2 className="h-4 w-4 animate-spin" />
-                       <span>Анализ описания...</span>
+                       <span>AI анализирует описание…</span>
                      </div>
                    )}
 
                    {/* Unified AI block: suggestions */}
-                   {!isAnalyzing && !isChecking && (
-                     (aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY) || (hasErrors && correctedText)
-                   ) && (
-                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
-                       <div className="flex items-start gap-2">
-                         <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                         <div className="flex-1 min-w-0 space-y-1.5">
-                           <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                             AI предлагает:
-                           </p>
-                           {aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY && (
-                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                               <span className="font-medium">Категория:</span> {aiSuggestions.category}
-                               <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
-                                 ({Math.round(aiConfidence * 100)}%)
+                   {(() => {
+                     const showCategory = !!(aiSuggestions && aiConfidence >= MIN_CONFIDENCE_TO_AUTO_APPLY);
+                     const showCorrection = !!(hasErrors && correctedText);
+                     if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection)) return null;
+
+                     const buttonLabel = showCategory && showCorrection
+                       ? 'Применить всё'
+                       : showCategory
+                         ? 'Применить категорию'
+                         : 'Применить исправление';
+
+                     return (
+                       <div className="mt-2 p-3 bg-accent/40 border border-border/60 rounded-2xl animate-in fade-in-50 duration-300">
+                         {/* Header row */}
+                         <div className="flex items-center justify-between mb-2">
+                           <div className="flex items-center gap-1.5">
+                             <Sparkles className="h-3.5 w-3.5 text-primary" />
+                             <span className="text-xs font-medium text-muted-foreground">Предложения AI</span>
+                           </div>
+                           <button
+                             type="button"
+                             onClick={dismissSuggestions}
+                             className="rounded-full p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
+                             aria-label="Скрыть"
+                           >
+                             <X className="h-3.5 w-3.5" />
+                           </button>
+                         </div>
+
+                         {/* Content */}
+                         <div className="space-y-1.5">
+                           {showCategory && (
+                             <p className="text-sm text-foreground">
+                               <span className="font-medium">Категория:</span>{' '}
+                               {aiSuggestions!.category}
+                               <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                                 {Math.round(aiConfidence * 100)}%
                                </span>
                              </p>
                            )}
-                           {hasErrors && correctedText && (
-                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                               <span className="font-medium">Исправление:</span> {correctedText}
+                           {showCorrection && (
+                             <p className="text-sm text-foreground">
+                               <span className="font-medium">Исправление:</span>{' '}
+                               {correctedText}
                              </p>
                            )}
                          </div>
-                         <div className="flex items-center gap-1 flex-shrink-0">
-                           <Button
-                             type="button"
-                             size="sm"
-                             onClick={handleApplyAll}
-                             className="h-10 min-h-[44px] text-xs"
-                           >
-                             Применить
-                           </Button>
-                           <Button
-                             type="button"
-                             size="sm"
-                             variant="ghost"
-                             onClick={dismissSuggestions}
-                             className="h-10 w-10 min-h-[44px] min-w-[44px] p-0"
-                           >
-                             <X className="h-4 w-4" />
-                           </Button>
-                         </div>
+
+                         {/* Action button — full width on mobile */}
+                         <Button
+                           type="button"
+                           size="sm"
+                           onClick={handleApplyAll}
+                           className="w-full mt-2.5 h-9 min-h-[44px] text-xs rounded-xl"
+                         >
+                           {buttonLabel}
+                         </Button>
                        </div>
-                     </div>
+                     );
+                   })()}
+
+                   {/* AI errors */}
+                   {analysisError && !isChecking && !isAnalyzing && (
+                     <p className="text-xs text-destructive mt-1.5 leading-snug">{analysisError}</p>
                    )}
                 </FormItem>
               )}
