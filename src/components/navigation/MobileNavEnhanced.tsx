@@ -85,23 +85,28 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 flex-1 pt-2 pb-1.5 touch-manipulation transition-colors",
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] pt-1.5 pb-1 touch-manipulation transition-all duration-200",
                   active ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                <div className="relative">
-                  <IconComponent
-                    className={cn("h-[22px] w-[22px]", active && "drop-shadow-sm")}
-                    strokeWidth={active ? 2.5 : 1.8}
-                  />
-                  {/* Active indicator dot */}
-                  {active && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                {/* Pill background for active state */}
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
+                    active
+                      ? "bg-primary/10 border border-primary/25"
+                      : "border border-transparent"
+                    /* Alt: circle style → active ? "bg-primary/10 border border-primary/25 rounded-full px-2" */
                   )}
+                >
+                  <IconComponent
+                    className="h-[20px] w-[20px]"
+                    strokeWidth={active ? 2.4 : 1.8}
+                  />
                 </div>
                 <span
                   className={cn(
-                    "text-[10px] leading-tight mt-0.5",
+                    "text-[10px] leading-tight",
                     active ? "font-semibold" : "font-medium"
                   )}
                 >
@@ -116,12 +121,21 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
             <SheetTrigger asChild>
               <button
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 flex-1 pt-2 pb-1.5 touch-manipulation transition-colors",
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] pt-1.5 pb-1 touch-manipulation transition-all duration-200",
                   isMoreMenuOpen ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                <MoreHorizontal className="h-[22px] w-[22px]" strokeWidth={1.8} />
-                <span className="text-[10px] font-medium leading-tight mt-0.5">Ещё</span>
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
+                    isMoreMenuOpen
+                      ? "bg-primary/10 border border-primary/25"
+                      : "border border-transparent"
+                  )}
+                >
+                  <MoreHorizontal className="h-[20px] w-[20px]" strokeWidth={1.8} />
+                </div>
+                <span className={cn("text-[10px] leading-tight", isMoreMenuOpen ? "font-semibold" : "font-medium")}>Ещё</span>
               </button>
             </SheetTrigger>
             <SheetContent
