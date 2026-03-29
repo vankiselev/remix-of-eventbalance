@@ -140,10 +140,10 @@ serve(async (req) => {
           if (!vapidConfigured) continue;
 
           const subscription = {
-            endpoint: sub.endpoint,
+            endpoint: sub.endpoint?.trim(),
             keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth,
+              p256dh: sub.p256dh?.trim().replace(/=+$/, ''),
+              auth: sub.auth?.trim().replace(/=+$/, ''),
             },
           };
 
