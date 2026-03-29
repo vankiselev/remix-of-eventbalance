@@ -43,6 +43,7 @@ function parseCashRows(rows: any[]): CashData {
 const CashOnHandCard = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRbacRoles();
+  const { getWalletDisplayName: walletDisplayName } = useWalletNames();
   const [cashData, setCashData] = useState<CashData>(defaultCash);
   const [companyCashData, setCompanyCashData] = useState<CashData>(defaultCash);
   const [loading, setLoading] = useState(true);

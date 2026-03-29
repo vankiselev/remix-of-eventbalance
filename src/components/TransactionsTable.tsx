@@ -46,6 +46,7 @@ export function TransactionsTable({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { user } = useAuth();
+  const { getWalletDisplayName } = useWalletNames();
 
   const filteredTransactions = transactions
     .filter(transaction => {
