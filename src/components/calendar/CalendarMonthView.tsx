@@ -1,46 +1,11 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { resolveOwnerKey, DEFAULT_OWNER_COLORS, OWNER_KEYS, buildOwnerColorSet } from "@/constants/ownerColors";
-
-interface Event {
-  id: string;
-  name: string;
-  start_date: string;
-  project_owner: string | null;
-  event_time: string | null;
-}
-
-interface CalendarMonthViewProps {
-  month: number;
-  year: number;
-  events: Event[];
-  onEventClick: (event: Event) => void;
-  onDateSelect: (date: Date) => void;
-  selectedDate?: Date;
-  /** Mobile compact mode: dot indicators only, no event text */
-  compact?: boolean;
-}
-
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
-/**
- * Returns inline-style-compatible owner color tokens.
- * Used by CalendarMonthView, CalendarWeekView, CalendarDayView, CalendarV2.
- * Falls back to gray for unknown owners.
- */
-export const getOwnerColor = (owner: string | null) => {
-  const key = resolveOwnerKey(owner);
-  if (!key) return {
-    dot: '#9CA3AF', bg: 'rgba(156,163,175,0.08)', border: 'rgba(156,163,175,0.3)',
-    text: '#6B7280',
-  };
-  const d = DEFAULT_OWNER_COLORS[key];
-  const set = buildOwnerColorSet(key, d.hex, d.label);
-  return { dot: set.dot, bg: set.bg, border: set.border, text: set.text };
-};
+import { OWNER_KEYS } from "@/constants/ownerColors";
+import { useOwnerColors } from "@/hooks/useOwnerColors";
 
 const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate, compact = false }: CalendarMonthViewProps) => {
+  const { colors, getOwnerColor } = useOwnerColors();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
@@ -143,15 +108,12 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
         {/* Compact legend */}
         <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-border/30">
-          {OWNER_KEYS.map(k => {
-            const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
-            return (
-              <div key={k} className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.dot }} />
-                <span className="text-[10px] text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
-              </div>
-            );
-          })}
+          {OWNER_KEYS.map(k => (
+            <div key={k} className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[k].dot }} />
+              <span className="text-[10px] text-muted-foreground">{colors[k].label}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -245,15 +207,12 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
       {/* Legend */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/50">
-        {OWNER_KEYS.map(k => {
-          const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
-          return (
-            <div key={k} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.dot }} />
-              <span className="text-xs text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
-            </div>
-          );
-        })}
+        {OWNER_KEYS.map(k => (
+          <div key={k} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[k].dot }} />
+            <span className="text-xs text-muted-foreground">{colors[k].label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

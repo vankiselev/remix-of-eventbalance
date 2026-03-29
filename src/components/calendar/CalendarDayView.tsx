@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { getOwnerColor } from "./CalendarMonthView";
+import { useOwnerColors } from "@/hooks/useOwnerColors";
 import { Clock, MapPin, User } from "lucide-react";
 
 interface Event {
@@ -20,6 +20,7 @@ interface CalendarDayViewProps {
 }
 
 const CalendarDayView = ({ date, events, onEventClick }: CalendarDayViewProps) => {
+  const { getOwnerColor } = useOwnerColors();
   const dateStr = format(date, 'yyyy-MM-dd');
   const dayEvents = events.filter(event => event.start_date === dateStr);
 
@@ -41,15 +42,15 @@ const CalendarDayView = ({ date, events, onEventClick }: CalendarDayViewProps) =
           </div>
         ) : (
           dayEvents.map((event) => {
-            const colors = getOwnerColor(event.project_owner);
+            const ownerColor = getOwnerColor(event.project_owner);
             return (
               <div
                 key={event.id}
                 className="p-3 rounded-lg border-l-[3px] hover:shadow-md cursor-pointer transition-all"
-                style={{ borderColor: colors.border, backgroundColor: colors.bg }}
+                style={{ borderColor: ownerColor.border, backgroundColor: ownerColor.bg }}
                 onClick={() => onEventClick(event)}
               >
-                <h3 className="font-semibold text-sm mb-1.5" style={{ color: colors.text }}>{event.name}</h3>
+                <h3 className="font-semibold text-sm mb-1.5" style={{ color: ownerColor.text }}>{event.name}</h3>
                 <div className="space-y-1">
                   {event.event_time && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
