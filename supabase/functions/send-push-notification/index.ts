@@ -59,11 +59,28 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get VAPID keys from database
+    // Get VAPID keys from database and sanitize
     const secrets = await getSystemSecrets(['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'WEB_PUSH_CONTACT']);
-    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY'];
-    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY'];
-    const contact = secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com";
+    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
+    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
+    const contact = (secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com").trim();
+
+    // Validate base64url format
+    const base64urlRegex = /^[A-Za-z0-9_-]+$/;
+    if (vapidPublicKey && !base64urlRegex.test(vapidPublicKey)) {
+      console.error("[send-push] VAPID_PUBLIC_KEY contains invalid base64url characters");
+      return new Response(
+        JSON.stringify({ error: "VAPID_PUBLIC_KEY содержит недопустимые символы. Допустимы только A-Z, a-z, 0-9, - и _" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+    if (vapidPrivateKey && !base64urlRegex.test(vapidPrivateKey)) {
+      console.error("[send-push] VAPID_PRIVATE_KEY contains invalid base64url characters");
+      return new Response(
+        JSON.stringify({ error: "VAPID_PRIVATE_KEY содержит недопустимые символы" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
 
     const vapidConfigured = !!(vapidPublicKey && vapidPrivateKey);
 
