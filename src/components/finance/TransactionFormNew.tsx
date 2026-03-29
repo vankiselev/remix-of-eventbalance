@@ -1295,7 +1295,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 </p>
                               </div>
                             )}
-                            {showCategory && (
+                            {effectiveShowCategory && (
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Категория:</span>{' '}
                                 {suggestedCategory}
@@ -1304,7 +1304,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 </span>
                               </p>
                             )}
-                            {showCorrection && (
+                            {effectiveShowCorrection && (
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Исправление:</span>{' '}
                                 {correctedText}
