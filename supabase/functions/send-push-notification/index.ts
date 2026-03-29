@@ -16,7 +16,18 @@ interface NotificationRequest {
   data?: any;
 }
 
+interface SubscriptionDebug {
+  sub_id: string;
+  endpoint_ok: boolean;
+  auth_ok: boolean;
+  p256dh_ok: boolean;
+  auth_len: number;
+  p256dh_len: number;
+  removed_reason?: string;
+}
+
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+const SEND_PUSH_VERSION_SHA = "9fc13f096a1b0cb502926331b8cb4ae41468241d";
 
 function sanitizeBase64url(val: string): string {
   // Convert standard base64 to base64url and strip padding
@@ -52,7 +63,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: missing token" }),
+        JSON.stringify({ error: "Unauthorized: missing token", version_sha: SEND_PUSH_VERSION_SHA }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
@@ -66,7 +77,7 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: invalid token" }),
+        JSON.stringify({ error: "Unauthorized: invalid token", version_sha: SEND_PUSH_VERSION_SHA }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
@@ -74,7 +85,7 @@ serve(async (req) => {
     const callerId = claimsData.claims.sub as string;
     if (!callerId) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: no user id in token" }),
+        JSON.stringify({ error: "Unauthorized: no user id in token", version_sha: SEND_PUSH_VERSION_SHA }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
@@ -94,14 +105,26 @@ serve(async (req) => {
     if (vapidPublicKey && !vapidPubValid) {
       console.error("[send-push] VAPID_PUBLIC_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PUBLIC_KEY невалидный base64url", vapid_valid: false }),
+        JSON.stringify({
+          error: "vapid_invalid",
+          detail: "VAPID_PUBLIC_KEY невалидный base64url",
+          vapid_valid: false,
+          version_sha: SEND_PUSH_VERSION_SHA,
+          push_errors: ["VAPID_PUBLIC_KEY invalid base64url"],
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
     if (vapidPrivateKey && !vapidPrivValid) {
       console.error("[send-push] VAPID_PRIVATE_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PRIVATE_KEY невалидный base64url", vapid_valid: false }),
+        JSON.stringify({
+          error: "vapid_invalid",
+          detail: "VAPID_PRIVATE_KEY невалидный base64url",
+          vapid_valid: false,
+          version_sha: SEND_PUSH_VERSION_SHA,
+          push_errors: ["VAPID_PRIVATE_KEY invalid base64url"],
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
@@ -148,6 +171,8 @@ serve(async (req) => {
     let invalidRemoved = 0;
     let validSubscriptions = 0;
     const pushErrors: string[] = [];
+    const subscriptionDebug: SubscriptionDebug[] = [];
+    const invalidDeletedSubscriptions: Array<{ sub_id: string; reason: string }> = [];
 
     if (!vapidConfigured) {
       pushErrors.push("VAPID keys not configured in system_secrets — web push skipped");
@@ -165,12 +190,23 @@ serve(async (req) => {
         const endpointValid = isValidEndpoint(sub.endpoint);
         const authValid = isValidBase64url(sub.auth);
         const p256dhValid = isValidBase64url(sub.p256dh);
+        const subDebug: SubscriptionDebug = {
+          sub_id: sub.id,
+          endpoint_ok: endpointValid,
+          auth_ok: authValid,
+          p256dh_ok: p256dhValid,
+          auth_len: (sub.auth || '').trim().length,
+          p256dh_len: (sub.p256dh || '').trim().length,
+        };
+        subscriptionDebug.push(subDebug);
 
         if (!endpointValid || !authValid || !p256dhValid) {
           const reasons: string[] = [];
           if (!endpointValid) reasons.push('endpoint');
           if (!authValid) reasons.push('auth');
           if (!p256dhValid) reasons.push('p256dh');
+          const removedReason = `invalid_${reasons.join('_')}`;
+          subDebug.removed_reason = removedReason;
           
           console.warn(`[send-push] invalid_subscription ${sub.id}: bad ${reasons.join(',')}`);
           pushErrors.push(`invalid_subscription ${sub.id}: bad ${reasons.join(',')}`);
@@ -179,6 +215,7 @@ serve(async (req) => {
           try {
             await supabase.from("push_subscriptions").delete().eq("id", sub.id);
             invalidRemoved++;
+            invalidDeletedSubscriptions.push({ sub_id: sub.id, reason: removedReason });
             console.log(`[send-push] Removed invalid subscription ${sub.id}`);
           } catch (delErr: any) {
             console.error(`[send-push] Failed to delete invalid sub ${sub.id}:`, delErr?.message);
@@ -211,6 +248,8 @@ serve(async (req) => {
           if ([404, 410].includes(err?.statusCode)) {
             await supabase.from("push_subscriptions").delete().eq("id", sub.id);
             invalidRemoved++;
+            subDebug.removed_reason = `expired_${err?.statusCode}`;
+            invalidDeletedSubscriptions.push({ sub_id: sub.id, reason: `expired_${err?.statusCode}` });
             console.log(`[send-push] Removed expired subscription ${sub.id}`);
           }
         }
@@ -220,6 +259,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        version_sha: SEND_PUSH_VERSION_SHA,
         notification,
         push_sent: pushSentCount,
         total_subscriptions: subscriptions?.length || 0,
@@ -227,14 +267,16 @@ serve(async (req) => {
         invalid_removed: invalidRemoved,
         vapid_valid: vapidConfigured,
         vapid_configured: vapidConfigured,
-        ...(pushErrors.length > 0 ? { push_errors: pushErrors } : {}),
+        push_errors: pushErrors,
+        invalid_deleted_subscriptions: invalidDeletedSubscriptions,
+        push_debug: subscriptionDebug,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error: any) {
     console.error("[send-push-notification] Error:", { message: error?.message, stack: error?.stack });
     return new Response(
-      JSON.stringify({ error: error?.message || "Failed to send notification" }),
+      JSON.stringify({ error: error?.message || "Failed to send notification", version_sha: SEND_PUSH_VERSION_SHA }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
