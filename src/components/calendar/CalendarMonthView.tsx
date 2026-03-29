@@ -143,18 +143,15 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
         {/* Compact legend */}
         <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-border/30">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-violet-500" />
-            <span className="text-[10px] text-muted-foreground">Настя</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Лера</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-[10px] text-muted-foreground">Ваня</span>
-          </div>
+          {OWNER_KEYS.map(k => {
+            const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
+            return (
+              <div key={k} className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.dot }} />
+                <span className="text-[10px] text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -248,18 +245,15 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
       {/* Legend */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/50">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
-          <span className="text-xs text-muted-foreground">Настя</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-          <span className="text-xs text-muted-foreground">Лера</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-          <span className="text-xs text-muted-foreground">Ваня</span>
-        </div>
+        {OWNER_KEYS.map(k => {
+          const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
+          return (
+            <div key={k} className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.dot }} />
+              <span className="text-xs text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
