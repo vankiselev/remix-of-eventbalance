@@ -1,8 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from './useDebounce';
+import { supabase } from '@/integrations/supabase/client';
 
-const CLOUD_FUNCTIONS_URL = `https://aobbrgmuvkopkjijbejz.supabase.co/functions/v1`;
-const CLOUD_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYmJyZ211dmtvcGtqaWpiZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MzA2NzUsImV4cCI6MjA4NTIwNjY3NX0.hKgvQ679v764rIIYWU1CCiwCtgNA_c6N4L9oK5XuxEg';
+/**
+ * Minimum confidence for backend to return a category (below this → null).
+ * Must match the backend constant MIN_CONFIDENCE_TO_RETURN_CATEGORY.
+ */
+export const MIN_CONFIDENCE_TO_RETURN_CATEGORY = 0.6;
+
+/**
+ * Minimum confidence to auto-apply category in UI without user confirmation.
+ * Category suggestions below this threshold are shown but not auto-applied.
+ */
+export const MIN_CONFIDENCE_TO_AUTO_APPLY = 0.75;
 
 interface AnalysisResult {
   success: boolean;
@@ -15,15 +25,12 @@ interface AnalysisResult {
 }
 
 interface UseTransactionAnalysisResult {
-  // Description checking
   isChecking: boolean;
   hasErrors: boolean;
   correctedText: string | null;
-  // Category suggestions
   suggestedCategory: string | null;
   suggestedTransactionType: 'expense' | 'income' | null;
   confidence: number;
-  // Actions
   applyCorrection: () => void;
   applyCategory: () => void;
   applyAll: () => void;
@@ -58,53 +65,50 @@ export function useTransactionAnalysis(
       return;
     }
 
-    const controller = new AbortController();
+    let cancelled = false;
 
     const analyze = async () => {
       setIsChecking(true);
       setCorrectionApplied(false);
 
       try {
-        const response = await fetch(`${CLOUD_FUNCTIONS_URL}/analyze-transaction-description`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': CLOUD_ANON_KEY,
-            'Authorization': `Bearer ${CLOUD_ANON_KEY}`,
-          },
-          body: JSON.stringify({
+        const { data, error } = await supabase.functions.invoke('analyze-transaction-description', {
+          body: {
             description: debouncedDescription,
             currentCategory: currentCategory || null,
-          }),
-          signal: controller.signal,
+          },
         });
 
-        if (!response.ok) {
-          console.error('[useTransactionAnalysis] Error:', response.status);
+        if (cancelled) return;
+
+        if (error) {
+          console.error('[useTransactionAnalysis] Invoke error:', error);
           setResult(null);
           return;
         }
 
-        const data: AnalysisResult = await response.json();
-        if (data.success) {
-          setResult(data);
+        const analysisData = data as AnalysisResult;
+        if (analysisData?.success) {
+          setResult(analysisData);
         } else {
           setResult(null);
         }
       } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
+        if (!cancelled) {
           console.error('[useTransactionAnalysis] Error:', error);
           setResult(null);
         }
       } finally {
-        setIsChecking(false);
+        if (!cancelled) {
+          setIsChecking(false);
+        }
       }
     };
 
     analyze();
 
-    return () => controller.abort();
-  }, [debouncedDescription, isDismissed]);
+    return () => { cancelled = true; };
+  }, [debouncedDescription, currentCategory, isDismissed]);
 
   // Reset dismissed when user types new text (not after applying)
   useEffect(() => {
@@ -125,7 +129,7 @@ export function useTransactionAnalysis(
   }, [result, onApplyCorrection]);
 
   const applyCategory = useCallback(() => {
-    if (result?.category && result.confidence >= 0.6 && onApplyCategory) {
+    if (result?.category && result.confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY && onApplyCategory) {
       appliedRef.current = true;
       skipNextRef.current = true;
       onApplyCategory(result.category, result.transaction_type);
@@ -139,7 +143,7 @@ export function useTransactionAnalysis(
       onApplyCorrection(result.corrected_text);
       setCorrectionApplied(true);
     }
-    if (result?.category && result.confidence >= 0.6 && onApplyCategory) {
+    if (result?.category && result.confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY && onApplyCategory) {
       onApplyCategory(result.category, result.transaction_type);
     }
     appliedRef.current = true;

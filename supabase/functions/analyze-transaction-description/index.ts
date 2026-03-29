@@ -40,6 +40,9 @@ interface AnalysisResult {
   reasoning: string | null;
 }
 
+/** Minimum confidence to include category in response (below → null) */
+const MIN_CONFIDENCE_TO_RETURN_CATEGORY = 0.6;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -164,7 +167,7 @@ ${CATEGORIES.map(c => `- ${c}`).join('\n')}`;
       success: true,
       corrected_text: corrected,
       has_errors: !!result.has_errors,
-      category: confidence >= 0.6 ? validCategory : null,
+      category: confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY ? validCategory : null,
       confidence,
       transaction_type: result.transaction_type || 'expense',
       reasoning: result.reasoning || null,
