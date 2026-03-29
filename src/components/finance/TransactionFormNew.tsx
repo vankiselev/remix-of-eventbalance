@@ -678,6 +678,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         throw new Error('Не удалось определить получателя перевода');
       }
       
+      const resolvedWallet = resolveWalletType(data.whose_project);
+      const walletKey = resolvedWallet?.key || null;
+
       const transactionData = {
         operation_date: data.operation_date.toISOString().split('T')[0],
         project_id: isStaticProject ? null : (projectId || null),
@@ -687,6 +690,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         expense_amount: data.expense_amount || 0,
         income_amount: data.income_amount || 0,
         cash_type: data.whose_project,
+        wallet_key: walletKey,
         category: data.category,
         no_receipt: data.no_receipt,
         no_receipt_reason: data.no_receipt ? data.no_receipt_reason : null,
