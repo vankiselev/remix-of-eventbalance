@@ -1218,65 +1218,108 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       * Below 0.6 → no category shown. 0.6–0.75 → shown but user must confirm. ≥0.75 → auto-apply.
                       */}
                    {(() => {
-                       const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
-                       const showCorrection = !!(hasErrors && correctedText);
-                     if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection)) return null;
+                        const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
+                        const showCorrection = !!(hasErrors && correctedText);
+                        const showProject = !!(detectedProject && !isProjectManuallySet && watchProjectId !== detectedProject.project);
+                      if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection && !showProject)) return null;
 
-                     const buttonLabel = showCategory && showCorrection
-                       ? 'Применить всё'
-                       : showCategory
-                         ? 'Применить категорию'
-                         : 'Применить исправление';
+                      const hasAiSuggestions = showCategory || showCorrection;
 
-                     return (
-                       <div className="mt-2 p-3 bg-accent/40 border border-border/60 rounded-2xl animate-in fade-in-50 duration-300">
-                         {/* Header row */}
-                         <div className="flex items-center justify-between mb-2">
-                           <div className="flex items-center gap-1.5">
-                             <Sparkles className="h-3.5 w-3.5 text-primary" />
-                             <span className="text-xs font-medium text-muted-foreground">Предложения AI</span>
-                           </div>
-                           <button
-                             type="button"
-                             onClick={dismissSuggestions}
-                             className="rounded-full p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
-                             aria-label="Скрыть"
-                           >
-                             <X className="h-3.5 w-3.5" />
-                           </button>
-                         </div>
+                      const handleApplyDetectedProject = () => {
+                        form.setValue('project_id', detectedProject!.project);
+                        setIsProjectManuallySet(false);
+                        toast({
+                          title: "Проект применён",
+                          description: `Проект: ${detectedProject!.project}`,
+                          duration: 3000,
+                        });
+                      };
 
-                         {/* Content */}
-                         <div className="space-y-1.5">
-                           {showCategory && (
-                             <p className="text-sm text-foreground">
-                               <span className="font-medium">Категория:</span>{' '}
-                               {suggestedCategory}
-                               <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                                 {Math.round(aiConfidence * 100)}%
-                               </span>
-                             </p>
-                           )}
-                           {showCorrection && (
-                             <p className="text-sm text-foreground">
-                               <span className="font-medium">Исправление:</span>{' '}
-                               {correctedText}
-                             </p>
-                           )}
-                         </div>
+                      const handleApplyAllWithProject = () => {
+                        if (hasAiSuggestions) applyAnalysisAll();
+                        if (showProject) handleApplyDetectedProject();
+                        toast({
+                          title: "Все предложения применены",
+                          description: "Описание, категория и проект обновлены",
+                          duration: 3000,
+                        });
+                      };
 
-                         {/* Action button — full width on mobile */}
-                         <Button
-                           type="button"
-                           size="sm"
-                           onClick={handleApplyAll}
-                           className="w-full mt-2.5 h-9 min-h-[44px] text-xs rounded-xl"
-                         >
-                           {buttonLabel}
-                         </Button>
-                       </div>
-                     );
-                   })()}
+                      const buttonLabel = (hasAiSuggestions && showProject)
+                        ? 'Применить всё'
+                        : showCategory && showCorrection
+                          ? 'Применить всё'
+                          : showCategory
+                            ? 'Применить категорию'
+                            : showCorrection
+                              ? 'Применить исправление'
+                              : 'Применить проект';
+
+                      return (
+                        <div className="mt-2 p-3 bg-accent/40 border border-border/60 rounded-2xl animate-in fade-in-50 duration-300">
+                          {/* Header row */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {hasAiSuggestions ? 'Предложения AI' : 'Предложения'}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                dismissSuggestions();
+                                setDetectedProject(null);
+                              }}
+                              className="rounded-full p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
+                              aria-label="Скрыть"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Content */}
+                          <div className="space-y-1.5">
+                            {showProject && (
+                              <div>
+                                <p className="text-sm text-foreground">
+                                  <span className="font-medium">Проект:</span>{' '}
+                                  {detectedProject!.project}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Определено по ключевым словам
+                                </p>
+                              </div>
+                            )}
+                            {showCategory && (
+                              <p className="text-sm text-foreground">
+                                <span className="font-medium">Категория:</span>{' '}
+                                {suggestedCategory}
+                                <span className="ml-1.5 inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                                  {Math.round(aiConfidence * 100)}%
+                                </span>
+                              </p>
+                            )}
+                            {showCorrection && (
+                              <p className="text-sm text-foreground">
+                                <span className="font-medium">Исправление:</span>{' '}
+                                {correctedText}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Action button — full width on mobile */}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={hasAiSuggestions ? handleApplyAllWithProject : handleApplyDetectedProject}
+                            className="w-full mt-2.5 h-9 min-h-[44px] text-xs rounded-xl"
+                          >
+                            {buttonLabel}
+                          </Button>
+                        </div>
+                      );
+                    })()}
 
                    {/* AI errors */}
                    {analysisError && !isChecking && !isAnalyzing && (
