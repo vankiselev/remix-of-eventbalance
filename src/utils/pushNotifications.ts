@@ -216,7 +216,8 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
           endpoint: subscriptionJson.endpoint!,
           auth: subscriptionJson.keys!.auth,
           p256dh: subscriptionJson.keys!.p256dh,
-        }, { onConflict: 'user_id,endpoint' });
+          platform: 'web',
+        } as any, { onConflict: 'user_id,endpoint' });
 
       if (error) throw new Error(`db_error: ${error.message}`);
 
@@ -281,7 +282,8 @@ export const resetPushSubscription = async (): Promise<boolean> => {
         endpoint: subJson.endpoint!,
         auth: subJson.keys!.auth,
         p256dh: subJson.keys!.p256dh,
-      }, { onConflict: 'user_id,endpoint' });
+        platform: 'web',
+      } as any, { onConflict: 'user_id,endpoint' });
 
     if (error) throw new Error(`db_error: ${error.message}`);
     console.log('Push subscription reset successfully');
