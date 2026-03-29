@@ -205,7 +205,7 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
     try {
       subscription = await swReg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as any,
       });
       break;
     } catch (err: any) {
