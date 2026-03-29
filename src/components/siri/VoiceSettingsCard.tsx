@@ -8,23 +8,7 @@ import { Settings, Save, Loader2 } from 'lucide-react';
 import { useVoiceSettings } from '@/hooks/useVoiceSettings';
 import { toast } from 'sonner';
 
-const WALLET_OPTIONS = [
-  'Наличка Настя',
-  'Наличка Лера', 
-  'Наличка Ваня',
-  'Корп. карта Настя',
-  'Корп. карта Лера',
-  'Корп. карта Ваня',
-  'ИП Настя',
-  'ИП Лера',
-  'ИП Ваня',
-  'ООО Настя',
-  'ООО Лера',
-  'ООО Ваня',
-  'Своя Настя',
-  'Своя Лера',
-  'Своя Ваня',
-];
+import { useWalletNames } from '@/hooks/useWalletNames';
 
 interface VoiceSettingsCardProps {
   onSettingsChange?: (wallet: string) => void;
@@ -32,6 +16,8 @@ interface VoiceSettingsCardProps {
 
 export function VoiceSettingsCard({ onSettingsChange }: VoiceSettingsCardProps) {
   const { settings, isLoading, saveSettings, isSaving } = useVoiceSettings();
+  const { getActiveWallets } = useWalletNames();
+  const activeWallets = getActiveWallets();
   const [defaultWallet, setDefaultWallet] = useState('Наличка Настя');
   const [autoCreate, setAutoCreate] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
@@ -98,9 +84,9 @@ export function VoiceSettingsCard({ onSettingsChange }: VoiceSettingsCardProps) 
               <SelectValue placeholder="Выберите кошелёк" />
             </SelectTrigger>
             <SelectContent>
-              {WALLET_OPTIONS.map(wallet => (
-                <SelectItem key={wallet} value={wallet}>
-                  {wallet}
+              {activeWallets.map(w => (
+                <SelectItem key={w.key} value={w.displayName}>
+                  {w.displayName}
                 </SelectItem>
               ))}
             </SelectContent>

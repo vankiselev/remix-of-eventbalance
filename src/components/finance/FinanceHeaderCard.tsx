@@ -5,6 +5,7 @@ import { Wallet, User, Banknote, Plus, Pencil, Trash2, ChevronDown } from "lucid
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
 import { DEFAULT_OWNER_COLORS } from "@/constants/ownerColors";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
@@ -47,6 +48,7 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
   const [isAdvancesExpanded, setIsAdvancesExpanded] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getWalletDisplayName } = useWalletNames();
 
   const handleDelete = async (empId: string, name: string) => {
     try {
@@ -96,12 +98,12 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
   const hasAdvanceDetails = isAdminOverview && advanceEmployees.length > 0;
 
   const walletDefs = [
-    { key: 'nastya' as const, dataKey: 'cash_nastya' as const },
-    { key: 'lera' as const, dataKey: 'cash_lera' as const },
-    { key: 'vanya' as const, dataKey: 'cash_vanya' as const },
+    { key: 'nastya' as const, dataKey: 'cash_nastya' as const, walletKey: 'cash_nastya' },
+    { key: 'lera' as const, dataKey: 'cash_lera' as const, walletKey: 'cash_lera' },
+    { key: 'vanya' as const, dataKey: 'cash_vanya' as const, walletKey: 'cash_vanya' },
   ];
   const wallets = walletDefs.map(w => ({
-    label: DEFAULT_OWNER_COLORS[w.key].label,
+    label: getWalletDisplayName(w.walletKey),
     value: summary[w.dataKey],
     hex: DEFAULT_OWNER_COLORS[w.key].hex,
   }));

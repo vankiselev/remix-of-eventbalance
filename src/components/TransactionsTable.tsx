@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Edit, Trash2, Search, Filter, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWalletNames } from "@/hooks/useWalletNames";
 
 interface Transaction {
   id: string;
@@ -45,6 +46,7 @@ export function TransactionsTable({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { user } = useAuth();
+  const { getWalletDisplayName } = useWalletNames();
 
   const filteredTransactions = transactions
     .filter(transaction => {
@@ -76,11 +78,7 @@ export function TransactionsTable({
   };
 
   const getCashTypeDisplay = (cashType?: string) => {
-    const v = (cashType || '').trim().toLowerCase();
-    if (v === 'nastya' || v === 'наличка настя' || cashType === 'Наличка Настя') return 'Наличка Настя';
-    if (v === 'lera' || v === 'наличка лера' || cashType === 'Наличка Лера') return 'Наличка Лера';
-    if (v === 'vanya' || v === 'наличка ваня' || cashType === 'Наличка Ваня') return 'Наличка Ваня';
-    return cashType || 'Не указан';
+    return getWalletDisplayName(cashType);
   };
 
   const getCategoryDisplay = (category: string) => {

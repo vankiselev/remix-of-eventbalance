@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWalletNames } from "@/hooks/useWalletNames";
 
 interface Event {
   id: string;
@@ -42,6 +43,8 @@ export function TransactionDialog({
   onSuccess,
   targetUserId 
 }: TransactionDialogProps) {
+  const { getCashWallets } = useWalletNames();
+  const cashWallets = getCashWallets();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -286,9 +289,9 @@ export function TransactionDialog({
                   <SelectValue placeholder="Выберите тип наличных" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nastya">Наличка Настя</SelectItem>
-                  <SelectItem value="lera">Наличка Лера</SelectItem>
-                  <SelectItem value="vanya">Наличка Ваня</SelectItem>
+                  {cashWallets.map(w => (
+                    <SelectItem key={w.key} value={w.key}>{w.displayName}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

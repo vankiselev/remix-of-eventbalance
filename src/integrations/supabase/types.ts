@@ -1592,6 +1592,47 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_name_settings: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          tenant_id: string
+          updated_at: string | null
+          wallet_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string | null
+          wallet_key: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string | null
+          wallet_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_name_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warehouse_items: {
         Row: {
           category: string | null
