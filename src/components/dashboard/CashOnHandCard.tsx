@@ -6,39 +6,10 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useWalletNames } from "@/hooks/useWalletNames";
+import { parseCashSummary, DEFAULT_CASH_SUMMARY, type CashSummary } from "@/utils/cashSummaryParser";
 
-interface CashData {
-  total_cash: number;
-  cash_nastya: number;
-  cash_lera: number;
-  cash_vanya: number;
-}
-
-const defaultCash: CashData = { total_cash: 0, cash_nastya: 0, cash_lera: 0, cash_vanya: 0 };
-
-function parseCashRows(rows: any[]): CashData {
-  if (!rows || rows.length === 0) return defaultCash;
-  // Flat format
-  if ('total_cash' in rows[0]) {
-    return {
-      total_cash: Number(rows[0].total_cash) || 0,
-      cash_nastya: Number(rows[0].cash_nastya) || 0,
-      cash_lera: Number(rows[0].cash_lera) || 0,
-      cash_vanya: Number(rows[0].cash_vanya) || 0,
-    };
-  }
-  // Grouped format (cash_type, total_income, total_expense)
-  let cash_nastya = 0, cash_lera = 0, cash_vanya = 0;
-  for (const row of rows) {
-    const net = (Number(row.total_income) || 0) - (Number(row.total_expense) || 0);
-    const ct = (row.cash_type || '').trim();
-    if (ct === 'Наличка Настя') cash_nastya += net;
-    else if (ct === 'Наличка Лера') cash_lera += net;
-    else if (ct === 'Наличка Ваня') cash_vanya += net;
-  }
-  const total_cash = cash_nastya + cash_lera + cash_vanya;
-  return { total_cash, cash_nastya, cash_lera, cash_vanya };
-}
+type CashData = CashSummary;
+const defaultCash = DEFAULT_CASH_SUMMARY;
 
 const CashOnHandCard = () => {
   const { user } = useAuth();
@@ -63,16 +34,16 @@ const CashOnHandCard = () => {
         ]);
 
         if (myResult.error) throw myResult.error;
-        setCashData(parseCashRows(myResult.data as any[] || []));
+        setCashData(parseCashSummary(myResult.data as any[] || []));
         
         if (!companyResult.error && companyResult.data) {
           const companyRows = Array.isArray(companyResult.data) ? companyResult.data : [companyResult.data];
-          setCompanyCashData(parseCashRows(companyRows as any[]));
+          setCompanyCashData(parseCashSummary(companyRows as any[]));
         }
       } else {
         const { data, error } = await supabase.rpc('calculate_user_cash_totals', { p_user_id: user?.id });
         if (error) throw error;
-        setCashData(parseCashRows(data as any[] || []));
+        setCashData(parseCashSummary(data as any[] || []));
       }
     } catch (error) {
       console.error('Error fetching cash data:', error);
