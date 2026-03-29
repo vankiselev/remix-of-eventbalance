@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
+import { useWalletNames } from "@/hooks/useWalletNames";
 
 interface CashData {
   total_cash: number;
@@ -80,14 +81,14 @@ const CashOnHandCard = () => {
   };
 
   const getCashTypeDisplay = (type: string, amount: number) => {
-    const names = {
-      nastya: 'Наличка Настя',
-      lera: 'Наличка Лера', 
-      vanya: 'Наличка Ваня'
+    const keyMap: Record<string, string> = {
+      nastya: 'cash_nastya',
+      lera: 'cash_lera',
+      vanya: 'cash_vanya',
     };
-    
+    const walletKey = keyMap[type] || type;
     return {
-      name: names[type as keyof typeof names] || type,
+      name: walletDisplayName(walletKey),
       amount: amount,
       color: amount >= 0 ? 'text-green-600' : 'text-red-600'
     };
