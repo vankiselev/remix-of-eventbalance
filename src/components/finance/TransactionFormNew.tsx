@@ -20,8 +20,10 @@ import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
-import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
-import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+// TODO: Legacy hooks — remove after unified endpoint is stable
+// import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
+// import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
+import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
@@ -342,76 +344,64 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchCategory = form.watch("category");
   const watchDescription = form.watch("description");
 
-  // AI-powered description checker
+  // Unified AI analysis (description check + category suggestion in one call)
   const {
     isChecking,
     hasErrors,
     correctedText,
-    errors,
-    suppressNextCheck,
-    clearCorrection,
-  } = useDescriptionChecker(watchDescription, watchCategory);
-
-  // AI-powered transaction suggestions
-  const {
-    suggestions: aiSuggestions,
-    isAnalyzing,
+    suggestedCategory,
     confidence: aiConfidence,
-    applySuggestions: applyAISuggestions,
+    applyCorrection: applyAnalysisCorrection,
+    applyCategory: applyAnalysisCategory,
+    applyAll: applyAnalysisAll,
     dismissSuggestions,
     suppressNextAnalysis,
-  } = useTransactionSuggestions(watchDescription, (suggestions) => {
-    // Apply AI suggestions to form
-    if (suggestions.category) {
-      form.setValue('category', suggestions.category);
+    clearCorrection,
+  } = useTransactionAnalysis(
+    watchDescription,
+    watchCategory,
+    // onApplyCorrection
+    (text) => {
+      form.setValue("description", text);
+      toast({ title: "Исправление применено", description: "Описание обновлено" });
+    },
+    // onApplyCategory
+    (category, transactionType) => {
+      form.setValue('category', category);
       
       // Handle special categories
-      if (suggestions.category === 'Передано или получено от сотрудника') {
+      if (category === 'Передано или получено от сотрудника') {
         setIsMoneyTransfer(true);
         form.setValue('no_receipt', true);
         form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
         form.setValue('income_amount', undefined);
       }
-    }
-    
-    if (suggestions.project) {
-      form.setValue('project_id', suggestions.project);
-    }
 
-    toast({
-      title: "Применены предложения AI",
-      description: "Категория и проект заполнены автоматически",
-      duration: 3000,
-    });
-  });
+      toast({
+        title: "Категория применена",
+        description: `Категория: ${category}`,
+        duration: 3000,
+      });
+    },
+  );
 
-  // Apply correction without triggering re-analysis
+  // Compat aliases for existing UI references
+  const isAnalyzing = isChecking;
+  const aiSuggestions = suggestedCategory ? { category: suggestedCategory } : null;
+
   const handleApplyCorrection = () => {
-    if (!correctedText) return;
-    suppressNextCheck();
-    suppressNextAnalysis();
-    form.setValue("description", correctedText);
-    clearCorrection();
-    toast({
-      title: "Исправление применено",
-      description: "Описание обновлено",
-    });
+    applyAnalysisCorrection();
   };
 
-  // Apply all AI suggestions at once
+  const applyAISuggestions = () => {
+    applyAnalysisCategory();
+  };
+
   const handleApplyAll = () => {
-    if (hasErrors && correctedText) {
-      suppressNextCheck();
-      suppressNextAnalysis();
-      form.setValue("description", correctedText);
-      clearCorrection();
-    }
-    if (aiSuggestions && aiConfidence > 0.6) {
-      applyAISuggestions();
-    }
+    applyAnalysisAll();
     toast({
       title: "Все предложения применены",
-      description: "Описание, категория и проект обновлены",
+      description: "Описание и категория обновлены",
       duration: 3000,
     });
   };
@@ -1208,7 +1198,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     </div>
                   )}
 
-                  {aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                  {aiSuggestions && aiConfidence >= 0.75 && !isAnalyzing && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-in fade-in-50 duration-300">
                       <div className="flex items-start gap-2">
                         <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
@@ -1220,11 +1210,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                             <p className="text-sm text-blue-700 dark:text-blue-300">
                               <span className="font-medium">Категория:</span> {aiSuggestions.category}
                             </p>
-                            {aiSuggestions.project && (
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                <span className="font-medium">Проект:</span> {aiSuggestions.project}
-                              </p>
-                            )}
                             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                               Уверенность: {Math.round(aiConfidence * 100)}%
                             </p>
@@ -1288,7 +1273,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                   )}
 
                   {/* Apply All button - shown when both correction and suggestions are available */}
-                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence > 0.6 && !isAnalyzing && (
+                  {hasErrors && correctedText && !isChecking && aiSuggestions && aiConfidence >= 0.75 && !isAnalyzing && (
                     <div className="mt-2">
                       <Button
                         type="button"
