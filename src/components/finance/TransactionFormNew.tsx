@@ -530,6 +530,8 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
         setTransferToUserId("");
         setIsWhoseProjectAutoFilled(false);
         setIsDescriptionAutoFilled(false);
+        setIsProjectManuallySet(false);
+        setDetectedProject(null);
         form.reset({
           operation_date: new Date(),
           project_id: undefined,
