@@ -45,6 +45,29 @@ function getFriendlyError(error: any): string {
   return ERROR_MESSAGES[code] || msg;
 }
 
+function formatPushDebug(result: any): string {
+  const lines: string[] = [];
+  if (result?.version_sha) lines.push(`version_sha: ${result.version_sha}`);
+
+  if (Array.isArray(result?.push_debug) && result.push_debug.length > 0) {
+    lines.push('push_debug:');
+    for (const row of result.push_debug) {
+      lines.push(
+        `- sub_id=${row?.sub_id} endpoint_ok=${row?.endpoint_ok} auth_ok=${row?.auth_ok} p256dh_ok=${row?.p256dh_ok} auth_len=${row?.auth_len} p256dh_len=${row?.p256dh_len}${row?.removed_reason ? ` removed=${row.removed_reason}` : ''}`
+      );
+    }
+  }
+
+  if (Array.isArray(result?.invalid_deleted_subscriptions) && result.invalid_deleted_subscriptions.length > 0) {
+    lines.push('invalid_deleted_subscriptions:');
+    for (const row of result.invalid_deleted_subscriptions) {
+      lines.push(`- sub_id=${row?.sub_id} reason=${row?.reason}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 function DiagItem({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
     <div className="flex items-start gap-2 text-sm">
@@ -113,13 +136,17 @@ export const NotificationSettings = () => {
       });
 
       const result = await response.json();
+      const debugText = formatPushDebug(result);
 
       if (!response.ok) {
         const isVapidError = result?.error === 'vapid_invalid';
+        const isSubscriptionError = Array.isArray(result?.push_errors) && result.push_errors.some((e: string) => String(e).includes('invalid_subscription'));
         const errText = isVapidError
           ? `Неверный формат VAPID ключа: ${result?.detail || 'проверьте настройки'}`
+          : isSubscriptionError
+            ? 'Повреждённая подписка, пересоздайте'
           : (result?.error || `HTTP ${response.status}`);
-        setLastError(`Тест push: ${errText}`);
+        setLastError(`Тест push: ${errText}${debugText ? `\n${debugText}` : ''}`);
         toast({ title: 'Ошибка', description: errText, variant: 'destructive' });
         return;
       }
@@ -143,6 +170,9 @@ export const NotificationSettings = () => {
       } else if (result.push_sent === 0) {
         toastTitle = '⚠️ Push не доставлен';
         toastVariant = 'destructive';
+        if (debugText) {
+          setLastError(`Тест push: push_sent=0\n${debugText}`);
+        }
       }
 
       toast({
