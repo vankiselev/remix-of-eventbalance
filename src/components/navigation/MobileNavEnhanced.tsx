@@ -111,15 +111,8 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                   active ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                {/* Pill background for active state */}
                 <div
-                  className={cn(
-                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
-                    active
-                      ? "bg-primary/10 border border-primary/25"
-                      : "border border-transparent"
-                    /* Alt: circle style → active ? "bg-primary/10 border border-primary/25 rounded-full px-2" */
-                  )}
+                  className={cn(indicatorBaseClass, activeIndicatorClass(active))}
                 >
                   <IconComponent
                     className="h-[20px] w-[20px]"
@@ -148,12 +141,7 @@ const MobileNavEnhanced = ({ onOpenCommandPalette }: MobileNavEnhancedProps) => 
                 )}
               >
                 <div
-                  className={cn(
-                    "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200",
-                    isMoreMenuOpen
-                      ? "bg-primary/10 border border-primary/25"
-                      : "border border-transparent"
-                  )}
+                  className={cn(indicatorBaseClass, activeIndicatorClass(isMoreMenuOpen))}
                 >
                   <MoreHorizontal className="h-[20px] w-[20px]" strokeWidth={1.8} />
                 </div>
