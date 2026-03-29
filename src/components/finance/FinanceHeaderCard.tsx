@@ -5,6 +5,7 @@ import { Wallet, User, Banknote, Plus, Pencil, Trash2, ChevronDown } from "lucid
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
 import { DEFAULT_OWNER_COLORS } from "@/constants/ownerColors";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
