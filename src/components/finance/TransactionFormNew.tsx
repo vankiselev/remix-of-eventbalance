@@ -126,6 +126,9 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const [isDescriptionAutoFilled, setIsDescriptionAutoFilled] = useState(false);
   const [detectedProject, setDetectedProject] = useState<{ project: string; reason: string } | null>(null);
   const [isProjectManuallySet, setIsProjectManuallySet] = useState(false);
+  const [ruleResult, setRuleResult] = useState<RuleEngineResult | null>(null);
+  const [isCategoryManuallySet, setIsCategoryManuallySet] = useState(false);
+  const [isWalletManuallySet, setIsWalletManuallySet] = useState(false);
 
   // Load employees for money transfer and current user profile
   useEffect(() => {
