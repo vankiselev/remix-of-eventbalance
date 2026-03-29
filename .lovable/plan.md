@@ -1,26 +1,33 @@
 
+Цель: срочно исправить отображение тостов на iPhone так, чтобы уведомления всегда были заметно ниже статус-бара/шапки и читались без наложений.
 
-## Problem
+1) Что именно сломано (по коду и скриншоту)
+- В `src/components/ui/sonner.tsx` уже задан большой `offset`, но он конфликтует с глобальным CSS-классом `.toaster` в `src/index.css` (там принудительно `top: 1rem`, `right: 1rem`).
+- Из-за этого Sonner-позиционирование работает нестабильно, и тост может “прилипать” слишком высоко.
+- Дополнительно читаемость на мобильном можно усилить (размер/перенос текста, ширина карточки).
 
-The `invitations.role` column uses the database enum type `user_role` which only allows two values: `'admin'` and `'employee'`. When selecting a role like "Финансист" (code: `financier`), the system tries to insert `"financier"` into this enum column, causing the error.
+2) План правок
+- Файл `src/index.css`:
+  - Удалить/деактивировать legacy-блок `.toaster { position: fixed; top: 1rem; right: 1rem; ... }`, чтобы он больше не переопределял позицию Sonner.
+- Файл `src/components/ui/sonner.tsx`:
+  - Переименовать корневой класс контейнера с `toaster` на уникальный (например `eb-toaster`), чтобы исключить любые будущие конфликты.
+  - Обновить все селекторы вида `group-[.toaster]:...` на `group-[.eb-toaster]:...`.
+  - Поднять мобильный отступ ещё ниже текущего (консервативно), чтобы гарантированно не пересекаться с iOS status bar + sticky header.
+  - Усилить читаемость: чуть крупнее description, нормальные переносы (`whitespace-normal`, `break-words`), и адекватная ширина на мобильном (`max-width`/`width` в рамках экрана).
+- Бэкенд/ключи/миграции: без изменений.
 
-## Solution
+3) Проверка (обязательная, end-to-end)
+- Проверить на мобильном viewport (430x637) минимум 3 сценария:
+  1. Успешный вход (success toast).
+  2. Ошибка (destructive/error toast, длинный текст).
+  3. Действие из Push-настроек (toast после нажатия “Тест”).
+- Критерии приемки:
+  - Тост визуально ниже шапки и не перекрывает статус-бар.
+  - Заголовок и описание читаются полностью, без обрезки и наложений.
+  - Кнопка закрытия доступна, свайп/закрытие работает.
+  - Поведение стабильно на `/auth`, `/dashboard`, `/settings`.
 
-Change the `invitations.role` column from `user_role` enum to `text` type. This allows storing any role code from `role_definitions` without enum constraints.
-
-## Steps
-
-1. **Migration**: `ALTER TABLE public.invitations ALTER COLUMN role TYPE text;`
-   - This converts the column to plain text, preserving existing values
-   - No data loss — existing 'admin'/'employee' values remain valid as text
-
-2. **No frontend changes needed** — the `InviteUserDialog` already sends the correct role code.
-
-## What will work after this
-- Creating invitations with any role (Финансист, Бухгалтер, etc.)
-- Existing invitations remain intact
-- The `approve_pending_user_membership` RPC already reads `role` as text, so approval flow is unaffected
-
-## Technical detail
-The enum `user_role` was created in the very first migration with only `('admin', 'employee')`. The RBAC system (`role_definitions` table) has since replaced it, but the `invitations` table column was never updated to match.
-
+4) Ожидаемый результат
+- Уведомления больше не появляются “под челкой/часами”.
+- На iPhone тосты выглядят заметно ниже и читаемо во всех ключевых сценариях.
+- Конфликт legacy CSS с Sonner полностью устранён.
