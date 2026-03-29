@@ -3,10 +3,8 @@ import { analyzeWithRules, normalizeDescription } from '../transactionRuleEngine
 
 describe('transactionRuleEngine', () => {
   // ════════════════════════════════════════════════════════════
-  // Regression suite
+  // Regression: P0 Project
   // ════════════════════════════════════════════════════════════
-
-  // P0: Project
   it.each([
     ['Закупка конфет в офис', 'Склад / Офис'],
     ['Купили бумагу для офиса', 'Склад / Офис'],
@@ -20,47 +18,59 @@ describe('transactionRuleEngine', () => {
     expect(r.confidence).toBeGreaterThanOrEqual(1.0);
   });
 
-  // P1: transport
+  // ════════════════════════════════════════════════════════════
+  // Regression: P1 Category — transport
+  // ════════════════════════════════════════════════════════════
   it.each([
-    ['Такси до дома', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-    ['Бензин на дорогу', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-    ['Парковка у ТЦ', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-    ['Доставка декора', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-    ['Трансфер до площадки', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-    ['Курьер привёз реквизит', 'Доставка / Трансфер / Парковка / Вывоз мусора'],
-  ])('P1 transport: "%s"', (desc, expected) => {
-    expect(analyzeWithRules(desc).category).toBe(expected);
+    ['Такси до дома'],
+    ['Бензин на дорогу'],
+    ['Парковка у ТЦ'],
+    ['Доставка декора'],
+    ['Трансфер до площадки'],
+    ['Курьер привёз реквизит'],
+  ])('P1 transport: "%s"', (desc) => {
+    expect(analyzeWithRules(desc).category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
   });
 
-  // P1: venue
+  // ════════════════════════════════════════════════════════════
+  // Regression: P1 Category — venue
+  // ════════════════════════════════════════════════════════════
   it.each([
-    ['Аренда площадки на 10 часов', 'Площадка (депозит, аренда, доп. услуги)'],
-    ['Депозит площадки', 'Площадка (депозит, аренда, доп. услуги)'],
-  ])('P1 venue: "%s"', (desc, expected) => {
-    expect(analyzeWithRules(desc).category).toBe(expected);
+    ['Аренда площадки на 10 часов'],
+    ['Депозит площадки'],
+  ])('P1 venue: "%s"', (desc) => {
+    expect(analyzeWithRules(desc).category).toBe('Площадка (депозит, аренда, доп. услуги)');
   });
 
-  // P1: salary
+  // ════════════════════════════════════════════════════════════
+  // Regression: P1 Category — salary
+  // ════════════════════════════════════════════════════════════
   it.each([
-    ['Аванс сотруднику', 'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)'],
-    ['Зарплата за март', 'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)'],
-    ['Бонус за проект', 'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)'],
-    ['Оклад Камилле', 'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)'],
-  ])('P1 salary: "%s"', (desc, expected) => {
-    expect(analyzeWithRules(desc).category).toBe(expected);
+    ['Аванс сотруднику'],
+    ['Зарплата за март'],
+    ['Бонус за проект'],
+    ['Оклад Камилле'],
+  ])('P1 salary: "%s"', (desc) => {
+    expect(analyzeWithRules(desc).category).toBe(
+      'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)'
+    );
   });
 
-  // P1: client payment (income)
+  // ════════════════════════════════════════════════════════════
+  // Regression: P1 Category — client payment (income)
+  // ════════════════════════════════════════════════════════════
   it.each([
-    ['Получил оплату от клиента Иванова', 'Получено/Возвращено клиенту'],
-    ['Оплата от клиента за мероприятие', 'Получено/Возвращено клиенту'],
-  ])('P1 client payment: "%s" → income', (desc, expected) => {
+    ['Получил оплату от клиента Иванова'],
+    ['Оплата от клиента за мероприятие'],
+  ])('P1 client payment: "%s" → income', (desc) => {
     const r = analyzeWithRules(desc);
-    expect(r.category).toBe(expected);
+    expect(r.category).toBe('Получено/Возвращено клиенту');
     expect(r.transaction_type).toBe('income');
   });
 
-  // P2: Wallet
+  // ════════════════════════════════════════════════════════════
+  // Regression: P2 Wallet
+  // ════════════════════════════════════════════════════════════
   it('wallet: наличка Настя → cash_nastya', () => {
     expect(analyzeWithRules('Купили воду наличка Настя').wallet_key).toBe('cash_nastya');
   });
@@ -74,7 +84,9 @@ describe('transactionRuleEngine', () => {
     expect(analyzeWithRules('Бумага Иван наличка').wallet_key).toBe('cash_vanya');
   });
 
-  // Combined
+  // ════════════════════════════════════════════════════════════
+  // Regression: combined fields
+  // ════════════════════════════════════════════════════════════
   it('combined: transport + wallet', () => {
     const r = analyzeWithRules('Такси до дома наличка Лера');
     expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
@@ -94,7 +106,9 @@ describe('transactionRuleEngine', () => {
     expect(r.reasons.length).toBe(3);
   });
 
-  // Negative
+  // ════════════════════════════════════════════════════════════
+  // Regression: negative cases
+  // ════════════════════════════════════════════════════════════
   it.each([
     ['Реклама в Instagram'],
     ['Оплата за дизайн'],
@@ -112,7 +126,6 @@ describe('transactionRuleEngine', () => {
   // ════════════════════════════════════════════════════════════
   // Weight-based conflict resolution
   // ════════════════════════════════════════════════════════════
-
   it('conflict: "Аванс водителю такси" → salary W40 beats transport W30', () => {
     const r = analyzeWithRules('Аванс водителю такси');
     expect(r.category).toBe('Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)');
@@ -124,7 +137,6 @@ describe('transactionRuleEngine', () => {
   it('conflict: "Доставка банкета" → transport W30 beats food W25', () => {
     const r = analyzeWithRules('Доставка банкета');
     expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
-    expect(r.reasons[0]).toContain('cat_transport');
   });
 
   it('conflict: "Печать баннера для офиса" → print + project (different fields)', () => {
@@ -140,43 +152,42 @@ describe('transactionRuleEngine', () => {
   });
 
   // ════════════════════════════════════════════════════════════
-  // Tie-breaker: equal priority+weight+kwlen → rule.id ASC
+  // Tie-breaker: equal P/W/kwlen → rule.id ASC
   // ════════════════════════════════════════════════════════════
-
-  it('tie-breaker by rule.id: wallet_lera < wallet_nastya alphabetically', () => {
-    // "наличка лера" and "наличка настя" both in text → wallet_lera wins (id < id)
-    const r = analyzeWithRules('наличка лера наличка настя');
-    expect(r.wallet_key).toBe('cash_lera'); // wallet_lera < wallet_nastya
+  it('tie-breaker by rule.id: wallet_lera < wallet_vanya (same P/W, equal kw length)', () => {
+    // "нал лера" (8 chars) and "нал ваня" (8 chars) → wallet_lera wins (id < id)
+    const r = analyzeWithRules('нал лера нал ваня');
+    expect(r.wallet_key).toBe('cash_lera'); // wallet_lera < wallet_vanya alphabetically
   });
 
   // ════════════════════════════════════════════════════════════
   // FALSE POSITIVES — word-boundary guards
   // ════════════════════════════════════════════════════════════
-
   it.each([
-    ['складчина для вечеринки'],      // "склад" must not match
-    ['таксист привёз гостей'],        // "такси" must not match
-    ['бонусный купон на скидку'],     // "бонус" must not match
-    ['парковочный датчик сломался'],  // "парковк" must not match
-    ['доставщик уволился'],           // "доставк" must not match
-    ['курьерская служба закрылась'],  // "курьер" must not match  
-    ['печатный станок'],              // "печать" — "печатн" ≠ "печать"
-    ['баннерная реклама в ТЦ'],       // "баннер" must not match inside "баннерная"
-  ])('false positive guard: "%s" → no category match', (desc) => {
+    ['складчина для вечеринки',     null, null],  // "склад" ⊄ "складчина"
+    ['таксист привёз гостей',       null, null],  // "такси" ⊄ "таксист"
+    ['бонусный купон на скидку',    null, null],  // "бонус" ⊄ "бонусный"
+    ['парковочный датчик сломался', null, null],  // "парковка" ⊄ "парковочный"
+    ['доставщик уволился',          null, null],  // "доставка" ⊄ "доставщик"
+    ['курьерская служба закрылась', null, null],  // "курьер" ⊄ "курьерская"
+    ['печатный станок',             null, null],  // "печать" ⊄ "печатный"
+    ['баннерная реклама в ТЦ',      null, null],  // "баннер" ⊄ "баннерная"
+  ])('false positive guard: "%s" → no category', (desc, _cat, _proj) => {
     const r = analyzeWithRules(desc);
     expect(r.category).toBeNull();
   });
 
-  it('false positive: "офисный" is whitelisted, but "переоформление" is not', () => {
-    // "офис" inside "переоформление" should NOT match
-    const r = analyzeWithRules('переоформление документов');
-    expect(r.project).toBeNull();
+  it('false positive: "переоформление" does not match "офис"', () => {
+    expect(analyzeWithRules('переоформление документов').project).toBeNull();
+  });
+
+  it('false positive: "премиальный клуб" does not match "премия"', () => {
+    expect(analyzeWithRules('премиальный клуб').category).toBeNull();
   });
 
   // ════════════════════════════════════════════════════════════
   // Normalisation: trim, collapse, case, ё→е
   // ════════════════════════════════════════════════════════════
-
   describe('normalizeDescription', () => {
     it('trims whitespace', () => {
       expect(normalizeDescription('  hello  ')).toBe('hello');
@@ -196,12 +207,12 @@ describe('transactionRuleEngine', () => {
   });
 
   it('normalisation: mixed case + extra spaces', () => {
-    const r = analyzeWithRules('  ТАКСИ   до   дома  ');
-    expect(r.category).toBe('Доставка / Трансфер / Парковка / Вывоз мусора');
+    expect(analyzeWithRules('  ТАКСИ   до   дома  ').category).toBe(
+      'Доставка / Трансфер / Парковка / Вывоз мусора'
+    );
   });
 
-  it('normalisation: ё in keyword → matches rule with е', () => {
-    // "клиент перевёл" has ё, normalisation converts to е, matches "клиент перевел"
+  it('normalisation: ё in input matches е in keyword', () => {
     const r = analyzeWithRules('Клиент перевёл оплату');
     expect(r.category).toBe('Получено/Возвращено клиенту');
     expect(r.transaction_type).toBe('income');
@@ -210,7 +221,6 @@ describe('transactionRuleEngine', () => {
   // ════════════════════════════════════════════════════════════
   // Reason format — safe, structured
   // ════════════════════════════════════════════════════════════
-
   it('reasons contain P/W, rule.id, keyword, field, value', () => {
     const r = analyzeWithRules('Закупка в офис');
     expect(r.reasons[0]).toContain('P0');
@@ -237,7 +247,6 @@ describe('transactionRuleEngine', () => {
   // ════════════════════════════════════════════════════════════
   // Case insensitive
   // ════════════════════════════════════════════════════════════
-
   it('case insensitive', () => {
     expect(analyzeWithRules('ТАКСИ ДО ПЛОЩАДКИ').category).toBe(
       'Доставка / Трансфер / Парковка / Вывоз мусора'

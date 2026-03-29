@@ -8,11 +8,14 @@
  *   3. keyword length DESC (longer = more specific match)
  *   4. rule.id ASC    (alphabetical, stable across environments)
  *
+ * Word boundaries are enforced on BOTH sides of every keyword
+ * to prevent false positives (e.g. "склад" must not match "складчина").
+ * All keywords must therefore be complete word-forms, not truncated stems.
+ *
  * Priority levels:
  *   P0 (confidence 1.0) : Project  (офис / склад)
- *   P1 (confidence 0.9) : Category (транспорт, площадка, выплаты, клиент, еда, печать)
- *   P2 (confidence 0.85): Wallet   (наличка Настя / Лера / Ваня)
- *   P3 (confidence 0)   : Fallback — no match
+ *   P1 (confidence 0.9) : Category
+ *   P2 (confidence 0.85): Wallet
  */
 
 export interface RuleEngineResult {
@@ -27,7 +30,6 @@ export interface RuleEngineResult {
 interface Rule {
   id: string;
   priority: number;
-  /** Higher weight wins within same priority+field. */
   weight: number;
   field: 'project' | 'category' | 'wallet_key' | 'transaction_type';
   keywords: string[];
@@ -41,56 +43,89 @@ interface RuleMatch {
   keyword: string;
 }
 
-// ── Keyword lists ────────────────────────────────────────────
-
-/** Multi-word keywords are matched as-is; single-word keywords
- *  use word-boundary guards so "склад" won't fire on "складчина". */
+// ── Rules ────────────────────────────────────────────────────
+// All keywords are complete word-forms (not stems).
+// Word boundaries are enforced on both sides during matching.
 
 const RULES: Rule[] = [
   // P0 — project
   { id: 'project_office', priority: 0, weight: 100, field: 'project',
-    keywords: ['в офис', 'для офиса', 'офисные', 'офисных', 'офисную', 'офисного',
-               'на склад', 'для склада', 'складские', 'складских', 'складскую', 'складского',
-               'офис', 'склад'],
+    keywords: [
+      'в офис', 'для офиса', 'офисные', 'офисных', 'офисную', 'офисного',
+      'на склад', 'для склада', 'складские', 'складских', 'складскую', 'складского',
+      'офис', 'склад',
+    ],
     value: 'Склад / Офис', confidence: 1.0 },
 
   // P1 — category
   { id: 'cat_venue', priority: 1, weight: 60, field: 'category',
-    keywords: ['аренда площадк', 'депозит площадк', 'аренда зала', 'депозит зала'],
+    keywords: [
+      'аренда площадки', 'аренда площадку', 'аренда площадке',
+      'депозит площадки', 'депозит площадку', 'депозит площадке',
+      'аренда зала', 'депозит зала',
+    ],
     value: 'Площадка (депозит, аренда, доп. услуги)', confidence: 0.9 },
 
   { id: 'cat_client', priority: 1, weight: 55, field: 'category',
-    keywords: ['получил оплат', 'оплата от клиент', 'получили оплат',
-               'клиент оплатил', 'клиент перевел', 'клиент перевёл'],
+    keywords: [
+      'получил оплату', 'получили оплату',
+      'оплата от клиента', 'оплата от клиентов',
+      'клиент оплатил', 'клиент перевел', 'клиент перевёл',
+    ],
     value: 'Получено/Возвращено клиенту', transactionType: 'income', confidence: 0.9 },
 
   { id: 'cat_salary', priority: 1, weight: 40, field: 'category',
-    keywords: ['аванс', 'зарплат', 'бонус', 'оклад', 'чаевые', 'премия'],
+    keywords: [
+      'аванс', 'зарплата', 'зарплату', 'зарплаты', 'зарплате', 'зарплатой',
+      'бонус', 'оклад', 'чаевые', 'премия', 'премию', 'премии',
+    ],
     value: 'Выплаты (зарплата, оклад, процент, бонус, чаевые, стажеры/хелперы)', confidence: 0.9 },
 
   { id: 'cat_transport', priority: 1, weight: 30, field: 'category',
-    keywords: ['такси', 'бензин', 'парковк', 'доставк', 'трансфер', 'курьер', 'вывоз мусор'],
+    keywords: [
+      'такси',
+      'бензин',
+      'парковка', 'парковку', 'парковки', 'парковке', 'парковкой',
+      'доставка', 'доставку', 'доставки', 'доставке', 'доставкой',
+      'трансфер',
+      'курьер',
+      'вывоз мусора',
+    ],
     value: 'Доставка / Трансфер / Парковка / Вывоз мусора', confidence: 0.9 },
 
   { id: 'cat_food', priority: 1, weight: 25, field: 'category',
-    keywords: ['кейтеринг', 'сладкий стол', 'торт на мероприят', 'банкет'],
+    keywords: [
+      'кейтеринг', 'сладкий стол',
+      'торт на мероприятие', 'торт на мероприятии',
+      'банкет',
+    ],
     value: 'Еда / Напитки (сладкий стол, торт, кейтеринг)', confidence: 0.85 },
 
   { id: 'cat_print', priority: 1, weight: 20, field: 'category',
-    keywords: ['баннер', 'печать', 'визитки', 'меню печат'],
+    keywords: ['баннер', 'печать', 'визитки', 'меню печать', 'меню печати'],
     value: 'Печать (баннеры, меню, карточки)', confidence: 0.85 },
 
   // P2 — wallet
-  { id: 'wallet_lera',   priority: 2, weight: 50, field: 'wallet_key',
-    keywords: ['наличка лера', 'лера наличк', 'нал лера', 'лера нал'],
+  { id: 'wallet_lera', priority: 2, weight: 50, field: 'wallet_key',
+    keywords: [
+      'наличка лера', 'лера наличка', 'лера наличку', 'лера наличкой',
+      'нал лера', 'лера нал',
+    ],
     value: 'cash_lera', confidence: 0.85 },
 
   { id: 'wallet_nastya', priority: 2, weight: 50, field: 'wallet_key',
-    keywords: ['наличка настя', 'настя наличк', 'нал настя', 'настя нал'],
+    keywords: [
+      'наличка настя', 'настя наличка', 'настя наличку', 'настя наличкой',
+      'нал настя', 'настя нал',
+    ],
     value: 'cash_nastya', confidence: 0.85 },
 
-  { id: 'wallet_vanya',  priority: 2, weight: 50, field: 'wallet_key',
-    keywords: ['наличка ваня', 'ваня наличк', 'иван наличк', 'наличка иван', 'нал ваня', 'ваня нал'],
+  { id: 'wallet_vanya', priority: 2, weight: 50, field: 'wallet_key',
+    keywords: [
+      'наличка ваня', 'ваня наличка', 'ваня наличку', 'ваня наличкой',
+      'иван наличка', 'иван наличку', 'наличка иван',
+      'нал ваня', 'ваня нал',
+    ],
     value: 'cash_vanya', confidence: 0.85 },
 ];
 
@@ -104,15 +139,12 @@ function escapeRegex(str: string): string {
 const B = '[\\s,.:;!?()«»"\'\\-]';
 
 /**
- * Match keyword in text with word-boundary guards.
- * Both leading and trailing boundaries are enforced so that
- * "склад" does NOT match inside "складчина".
+ * Match keyword with word-boundary guards on BOTH sides.
+ * Prevents "склад" matching inside "складчина".
  */
 function matchesKeyword(text: string, keyword: string): boolean {
   const pattern = `(?:^|${B})${escapeRegex(keyword)}(?:$|${B})`;
-  const regex = new RegExp(pattern, 'i');
-  // Pad so anchors work at edges
-  return regex.test(` ${text} `);
+  return new RegExp(pattern, 'i').test(` ${text} `);
 }
 
 /**
@@ -128,12 +160,6 @@ export function normalizeDescription(raw: string): string {
 
 // ── Core ─────────────────────────────────────────────────────
 
-/**
- * Run deterministic rules against a transaction description.
- *
- * Tie-breaker per field:
- *   priority ASC → weight DESC → keyword.length DESC → rule.id ASC
- */
 export function analyzeWithRules(description: string): RuleEngineResult {
   const result: RuleEngineResult = {
     category: null,
@@ -154,9 +180,11 @@ export function analyzeWithRules(description: string): RuleEngineResult {
   const matches: RuleMatch[] = [];
   for (const rule of RULES) {
     for (const keyword of rule.keywords) {
-      if (matchesKeyword(norm, keyword)) {
+      // keywords with ё are also normalised for matching
+      const normKw = keyword.replace(/ё/g, 'е');
+      if (matchesKeyword(norm, normKw)) {
         matches.push({ rule, keyword });
-        break; // first keyword hit per rule is enough
+        break;
       }
     }
   }
@@ -199,7 +227,7 @@ export function analyzeWithRules(description: string): RuleEngineResult {
 
     result.confidence = Math.max(result.confidence, winner.rule.confidence);
 
-    // Safe reason — no raw description, only rule metadata
+    // Safe reason — no raw description
     let reason = `P${winner.rule.priority}/W${winner.rule.weight} [${winner.rule.id}]: "${winner.keyword}" → ${field}="${winner.rule.value}"`;
     if (losers.length > 0) {
       const loserIds = losers.map(l => `${l.rule.id}(W${l.rule.weight})`).join(', ');
