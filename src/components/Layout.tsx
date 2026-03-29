@@ -355,9 +355,18 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
 
-          <PullToRefresh className="flex-1 w-full px-3 py-3">
-            {children}
-          </PullToRefresh>
+          {location.pathname === '/transaction' ? (
+            <div
+              className="flex-1 w-full px-3 py-3 overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {children}
+            </div>
+          ) : (
+            <PullToRefresh className="flex-1 w-full px-3 py-3">
+              {children}
+            </PullToRefresh>
+          )}
           
           <MobileNavEnhanced onOpenCommandPalette={() => {}} />
         </div>
