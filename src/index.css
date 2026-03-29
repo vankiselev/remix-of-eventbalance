@@ -349,6 +349,15 @@ html, body {
 }
 
 @layer utilities {
+  /* Action Row — unified toolbar layout for search/filter/sort/create bars */
+  .action-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .action-row > * {
+    flex-shrink: 0;
+  }
+
   /* Container System - ТЗ Compliant */
   .main-container {
     width: 100%;
