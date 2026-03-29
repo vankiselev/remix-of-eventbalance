@@ -19,6 +19,69 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 // ── VAPID validation ──────────────────────────────────────────────
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
+function isValidBase64url(value: string | null | undefined): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const clean = value.trim().replace(/=+$/g, '');
+  return clean.length > 0 && BASE64URL_RE.test(clean);
+}
+
+function getWebSubPayload(subscription: PushSubscription) {
+  const subJson = subscription.toJSON();
+  return {
+    endpoint: (subJson.endpoint || '').trim(),
+    auth: (subJson.keys?.auth || '').trim(),
+    p256dh: (subJson.keys?.p256dh || '').trim(),
+  };
+}
+
+function validateWebSubPayload(payload: { endpoint: string; auth: string; p256dh: string }): { ok: boolean; reason?: string } {
+  if (!payload.endpoint || !payload.endpoint.startsWith('https://')) return { ok: false, reason: 'subscription_invalid_endpoint' };
+  if (!isValidBase64url(payload.auth)) return { ok: false, reason: 'subscription_invalid_auth' };
+  if (!isValidBase64url(payload.p256dh)) return { ok: false, reason: 'subscription_invalid_p256dh' };
+  return { ok: true };
+}
+
+async function clearUserPushSubscriptions(userId: string): Promise<void> {
+  const { error: deleteError } = await supabase.from('push_subscriptions').delete().eq('user_id', userId);
+  if (deleteError) {
+    throw new Error(`db_error: cleanup_delete_failed: ${deleteError.message}`);
+  }
+
+  const { count, error: countError } = await supabase
+    .from('push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (countError) {
+    throw new Error(`db_error: cleanup_verify_failed: ${countError.message}`);
+  }
+
+  if ((count ?? 0) !== 0) {
+    throw new Error(`db_error: cleanup_incomplete: осталось ${(count ?? 0)} записей`);
+  }
+}
+
+async function ensureSinglePushSubscription(userId: string, endpoint: string): Promise<void> {
+  await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('user_id', userId)
+    .neq('endpoint', endpoint);
+
+  const { count, error } = await supabase
+    .from('push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(`db_error: single_verify_failed: ${error.message}`);
+  }
+
+  if ((count ?? 0) !== 1) {
+    throw new Error(`db_error: expected_one_subscription_got_${count ?? 0}`);
+  }
+}
+
 function getVapidPublicKey(): string | null {
   const raw = import.meta.env.VITE_VAPID_PUBLIC_KEY;
   if (!raw || typeof raw !== 'string') return null;
@@ -224,21 +287,27 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('not_authenticated: Войдите в аккаунт');
 
-  const subJson = subscription.toJSON();
+  const payload = getWebSubPayload(subscription);
+  const payloadValidation = validateWebSubPayload(payload);
+  if (!payloadValidation.ok) {
+    throw new Error(`subscription_invalid: ${payloadValidation.reason}`);
+  }
+
   const { error } = await supabase
     .from('push_subscriptions')
     .upsert(
       {
         user_id: userData.user.id,
-        endpoint: subJson.endpoint!,
-        auth: subJson.keys?.auth || '',
-        p256dh: subJson.keys?.p256dh || '',
+        endpoint: payload.endpoint,
+        auth: payload.auth,
+        p256dh: payload.p256dh,
         platform: 'web',
       } as any,
       { onConflict: 'user_id,endpoint' }
     );
 
   if (error) throw new Error(`db_error: ${error.message}`);
+  await ensureSinglePushSubscription(userData.user.id, payload.endpoint);
   console.log('[push] Subscription saved to DB');
   return true;
 };
@@ -254,16 +323,16 @@ export const repairPushSubscription = async (): Promise<boolean> => {
   if (!reg?.pushManager) throw new Error('sw_not_ready: Service Worker не готов');
 
   let subscription = await reg.pushManager.getSubscription();
-  const subJson = subscription?.toJSON();
+  const payload = subscription ? getWebSubPayload(subscription) : null;
 
   // If current subscription is damaged (missing keys), do a full reset
-  if (!subscription || !subJson?.endpoint || !subJson?.keys?.auth || !subJson?.keys?.p256dh) {
+  if (!subscription || !payload || !validateWebSubPayload(payload).ok) {
     console.log('[push] Existing subscription damaged or missing, doing full reset');
     return resetPushSubscription();
   }
 
   // Delete ALL old DB records for this user first
-  await supabase.from('push_subscriptions').delete().eq('user_id', userData.user.id);
+  await clearUserPushSubscriptions(userData.user.id);
 
   // Save current valid subscription
   const { error } = await supabase
@@ -271,15 +340,16 @@ export const repairPushSubscription = async (): Promise<boolean> => {
     .upsert(
       {
         user_id: userData.user.id,
-        endpoint: subJson.endpoint,
-        auth: subJson.keys.auth,
-        p256dh: subJson.keys.p256dh,
+        endpoint: payload.endpoint,
+        auth: payload.auth,
+        p256dh: payload.p256dh,
         platform: 'web',
       } as any,
       { onConflict: 'user_id,endpoint' }
     );
 
   if (error) throw new Error(`db_error: ${error.message} (code: ${error.code}, details: ${error.details})`);
+  await ensureSinglePushSubscription(userData.user.id, payload.endpoint);
   console.log('[push] Subscription repaired in DB');
   return true;
 };
@@ -302,8 +372,8 @@ export const resetPushSubscription = async (): Promise<boolean> => {
     }
   }
 
-  // 2. Delete ALL old DB records for this user (cleanup stale/invalid entries)
-  await supabase.from('push_subscriptions').delete().eq('user_id', userData.user.id);
+  // 2. Delete ALL old DB records for this user and verify cleanup to zero
+  await clearUserPushSubscriptions(userData.user.id);
 
   // 3. Create fresh subscription
   return subscribeToPushNotifications();
