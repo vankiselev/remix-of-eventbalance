@@ -111,8 +111,8 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
             </span>
             {hasEvents && (
               <div className="flex items-center gap-[3px] mt-0.5 h-[6px]">
-                {uniqueDots.map((dotClass, i) => (
-                  <div key={i} className={`w-[5px] h-[5px] rounded-full ${dotClass}`} />
+                {uniqueDots.map((dotColor, i) => (
+                  <div key={i} className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: dotColor }} />
                 ))}
               </div>
             )}
@@ -203,7 +203,8 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
               return (
                 <div
                   key={event.id}
-                  className={`text-[9px] md:text-[11px] leading-tight px-1.5 py-0.5 rounded-sm truncate cursor-pointer transition-opacity hover:opacity-80 border-l-2 ${colors.bg} ${colors.border} ${colors.text}`}
+                  className="text-[9px] md:text-[11px] leading-tight px-1.5 py-0.5 rounded-sm truncate cursor-pointer transition-opacity hover:opacity-80 border-l-2"
+                  style={{ backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onEventClick(event);
