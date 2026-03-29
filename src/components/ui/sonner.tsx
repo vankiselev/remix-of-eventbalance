@@ -45,7 +45,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "hsl(var(--foreground))",
         } as React.CSSProperties
       }
-      offset="max(56px, calc(env(safe-area-inset-top) + 40px))"
+      offset="max(72px, calc(env(safe-area-inset-top) + 56px))"
       {...props}
     />
   )
