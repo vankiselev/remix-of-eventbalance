@@ -10,25 +10,41 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      position="top-right"
-      expand={true}
-      visibleToasts={5}
+      position="top-center"
+      expand={false}
+      visibleToasts={3}
       duration={4000}
+      gap={8}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg group-[.toaster]:rounded-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-background/95 group-[.toaster]:text-foreground group-[.toaster]:border-border/60 group-[.toaster]:shadow-[0_4px_24px_-4px_hsl(var(--foreground)/0.08)] group-[.toaster]:rounded-2xl group-[.toaster]:backdrop-blur-sm group-[.toaster]:px-4 group-[.toaster]:py-3",
+          title: "group-[.toast]:text-sm group-[.toast]:font-semibold group-[.toast]:leading-tight",
+          description: "group-[.toast]:text-xs group-[.toast]:text-muted-foreground group-[.toast]:leading-snug",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-xl group-[.toast]:text-xs group-[.toast]:h-8 group-[.toast]:px-3",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          success: "group-[.toaster]:bg-success group-[.toaster]:text-success-foreground group-[.toaster]:border-success",
-          error: "group-[.toaster]:bg-destructive group-[.toaster]:text-destructive-foreground group-[.toaster]:border-destructive",
-          warning: "group-[.toaster]:bg-warning group-[.toaster]:text-warning-foreground group-[.toaster]:border-warning",
-          info: "group-[.toaster]:bg-info group-[.toaster]:text-info-foreground group-[.toaster]:border-info",
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-xl group-[.toast]:text-xs group-[.toast]:h-8 group-[.toast]:px-3",
+          closeButton:
+            "group-[.toast]:text-foreground/40 group-[.toast]:hover:text-foreground/70",
+          success:
+            "group-[.toaster]:border-[hsl(var(--success)/0.3)] group-[.toaster]:bg-[hsl(var(--success)/0.08)] group-[.toaster]:text-foreground",
+          error:
+            "group-[.toaster]:border-destructive/30 group-[.toaster]:bg-destructive/10 group-[.toaster]:text-foreground",
+          warning:
+            "group-[.toaster]:border-[hsl(var(--warning)/0.3)] group-[.toaster]:bg-[hsl(var(--warning)/0.08)] group-[.toaster]:text-foreground",
+          info:
+            "group-[.toaster]:border-[hsl(var(--info)/0.3)] group-[.toaster]:bg-[hsl(var(--info)/0.08)] group-[.toaster]:text-foreground",
         },
       }}
+      style={
+        {
+          "--normal-bg": "hsl(var(--background) / 0.95)",
+          "--normal-border": "hsl(var(--border) / 0.6)",
+          "--normal-text": "hsl(var(--foreground))",
+        } as React.CSSProperties
+      }
+      offset="max(16px, env(safe-area-inset-top))"
       {...props}
     />
   )
