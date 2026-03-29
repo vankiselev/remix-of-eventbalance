@@ -1491,6 +1491,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={(value) => {
                         field.onChange(value);
+                        setIsCategoryManuallySet(true);
                         // Automatically enable money transfer for employee transfer category
                         if (MONEY_TRANSFER_CATEGORIES.includes(value)) {
                           setIsMoneyTransfer(true);
@@ -1712,6 +1713,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={(value) => {
                         field.onChange(value);
+                        setIsWalletManuallySet(true);
                         // If user manually changes the value, remove auto-fill indicator
                         setIsWhoseProjectAutoFilled(false);
                       }}
