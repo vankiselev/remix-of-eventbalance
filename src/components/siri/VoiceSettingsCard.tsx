@@ -8,23 +8,7 @@ import { Settings, Save, Loader2 } from 'lucide-react';
 import { useVoiceSettings } from '@/hooks/useVoiceSettings';
 import { toast } from 'sonner';
 
-const WALLET_OPTIONS = [
-  'Наличка Настя',
-  'Наличка Лера', 
-  'Наличка Ваня',
-  'Корп. карта Настя',
-  'Корп. карта Лера',
-  'Корп. карта Ваня',
-  'ИП Настя',
-  'ИП Лера',
-  'ИП Ваня',
-  'ООО Настя',
-  'ООО Лера',
-  'ООО Ваня',
-  'Своя Настя',
-  'Своя Лера',
-  'Своя Ваня',
-];
+import { useWalletNames } from '@/hooks/useWalletNames';
 
 interface VoiceSettingsCardProps {
   onSettingsChange?: (wallet: string) => void;

@@ -11,8 +11,9 @@ import { WarehouseLocationsManagement } from "@/components/admin/WarehouseLocati
 import { TestDataManagement } from "@/components/admin/TestDataManagement";
 import { TenantsManagement } from "@/components/admin/TenantsManagement";
 import { OwnerColorsManagement } from "@/components/admin/OwnerColorsManagement";
+import { WalletNamesManagement } from "@/components/admin/WalletNamesManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2, Paintbrush } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2, Paintbrush, Wallet } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -79,6 +80,11 @@ const AdministrationPage = () => {
               <span className="hidden sm:inline">Цвета</span>
               <span className="sm:hidden">Цвета</span>
             </TabsTrigger>
+            <TabsTrigger value="wallet-names" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Кошельки</span>
+              <span className="sm:hidden">Кош.</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="companies" className="mt-6">
@@ -134,6 +140,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="owner-colors" className="mt-6">
             <OwnerColorsManagement />
+          </TabsContent>
+
+          <TabsContent value="wallet-names" className="mt-6">
+            <WalletNamesManagement />
           </TabsContent>
         </Tabs>
       </div>
