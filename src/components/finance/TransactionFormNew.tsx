@@ -348,6 +348,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     correctedText,
     suggestedCategory,
     confidence: aiConfidence,
+    analysisError,
     applyCorrection: applyAnalysisCorrection,
     applyCategory: applyAnalysisCategory,
     applyAll: applyAnalysisAll,
@@ -1186,6 +1187,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                     />
                   </FormControl>
                   <FormMessage />
+
+                  {/* AI Analysis Error */}
+                  {analysisError && !isChecking && (
+                    <p className="text-xs text-destructive mt-1">{analysisError}</p>
+                  )}
                   
                   {/* AI Transaction Suggestions */}
                   {isAnalyzing && (

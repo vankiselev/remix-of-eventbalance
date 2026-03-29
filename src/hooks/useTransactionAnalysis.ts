@@ -31,6 +31,7 @@ interface UseTransactionAnalysisResult {
   suggestedCategory: string | null;
   suggestedTransactionType: 'expense' | 'income' | null;
   confidence: number;
+  analysisError: string | null;
   applyCorrection: () => void;
   applyCategory: () => void;
   applyAll: () => void;
@@ -49,6 +50,7 @@ export function useTransactionAnalysis(
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const [correctionApplied, setCorrectionApplied] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const skipNextRef = useRef(false);
   const appliedRef = useRef(false);
 
@@ -57,6 +59,7 @@ export function useTransactionAnalysis(
   useEffect(() => {
     if (!debouncedDescription || debouncedDescription.trim().length < 3 || isDismissed) {
       setResult(null);
+      setAnalysisError(null);
       return;
     }
 
@@ -70,32 +73,52 @@ export function useTransactionAnalysis(
     const analyze = async () => {
       setIsChecking(true);
       setCorrectionApplied(false);
+      setAnalysisError(null);
 
       try {
-        const { data, error } = await supabase.functions.invoke('analyze-transaction-description', {
-          body: {
+        // Use direct fetch for better error diagnostics (project pattern)
+        const { data: { session } } = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+        const res = await fetch(`${supabaseUrl}/functions/v1/analyze-transaction-description`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || anonKey}`,
+            'apikey': anonKey,
+          },
+          body: JSON.stringify({
             description: debouncedDescription,
             currentCategory: currentCategory || null,
-          },
+          }),
         });
 
         if (cancelled) return;
 
-        if (error) {
-          console.error('[useTransactionAnalysis] Invoke error:', error);
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          const errorMsg = data?.error || `Ошибка AI-анализа (${res.status})`;
+          console.error('[useTransactionAnalysis] Error:', res.status, errorMsg);
+          setAnalysisError(errorMsg);
           setResult(null);
           return;
         }
 
-        const analysisData = data as AnalysisResult;
+        const analysisData = data as AnalysisResult & { error?: string };
         if (analysisData?.success) {
           setResult(analysisData);
         } else {
           setResult(null);
+          if (analysisData?.error) {
+            setAnalysisError(analysisData.error);
+          }
         }
       } catch (error) {
         if (!cancelled) {
           console.error('[useTransactionAnalysis] Error:', error);
+          setAnalysisError('Не удалось выполнить AI-анализ');
           setResult(null);
         }
       } finally {
@@ -172,6 +195,7 @@ export function useTransactionAnalysis(
     suggestedCategory: result?.category || null,
     suggestedTransactionType: result?.transaction_type || null,
     confidence: result?.confidence || 0,
+    analysisError,
     applyCorrection,
     applyCategory,
     applyAll,
