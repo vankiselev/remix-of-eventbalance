@@ -42,6 +42,7 @@ interface Event {
 }
 
 const CalendarV2 = () => {
+  const { getOwnerColor } = useOwnerColors();
   const currentDate = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
