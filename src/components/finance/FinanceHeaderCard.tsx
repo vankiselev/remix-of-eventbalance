@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Wallet, User, Banknote, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
+import { DEFAULT_OWNER_COLORS } from "@/constants/ownerColors";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { AdvanceEditDialog } from "./AdvanceEditDialog";
@@ -147,16 +148,14 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
             {wallets.map((w) => (
               <div
                 key={w.label}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5",
-                  w.bg
-                )}
+                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5"
+                style={{ backgroundColor: `${w.hex}14` }}
               >
-                <User className={cn("h-3 w-3 flex-shrink-0", w.color)} />
-                <span className={cn("text-xs whitespace-nowrap", w.color)}>
+                <User className="h-3 w-3 flex-shrink-0" style={{ color: w.hex }} />
+                <span className="text-xs whitespace-nowrap" style={{ color: w.hex }}>
                   {w.label}
                 </span>
-                <span className={cn("text-xs font-semibold whitespace-nowrap", w.color)}>
+                <span className="text-xs font-semibold whitespace-nowrap" style={{ color: w.hex }}>
                   {formatCurrency(w.value)}
                 </span>
               </div>
