@@ -201,13 +201,13 @@ const Finances = () => {
         {/* Action buttons — header hidden on mobile (Layout shows title) */}
         {hasPermission('finances.create') && (
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setShowVoiceDialog(true)} className="h-9 sm:h-10 touch-manipulation">
+            <Button variant="outline" onClick={() => setShowVoiceDialog(true)} className="touch-manipulation">
               <Mic className="mr-1.5 sm:mr-2 h-4 w-4" />
-              <span className="text-[13px] sm:text-sm">Голосом</span>
+              <span className="text-sm">Голосом</span>
             </Button>
-            <Button onClick={() => setShowTransactionForm(true)} className="flex-1 sm:flex-initial h-9 sm:h-10 touch-manipulation">
+            <Button onClick={() => setShowTransactionForm(true)} className="flex-1 sm:flex-initial touch-manipulation">
               <Plus className="mr-1.5 sm:mr-2 h-4 w-4" />
-              <span className="text-[13px] sm:text-sm">Добавить</span>
+              <span className="text-sm">Добавить</span>
             </Button>
           </div>
         )}

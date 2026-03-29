@@ -528,25 +528,25 @@ export function TransactionDetailDialog({
         {(canEdit || isRejectedTransfer || isDraft) && (
           <div className="flex-shrink-0 border-t border-border px-4 py-3 sm:px-0 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 flex flex-col sm:flex-row gap-2 sm:justify-end bg-background">
             {isDraft && (
-              <Button onClick={handlePublishDraft} disabled={isPublishing} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+              <Button onClick={handlePublishDraft} disabled={isPublishing} size="sm" className="w-full sm:w-auto h-11 text-sm">
                 <Send className="mr-1.5 h-4 w-4" />
                 {isPublishing ? "Отправка..." : "На проверку"}
               </Button>
             )}
             {isRejectedTransfer && (
-              <Button onClick={handleResendTransfer} disabled={isResending} size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+              <Button onClick={handleResendTransfer} disabled={isResending} size="sm" className="w-full sm:w-auto h-11 text-sm">
                 {isResending ? "Отправка..." : "Отправить снова"}
               </Button>
             )}
             {canEdit && (
               <>
                 {onEdit && (
-                  <Button onClick={handleEdit} variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                  <Button onClick={handleEdit} variant="outline" size="sm" className="w-full sm:w-auto h-11 text-sm">
                     <Pencil className="mr-1.5 h-4 w-4" />
                     Редактировать
                   </Button>
                 )}
-                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" size="sm" className="w-full sm:w-auto h-10 sm:h-9 text-sm">
+                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" size="sm" className="w-full sm:w-auto h-11 text-sm">
                   <Trash2 className="mr-1.5 h-4 w-4" />
                   Удалить
                 </Button>
