@@ -107,7 +107,7 @@ export const diagnosePush = async (): Promise<PushDiagnostics> => {
       dbSubscriptionCount = count || data?.length || 0;
       savedInDb = dbSubscriptionCount > 0;
     }
-  } catch {}
+  } catch { /* ignore */ }
 
   return {
     isHttps,
@@ -213,14 +213,13 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       if (attempt === maxAttempts) {
         throw new Error(`subscribe_failed: ${err?.message || err?.name || 'Неизвестная ошибка'}`);
       }
-      // Wait before retry
       await new Promise(r => setTimeout(r, 1000));
     }
   }
 
   if (!subscription) throw new Error('subscribe_failed: Подписка не создана');
 
-  // 7. Save to DB via upsert
+  // 7. Save to DB via upsert (only existing columns: user_id, endpoint, auth, p256dh)
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('not_authenticated: Войдите в аккаунт');
 
@@ -242,7 +241,7 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
   return true;
 };
 
-// ── Reset subscription ────────────────────────────────────────────
+// ── Reset subscription (deletes ALL old records for user first) ───
 export const resetPushSubscription = async (): Promise<boolean> => {
   const vapidCheck = validateVapidKey();
   if (!vapidCheck.valid) throw new Error(`vapid_invalid: ${vapidCheck.error}`);
@@ -251,18 +250,19 @@ export const resetPushSubscription = async (): Promise<boolean> => {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('not_authenticated: Войдите в аккаунт');
 
-  // Unsubscribe old
+  // 1. Unsubscribe browser push if exists
   const reg = await navigator.serviceWorker.getRegistration('/');
   if (reg) {
     const oldSub = await reg.pushManager?.getSubscription();
     if (oldSub) {
-      const oldEndpoint = oldSub.endpoint;
-      try { await oldSub.unsubscribe(); } catch {}
-      await supabase.from('push_subscriptions').delete().eq('user_id', userData.user.id).eq('endpoint', oldEndpoint);
+      try { await oldSub.unsubscribe(); } catch { /* ignore */ }
     }
   }
 
-  // Re-register and subscribe
+  // 2. Delete ALL old DB records for this user (cleanup stale/invalid entries)
+  await supabase.from('push_subscriptions').delete().eq('user_id', userData.user.id);
+
+  // 3. Create fresh subscription
   return subscribeToPushNotifications();
 };
 
