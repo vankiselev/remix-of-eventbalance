@@ -23,7 +23,7 @@ import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 // TODO: Legacy hooks — remove after unified endpoint is stable
 // import { useDescriptionChecker } from "@/hooks/useDescriptionChecker";
 // import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
-import { useTransactionAnalysis } from "@/hooks/useTransactionAnalysis";
+import { useTransactionAnalysis, MIN_CONFIDENCE_TO_AUTO_APPLY } from "@/hooks/useTransactionAnalysis";
 import { useTenant } from "@/contexts/TenantContext";
 import {
   Dialog,
