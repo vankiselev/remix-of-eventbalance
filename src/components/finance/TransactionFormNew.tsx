@@ -19,6 +19,7 @@ import { formatDate } from '@/utils/dateFormat';
 import { PROJECT_OWNERS, STATIC_PROJECTS } from '@/utils/constants';
 import { resolveWalletType } from '@/constants/walletTypes';
 import { useTransactionCategories } from '@/hooks/useTransactionCategories';
+import { detectProjectByDescription } from '@/utils/projectAutoDetect';
 import { declineFullNameToDative, detectGender } from '@/utils/nameDeclenation';
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
 import { useTransactionAnalysis, MIN_CONFIDENCE_TO_AUTO_APPLY, MIN_CONFIDENCE_TO_RETURN_CATEGORY } from "@/hooks/useTransactionAnalysis";
