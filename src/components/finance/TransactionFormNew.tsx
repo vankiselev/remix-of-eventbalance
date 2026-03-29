@@ -348,56 +348,76 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const watchCategory = form.watch("category");
   const watchDescription = form.watch("description");
 
-  // Unified AI analysis (description check + category suggestion in one call)
+  // AI analysis — grammar only
   const {
     isChecking,
     hasErrors,
     correctedText,
-    suggestedCategory,
-    confidence: aiConfidence,
     analysisError,
-    applyAll: applyAnalysisAll,
+    applyCorrection,
     dismissSuggestions,
     suppressNextAnalysis,
     clearCorrection,
   } = useTransactionAnalysis(
     watchDescription,
-    watchCategory,
     // onApplyCorrection
     (text) => {
       form.setValue("description", text);
       toast({ title: "Исправление применено", description: "Описание обновлено" });
     },
-    // onApplyCategory
-    (category, transactionType) => {
-      form.setValue('category', category);
-      
-      // Handle special categories
-      if (category === 'Передано или получено от сотрудника') {
-        setIsMoneyTransfer(true);
-        form.setValue('no_receipt', true);
-        form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
-        form.setValue('income_amount', undefined);
-      }
-
-      toast({
-        title: "Категория применена",
-        description: `Категория: ${category}`,
-        duration: 3000,
-      });
-    },
   );
+
+  // Local rule engine — category, project, wallet, transaction type
+  useEffect(() => {
+    if (!watchDescription || watchDescription.trim().length < 3) {
+      setRuleResult(null);
+      setDetectedProject(null);
+      return;
+    }
+    const result = analyzeWithRules(watchDescription);
+    setRuleResult(result.confidence > 0 ? result : null);
+    if (result.project) {
+      setDetectedProject({ project: result.project, reason: result.reasons.find(r => r.includes('project')) || '' });
+    } else {
+      setDetectedProject(null);
+    }
+  }, [watchDescription]);
 
   // Compat aliases for existing UI references
   const isAnalyzing = isChecking;
-  const aiSuggestions = suggestedCategory ? { category: suggestedCategory } : null;
-
 
   const handleApplyAll = () => {
-    applyAnalysisAll();
+    // Apply AI correction
+    if (hasErrors && correctedText) {
+      applyCorrection();
+    }
+    // Apply rule-based suggestions
+    if (ruleResult) {
+      if (ruleResult.category && !isCategoryManuallySet) {
+        form.setValue('category', ruleResult.category);
+        if (ruleResult.category === 'Передано или получено от сотрудника') {
+          setIsMoneyTransfer(true);
+          form.setValue('no_receipt', true);
+          form.setValue('no_receipt_reason', 'Внутренняя передача денег между сотрудниками');
+          form.setValue('income_amount', undefined);
+        }
+      }
+      if (ruleResult.project && !isProjectManuallySet) {
+        form.setValue('project_id', ruleResult.project);
+      }
+      if (ruleResult.wallet_key && !isWalletManuallySet) {
+        const displayName = walletKeyToDisplayName(ruleResult.wallet_key);
+        form.setValue('whose_project', displayName);
+        setIsWhoseProjectAutoFilled(true);
+      }
+      if (ruleResult.transaction_type === 'income') {
+        form.setValue('income_amount', form.getValues('expense_amount') || undefined);
+        form.setValue('expense_amount', undefined);
+      }
+    }
     toast({
       title: "Все предложения применены",
-      description: "Описание и категория обновлены",
+      description: "Изменения внесены",
       duration: 3000,
     });
   };
