@@ -24,19 +24,19 @@ const Contacts = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full overflow-x-auto scrollbar-hide">
-          <TabsTrigger value="contractors" className="flex items-center gap-2 whitespace-nowrap">
+          <TabsTrigger value="contractors" className="flex items-center gap-2 whitespace-nowrap text-sm px-3 touch-manipulation">
             <Briefcase className="h-4 w-4" />
             Подрядчики
           </TabsTrigger>
-          <TabsTrigger value="animators" className="flex items-center gap-2 whitespace-nowrap">
+          <TabsTrigger value="animators" className="flex items-center gap-2 whitespace-nowrap text-sm px-3 touch-manipulation">
             <Users className="h-4 w-4" />
             Аниматоры
           </TabsTrigger>
-          <TabsTrigger value="clients" className="flex items-center gap-2 whitespace-nowrap">
+          <TabsTrigger value="clients" className="flex items-center gap-2 whitespace-nowrap text-sm px-3 touch-manipulation">
             <Building2 className="h-4 w-4" />
             Клиенты
           </TabsTrigger>
-          <TabsTrigger value="venues" className="flex items-center gap-2 whitespace-nowrap">
+          <TabsTrigger value="venues" className="flex items-center gap-2 whitespace-nowrap text-sm px-3 touch-manipulation">
             <MapPin className="h-4 w-4" />
             Площадки
           </TabsTrigger>

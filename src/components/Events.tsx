@@ -467,7 +467,7 @@ const Events = () => {
         </div>
         
         {/* Верхняя панель: Фильтр, Сортировка, Поиск, Создать */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="action-row">
           {selectionMode ? (
             <>
               <Button
@@ -510,10 +510,10 @@ const Events = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex items-center gap-1.5 h-8 sm:h-9 touch-manipulation"
+                    className="flex items-center gap-1.5 touch-manipulation"
                   >
-                    <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="text-[13px] sm:text-sm">Фильтр</span>
+                    <Filter className="h-4 w-4" />
+                    <span className="text-sm">Фильтр</span>
                     {(selectedMonth || selectedYear || selectedProjectOwner || selectedManagers.length > 0 || selectedVenue) && (
                       <span className="ml-0.5 bg-primary text-primary-foreground text-[10px] min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full tabular-nums font-bold">
                         {[selectedMonth, selectedYear, selectedProjectOwner, selectedManagers.length > 0, selectedVenue].filter(Boolean).length}
@@ -669,9 +669,9 @@ const Events = () => {
                   variant="outline"
                   size="sm"
                   onClick={toggleSortOrder}
-                  className="flex items-center gap-1 h-8 touch-manipulation"
+                  className="flex items-center gap-1 touch-manipulation"
                 >
-                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  <ArrowUpDown className="h-4 w-4" />
                   <span className="hidden sm:inline">{sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}</span>
                 </Button>
               ) : (
@@ -724,12 +724,12 @@ const Events = () => {
 
               {/* Поиск */}
               <div className="relative flex-1 min-w-[100px] sm:min-w-[200px]">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={isMobile ? "Поиск..." : "Поиск по названию, описанию, месту..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 sm:pl-10 h-8 sm:h-9 text-[13px] sm:text-sm"
+                  className="pl-10"
                 />
               </div>
             </>
@@ -737,7 +737,7 @@ const Events = () => {
           
           {/* Кнопка создания */}
           {hasPermission('events.create') && !selectionMode && (
-            <Button size="sm" onClick={handleCreateNew} className="h-8 sm:h-9 touch-manipulation ml-auto">
+            <Button size="sm" onClick={handleCreateNew} className="touch-manipulation ml-auto">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Создать мероприятие</span>
             </Button>
@@ -753,29 +753,29 @@ const Events = () => {
           onValueChange={(value) => {
             if (value) setPeriodFilter(value as 'future' | 'past' | 'all' | 'cancelled');
           }}
-          className="grid grid-cols-4 w-full border rounded-md"
+          className="grid grid-cols-4 w-full border rounded-xl"
         >
           <ToggleGroupItem 
             value="future" 
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Будущие
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="past"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Прошлые
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="all"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Все
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="cancelled"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-[11px] sm:text-sm h-7 sm:h-9 touch-manipulation"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs sm:text-sm h-10 sm:h-11 touch-manipulation"
           >
             Отмена
           </ToggleGroupItem>

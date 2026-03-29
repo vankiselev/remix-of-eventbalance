@@ -231,18 +231,18 @@ const Finances = () => {
       <Card className="w-full border-border/50">
         <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
           <CardHeader className="py-2 sm:py-4 border-b px-2 sm:px-6">
-            <TabsList className="w-full overflow-x-auto scrollbar-hide h-8 sm:h-10">
-              <TabsTrigger value="my-transactions" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+            <TabsList className="w-full overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="my-transactions" className="whitespace-nowrap text-sm px-3">
                 Мои
               </TabsTrigger>
-              <TabsTrigger value="employees" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="employees" className="whitespace-nowrap text-sm px-3">
                 Сотрудники
               </TabsTrigger>
-              <TabsTrigger value="all-transactions" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="all-transactions" className="whitespace-nowrap text-sm px-3">
                 Все
               </TabsTrigger>
               {isFinancier && (
-                <TabsTrigger value="review" className="whitespace-nowrap relative text-[12px] sm:text-sm px-2 sm:px-3">
+                <TabsTrigger value="review" className="whitespace-nowrap relative text-sm px-3">
                   Проверка
                   {pendingCount > 0 && (
                     <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-none tabular-nums">
@@ -252,11 +252,11 @@ const Finances = () => {
                 </TabsTrigger>
               )}
               {(isAdmin || isFinancier) && (
-                <TabsTrigger value="fin-reports" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+                <TabsTrigger value="fin-reports" className="whitespace-nowrap text-sm px-3">
                   Отчёты
                 </TabsTrigger>
               )}
-              <TabsTrigger value="audit-log" className="whitespace-nowrap text-[12px] sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="audit-log" className="whitespace-nowrap text-sm px-3">
                 Журнал
               </TabsTrigger>
             </TabsList>

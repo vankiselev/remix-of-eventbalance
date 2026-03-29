@@ -129,7 +129,7 @@ const VenuesTab = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="action-row justify-between">
         <h2 className="text-2xl font-semibold">Площадки</h2>
         {hasPermission('contacts.create') && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
