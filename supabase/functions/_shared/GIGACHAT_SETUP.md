@@ -49,12 +49,12 @@ ZDg4M2...base64...строка==
 
 ### Успешный ответ
 ```bash
-curl -X POST https://YOUR_SUPABASE_URL/functions/v1/check-transaction-description \
+curl -X POST https://YOUR_SUPABASE_URL/functions/v1/analyze-transaction-description \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ANON_KEY" \
-  -d '{"text": "такси до площадки"}'
+  -d '{"description": "такси до площадки"}'
 ```
-Ожидаемый ответ: `{"has_errors": false, "corrected_text": "Такси до площадки", "errors": [...]}`
+Ожидаемый ответ: `{"success": true, "corrected_text": "Такси до площадки", "has_errors": false, "category": "Доставка / Трансфер / Парковка / Вывоз мусора", "confidence": 0.9, ...}`
 
 ### Ошибка авторизации
 Если ключи неверны:
