@@ -27,7 +27,7 @@ interface SubscriptionDebug {
 }
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
-const SEND_PUSH_VERSION_SHA = "9fc13f096a1b0cb502926331b8cb4ae41468241d";
+const SEND_PUSH_VERSION_SHA = "2d10b5775fd596f7109831d73467db52695bc85e";
 
 function sanitizeBase64url(val: string): string {
   // Convert standard base64 to base64url and strip padding
@@ -129,11 +129,27 @@ serve(async (req) => {
       );
     }
 
-    const vapidConfigured = !!(vapidPublicKey && vapidPrivateKey);
+    let vapidConfigured = !!(vapidPublicKey && vapidPrivateKey);
 
     if (vapidConfigured) {
-      webpush.setVapidDetails(contact, vapidPublicKey!, vapidPrivateKey!);
-      console.log("[send-push] VAPID configured successfully");
+      try {
+        webpush.setVapidDetails(contact, vapidPublicKey!, vapidPrivateKey!);
+        console.log("[send-push] VAPID configured successfully");
+      } catch (e: any) {
+        const detail = e?.message || "webpush.setVapidDetails failed";
+        console.error("[send-push] vapid_invalid setVapidDetails:", detail);
+        vapidConfigured = false;
+        return new Response(
+          JSON.stringify({
+            error: "vapid_invalid",
+            detail,
+            vapid_valid: false,
+            version_sha: SEND_PUSH_VERSION_SHA,
+            push_errors: ["setVapidDetails failed"],
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
     } else {
       const missing = [];
       if (!vapidPublicKey) missing.push('VAPID_PUBLIC_KEY');
