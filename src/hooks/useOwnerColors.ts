@@ -21,7 +21,8 @@ function buildDefaults(): OwnerColors {
 const DEFAULT_COLORS = buildDefaults();
 
 export function useOwnerColors() {
-  const { currentTenantId } = useTenant();
+  const { currentTenant } = useTenant();
+  const currentTenantId = currentTenant?.id ?? null;
 
   const { data: colors = DEFAULT_COLORS } = useQuery({
     queryKey: ['owner-colors', currentTenantId],
