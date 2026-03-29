@@ -84,22 +84,24 @@ serve(async (req) => {
 
     // Get VAPID keys from database and sanitize
     const secrets = await getSystemSecrets(['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'WEB_PUSH_CONTACT']);
-    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
-    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY']?.trim().replace(/[=\s\n\r"']+/g, '') || null;
+    const vapidPublicKey = secrets['VAPID_PUBLIC_KEY'] ? sanitizeBase64url(secrets['VAPID_PUBLIC_KEY']) : null;
+    const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY'] ? sanitizeBase64url(secrets['VAPID_PRIVATE_KEY']) : null;
     const contact = (secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com").trim();
 
-    // Validate base64url format
-    if (vapidPublicKey && !BASE64URL_RE.test(vapidPublicKey)) {
-      console.error("[send-push] VAPID_PUBLIC_KEY contains invalid base64url characters");
+    const vapidPubValid = isValidBase64url(vapidPublicKey);
+    const vapidPrivValid = isValidBase64url(vapidPrivateKey);
+    
+    if (vapidPublicKey && !vapidPubValid) {
+      console.error("[send-push] VAPID_PUBLIC_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "VAPID_PUBLIC_KEY содержит недопустимые символы. Допустимы только A-Z, a-z, 0-9, - и _" }),
+        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PUBLIC_KEY невалидный base64url", vapid_valid: false }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
-    if (vapidPrivateKey && !BASE64URL_RE.test(vapidPrivateKey)) {
-      console.error("[send-push] VAPID_PRIVATE_KEY contains invalid base64url characters");
+    if (vapidPrivateKey && !vapidPrivValid) {
+      console.error("[send-push] VAPID_PRIVATE_KEY invalid base64url after sanitization");
       return new Response(
-        JSON.stringify({ error: "VAPID_PRIVATE_KEY содержит недопустимые символы" }),
+        JSON.stringify({ error: "vapid_invalid", detail: "VAPID_PRIVATE_KEY невалидный base64url", vapid_valid: false }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
