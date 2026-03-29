@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { resolveOwnerKey, DEFAULT_OWNER_COLORS, OWNER_KEYS, buildOwnerColorSet } from "@/constants/ownerColors";
 
 interface Event {
   id: string;
@@ -23,13 +24,20 @@ interface CalendarMonthViewProps {
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
+/**
+ * Returns inline-style-compatible owner color tokens.
+ * Used by CalendarMonthView, CalendarWeekView, CalendarDayView, CalendarV2.
+ * Falls back to gray for unknown owners.
+ */
 export const getOwnerColor = (owner: string | null) => {
-  if (!owner) return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
-  const o = owner.toLowerCase();
-  if (o.includes("настя")) return { bg: "bg-violet-50 dark:bg-violet-950/30", dot: "bg-violet-500", border: "border-violet-400", text: "text-violet-700 dark:text-violet-300" };
-  if (o.includes("лера")) return { bg: "bg-orange-50 dark:bg-orange-950/30", dot: "bg-orange-500", border: "border-orange-400", text: "text-orange-700 dark:text-orange-300" };
-  if (o.includes("ваня") || o.includes("иван")) return { bg: "bg-yellow-50 dark:bg-yellow-950/30", dot: "bg-yellow-500", border: "border-yellow-400", text: "text-yellow-700 dark:text-yellow-300" };
-  return { bg: "bg-muted", dot: "bg-gray-400", border: "border-gray-300", text: "text-muted-foreground" };
+  const key = resolveOwnerKey(owner);
+  if (!key) return {
+    dot: '#9CA3AF', bg: 'rgba(156,163,175,0.08)', border: 'rgba(156,163,175,0.3)',
+    text: '#6B7280',
+  };
+  const d = DEFAULT_OWNER_COLORS[key];
+  const set = buildOwnerColorSet(key, d.hex, d.label);
+  return { dot: set.dot, bg: set.bg, border: set.border, text: set.text };
 };
 
 const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate, compact = false }: CalendarMonthViewProps) => {
@@ -103,8 +111,8 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
             </span>
             {hasEvents && (
               <div className="flex items-center gap-[3px] mt-0.5 h-[6px]">
-                {uniqueDots.map((dotClass, i) => (
-                  <div key={i} className={`w-[5px] h-[5px] rounded-full ${dotClass}`} />
+                {uniqueDots.map((dotColor, i) => (
+                  <div key={i} className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: dotColor }} />
                 ))}
               </div>
             )}
@@ -135,18 +143,15 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
         {/* Compact legend */}
         <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-border/30">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-violet-500" />
-            <span className="text-[10px] text-muted-foreground">Настя</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Лера</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-[10px] text-muted-foreground">Ваня</span>
-          </div>
+          {OWNER_KEYS.map(k => {
+            const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
+            return (
+              <div key={k} className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.dot }} />
+                <span className="text-[10px] text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -195,7 +200,8 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
               return (
                 <div
                   key={event.id}
-                  className={`text-[9px] md:text-[11px] leading-tight px-1.5 py-0.5 rounded-sm truncate cursor-pointer transition-opacity hover:opacity-80 border-l-2 ${colors.bg} ${colors.border} ${colors.text}`}
+                  className="text-[9px] md:text-[11px] leading-tight px-1.5 py-0.5 rounded-sm truncate cursor-pointer transition-opacity hover:opacity-80 border-l-2"
+                  style={{ backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onEventClick(event);
@@ -239,18 +245,15 @@ const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, se
 
       {/* Legend */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/50">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
-          <span className="text-xs text-muted-foreground">Настя</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-          <span className="text-xs text-muted-foreground">Лера</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-          <span className="text-xs text-muted-foreground">Ваня</span>
-        </div>
+        {OWNER_KEYS.map(k => {
+          const c = getOwnerColor(DEFAULT_OWNER_COLORS[k].label);
+          return (
+            <div key={k} className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.dot }} />
+              <span className="text-xs text-muted-foreground">{DEFAULT_OWNER_COLORS[k].label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

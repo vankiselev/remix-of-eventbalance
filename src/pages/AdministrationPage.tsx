@@ -10,8 +10,9 @@ import { WarehouseCategoriesManagement } from "@/components/admin/WarehouseCateg
 import { WarehouseLocationsManagement } from "@/components/admin/WarehouseLocationsManagement";
 import { TestDataManagement } from "@/components/admin/TestDataManagement";
 import { TenantsManagement } from "@/components/admin/TenantsManagement";
+import { OwnerColorsManagement } from "@/components/admin/OwnerColorsManagement";
 import Layout from "@/components/Layout";
-import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2 } from "lucide-react";
+import { Shield, UserPlus, Palette, Tags, FolderKanban, Settings, Package, MapPin, FlaskConical, Building2, Paintbrush } from "lucide-react";
 
 const AdministrationPage = () => {
   return (
@@ -73,6 +74,11 @@ const AdministrationPage = () => {
               <FlaskConical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Тест
             </TabsTrigger>
+            <TabsTrigger value="owner-colors" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 touch-manipulation">
+              <Paintbrush className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Цвета</span>
+              <span className="sm:hidden">Цвета</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="companies" className="mt-6">
@@ -124,6 +130,10 @@ const AdministrationPage = () => {
 
           <TabsContent value="testing" className="mt-6">
             <TestDataManagement />
+          </TabsContent>
+
+          <TabsContent value="owner-colors" className="mt-6">
+            <OwnerColorsManagement />
           </TabsContent>
         </Tabs>
       </div>

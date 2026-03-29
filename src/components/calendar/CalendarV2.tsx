@@ -284,10 +284,11 @@ const CalendarV2 = () => {
                     return (
                       <div
                         key={event.id}
-                        className={`p-3 rounded-lg border-l-[3px] cursor-pointer transition-all hover:shadow-md hover:translate-x-0.5 ${colors.border} ${colors.bg}`}
+                        className="p-3 rounded-lg border-l-[3px] cursor-pointer transition-all hover:shadow-md hover:translate-x-0.5"
+                        style={{ borderColor: colors.border, backgroundColor: colors.bg }}
                         onClick={() => handleEventClick(event)}
                       >
-                        <h4 className={`font-semibold text-sm leading-tight mb-1.5 ${colors.text}`}>
+                        <h4 className="font-semibold text-sm leading-tight mb-1.5" style={{ color: colors.text }}>
                           {event.name}
                         </h4>
                         <div className="space-y-1">
@@ -386,10 +387,11 @@ const CalendarV2 = () => {
                     return (
                       <div
                         key={event.id}
-                        className={`p-2.5 rounded-lg border-l-[3px] cursor-pointer active:scale-[0.98] transition-transform touch-manipulation ${colors.border} ${colors.bg}`}
+                        className="p-2.5 rounded-lg border-l-[3px] cursor-pointer active:scale-[0.98] transition-transform touch-manipulation"
+                        style={{ borderColor: colors.border, backgroundColor: colors.bg }}
                         onClick={() => handleEventClick(event)}
                       >
-                        <h4 className={`font-semibold text-sm leading-tight mb-1 ${colors.text}`}>
+                        <h4 className="font-semibold text-sm leading-tight mb-1" style={{ color: colors.text }}>
                           {event.name}
                         </h4>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
