@@ -387,13 +387,6 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
   const isAnalyzing = isChecking;
   const aiSuggestions = suggestedCategory ? { category: suggestedCategory } : null;
 
-  const handleApplyCorrection = () => {
-    applyAnalysisCorrection();
-  };
-
-  const applyAISuggestions = () => {
-    applyAnalysisCategory();
-  };
 
   const handleApplyAll = () => {
     applyAnalysisAll();
