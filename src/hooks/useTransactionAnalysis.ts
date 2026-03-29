@@ -3,38 +3,22 @@ import { useDebounce } from './useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Minimum confidence for backend to return a category (below this → null).
- * Must match the backend constant MIN_CONFIDENCE_TO_RETURN_CATEGORY.
+ * Hook for AI-based grammar correction only.
+ * Category/project/wallet detection is handled by the local rule engine.
  */
-export const MIN_CONFIDENCE_TO_RETURN_CATEGORY = 0.6;
 
-/**
- * Minimum confidence to auto-apply category in UI without user confirmation.
- * Category suggestions below this threshold are shown but not auto-applied.
- */
-export const MIN_CONFIDENCE_TO_AUTO_APPLY = 0.75;
-
-interface AnalysisResult {
+interface GrammarResult {
   success: boolean;
   corrected_text: string;
   has_errors: boolean;
-  category: string | null;
-  confidence: number;
-  transaction_type: 'expense' | 'income';
-  reasoning: string | null;
 }
 
 interface UseTransactionAnalysisResult {
   isChecking: boolean;
   hasErrors: boolean;
   correctedText: string | null;
-  suggestedCategory: string | null;
-  suggestedTransactionType: 'expense' | 'income' | null;
-  confidence: number;
   analysisError: string | null;
   applyCorrection: () => void;
-  applyCategory: () => void;
-  applyAll: () => void;
   dismissSuggestions: () => void;
   suppressNextAnalysis: () => void;
   clearCorrection: () => void;
@@ -42,12 +26,10 @@ interface UseTransactionAnalysisResult {
 
 export function useTransactionAnalysis(
   description: string,
-  currentCategory?: string,
   onApplyCorrection?: (text: string) => void,
-  onApplyCategory?: (category: string, transactionType: 'expense' | 'income') => void,
 ): UseTransactionAnalysisResult {
   const [isChecking, setIsChecking] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<GrammarResult | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const [correctionApplied, setCorrectionApplied] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -76,7 +58,6 @@ export function useTransactionAnalysis(
       setAnalysisError(null);
 
       try {
-        // Use direct fetch for better error diagnostics (project pattern)
         const { data: { session } } = await supabase.auth.getSession();
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -88,10 +69,7 @@ export function useTransactionAnalysis(
             'Authorization': `Bearer ${session?.access_token || anonKey}`,
             'apikey': anonKey,
           },
-          body: JSON.stringify({
-            description: debouncedDescription,
-            currentCategory: currentCategory || null,
-          }),
+          body: JSON.stringify({ description: debouncedDescription }),
         });
 
         if (cancelled) return;
@@ -106,13 +84,12 @@ export function useTransactionAnalysis(
           return;
         }
 
-        const analysisData = data as AnalysisResult & { error?: string };
-        if (analysisData?.success) {
-          setResult(analysisData);
+        if (data?.success) {
+          setResult(data as GrammarResult);
         } else {
           setResult(null);
-          if (analysisData?.error) {
-            setAnalysisError(analysisData.error);
+          if (data?.error) {
+            setAnalysisError(data.error);
           }
         }
       } catch (error) {
@@ -131,7 +108,7 @@ export function useTransactionAnalysis(
     analyze();
 
     return () => { cancelled = true; };
-  }, [debouncedDescription, currentCategory, isDismissed]);
+  }, [debouncedDescription, isDismissed]);
 
   // Reset dismissed when user types new text (not after applying)
   useEffect(() => {
@@ -151,30 +128,6 @@ export function useTransactionAnalysis(
     }
   }, [result, onApplyCorrection]);
 
-  const applyCategory = useCallback(() => {
-    if (result?.category && result.confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY && onApplyCategory) {
-      appliedRef.current = true;
-      skipNextRef.current = true;
-      onApplyCategory(result.category, result.transaction_type);
-      setResult(prev => prev ? { ...prev, category: null } : null);
-      setIsDismissed(true);
-    }
-  }, [result, onApplyCategory]);
-
-  const applyAll = useCallback(() => {
-    if (result?.has_errors && result.corrected_text && onApplyCorrection) {
-      onApplyCorrection(result.corrected_text);
-      setCorrectionApplied(true);
-    }
-    if (result?.category && result.confidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY && onApplyCategory) {
-      onApplyCategory(result.category, result.transaction_type);
-    }
-    appliedRef.current = true;
-    skipNextRef.current = true;
-    setResult(null);
-    setIsDismissed(true);
-  }, [result, onApplyCorrection, onApplyCategory]);
-
   const dismissSuggestions = useCallback(() => {
     setResult(null);
     setIsDismissed(true);
@@ -192,13 +145,8 @@ export function useTransactionAnalysis(
     isChecking,
     hasErrors: !!(result?.has_errors && !correctionApplied),
     correctedText: result?.has_errors && !correctionApplied ? result.corrected_text : null,
-    suggestedCategory: result?.category || null,
-    suggestedTransactionType: result?.transaction_type || null,
-    confidence: result?.confidence || 0,
     analysisError,
     applyCorrection,
-    applyCategory,
-    applyAll,
     dismissSuggestions,
     suppressNextAnalysis,
     clearCorrection,
