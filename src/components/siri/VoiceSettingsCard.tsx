@@ -16,6 +16,8 @@ interface VoiceSettingsCardProps {
 
 export function VoiceSettingsCard({ onSettingsChange }: VoiceSettingsCardProps) {
   const { settings, isLoading, saveSettings, isSaving } = useVoiceSettings();
+  const { getActiveWallets } = useWalletNames();
+  const activeWallets = getActiveWallets();
   const [defaultWallet, setDefaultWallet] = useState('Наличка Настя');
   const [autoCreate, setAutoCreate] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
@@ -82,9 +84,9 @@ export function VoiceSettingsCard({ onSettingsChange }: VoiceSettingsCardProps) 
               <SelectValue placeholder="Выберите кошелёк" />
             </SelectTrigger>
             <SelectContent>
-              {WALLET_OPTIONS.map(wallet => (
-                <SelectItem key={wallet} value={wallet}>
-                  {wallet}
+              {activeWallets.map(w => (
+                <SelectItem key={w.key} value={w.displayName}>
+                  {w.displayName}
                 </SelectItem>
               ))}
             </SelectContent>
