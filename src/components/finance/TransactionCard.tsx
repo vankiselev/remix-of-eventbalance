@@ -37,6 +37,7 @@ interface TransactionCardProps {
 }
 
 export const TransactionCard = ({ transaction, onClick, verification_status, ownerProfile }: TransactionCardProps) => {
+  const { getWalletDisplayName } = useWalletNames();
   const isIncome = transaction.income_amount > 0;
   const amount = isIncome ? transaction.income_amount : transaction.expense_amount;
   const isMoneyTransfer = transaction.category === 'Передано или получено от сотрудника';
@@ -129,7 +130,7 @@ export const TransactionCard = ({ transaction, onClick, verification_status, own
         </div>
         {transaction.cash_type && (
           <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 mt-0.5">
-            {walletDisplay(transaction.cash_type)}
+            {getWalletDisplayName(transaction.cash_type)}
           </Badge>
         )}
       </div>

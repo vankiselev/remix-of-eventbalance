@@ -24,6 +24,7 @@ interface TransactionsCardViewProps {
 
 export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: TransactionsCardViewProps) => {
   const { user } = useAuth();
+  const { getWalletDisplayName } = useWalletNames();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showExpensesBreakdown, setShowExpensesBreakdown] = useState(false);
   const [showIncomesBreakdown, setShowIncomesBreakdown] = useState(false);
@@ -65,7 +66,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
     return map;
   }, [profiles]);
 
-  const cashWallets = useMemo(() => new Set(['наличка настя','наличка лера','наличка ваня']), []);
+  const cashWalletKeys = useMemo(() => new Set(['cash_nastya','cash_lera','cash_vanya','наличка настя','наличка лера','наличка ваня']), []);
   
   // Уникальные даты (конкретные дни)
   const availableDates = useMemo(() => {
@@ -132,8 +133,11 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
   }, [transactions]);
 
   const transactionsForCashTotals = useMemo(() => (
-    transactions.filter(t => t.cash_type != null && cashWallets.has(normalizeWallet(String(t.cash_type))))
-  ), [transactions, cashWallets]);
+    transactions.filter(t => {
+      const key = (t.wallet_key || t.cash_type || '').trim().toLowerCase();
+      return key !== '' && cashWalletKeys.has(key);
+    })
+  ), [transactions, cashWalletKeys]);
 
   const expensesBreakdown = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -194,7 +198,7 @@ export const TransactionsCardView = ({ userId, isAdmin, onEdit, showOwner }: Tra
     transactions.forEach(t => {
       if (t.project_owner) ws.add(t.project_owner);
     });
-    return Array.from(ws).sort().map(w => ({ value: w, label: walletDisplay(w) }));
+    return Array.from(ws).sort().map(w => ({ value: w, label: getWalletDisplayName(w) }));
   }, [transactions]);
 
   // Apply compact filters
