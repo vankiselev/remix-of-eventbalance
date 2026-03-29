@@ -348,6 +348,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
     correctedText,
     suggestedCategory,
     confidence: aiConfidence,
+    analysisError,
     applyCorrection: applyAnalysisCorrection,
     applyCategory: applyAnalysisCategory,
     applyAll: applyAnalysisAll,
