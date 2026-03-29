@@ -194,8 +194,8 @@ serve(async (req) => {
           const subscription = {
             endpoint: sub.endpoint.trim(),
             keys: {
-              p256dh: sub.p256dh.trim().replace(/=+$/, ''),
-              auth: sub.auth.trim().replace(/=+$/, ''),
+              p256dh: sanitizeBase64url(sub.p256dh),
+              auth: sanitizeBase64url(sub.auth),
             },
           };
 
