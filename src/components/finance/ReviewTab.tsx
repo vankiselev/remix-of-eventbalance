@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useWalletNames } from "@/hooks/useWalletNames";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -244,7 +245,7 @@ export const ReviewTab = ({ enabled }: ReviewTabProps) => {
                     {isIncome ? '+' : '-'} {formatCurrency(amount)}
                   </p>
                   {transaction.cash_type && (
-                    <p className="text-xs text-muted-foreground">{transaction.cash_type}</p>
+                    <p className="text-xs text-muted-foreground">{getWalletDisplayName(transaction.cash_type)}</p>
                   )}
                 </div>
               </div>
