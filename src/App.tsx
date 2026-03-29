@@ -1,5 +1,4 @@
 import { useEffect, lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -183,7 +182,6 @@ const App = () => {
               <ImportProgressProvider>
                 <TooltipProvider>
                   <RealtimeSync />
-                  <Toaster />
                   <Sonner />
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
