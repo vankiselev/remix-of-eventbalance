@@ -7,8 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, CalendarDays } from "lucide-react";
 import CalendarWeekView from "./CalendarWeekView";
-import CalendarMonthView, { getOwnerColor } from "./CalendarMonthView";
+import CalendarMonthView from "./CalendarMonthView";
 import CalendarYearView from "./CalendarYearView";
+import { useOwnerColors } from "@/hooks/useOwnerColors";
 import EventDetailDialog from "./EventDetailDialog";
 
 const MONTHS = [
@@ -41,6 +42,7 @@ interface Event {
 }
 
 const CalendarV2 = () => {
+  const { getOwnerColor } = useOwnerColors();
   const currentDate = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());

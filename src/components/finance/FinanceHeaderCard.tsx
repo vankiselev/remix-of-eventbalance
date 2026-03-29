@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Wallet, User, Banknote, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDisplayName } from "@/utils/formatName";
-import { DEFAULT_OWNER_COLORS } from "@/constants/ownerColors";
+import { useOwnerColors } from "@/hooks/useOwnerColors";
 import { useWalletNames } from "@/hooks/useWalletNames";
 import { useAllAdvances, useMyAdvance } from "@/hooks/useAdvances";
 import { useUserRbacRoles } from "@/hooks/useUserRbacRoles";
@@ -97,6 +97,7 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
   const advanceEmployees = isAdminOverview ? (allAdvances?.employees || []) : [];
   const hasAdvanceDetails = isAdminOverview && advanceEmployees.length > 0;
 
+  const { colors: ownerColors } = useOwnerColors();
   const walletDefs = [
     { key: 'nastya' as const, dataKey: 'cash_nastya' as const, walletKey: 'cash_nastya' },
     { key: 'lera' as const, dataKey: 'cash_lera' as const, walletKey: 'cash_lera' },
@@ -105,7 +106,7 @@ export function FinanceHeaderCard({ summary, isLoading, employeeId }: FinanceHea
   const wallets = walletDefs.map(w => ({
     label: getWalletDisplayName(w.walletKey),
     value: summary[w.dataKey],
-    hex: DEFAULT_OWNER_COLORS[w.key].hex,
+    hex: ownerColors[w.key].hex,
   }));
 
   return (

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { getOwnerColor } from "./CalendarMonthView";
+import { useOwnerColors } from "@/hooks/useOwnerColors";
 
 interface Event {
   id: string;
@@ -18,6 +18,7 @@ interface CalendarWeekViewProps {
 }
 
 const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps) => {
+  const { getOwnerColor } = useOwnerColors();
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -63,21 +64,25 @@ const CalendarWeekView = ({ date, events, onEventClick }: CalendarWeekViewProps)
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  {dayEvents.slice(0, 4).map((event) => (
-                    <div
-                      key={event.id}
-                      className="text-[8px] sm:text-xs p-1 sm:p-2 rounded cursor-pointer hover:opacity-80 transition-opacity bg-primary/10 text-primary border-l-2 border-primary"
-                      onClick={() => onEventClick(event)}
-                    >
-                      <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getOwnerColor(event.project_owner).dot }} />
-                        <span className="font-medium truncate text-[8px] sm:text-xs">{event.name}</span>
+                  {dayEvents.slice(0, 4).map((event) => {
+                    const ownerColor = getOwnerColor(event.project_owner);
+                    return (
+                      <div
+                        key={event.id}
+                        className="text-[8px] sm:text-xs p-1 sm:p-2 rounded cursor-pointer hover:opacity-80 transition-opacity border-l-2"
+                        style={{ backgroundColor: ownerColor.bg, borderColor: ownerColor.border, color: ownerColor.text }}
+                        onClick={() => onEventClick(event)}
+                      >
+                        <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0" style={{ backgroundColor: ownerColor.dot }} />
+                          <span className="font-medium truncate text-[8px] sm:text-xs">{event.name}</span>
+                        </div>
+                        {event.event_time && (
+                          <div className="text-muted-foreground text-[7px] sm:text-[10px] truncate hidden sm:block">{event.event_time}</div>
+                        )}
                       </div>
-                      {event.event_time && (
-                        <div className="text-muted-foreground text-[7px] sm:text-[10px] truncate hidden sm:block">{event.event_time}</div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                   {dayEvents.length > 4 && (
                     <div className="text-[8px] sm:text-[10px] text-muted-foreground text-center">
                       +{dayEvents.length - 4}
