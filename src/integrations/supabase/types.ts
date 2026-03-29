@@ -620,6 +620,7 @@ export type Database = {
           transfer_to_user_id: string | null
           updated_at: string | null
           verification_status: string | null
+          wallet_key: string | null
         }
         Insert: {
           attachments_count?: number | null
@@ -647,6 +648,7 @@ export type Database = {
           transfer_to_user_id?: string | null
           updated_at?: string | null
           verification_status?: string | null
+          wallet_key?: string | null
         }
         Update: {
           attachments_count?: number | null
@@ -674,6 +676,7 @@ export type Database = {
           transfer_to_user_id?: string | null
           updated_at?: string | null
           verification_status?: string | null
+          wallet_key?: string | null
         }
         Relationships: []
       }
@@ -1790,6 +1793,15 @@ export type Database = {
         Args: { p_invitation_id: string; p_role?: string; p_user_id: string }
         Returns: Json
       }
+      get_company_cash_summary: {
+        Args: never
+        Returns: {
+          cash_lera: number
+          cash_nastya: number
+          cash_vanya: number
+          total_cash: number
+        }[]
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_invitation_by_token: {
         Args: { invitation_token: string }
@@ -1844,6 +1856,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      normalize_wallet_key: { Args: { raw_wallet: string }; Returns: string }
       reactivate_employee:
         | { Args: { p_user_id: string }; Returns: undefined }
         | {
