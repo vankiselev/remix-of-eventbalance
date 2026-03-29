@@ -14,6 +14,27 @@ import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
+/**
+ * Active tab indicator style:
+ *  "pill"   — rounded-xl pill highlight (default)
+ *  "circle" — circular outline around the icon
+ */
+type ActiveTabStyle = "pill" | "circle";
+const ACTIVE_TAB_STYLE: ActiveTabStyle = "pill";
+
+const activeIndicatorClass = (active: boolean): string => {
+  if (!active) return "border border-transparent";
+  if (ACTIVE_TAB_STYLE === "circle") {
+    return "bg-primary/10 border border-primary/25 rounded-full px-2";
+  }
+  return "bg-primary/10 border border-primary/25";
+};
+
+const indicatorBaseClass =
+  ACTIVE_TAB_STYLE === "circle"
+    ? "flex items-center justify-center rounded-full px-2 py-1 transition-all duration-200"
+    : "flex items-center justify-center rounded-xl px-3 py-1 transition-all duration-200";
+
 interface NavItem {
   path: string;
   label: string;
