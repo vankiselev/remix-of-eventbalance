@@ -19,10 +19,62 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
-// VAPID public key for web push
-// To generate new keys, run: npx tsx scripts/generate-vapid-keys.ts
-// Or use: https://www.stephane-quantin.com/en/tools/generators/vapid-keys
-const VAPID_PUBLIC_KEY = 'BHpoaSorH9cw5GNloAsiccmXCthL-vCxW433W4QljzrABLZwJhO0GxCVB9992ckJRULwZtik_jsCHTyj0B-ZHjE';
+// VAPID public key — read from env, no hardcode
+function getVapidPublicKey(): string | null {
+  const key = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  if (!key || typeof key !== 'string' || key.length < 20) {
+    return null;
+  }
+  return key;
+}
+
+export type PushDiagnostics = {
+  isIOS: boolean;
+  isStandalone: boolean;
+  hasNotificationAPI: boolean;
+  hasServiceWorker: boolean;
+  hasPushManager: boolean;
+  notificationPermission: string;
+  serviceWorkerReady: boolean;
+  existingSubscription: boolean;
+  vapidKeyAvailable: boolean;
+};
+
+export const diagnosePush = async (): Promise<PushDiagnostics> => {
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+  const hasNotificationAPI = 'Notification' in window;
+  const hasServiceWorker = 'serviceWorker' in navigator;
+  const hasPushManager = 'PushManager' in window;
+  const notificationPermission = hasNotificationAPI ? Notification.permission : 'unsupported';
+  const vapidKeyAvailable = !!getVapidPublicKey();
+
+  let serviceWorkerReady = false;
+  let existingSubscription = false;
+
+  if (hasServiceWorker) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      serviceWorkerReady = !!reg?.active;
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription();
+        existingSubscription = !!sub;
+      }
+    } catch {}
+  }
+
+  return {
+    isIOS,
+    isStandalone,
+    hasNotificationAPI,
+    hasServiceWorker,
+    hasPushManager,
+    notificationPermission,
+    serviceWorkerReady,
+    existingSubscription,
+    vapidKeyAvailable,
+  };
+};
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
@@ -50,33 +102,28 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       // Native mobile push notifications (iOS/Android)
       console.log('Setting up native push notifications');
       
-      // Request permission
       const permResult = await PushNotifications.requestPermissions();
       if (permResult.receive !== 'granted') {
-        console.log('Push notification permission denied');
-        return false;
+        throw new Error('permission_denied: Push notification permission denied');
       }
 
-      // Register with Apple / Google to receive push via APNS/FCM
       await PushNotifications.register();
 
-      // Listen for registration token
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         PushNotifications.addListener('registration', async (token) => {
           console.log('Push registration success, token:', token.value);
           
           const { data: user } = await supabase.auth.getUser();
           if (!user.user) {
-            resolve(false);
+            reject(new Error('not_authenticated: User not authenticated'));
             return;
           }
 
-          // Save token to database
           const { error } = await supabase
             .from('push_subscriptions')
             .upsert([{
               user_id: user.user.id,
-              platform: Capacitor.getPlatform(), // 'ios' or 'android'
+              platform: Capacitor.getPlatform(),
               endpoint: token.value,
               device_token: token.value,
               subscription_data: { token: token.value },
@@ -88,50 +135,58 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
             });
 
           if (error) {
-            console.error('Error saving push token:', error);
-            resolve(false);
+            reject(new Error(`db_error: ${error.message}`));
           } else {
-            console.log('Push token saved to database');
             resolve(true);
           }
         });
 
         PushNotifications.addListener('registrationError', (error) => {
-          console.error('Error on registration:', error);
-          resolve(false);
+          reject(new Error(`native_registration_failed: ${error?.error || JSON.stringify(error)}`));
         });
       });
     } else {
       // Web push notifications
+      const vapidKey = getVapidPublicKey();
+      if (!vapidKey) {
+        throw new Error('vapid_missing: VAPID public key not configured (VITE_VAPID_PUBLIC_KEY). Contact administrator.');
+      }
+
       if (!('serviceWorker' in navigator)) {
-        console.error('Service workers are not supported');
-        return false;
+        throw new Error('sw_unsupported: Service workers are not supported in this browser');
+      }
+
+      if (!('PushManager' in window)) {
+        throw new Error('push_unsupported: PushManager is not available in this browser/context');
       }
 
       // Request notification permission
       const hasPermission = await requestNotificationPermission();
       if (!hasPermission) {
-        console.log('Notification permission denied');
-        return false;
+        throw new Error('permission_denied: Notification permission was denied');
       }
 
       // Register or reuse service worker
       let registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
-        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        console.log('Service worker registered:', registration);
-      } else {
-        console.log('Service worker already registered:', registration);
+        try {
+          registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          console.log('Service worker registered:', registration);
+        } catch (swErr: any) {
+          throw new Error(`sw_register_failed: ${swErr?.message || swErr}`);
+        }
       }
 
       // Wait for the service worker to be ready (activated)
       const swReg = await navigator.serviceWorker.ready;
-      console.log('Service worker ready:', swReg);
+      if (!swReg?.pushManager) {
+        throw new Error('sw_not_ready: Service worker ready but pushManager is unavailable');
+      }
 
-      // First, unsubscribe from any existing subscription (might have old VAPID key)
+      // Unsubscribe from any existing subscription (might have old VAPID key)
       let subscription = await swReg.pushManager.getSubscription();
       if (subscription) {
-        console.log('Found existing subscription, unsubscribing first to use new VAPID key...');
+        console.log('Found existing subscription, unsubscribing first to use current VAPID key...');
         try {
           await subscription.unsubscribe();
           console.log('Unsubscribed from old subscription');
@@ -144,18 +199,18 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
       try {
         subscription = await swReg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
         });
-        console.log('Created new push subscription:', subscription);
+        console.log('Created new push subscription');
       } catch (err: any) {
         console.error('pushManager.subscribe failed:', err?.message, err?.name, err);
-        throw new Error(`Push subscription failed: ${err?.message || err}`);
+        throw new Error(`subscribe_failed: ${err?.message || err?.name || err}`);
       }
 
       // Save subscription to database
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        throw new Error('User not authenticated');
+        throw new Error('not_authenticated: User not authenticated');
       }
 
       const subscriptionJson = subscription.toJSON();
@@ -164,27 +219,86 @@ export const subscribeToPushNotifications = async (): Promise<boolean> => {
         .from('push_subscriptions')
         .upsert([{
           user_id: user.user.id,
-          platform: 'web',
           endpoint: subscriptionJson.endpoint!,
-          subscription_data: {
-            endpoint: subscriptionJson.endpoint,
-            keys: subscriptionJson.keys,
-          },
           auth: subscriptionJson.keys!.auth,
           p256dh: subscriptionJson.keys!.p256dh,
-          device_type: 'web',
         }], {
           onConflict: 'user_id,endpoint',
         });
 
-      if (error) throw error;
+      if (error) throw new Error(`db_error: ${error.message}`);
 
       console.log('Subscription saved to database');
       return true;
     }
   } catch (error: any) {
     console.error('Error subscribing to push notifications:', error);
-    throw new Error(error?.message || error?.name || String(error));
+    throw error;
+  }
+};
+
+export const resetPushSubscription = async (): Promise<boolean> => {
+  try {
+    if (!('serviceWorker' in navigator)) {
+      throw new Error('sw_unsupported: Service workers not supported');
+    }
+
+    const vapidKey = getVapidPublicKey();
+    if (!vapidKey) {
+      throw new Error('vapid_missing: VAPID public key not configured');
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      throw new Error('not_authenticated: User not authenticated');
+    }
+
+    // Unsubscribe from old
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      const oldSub = await reg.pushManager.getSubscription();
+      if (oldSub) {
+        await oldSub.unsubscribe();
+        // Delete old record from DB
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('endpoint', oldSub.toJSON().endpoint!);
+      }
+    }
+
+    // Re-register SW if needed
+    let swReg = await navigator.serviceWorker.getRegistration();
+    if (!swReg) {
+      swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    }
+    const ready = await navigator.serviceWorker.ready;
+
+    // Create new subscription
+    const newSub = await ready.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    });
+
+    const subJson = newSub.toJSON();
+
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert([{
+        user_id: userData.user.id,
+        endpoint: subJson.endpoint!,
+        auth: subJson.keys!.auth,
+        p256dh: subJson.keys!.p256dh,
+      }], {
+        onConflict: 'user_id,endpoint',
+      });
+
+    if (error) throw new Error(`db_error: ${error.message}`);
+    console.log('Push subscription reset successfully');
+    return true;
+  } catch (error: any) {
+    console.error('Error resetting push subscription:', error);
+    throw error;
   }
 };
 
@@ -193,17 +307,14 @@ export const unsubscribeFromPushNotifications = async (): Promise<boolean> => {
     const isNative = Capacitor.isNativePlatform();
     
     if (isNative) {
-      // Unregister native push
       await PushNotifications.removeAllListeners();
       
-      // Remove from database - we need to get all subscriptions for this user
       const { data: user } = await supabase.auth.getUser();
       if (user.user) {
         const { error } = await supabase
           .from('push_subscriptions')
           .delete()
-          .eq('user_id', user.user.id)
-          .eq('platform', Capacitor.getPlatform());
+          .eq('user_id', user.user.id);
 
         if (error) throw error;
       }
@@ -211,19 +322,19 @@ export const unsubscribeFromPushNotifications = async (): Promise<boolean> => {
       console.log('Unsubscribed from native push notifications');
       return true;
     } else {
-      // Web push
       if (!('serviceWorker' in navigator)) {
         return false;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return true;
+
       const subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
         return true;
       }
 
-      // Remove from database
       const subscriptionJson = subscription.toJSON();
       const { error } = await supabase
         .from('push_subscriptions')
@@ -232,7 +343,6 @@ export const unsubscribeFromPushNotifications = async (): Promise<boolean> => {
 
       if (error) throw error;
 
-      // Unsubscribe from push
       await subscription.unsubscribe();
       
       console.log('Unsubscribed from push notifications');
@@ -249,7 +359,6 @@ export const checkPushSubscription = async (): Promise<boolean> => {
     const isNative = Capacitor.isNativePlatform();
     
     if (isNative) {
-      // Check if we have a saved token in the database
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return false;
 
@@ -257,18 +366,14 @@ export const checkPushSubscription = async (): Promise<boolean> => {
         .from('push_subscriptions')
         .select('id')
         .eq('user_id', user.user.id)
-        .eq('platform', Capacitor.getPlatform())
-        .single();
+        .maybeSingle();
 
       return !!data;
     } else {
-      // Web push
       if (!('serviceWorker' in navigator)) {
         return false;
       }
 
-      // Avoid waiting on navigator.serviceWorker.ready here — it may never resolve
-      // when no Service Worker is registered yet. Check existing registration only.
       let registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
         return false;

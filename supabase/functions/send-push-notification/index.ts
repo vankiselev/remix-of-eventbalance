@@ -25,7 +25,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // --- AUTH CHECK: verify caller is authenticated ---
+    // --- AUTH CHECK ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
@@ -65,13 +65,26 @@ serve(async (req) => {
     const vapidPrivateKey = secrets['VAPID_PRIVATE_KEY'];
     const contact = secrets['WEB_PUSH_CONTACT'] || "mailto:admin@example.com";
 
-    if (vapidPublicKey && vapidPrivateKey) {
-      webpush.setVapidDetails(contact, vapidPublicKey, vapidPrivateKey);
+    const vapidConfigured = !!(vapidPublicKey && vapidPrivateKey);
+
+    if (vapidConfigured) {
+      webpush.setVapidDetails(contact, vapidPublicKey!, vapidPrivateKey!);
+      console.log("[send-push] VAPID configured successfully");
     } else {
-      console.warn("VAPID keys not configured in system_secrets. Web Push deliveries will be skipped.");
+      const missing = [];
+      if (!vapidPublicKey) missing.push('VAPID_PUBLIC_KEY');
+      if (!vapidPrivateKey) missing.push('VAPID_PRIVATE_KEY');
+      console.error(`[send-push] VAPID keys missing in system_secrets: ${missing.join(', ')}`);
     }
 
     const { user_id, title, message, type, data } = (await req.json()) as NotificationRequest;
+
+    if (!user_id || !title) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: user_id and title" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
 
     // Create notification row
     const { data: notification, error: notificationError } = await supabase
@@ -91,6 +104,11 @@ serve(async (req) => {
     if (subscriptionsError) throw subscriptionsError;
 
     let pushSentCount = 0;
+    const pushErrors: string[] = [];
+
+    if (!vapidConfigured) {
+      pushErrors.push("VAPID keys not configured in system_secrets — web push skipped");
+    }
 
     if (subscriptions && subscriptions.length > 0) {
       const payload = JSON.stringify({
@@ -101,27 +119,35 @@ serve(async (req) => {
 
       for (const sub of subscriptions) {
         try {
-          if (sub.platform === "web") {
-            if (!vapidPublicKey || !vapidPrivateKey) continue;
-            const subscription = typeof sub.subscription_data === "string"
-              ? JSON.parse(sub.subscription_data)
-              : sub.subscription_data;
+          // Web push via VAPID
+          if (!vapidConfigured) continue;
 
-            await webpush
-              .sendNotification(subscription as any, payload, { TTL: 86400 })
-              .catch(async (err: any) => {
-                console.error("Web Push send error:", err?.statusCode, err?.body || err?.message);
-                if (String(err?.statusCode).startsWith("4")) {
-                  await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-                }
-                throw err;
-              });
-            pushSentCount++;
-          } else {
-            pushSentCount++;
+          const subscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth,
+            },
+          };
+
+          if (!subscription.endpoint || !subscription.keys.p256dh || !subscription.keys.auth) {
+            pushErrors.push(`Subscription ${sub.id}: missing endpoint/keys`);
+            continue;
           }
-        } catch (_err) {
-          // Already logged; continue
+
+          await webpush.sendNotification(subscription as any, payload, { TTL: 86400 });
+          pushSentCount++;
+          console.log(`[send-push] Delivered to subscription ${sub.id}`);
+        } catch (err: any) {
+          const errMsg = `Subscription ${sub.id}: ${err?.statusCode || ''} ${err?.body || err?.message || 'unknown error'}`;
+          console.error("[send-push] Push error:", errMsg);
+          pushErrors.push(errMsg);
+
+          // Remove invalid subscriptions (410 Gone, 404, etc.)
+          if ([404, 410].includes(err?.statusCode)) {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            console.log(`[send-push] Removed expired subscription ${sub.id}`);
+          }
         }
       }
     }
@@ -132,14 +158,16 @@ serve(async (req) => {
         notification,
         push_sent: pushSentCount,
         total_subscriptions: subscriptions?.length || 0,
+        vapid_configured: vapidConfigured,
+        ...(pushErrors.length > 0 ? { push_errors: pushErrors } : {}),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error: any) {
     console.error("[send-push-notification] Error:", { message: error?.message, stack: error?.stack });
-    return new Response(JSON.stringify({ error: "Failed to send notification" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ error: error?.message || "Failed to send notification" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+    );
   }
 });
