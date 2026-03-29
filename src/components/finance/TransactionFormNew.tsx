@@ -1304,6 +1304,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                       value={field.value} 
                       onValueChange={async (value) => {
                         field.onChange(value);
+                        setIsProjectManuallySet(true);
                         
                         // Check if this is an event (UUID) or static project
                         const isStaticProject = STATIC_PROJECTS.includes(value);
