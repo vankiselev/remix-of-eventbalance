@@ -1221,9 +1221,13 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                         const showCategory = !!(suggestedCategory && aiConfidence >= MIN_CONFIDENCE_TO_RETURN_CATEGORY);
                         const showCorrection = !!(hasErrors && correctedText);
                         const showProject = !!(detectedProject && !isProjectManuallySet && watchProjectId !== detectedProject.project);
-                      if ((isAnalyzing || isChecking) || (!showCategory && !showCorrection && !showProject)) return null;
+                      if (!showCategory && !showCorrection && !showProject) return null;
+                      // Hide AI suggestions while analyzing, but keep local project suggestion visible
+                      const aiStillLoading = isAnalyzing || isChecking;
+                      const effectiveShowCategory = showCategory && !aiStillLoading;
+                      const effectiveShowCorrection = showCorrection && !aiStillLoading;
 
-                      const hasAiSuggestions = showCategory || showCorrection;
+                      const hasAiSuggestions = effectiveShowCategory || effectiveShowCorrection;
 
                       const handleApplyDetectedProject = () => {
                         form.setValue('project_id', detectedProject!.project);
@@ -1247,11 +1251,11 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
 
                       const buttonLabel = (hasAiSuggestions && showProject)
                         ? 'Применить всё'
-                        : showCategory && showCorrection
+                        : effectiveShowCategory && effectiveShowCorrection
                           ? 'Применить всё'
-                          : showCategory
+                          : effectiveShowCategory
                             ? 'Применить категорию'
-                            : showCorrection
+                            : effectiveShowCorrection
                               ? 'Применить исправление'
                               : 'Применить проект';
 
@@ -1291,7 +1295,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 </p>
                               </div>
                             )}
-                            {showCategory && (
+                            {effectiveShowCategory && (
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Категория:</span>{' '}
                                 {suggestedCategory}
@@ -1300,7 +1304,7 @@ export function TransactionForm({ isOpen, onOpenChange, onSuccess, editTransacti
                                 </span>
                               </p>
                             )}
-                            {showCorrection && (
+                            {effectiveShowCorrection && (
                               <p className="text-sm text-foreground">
                                 <span className="font-medium">Исправление:</span>{' '}
                                 {correctedText}
