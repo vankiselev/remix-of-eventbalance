@@ -4,6 +4,26 @@ import { ru } from "date-fns/locale";
 import { OWNER_KEYS } from "@/constants/ownerColors";
 import { useOwnerColors } from "@/hooks/useOwnerColors";
 
+interface Event {
+  id: string;
+  name: string;
+  start_date: string;
+  project_owner: string | null;
+  event_time: string | null;
+}
+
+interface CalendarMonthViewProps {
+  month: number;
+  year: number;
+  events: Event[];
+  onEventClick: (event: Event) => void;
+  onDateSelect: (date: Date) => void;
+  selectedDate?: Date;
+  compact?: boolean;
+}
+
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
 const CalendarMonthView = ({ month, year, events, onEventClick, onDateSelect, selectedDate, compact = false }: CalendarMonthViewProps) => {
   const { colors, getOwnerColor } = useOwnerColors();
   const firstDay = new Date(year, month, 1);
